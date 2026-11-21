@@ -2758,7 +2758,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         const QString password = character_password_entry->text().trimmed();
         // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
         if (!password.isEmpty() || character_password_entry->isModified()) {
-            pHostBeforeLoad->setPass(password);
+            pHostBeforeLoad->setPassTypedByPlayer(password);
         }
     }
 

@@ -379,6 +379,44 @@ private slots:
         QCOMPARE(pHost->getLogin(), savedName);
     }
 
+    void test_aPasswordTypedForTheOpenProfileOutlivesItsSavedPasswordLookup_data()
+    {
+        QTest::addColumn<QString>("typedPassword");
+
+        QTest::newRow("changed") << qsl("typedsecret");
+        QTest::newRow("erased") << QString();
+    }
+
+    // The keychain can answer the open profile's lookup after the dialog has
+    // handed over what was typed, with the password saved before the edit.
+    void test_aPasswordTypedForTheOpenProfileOutlivesItsSavedPasswordLookup()
+    {
+        QFETCH(QString, typedPassword);
+        const QString savedName = qsl("savedname");
+        const QString savedPassword = qsl("savedsecret");
+
+        auto* pHost = theOpenTestProfile();
+        QVERIFY2(pHost, "The test profile could not be opened, so the dialog has no open profile to be asked about");
+        pHost->setLogin(savedName);
+        pHost->setPass(savedPassword);
+        QVERIFY2(showTheTestProfileWithSavedLogin(savedName, savedPassword), "The dialog did not show the profile's saved login");
+
+        typeOver(dialog()->character_password_entry, typedPassword);
+        QSignalSpy connections(mpServer, &QTcpServer::newConnection);
+        QVERIFY(connections.isValid());
+        dialog()->accept();
+        QVERIFY2(QTest::qWaitFor(
+                         [&connections]() {
+                             return !connections.isEmpty();
+                         },
+                         15s),
+                 "The open profile was not connected, so the dialog was never asked");
+        QCOMPARE(pHost->getPass(), typedPassword);
+
+        pHost->securedPasswordAnswered(true, savedPassword, QString(), false);
+        QCOMPARE(pHost->getPass(), typedPassword);
+    }
+
     // The dialog cannot always show a saved password - a locked keychain leaves
     // the box empty - so one nobody touched says nothing about the open profile's.
     void test_aPasswordBoxLeftEmptyLeavesTheOpenProfilesPassword()

@@ -178,6 +178,7 @@ class Host : public QObject
     friend class TelnetLatePasswordTest;
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
+    friend class ConnectionDialogOpenProfileTest;
     friend class HeadlessSessionTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
@@ -236,6 +237,13 @@ public:
             return;
         }
         mPass = QString(password.constData(), password.size());
+        mPassGiven = true;
+    }
+    // One the player typed for this profile while it is open, which the stored one does not replace either; an
+    // empty one is the player's choice of none
+    void setPassTypedByPlayer(const QString& password)
+    {
+        mPass = password;
         mPassGiven = true;
     }
     // A password still being fetched from the keychain counts: the auto-login is timer based, so
