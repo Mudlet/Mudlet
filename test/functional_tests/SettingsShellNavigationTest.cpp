@@ -682,6 +682,156 @@ private slots:
         mpPreferences->resize(1060, 760);
     }
 
+    // Right to left Qt puts a page's bar on the left, and neither a layout's margins nor a sheet's are mirrored with
+    // it. The direction is changed on the open window, so what the shell does on the change is what is checked.
+    void test_rightToLeftTheScrollBarAndItsGapMirror()
+    {
+        selectCategory(qsl("general"));
+        QScrollArea* pPage = pageOf(qsl("general"));
+        QWidget* pColumn = pPage->widget();
+        QScrollBar* pBar = pPage->verticalScrollBar();
+        auto* pContent = mpPreferences->findChild<QWidget*>(qsl("settingsContent"));
+        auto* pSearch = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        QWidget* pTitleRow = mpPreferences->mpWidget_titleRow;
+        QVERIFY2(pContent && pSearch && pTitleRow, "the settings shell has no content column, search field or title row");
+        QGroupBox* pCard = nullptr;
+        for (auto* pCandidate : pColumn->findChildren<QGroupBox*>(QString(), Qt::FindDirectChildrenOnly)) {
+            if (pCandidate->isVisible()) {
+                pCard = pCandidate;
+                break;
+            }
+        }
+        QVERIFY2(pCard, "the General page has no card on show to measure");
+
+        const auto settle = [this](const int height) {
+            mpPreferences->resize(mpPreferences->width(), height);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QCoreApplication::processEvents();
+        };
+        const auto inContent = [pContent](const QWidget* pWidget) {
+            return QRect(pWidget->mapTo(pContent, QPoint(0, 0)), pWidget->size());
+        };
+        const auto mirrored = [pContent](const QRect& rect) {
+            return QRect(pContent->width() - 1 - rect.right(), rect.top(), rect.width(), rect.height());
+        };
+        const auto span = [](const QRect& rect) {
+            return qsl("x %1-%2").arg(rect.left()).arg(rect.right() + 1);
+        };
+        struct Picture
+        {
+            QRect page;
+            QRect card;
+            QRect search;
+            QRect titleRow;
+            // The bar's whole width, the gap it carries as its margin included
+            QRect barRoom;
+            QRect groove;
+        };
+        const auto picture = [&]() {
+            // The style's own groove, which leaves out the gap
+            QStyleOptionSlider option;
+            option.initFrom(pBar);
+            option.orientation = Qt::Vertical;
+            const QRect groove = pBar->style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarGroove, pBar).translated(inContent(pBar).topLeft());
+            return Picture{inContent(pPage), inContent(pCard), inContent(pSearch), inContent(pTitleRow), inContent(pBar), groove};
+        };
+        const auto describe = [&span](const Picture& shown) {
+            return qsl("page %1, card %2, search %3, title row %4, bar %5, groove %6")
+                    .arg(span(shown.page), span(shown.card), span(shown.search), span(shown.titleRow), span(shown.barRoom), span(shown.groove));
+        };
+
+        const int chrome = mpPreferences->height() - pPage->viewport()->height();
+        // Measured at the narrower of the two widths the cards could have, so they fit at either
+        const int tall = chrome + pColumn->heightForWidth(pPage->viewport()->width() - pBar->sizeHint().width()) + 40;
+        const int shortest = mpPreferences->minimumHeight();
+        settle(tall);
+        QTRY_VERIFY2(!pBar->isVisible(), qPrintable(qsl("SETUP: the General page still scrolls in a %1px tall window").arg(mpPreferences->height())));
+        const Picture leftToRightFits = picture();
+        const int contentWidth = pContent->width();
+        const int threshold = chrome + pColumn->heightForWidth(pColumn->width());
+        QVERIFY2(threshold - 8 > shortest, qPrintable(qsl("SETUP: the General page fits a %1px tall window, so it never scrolls").arg(shortest)));
+        settle(shortest);
+        QTRY_VERIFY2(pBar->isVisible(), qPrintable(qsl("SETUP: the General page does not scroll in a %1px tall window").arg(mpPreferences->height())));
+        const Picture leftToRightScrolls = picture();
+
+        settle(tall);
+        mpPreferences->setLayoutDirection(Qt::RightToLeft);
+        settle(tall);
+        QVERIFY2(pBar->isRightToLeft() && pCard->isRightToLeft(), "SETUP: the dialog's direction did not reach the page");
+        QVERIFY2(pContent->width() == contentWidth, qPrintable(qsl("SETUP: the content column went from %1px to %2px wide with the direction").arg(contentWidth).arg(pContent->width())));
+        QTRY_VERIFY2(!pBar->isVisible(), qPrintable(qsl("SETUP: right to left, the General page scrolls in a %1px tall window").arg(mpPreferences->height())));
+        const Picture rightToLeftFits = picture();
+
+        auto* pColumnWidths = new ResizeWidthRecorder(pColumn);
+        auto* pCardWidths = new ResizeWidthRecorder(pCard);
+        for (int height = threshold + 8; height >= threshold - 8; --height) {
+            settle(height);
+        }
+        settle(shortest);
+        QTRY_VERIFY2(pBar->isVisible(), qPrintable(qsl("SETUP: right to left, the General page does not scroll in a %1px tall window").arg(mpPreferences->height())));
+        const Picture rightToLeftScrolls = picture();
+        qDebug().noquote() << "content column" << contentWidth << "wide; left to right fitting:" << describe(leftToRightFits) << "; scrolling:" << describe(leftToRightScrolls)
+                           << "; right to left fitting:" << describe(rightToLeftFits) << "; scrolling:" << describe(rightToLeftScrolls);
+
+        const auto verifyMirrored = [&](const Picture& shown, const Picture& leftToRight, const QString& state) {
+            QVERIFY2(shown.barRoom.left() == shown.page.left() && shown.barRoom.right() < shown.card.left(),
+                     qPrintable(qsl("%1, the bar spans %2 beside cards at %3 on a page at %4, not along the page's left edge").arg(state, span(shown.barRoom), span(shown.card), span(shown.page))));
+            QVERIFY2(shown.groove.left() == 4, qPrintable(qsl("%1, the bar is drawn %2px in from the content column's left edge, not 4px").arg(state).arg(shown.groove.left())));
+            QCOMPARE(shown.groove.width(), uiDesign::scmScrollBarThickness);
+            QVERIFY2(shown.card.left() - (shown.groove.right() + 1) == 8,
+                     qPrintable(qsl("%1, the bar is drawn %2px left of the cards, not 8px").arg(state).arg(shown.card.left() - (shown.groove.right() + 1))));
+            QVERIFY2(shown.card.left() == 24 && contentWidth - (shown.card.right() + 1) == 24,
+                     qPrintable(qsl("%1, the card starts %2px in from the content column's left edge and ends %3px short of its right one, not 24px each")
+                                        .arg(state)
+                                        .arg(shown.card.left())
+                                        .arg(contentWidth - (shown.card.right() + 1))));
+            QVERIFY2(shown.titleRow.left() == shown.card.left() && shown.titleRow.right() == shown.card.right(),
+                     qPrintable(qsl("%1, the title row spans %2 above cards at %3").arg(state, span(shown.titleRow), span(shown.card))));
+            QVERIFY2(shown.search.left() >= shown.titleRow.left() && shown.search.right() <= shown.titleRow.right(),
+                     qPrintable(qsl("%1, the search field spans %2, past the cards at %3").arg(state, span(shown.search), span(shown.card))));
+            QVERIFY2(shown.card.width() == leftToRight.card.width(),
+                     qPrintable(qsl("%1, the card is %2px wide against %3px left to right").arg(state).arg(shown.card.width()).arg(leftToRight.card.width())));
+            const QList<std::pair<QString, std::pair<QRect, QRect>>> parts{{qsl("page"), {shown.page, leftToRight.page}},
+                                                                           {qsl("card"), {shown.card, leftToRight.card}},
+                                                                           {qsl("search field"), {shown.search, leftToRight.search}},
+                                                                           {qsl("title row"), {shown.titleRow, leftToRight.titleRow}},
+                                                                           {qsl("bar"), {shown.barRoom, leftToRight.barRoom}},
+                                                                           {qsl("groove"), {shown.groove, leftToRight.groove}}};
+            // Across only: the restyle a direction change brings can move a card's top padding by a pixel, as any restyle can
+            for (const auto& [part, rects] : parts) {
+                QVERIFY2(span(rects.first) == span(mirrored(rects.second)),
+                         qPrintable(qsl("%1, the %2 spans %3, not %4 as the mirror of its %5 left to right").arg(state, part, span(rects.first), span(mirrored(rects.second)), span(rects.second))));
+            }
+        };
+        verifyMirrored(rightToLeftFits, leftToRightFits, qsl("right to left while the page fits"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        verifyMirrored(rightToLeftScrolls, leftToRightScrolls, qsl("right to left while the page scrolls"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(!pColumnWidths->mWidths.isEmpty(), "SETUP: the column was never resized while the window's height changed, so no width was recorded");
+        for (const int width : std::as_const(pColumnWidths->mWidths)) {
+            QVERIFY2(width == pColumn->width(),
+                     qPrintable(qsl("right to left, as the page came to scroll, the column was laid out %1px wide against its settled %2px").arg(width).arg(pColumn->width())));
+        }
+        for (const int width : std::as_const(pCardWidths->mWidths)) {
+            QVERIFY2(width == pCard->width(), qPrintable(qsl("right to left, as the page came to scroll, the card was laid out %1px wide against its settled %2px").arg(width).arg(pCard->width())));
+        }
+
+        mpPreferences->setLayoutDirection(Qt::LeftToRight);
+        settle(shortest);
+        QTRY_VERIFY2(pBar->isVisible(), "SETUP: back left to right, the General page does not scroll in the shortest window");
+        const Picture backScrolls = picture();
+        QVERIFY2(describe(backScrolls) == describe(leftToRightScrolls),
+                 qPrintable(qsl("back left to right while the page scrolls: %1, against %2 before").arg(describe(backScrolls), describe(leftToRightScrolls))));
+        settle(tall);
+        QTRY_VERIFY2(!pBar->isVisible(), "SETUP: back left to right, the General page still scrolls in the tall window");
+        const Picture backFits = picture();
+        QVERIFY2(describe(backFits) == describe(leftToRightFits), qPrintable(qsl("back left to right while the page fits: %1, against %2 before").arg(describe(backFits), describe(leftToRightFits))));
+    }
+
     void test_theSidebarOpensAtTheWidthARestyleKeeps()
     {
         const QFont savedListFont = QApplication::font("QAbstractItemView");

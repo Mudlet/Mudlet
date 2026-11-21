@@ -184,7 +184,7 @@ static constexpr char scmProp_settingsRichText[] = "settingsRichText";
 static constexpr int scmContentColumnWidth = 640;
 static constexpr int scmContentMargin = 24;
 static constexpr int scmScrollBarGap = 8;
-// A page keeps this room whether or not its bar shows, and it is taken out of the content's right margin
+// A page keeps this room whether or not its bar shows, and it is taken out of the content's margin on the bar's side
 static constexpr int scmScrollBarRoom = uiDesign::scmScrollBarThickness + scmScrollBarGap;
 // The narrowest the window goes, however little its pages need
 static constexpr int scmMinimumWindowWidth = 780;
@@ -831,14 +831,15 @@ void dlgProfilePreferences::buildShell()
     auto* pContent = new QWidget(mpWidget_shell);
     pContent->setObjectName(qsl("settingsContent"));
     auto* pContentLayout = new QVBoxLayout(pContent);
-    pContentLayout->setContentsMargins(scmContentMargin, scmContentMargin, scmContentMargin - scmScrollBarRoom, scmContentMargin);
+    mpLayout_content = pContentLayout;
     pContentLayout->setSpacing(16);
     pShellLayout->addWidget(pContent, 1);
     // The rows above the pages end where the pages' cards do, short of the scroll bar's room
     auto* pHeadLayout = new QVBoxLayout();
-    pHeadLayout->setContentsMargins(0, 0, scmScrollBarRoom, 0);
+    mpLayout_head = pHeadLayout;
     pHeadLayout->setSpacing(pContentLayout->spacing());
     pContentLayout->addLayout(pHeadLayout);
+    placeScrollBarRoom();
 
     // The control that gives the sidebar's names up rides on the seam between
     // the sidebar and the settings beside it, so it is a child of the shell
@@ -1030,6 +1031,21 @@ void dlgProfilePreferences::buildShell()
 
     // Otherwise the first page shows with nothing selected; setTab() overrides this for a deep link
     showCategory(scmCategory_general);
+}
+
+void dlgProfilePreferences::placeScrollBarRoom()
+{
+    if (!mpLayout_content || !mpLayout_head) {
+        return;
+    }
+    const int barSideMargin = scmContentMargin - scmScrollBarRoom;
+    if (isRightToLeft()) {
+        mpLayout_content->setContentsMargins(barSideMargin, scmContentMargin, scmContentMargin, scmContentMargin);
+        mpLayout_head->setContentsMargins(scmScrollBarRoom, 0, 0, 0);
+    } else {
+        mpLayout_content->setContentsMargins(scmContentMargin, scmContentMargin, barSideMargin, scmContentMargin);
+        mpLayout_head->setContentsMargins(0, 0, scmScrollBarRoom, 0);
+    }
 }
 
 // mpFrame_migrationBanner stays null once dismissed
@@ -3020,6 +3036,11 @@ void dlgProfilePreferences::changeEvent(QEvent* pEvent)
         invalidateSidebarWidth();
         updateSidebarMode();
     }
+    // Restyled outright, as event() leaves the sheet alone while the palette stays the same
+    if (pEvent->type() == QEvent::LayoutDirectionChange) {
+        placeScrollBarRoom();
+        applyShellStyle();
+    }
 }
 
 // Returning to the window is when settings can be re-read without interrupting anything - see
@@ -3789,8 +3810,8 @@ void dlgProfilePreferences::applyShellStyle()
             + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens)
             // The gap to the cards is part of the bar's width, and so of the room a page keeps for it. A child
             // selector, as a descendant one also reaches the bars of what a page holds, the theme preview's among them
-            + qsl("QScrollArea[settingsSurface=\"true\"] > #qt_scrollarea_vcontainer > QScrollBar:vertical { width: %1px; margin-left: %2px; }")
-                      .arg(QString::number(scmScrollBarRoom), QString::number(scmScrollBarGap))
+            + qsl("QScrollArea[settingsSurface=\"true\"] > #qt_scrollarea_vcontainer > QScrollBar:vertical { width: %1px; %2: %3px; }")
+                      .arg(QString::number(scmScrollBarRoom), isRightToLeft() ? qsl("margin-right") : qsl("margin-left"), QString::number(scmScrollBarGap))
             + scrollBarStyleSheet(qsl("#settingsCategoryList"), tokens)
             // Every control a setting is typed into or picked in is drawn the
             // one way the editor draws its own, and under the stack alone:

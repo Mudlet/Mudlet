@@ -303,6 +303,8 @@ private:
 
     // The sidebar-and-cards shell that replaces the .ui file's tab widget
     void buildShell();
+    // A layout's margins are not mirrored right to left, where Qt moves a page's scroll bar to the left
+    void placeScrollBarRoom();
     QWidget* buildSidebar();
     void addCategory(const QString& key, const QString& iconFile);
     // The single declaration of the categories: sidebar order, icon, name and separators.
@@ -484,6 +486,8 @@ private:
     QPalette mShellPalette;
     QWidget* mpWidget_sidebar = nullptr;
     QWidget* mpWidget_titleRow = nullptr;
+    QVBoxLayout* mpLayout_content = nullptr;
+    QVBoxLayout* mpLayout_head = nullptr;
     QLabel* mpLabel_wordmark = nullptr;
     QCheckBox* mpCheckBox_triggerMatchPool = nullptr;
     QLabel* mpLabel_triggerMatchThreads = nullptr;
