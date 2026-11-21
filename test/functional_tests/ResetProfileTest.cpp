@@ -569,11 +569,7 @@ private slots:
 
     QVERIFY(mpHost->getScriptUnit()->enableScript(
         qsl("resetSelfEnablingGroup")));
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    lua_getglobal(L, "resetSelfEnablingRuns");
-    const int runs = static_cast<int>(lua_tointeger(L, -1));
-    lua_pop(L, 1);
-    QCOMPARE(runs, 1);
+    QCOMPARE(luaGlobalInt("resetSelfEnablingRuns"), 1);
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 
@@ -708,11 +704,7 @@ private slots:
 
     performReset();
 
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    lua_getglobal(L, "resetDuringSelfEnablingRuns");
-    const int runs = static_cast<int>(lua_tointeger(L, -1));
-    lua_pop(L, 1);
-    QCOMPARE(runs, 1);
+    QCOMPARE(luaGlobalInt("resetDuringSelfEnablingRuns"), 1);
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 
@@ -730,11 +722,7 @@ private slots:
 
     performReset();
 
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    lua_getglobal(L, "resetEnabledLaterRuns");
-    const int runs = static_cast<int>(lua_tointeger(L, -1));
-    lua_pop(L, 1);
-    QCOMPARE(runs, 1);
+    QCOMPARE(luaGlobalInt("resetEnabledLaterRuns"), 1);
     delete mpHost->getScriptUnit()->getScript(firstId);
     delete mpHost->getScriptUnit()->getScript(laterId);
   }
@@ -757,11 +745,7 @@ private slots:
 
     performReset();
 
-    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
-    lua_getglobal(L, "resetOrderTargetSaw");
-    const int seen = static_cast<int>(lua_tointeger(L, -1));
-    lua_pop(L, 1);
-    QCOMPARE(seen, 42);
+    QCOMPARE(luaGlobalInt("resetOrderTargetSaw"), 42);
     delete scriptUnit->getScript(enablerId);
     delete scriptUnit->getScript(libraryId);
     delete scriptUnit->getScript(targetId);
