@@ -20,11 +20,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <chrono>
 #include <cstdlib>
 
+#include <QAbstractEventDispatcher>
 #include <QColor>
 #include <QCoreApplication>
+#include <QEventLoop>
 #include <QIcon>
 #include <QImage>
 #include <QPoint>
@@ -33,7 +34,6 @@
 #include <QString>
 #include <QTreeWidgetItem>
 #include <QWidget>
-#include <QtTest/QTest>
 
 #include "enums.h"
 #include "mudlet.h"
@@ -43,10 +43,6 @@
 // CMakeLists.txt does not list. Nothing here may use QVERIFY or QFAIL - both
 // expand to a bare return, ill-formed in a function returning anything.
 namespace TestPixels {
-
-// Each is the longest wait any of the tests that shared the helper needed
-inline constexpr std::chrono::milliseconds scmSettleWait{80};
-inline constexpr std::chrono::milliseconds scmRestyleWait{150};
 
 // Summed rather than per channel: at a pixel blending two flat fills the
 // nearer fill is the one that was painted there
@@ -106,13 +102,21 @@ inline QImage drawnAt(const QIcon& icon, const int size, const QIcon::State stat
     return icon.pixmap(QSize(size, size), QIcon::Normal, state).toImage();
 }
 
-// The posted events first, then the timers a relayout or restyle queues, then
-// what those posted in turn
+// A relayout or restyle posts events and zero timers that queue more in turn,
+// and how many passes that chain takes differs by event dispatcher, so this
+// runs until a pass handles nothing. Capped, as a repeating timer never goes quiet.
 inline void settle()
 {
-    QCoreApplication::processEvents();
-    QTest::qWait(scmSettleWait);
-    QCoreApplication::processEvents();
+    static constexpr int scmFewestPasses = 2;
+    static constexpr int scmMostPasses = 20;
+    QAbstractEventDispatcher* pDispatcher = QAbstractEventDispatcher::instance();
+    for (int pass = 0; pass < scmMostPasses; ++pass) {
+        QCoreApplication::sendPostedEvents();
+        const bool handled = pDispatcher && pDispatcher->processEvents(QEventLoop::AllEvents);
+        if (!handled && pass + 1 >= scmFewestPasses) {
+            return;
+        }
+    }
 }
 
 // setAppearance() swaps the application style and widgets restyle on the
@@ -121,9 +125,7 @@ inline void settle()
 inline void setAppearanceAndWait(const enums::Appearance appearance, QWidget* pToPaint = nullptr)
 {
     mudlet::self()->setAppearance(appearance);
-    QCoreApplication::processEvents();
-    QTest::qWait(scmRestyleWait);
-    QCoreApplication::processEvents();
+    settle();
     if (pToPaint) {
         pToPaint->grab();
     }
