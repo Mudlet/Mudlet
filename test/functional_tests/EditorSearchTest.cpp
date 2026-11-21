@@ -935,6 +935,34 @@ private slots:
         QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
     }
 
+    void test_aClickAfterTheDoubleClickWindowOpensTheResult()
+    {
+        const int savedInterval = QApplication::doubleClickInterval();
+        QApplication::setDoubleClickInterval(200);
+        const auto restoreInterval = qScopeGuard([savedInterval]() {
+            QApplication::setDoubleClickInterval(savedInterval);
+        });
+        mpEditor->slot_showVariables();
+        search(mNeedle);
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->scrollToItem(offer);
+        QCoreApplication::processEvents();
+        const QPoint pos = tree->visualItemRect(offer).center();
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QVERIFY(QTest::qWaitFor([this]() {
+            return topLevelResultFor(qsl("Variable")) != nullptr;
+        }));
+        QTreeWidgetItem* landed = tree->itemAt(pos);
+        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
+
+        QTest::qWait(400ms);
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QCoreApplication::processEvents();
+        QVERIFY2(mpEditor->treeWidget_variables->currentItem() != mpEditor->treeWidget_variables->topLevelItem(0), "a click well after the offer was taken was still swallowed");
+    }
+
     void test_theOfferCanBeTakenFromTheKeyboard()
     {
         mpEditor->slot_showScripts();
