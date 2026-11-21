@@ -112,6 +112,12 @@ describe("Tests keybind-related functions", function()
       killKey(id)
     end)
 
+    it("returns only the id for a string body that compiles", function()
+      local results = {tempKey(mudlet.key.F5, [[echo("hi")]])}
+      assert.are.equal(1, #results)
+      killKey(results[1])
+    end)
+
     it("creates a key from the two-argument (key code, body) form", function()
       local id = tempKey(mudlet.key.F6, [[echo("hi")]])
       assert.is_number(id)
