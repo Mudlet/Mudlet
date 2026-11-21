@@ -258,7 +258,7 @@ private:
         mpHost->getScriptUnit()->registerScript(pScript);
 
         auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
-        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n-- 😀😀\n-- की कीमत\n"));
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n-- 😀😀\n-- की कीमत\nx = obj:qaCall()\n"));
         mpHost->getScriptUnit()->registerScript(pLongScript);
 
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
@@ -586,6 +586,12 @@ private slots:
         search(qsl("^qaHay"));
         QCOMPARE(totalResultRows(), 0);
         search(qsl("tern$"));
+        QCOMPARE(totalResultRows(), 0);
+
+        // An end that is punctuation may sit against a word character
+        search(qsl(":qaCall"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 7:8")}));
+        search(qsl(":qaCal"));
         QCOMPARE(totalResultRows(), 0);
     }
 
