@@ -3145,7 +3145,8 @@ void TNullConsoleFrontend::commandLineSent(const QString& name)
     if (!text.isEmpty() && it->second.writer && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         TCommandHistory::add(it->second.writer->history, text);
     }
-    if (mpHost->mAutoClearCommandLineAfterSend && (it->second.sentToAction || !it->second.rewritten)) {
+    const bool lineChangedDuringSend = !it->second.sentToAction && it->second.rewritten;
+    if (mpHost->mAutoClearCommandLineAfterSend && !lineChangedDuringSend) {
         replaceCommandLineText(name, QString());
     }
 }
