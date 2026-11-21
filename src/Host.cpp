@@ -3362,6 +3362,7 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
     mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
+    mTriggerUnit.refreshColorPatterns();
     emit mpMainConsoleModel->mNotifier.colorsChanged();
 }
 
