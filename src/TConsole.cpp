@@ -1517,7 +1517,8 @@ bool TConsole::showLowerPane()
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+    // Ctrl+Enter only clears the main console's split, so elsewhere the hint misleads and uses up a showing
+    if (lowerAppears && mType == MainConsole && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
         const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
