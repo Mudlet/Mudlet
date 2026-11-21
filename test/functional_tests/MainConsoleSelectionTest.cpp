@@ -479,8 +479,11 @@ private slots:
         TTextEdit* pane = paneShowingProse();
         QVERIFY2(pane, "No upper pane available");
         TConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
-        console->scrollUp(30);
-        QTRY_VERIFY2_WITH_TIMEOUT(console->mLowerPane->isVisible(), "Scrolling back did not open the split", 2000);
+        // Short, and from the top, so a few moves' lines cannot come near enough to the end to jump there and close the split
+        mudlet::self()->resize(1200, 400);
+        console->scrollUp(1000);
+        QTRY_VERIFY2_WITH_TIMEOUT(console->mLowerPane->isVisible() && pane->imageTopLine() < 10, "Scrolling back to the top did not open the split", 2000);
+        QTest::qWait(100ms);
         const int topBefore = pane->imageTopLine();
 
         const QPoint startPos = pane->rect().center();
