@@ -580,15 +580,8 @@ void dlgPackageManager::resetPackageList()
     mCurrentView = NavigationView::Installed;
     mpNavigationGroup->button(static_cast<int>(NavigationView::Installed))->setChecked(true);
     syncViewBar();
-    packageList->clear();
-
     // The search box keeps its text through an install or removal, so the list keeps its filter
-    const QString searchText = lineEdit_searchBar->text();
-    for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
-        if (installedPackageMatches(packageName, searchText)) {
-            packageList->addItem(installedPackageItem(packageName));
-        }
-    }
+    slot_searchTextChanged(lineEdit_searchBar->text());
 
     populatePackagesWithUpdates();
     updateUpdatesBadge();

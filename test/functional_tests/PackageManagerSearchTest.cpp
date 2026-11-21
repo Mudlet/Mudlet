@@ -177,6 +177,18 @@ private slots:
         QCOMPARE(listed, QStringList({installed, mNamedPackage}));
     }
 
+    // An install from the repository relists while Explore is showing, and the relist shows Installed
+    void test_aRelistFromTheRepositoryListsTheMatchingInstalledPackages()
+    {
+        mpManager->pushButton_explore->click();
+        mpManager->lineEdit_searchBar->setText(qsl("a"));
+        emit mpHost->signal_packageListChanged();
+
+        QVERIFY(mpManager->pushButton_installed->isChecked());
+        QVERIFY(!listedNames().contains(qsl("alpha")));
+        QVERIFY(listedNames().contains(mNamedPackage));
+    }
+
     void test_theRepositoryIsListedAlphabeticallyWhateverTheCase()
     {
         mpManager->pushButton_explore->click();
