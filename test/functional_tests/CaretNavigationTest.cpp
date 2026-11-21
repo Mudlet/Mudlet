@@ -66,6 +66,13 @@
 
 using namespace std::chrono_literals;
 
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
+
 class CaretNavigationTest : public QObject
 {
     Q_OBJECT
@@ -527,7 +534,7 @@ private slots:
         QTest::addColumn<int>("modifiers");
         QTest::addColumn<bool>("inMiniConsole");
         QTest::newRow("tab") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << false;
-        QTest::newRow("ctrltab") << qsl("ctrltab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::ControlModifier) << false;
+        QTest::newRow("ctrltab") << qsl("ctrltab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(controlKey) << false;
         QTest::newRow("f6") << qsl("f6") << static_cast<int>(Qt::Key_F6) << static_cast<int>(Qt::NoModifier) << false;
         QTest::newRow("tab in a mini console") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << true;
     }
@@ -565,6 +572,30 @@ private slots:
         // The hand-off is to the profile's active command line, which a mini console's need not be
         const bool onACommandLine = inMiniConsole ? qobject_cast<TCommandLine*>(pFocused) != nullptr : pFocused == pCommandLine;
         QVERIFY2(onACommandLine, qPrintable(qsl("the keyboard went to %1 rather than the command line").arg(pFocused ? QString::fromLatin1(pFocused->metaObject()->className()) : qsl("nothing"))));
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutLeavesCaretMode()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        const auto savedShortcut = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedShortcut]() {
+            mpHost->mCaretShortcut = savedShortcut;
+        });
+        QVERIFY(runLua(qsl("setConfig('caretShortcut', 'ctrltab')")));
+        QVERIFY(mpHost->caretEnabled());
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pane(), &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(!mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode off");
+        drainDeferredFocusChange();
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(mpHost->mainConsoleView()->mpCommandLine));
+#endif
     }
 
     // Tab and Shift+Tab are how a screen-reader user finds the links in a page
