@@ -882,7 +882,6 @@ private slots:
                 pArea->gridMode = startInGridMode;
                 TMapPainter painter;
                 TMapPainter freshPainter;
-                TMapPainter blankPainter;
                 TMapPainter::PaintResult result;
                 paintedView(painter, playerView(), result);
                 pArea->gridMode = !startInGridMode;
@@ -891,6 +890,7 @@ private slots:
                 const QString name = qsl("room%1-%2").arg(QString::number(roomId), startInGridMode ? qsl("out-of-grid") : qsl("into-grid"));
                 QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
                 pRoom->mSymbol.clear();
+                TMapPainter blankPainter;
                 const QImage blank = paintedView(blankPainter, playerView(), result);
                 QVERIFY2(fresh != blank, qPrintable(qsl("no symbol was drawn, so the comparison proves nothing: ") + saved(fresh, name + qsl("-fresh"))));
             }
