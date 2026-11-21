@@ -2349,8 +2349,8 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         pProfileHost->waitForMapAutosave();
     }
     const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
-    // Only binary maps can be read here: anything else in the folder, such as
-    // a JSON export, is read as a map of nonsense and its player room lost
+    // Only binary maps can be read here: the first bytes of a JSON export or other
+    // text file read as a format version far beyond ours, so no player room is read
     const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
 
     if (entries.isEmpty()) {
