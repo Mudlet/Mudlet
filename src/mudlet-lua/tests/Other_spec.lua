@@ -378,6 +378,19 @@ describe("Tests Other.lua functions", function()
       sent = {}
       speedwalk("2in, nout, 10e", true)
       assert.are.same({"w", "w", "w", "w", "w", "w", "w", "w", "w", "w", "in", "s", "out", "out"}, sent)
+
+      sent = {}
+      speedwalk("eewwen")
+      assert.are.same({"e", "e", "w", "w", "e", "n"}, sent)
+    end)
+
+    it("walks each of the twelve directions back the opposite way", function()
+      local sent = {}
+      local send = stub(_G, "send", function(command) sent[#sent + 1] = command end)
+      finally(function() send:revert() end)
+
+      speedwalk("n, ne, e, se, s, sw, w, nw, u, d, in, out", true)
+      assert.are.same({"in", "out", "u", "d", "se", "e", "ne", "n", "nw", "w", "sw", "s"}, sent)
     end)
 
     it("dispatches only the first step synchronously when a delay is given", function()

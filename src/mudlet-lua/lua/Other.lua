@@ -730,11 +730,11 @@ function speedwalk(dirString, backwards, delay, show)
   for k,v in pairs(long_dir) do
     dirString = dirString:gsub(k,v)
   end
-  -- one direction at a time, longest first, so "nne" is n then ne rather than "nn" then e
+  -- match only real direction names, longest first, so "nne" is n then ne
   local steps = {}
   local position = 1
   while true do
-    local _, start, count = dirString:find("([0-9]*)[neswudio]", position)
+    local count, start = dirString:match("([0-9]*)()[neswudio]", position)
     if not start then
       break
     end
@@ -749,7 +749,7 @@ function speedwalk(dirString, backwards, delay, show)
     first, last, increment = #steps, 1, -1
   end
   for index = first, last, increment do
-    local direction, count = steps[index][1], steps[index][2]
+    local direction, count = unpack(steps[index])
     if backwards then
       direction = reversedir[direction]
     end
