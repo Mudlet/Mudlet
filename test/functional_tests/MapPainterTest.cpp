@@ -452,6 +452,67 @@ private slots:
         QVERIFY2(image.pixelColor(onImage(QPointF(1, 1)).toPoint()) == QColor(Qt::black), qPrintable(saved(image, qsl("custom-line"))));
     }
 
+    // The east room's custom line west stands in for the west room's bent exit east only where it gets back to the west room
+    void aCustomLineBackStandsInOnlyWhereItReachesTheRoom()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        TMapPainter::ExitToPaint exit;
+        exit.destination = pEastRoom;
+        exit.destinationId = scmEastRoom;
+        exit.direction = DIR_EAST;
+        QVERIFY(!TMapPainter::returnExitHasCustomLine(*pWestRoom, exit));
+
+        pEastRoom->customLines[qsl("w")] = {QPointF(1, 1), QPointF(0, 0)};
+        QVERIFY(TMapPainter::returnExitHasCustomLine(*pWestRoom, exit));
+
+        pEastRoom->customLines[qsl("w")] = {QPointF(1, 1)};
+        QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, exit), "a custom line stopping a room short of the west room stood in for its exit");
+    }
+
+    // Two rooms just left of the view, whose east exits lead to each other: their bent line runs through their east
+    // stubs half a cell to the right, inside the view, though both rooms' centres are outside it
+    void aBentLineFromRoomsJustOutsideTheViewIsDrawn()
+    {
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 0, -2, 0));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, scmWestRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        // Map x 0 lands a quarter cell left of the view, so the stubs end a quarter cell inside it
+        const int originX = -10;
+        TMapPainter::View edgeView = view();
+        edgeView.mRX = originX;
+        edgeView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(edgeView);
+        QImage image = blankImage();
+        {
+            QPainter imagePainter(&image);
+            QPen pen(Qt::white);
+            const float exitWidth = 3.0f;
+            pen.setWidthF(exitWidth);
+            imagePainter.setPen(pen);
+            const QRect roomBounds = TMapPainter::viewportRoomBounds(originX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+            const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+            QList<TMapPainter::ExitToPaint> exitList;
+            QMap<int, QPointF> areaExitsMap;
+            painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+        }
+
+        // Along the stretch joining the two east stubs; dotted, as neither exit's reverse leads back
+        const int stubX = originX + qRound(scmRoomPixels / 2);
+        int drawn = 0;
+        for (int y = scmOriginY + 10; y < scmOriginY + 2 * qRound(scmRoomPixels) - 10; ++y) {
+            for (int x = stubX - 3; x <= stubX + 3; ++x) {
+                drawn += image.pixelColor(x, y) != QColor(Qt::black);
+            }
+        }
+        QVERIFY2(drawn > 20, qPrintable(qsl("%1 pixels drawn. %2").arg(drawn).arg(saved(image, qsl("edge-bent")))));
+    }
+
     // An image label is scaled to fill the rectangle it is given
     void anImageLabelIsScaledIntoItsRectangle()
     {
@@ -852,6 +913,34 @@ private slots:
         QVERIFY2(failure.isEmpty(), qPrintable(failure + qsl("; ") + saved(image, qsl("mapper-widget"))));
         QCOMPARE(mapperMap.getAreaId(), mAreaId);
         QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
+    }
+
+    // centerview() pans the main mapper to a room as a drag would: the player stays where they are, and the view only
+    // goes back to them once they move
+    void theMapperPansToARoomWithoutMovingThePlayer()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.setPlayerRoomStyle(map()->mPlayerRoomStyle);
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        const auto centre = [&mapperMap]() {
+            return mapperMap.grab().toImage().convertToFormat(QImage::Format_ARGB32).pixelColor(westCentreInView());
+        };
+        QCOMPARE(centre(), markerColour());
+
+        QVERIFY(mapperMap.centerview(scmEastRoom).first);
+        // A second frame too: the pan has to outlast the one it was made for
+        for (int frame = 0; frame < 2; ++frame) {
+            QCOMPARE(centre(), QColor(Qt::blue));
+        }
+        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), scmWestRoom);
+
+        map()->mRoomIdHash[map()->mProfileName] = scmEastRoom;
+        QCOMPARE(centre(), markerColour());
     }
 
     // The info box's Lua reads the area from the mapper, as getMapZoom() and setMapZoom() do, so the frame has moved it

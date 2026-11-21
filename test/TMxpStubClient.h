@@ -246,14 +246,14 @@ public:
     bool createMxpFrameCalled = false;
     QString lastCreatedFrameName;
     QMap<QString, QString> lastFrameAttributes;
-    
+
     bool setMxpDestinationCalled = false;
     QString lastDestinationName;
     bool lastDestinationEol = false;
     bool lastDestinationEof = false;
-    
+
     bool clearMxpDestinationCalled = false;
-    
+
     bool createMxpFrame(const QString& name, const QMap<QString, QString>& attributes) override
     {
         createMxpFrameCalled = true;
@@ -261,7 +261,7 @@ public:
         lastFrameAttributes = attributes;
         return false;
     }
-    
+
     bool setMxpDestination(const QString& frameName, bool eol, bool eof) override
     {
         setMxpDestinationCalled = true;
@@ -270,12 +270,12 @@ public:
         lastDestinationEof = eof;
         return false;
     }
-    
+
     void clearMxpDestination() override
     {
         clearMxpDestinationCalled = true;
     }
-    
+
     void resetMxpTracking()
     {
         createMxpFrameCalled = false;
