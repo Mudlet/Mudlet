@@ -636,9 +636,10 @@ void TMapPainter::drawRoom(QPainter& painter,
                 * similarly for the y-offset
                 */
 
-            painter.drawPixmap(QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->deviceIndependentSize().width()) / 2.0)),
-                                      qRound(roomRectangle.top() + ((roomRectangle.height() - pix->deviceIndependentSize().height()) / 2.0))),
-                               *pix);
+            const QSizeF symbolSize = pix->deviceIndependentSize();
+            painter.drawPixmap(
+                    QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - symbolSize.width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - symbolSize.height()) / 2.0))),
+                    *pix);
         }
 
         painter.restore();
@@ -1285,9 +1286,8 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
             if (const QPixmap* pix = mSymbolPixmapCache.object(pixmapKey); pix && !pix->isNull()) {
                 painter.save();
                 painter.setBackgroundMode(Qt::TransparentMode);
-                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - pix->deviceIndependentSize().width()) / 2.0),
-                                          qRound(roomRect.top() + (roomRect.height() - pix->deviceIndependentSize().height()) / 2.0)),
-                                   *pix);
+                const QSizeF symbolSize = pix->deviceIndependentSize();
+                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - symbolSize.width()) / 2.0), qRound(roomRect.top() + (roomRect.height() - symbolSize.height()) / 2.0)), *pix);
                 painter.restore();
             }
         }
