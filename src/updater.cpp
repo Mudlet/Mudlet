@@ -420,10 +420,9 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    // Only the dialog deletes it, so it must not exist without one
-    mpInstallOrRestart = new QPushButton();
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -467,10 +466,9 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    // Only the dialog deletes it, so it must not exist without one
-    mpInstallOrRestart = new QPushButton();
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -726,6 +724,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
+        // Gone with its dialog once the application is quitting
         if (mpInstallOrRestart) {
             if (mUpdateInstalled) {
                 //: Label for the button shown after the update has been downloaded and installed, prompting user to restart

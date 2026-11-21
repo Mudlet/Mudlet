@@ -45,6 +45,7 @@
 #include <QCheckBox>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QScopeGuard>
 
 #include "MudletApp.h"
@@ -323,6 +324,22 @@ private slots:
 
         delete preferences;
         QVERIFY2(HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
+    }
+
+    // Mudlet set up without checkUpdatesOnStart(), as in every test, holds no button without an owner: nothing would
+    // ever delete it
+    void test_noUnownedUpdateButtonBeforeTheUpdaterIsSetUp()
+    {
+#if defined(INCLUDE_UPDATER)
+        QVERIFY2(mudlet::self()->pUpdater, "An updater-enabled build has no updater");
+        for (QWidget* pWidget : QApplication::topLevelWidgets()) {
+            if (const auto* pButton = qobject_cast<QPushButton*>(pWidget)) {
+                QFAIL(qPrintable(qsl("a button with no owner, \"%1\", is left over").arg(pButton->text())));
+            }
+        }
+#else
+        QSKIP("This build has no updater");
+#endif
     }
 
     // ...and through the editor, where the item name field is connected to
