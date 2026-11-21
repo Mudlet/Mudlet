@@ -88,6 +88,8 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("FlowLayout.h"),
                           QStringLiteral("PairGridLayout.cpp"),
                           QStringLiteral("PairGridLayout.h"),
+                          QStringLiteral("AlphaColourWell.cpp"),
+                          QStringLiteral("AlphaColourWell.h"),
                           QStringLiteral("ColourValue.cpp"),
                           QStringLiteral("ColourValue.h"),
                           QStringLiteral("ConsoleColourPreview.cpp"),

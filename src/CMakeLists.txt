@@ -225,6 +225,7 @@ set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     AboutLinkButton.cpp
     AboutSupporterBanner.cpp
+    AlphaColourWell.cpp
     ChipRow.cpp
     ColourValue.cpp
     ConsoleColourPreview.cpp
@@ -575,6 +576,7 @@ set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     AboutLinkButton.h
     AboutSupporterBanner.h
+    AlphaColourWell.h
     ChipRow.h
     ColourValue.h
     ConsoleColourPreview.h
