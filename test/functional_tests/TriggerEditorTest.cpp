@@ -1038,12 +1038,7 @@ private slots:
     pEditor->slot_showVariables();
     QTreeWidgetItem *pItem = nullptr;
     QTRY_VERIFY([&]() {
-      QTreeWidgetItem *pBase = pEditor->treeWidget_variables->topLevelItem(0);
-      for (int i = 0; pBase && i < pBase->childCount(); ++i) {
-        if (pBase->child(i)->text(0) == qsl("qaResetVar")) {
-          pItem = pBase->child(i);
-        }
-      }
+      pItem = pEditor->treeWidget_variables->findItems(qsl("qaResetVar"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive).value(0);
       return pItem != nullptr;
     }());
     pEditor->treeWidget_variables->setCurrentItem(pItem);
@@ -1056,7 +1051,6 @@ private slots:
     QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetVar == \"new\")")));
   }
 
-  // Nobody sees the compile error once the reset clears the form, so it must not leave the trigger switched off
   void test_editorResetWithHalfTypedTriggerLeavesItActive() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);

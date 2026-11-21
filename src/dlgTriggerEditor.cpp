@@ -14160,7 +14160,7 @@ void dlgTriggerEditor::resetTrees()
     clearTypeTrees();
     fillout_form();
     slot_showTriggers();
-    // The rebuild clears the code heading the save reported into
+    // The rebuild clears the heading the save put its error in
     if (!saveError.isEmpty()) {
         //: Editor banner after the editor reloaded for a package or module change and kept an unsaved edit that has an error. %1 is the error.
         showError(tr("<p>Your unsaved edit was kept when the editor reloaded, but it has an error: %1</p>").arg(saveError));
