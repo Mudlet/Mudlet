@@ -237,7 +237,8 @@ public:
     qreal getZoom() const { return xyzoom; }
     int getZLevel() const { return mMapCenterZ; }
 
-    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
+    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events. The main view is panned
+    // there, leaving the player's room alone, and follows the player again once they move.
     std::pair<bool, QString> centerview(int roomId);
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
@@ -255,6 +256,7 @@ public:
     bool mRoomBeingMoved = false;
     QPointF mRoomMoveLastMapPoint;
     bool mHasRoomMoveLastMapPoint = false;
+    QSet<int> mAreasMovedByDrag;
     bool mRoomMoveViaContextMenu = false;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is
@@ -348,6 +350,7 @@ public:
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
 
 public slots:
     void slot_roomSelectionChanged();
@@ -467,7 +470,7 @@ private:
     void applyPaintedView(const TMapPainter::View& before, const TMapPainter::View& after);
     void applyPaintResult(const TMapPainter::View& before, const TMapPainter::PaintResult&);
     void addClickedRoomsToSelection(const QList<int>& hitRooms, Qt::KeyboardModifiers modifiers);
-    void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
+    void updateMapLabel(QRectF labelRectangle, QVector3D mapPosition, QSizeF mapSize, int labelId, int areaId, TArea* pArea);
 
     bool mDialogLock = false;
     struct ClickPosition

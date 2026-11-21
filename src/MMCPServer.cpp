@@ -41,6 +41,27 @@ MMCPServer::MMCPServer(Host* pHost)
 }
 
 /**
+ * Stop listening and drop every peer. For profile close, while the Host is
+ * still whole - not the same as stopServer(), which only stops answering new
+ * calls and deliberately leaves existing peers connected. The Host can outlive
+ * closeChildren() by some time with the event loop still running, so the peers
+ * cannot be left for ~MMCPClient() to silence when the Host is finally deleted.
+ */
+void MMCPServer::disconnectAll()
+{
+    close();
+
+    // Not mPeersList: a client only lands there once it has handshaken, so
+    // the children are the ones still connecting or pending too.
+    for (auto* pClient : findChildren<MMCPClient*>(Qt::FindDirectChildrenOnly)) {
+        pClient->abortConnection();
+        pClient->deleteLater();
+    }
+
+    mPeersList.clear();
+}
+
+/**
  * Handle an incoming connection, create an MMCPClient and set its state
  * to ConnectingIn
  */
@@ -342,9 +363,11 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
 
     using namespace AnsiColors;
 
-    QString outMsg = qsl("%1%2\n%3%4 chats to the group, '%5'\n%6")
+    // The group field is a fixed 15 characters with no separator after it, so it
+    // has to be truncated as well as padded or the receiver's split desynchronises
+    QString outMsg = qsl("%1%2%3%4 chats to the group, '%5'\n%6")
                             .arg(QChar(static_cast<char>(TextGroup)))
-                            .arg(group, -15)
+                            .arg(group.left(csMMCPGroupFieldWidth), -csMMCPGroupFieldWidth)
                             .arg(getChatName(), FBLDRED, message)
                             .arg(QChar(static_cast<char>(End)));
 
@@ -831,7 +854,10 @@ QPair<bool, QString> MMCPServer::allowSnoop(const QVariant& target)
     if (pClient) {
         if (pClient->canSnoop()) {
             pClient->setCanSnoop(false);
-            pClient->setSnooping(false);
+            if (pClient->isSnooping()) {
+                pClient->setSnooping(false);
+                decrementSnoopCount();
+            }
             pClient->sendMessage(qsl("<CHAT> You are no longer allowed to snoop %1.").arg(getChatName()));
 
             const QString infoMsg = tr("[ CHAT ]  - %1 is no longer allowed to snoop you.").arg(pClient->chatName());
@@ -859,12 +885,8 @@ QPair<bool, QString> MMCPServer::snoop(const QVariant& target)
     MMCPClient* pClient = clientByNameOrId(target);
 
     if (pClient) {
-        if (pClient->isSnooped()) {
-            pClient->setSnooped(false);
-        } else {
-            pClient->snoop();
-        }
-
+        // MMCPClient::snoop() sends the toggle and updates our record of it
+        pClient->snoop();
         return {true, QString()};
     }
 
@@ -889,6 +911,11 @@ QPair<bool, QString> MMCPServer::disconnect(const QVariant& target)
 
 quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 {
+    // Ids are positions in this list, so a QPointer left null by a client that
+    // was deleted without going through slot_clientDisconnected() would push
+    // every id after it up by one
+    mPeersList.removeAll(QPointer<MMCPClient>());
+
     if (!mPeersList.contains(pClient)) {
         mPeersList.append(pClient);
     }
@@ -909,8 +936,12 @@ quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 
 void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
 {
+    // A client that never completed a handshake was never added to the list,
+    // so its going away is not a peer list change
+    const bool wasAPeer = mPeersList.removeOne(pClient);
 
-    mPeersList.removeOne(pClient);
+    mPeersList.removeAll(QPointer<MMCPClient>());
+
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
@@ -920,13 +951,15 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
         cl->setId(mPeersList.indexOf(cl) + 1);
     }
 
-    // Raise event after client has been removed from mPeersList
-    // in case they want to use getClientList in response to the event
-    TEvent event {};
-    event.mArgumentList << csMMCPPeerUpdateEvent;
-    event.mArgumentList << pClient->chatName();
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    mpHost->raiseEvent(event);
+    if (wasAPeer) {
+        // Raise event after client has been removed from mPeersList
+        // in case they want to use getClientList in response to the event
+        TEvent event {};
+        event.mArgumentList << csMMCPPeerUpdateEvent;
+        event.mArgumentList << pClient->chatName();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+        mpHost->raiseEvent(event);
+    }
 
     pClient->deleteLater();
 }
@@ -1076,7 +1109,8 @@ void MMCPServer::sendPublicConnections(MMCPClient* pClient)
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
 
-        if (cl && cl != pClient && !cl->isPrivate()) {
+        // No point handing out an endpoint the recipient cannot dial
+        if (cl && cl != pClient && !cl->isPrivate() && cl->hasCallbackEndpoint()) {
             peerList << qsl("%1,%2").arg(cl->host(), QString::number(cl->port()));
         }
     }
@@ -1106,7 +1140,7 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
 
-        if (cl && cl != pClient && !cl->isPrivate()) {
+        if (cl && cl != pClient && !cl->isPrivate() && cl->hasCallbackEndpoint()) {
             peerList << qsl("%1~%2~%3").arg(cl->host(), QString::number(cl->port()), cl->chatName());
         }
     }

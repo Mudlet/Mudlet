@@ -55,7 +55,7 @@ public:
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
-    void showFullChangelog() const;
+    void showFullChangelog();
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();
@@ -73,11 +73,15 @@ private:
     // the rest of the quit cascade (#9967).
     QPointer<dblsqd::UpdateDialog> updateDialog;
 #if !defined(Q_OS_MACOS)
-    QPushButton* mpInstallOrRestart;
+    // Made with updateDialog and owned by it, so none exists where no update dialog was ever set up
+    QPointer<QPushButton> mpInstallOrRestart;
 #endif
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
     bool mRestartInProgress{false};
+    // Held while the Changelog menu entry waits for the feed; only one of the pair ever fires
+    QMetaObject::Connection mChangelogFeedReady;
+    QMetaObject::Connection mChangelogFeedError;
     QSettings* mSettings;
     std::unique_ptr<QTimer> mPeriodicCheck;
 
