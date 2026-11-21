@@ -35,9 +35,12 @@ struct PresetPropertyEntry {
 // Registry entry for shorthand mappings
 struct ShorthandEntry {
     QString fullName;
-    
+
     ShorthandEntry() {}
-    ShorthandEntry(const QString& full) : fullName(full) {}
+    explicit ShorthandEntry(const QString& full)
+    : fullName(full)
+    {
+    }
 };
 
 // Pure plugin framework for OSC 8 hyperlink compact syntax
@@ -54,10 +57,10 @@ public:
 
     // Register a shorthand expansion (e.g., "s" → "style")
     void registerShorthand(const QString& shorthand, const QString& fullName);
-    
+
     // Unregister a shorthand expansion
     void unregisterShorthand(const QString& shorthand);
-    
+
     // Clear all shorthands
     void clearShorthands();
 
@@ -70,10 +73,10 @@ public:
 
     // Register a property as preset-aware (allows it to be included in presets)
     void registerPresetProperty(const QString& propertyName);
-    
+
     // Unregister a preset property
     void unregisterPresetProperty(const QString& propertyName);
-    
+
     // Clear all preset properties
     void clearPresetProperties();
 
@@ -97,11 +100,11 @@ signals:
     void shorthandRegistered(const QString& shorthand, const QString& fullName);
     void shorthandUnregistered(const QString& shorthand);
     void shorthandsCleared();
-    
+
     void presetPropertyRegistered(const QString& propertyName);
     void presetPropertyUnregistered(const QString& propertyName);
     void presetPropertiesCleared();
-    
+
     void presetRegistered(const QString& name);
     void presetsCleared();
 
