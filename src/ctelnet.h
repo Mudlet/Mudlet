@@ -408,6 +408,9 @@ private:
     friend class TelnetConnectFailureTest;
     friend class TelnetLatencyMeasurementTest;
 
+    // Holds the reads of a game's last words off until the game has closed
+    friend class TelnetLargeBurstTest;
+
     // Reads a proxy's reply into the dialling socket's proxy engine without running the event loop
     friend class HeadlessSessionTest;
 
