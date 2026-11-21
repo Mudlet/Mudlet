@@ -92,14 +92,14 @@ private:
     }
 
     // A scroll box 200 pixels high holding a taller mini console, which has the given number of lines
-    TConsole* miniConsoleInAScrollBox(TMainConsole* console, const int lines, TScrollBox*& box)
+    TConsole* miniConsoleInAScrollBox(TMainConsole* console, const int lines, TScrollBox** box)
     {
         if (!console->createScrollBox(QString(), qsl("box"), 0, 0, 300, 200)) {
             return nullptr;
         }
         TConsole* mini = console->createMiniConsole(qsl("box"), qsl("mini"), 0, 0, 280, 1000);
-        box = console->findChild<TScrollBox*>(qsl("box"));
-        if (!mini || !box) {
+        *box = console->findChild<TScrollBox*>(qsl("box"));
+        if (!mini || !*box) {
             return nullptr;
         }
         for (int line = 1; line <= lines; ++line) {
@@ -246,7 +246,7 @@ private slots:
         TMainConsole* console = startProfile();
         QVERIFY2(console, "the profile did not start");
         TScrollBox* box = nullptr;
-        TConsole* mini = miniConsoleInAScrollBox(console, lines, box);
+        TConsole* mini = miniConsoleInAScrollBox(console, lines, &box);
         QVERIFY(mini);
         QScrollBar* bar = box->verticalScrollBar();
         mini->setScrolling(scrollingEnabled);
@@ -267,7 +267,7 @@ private slots:
         TMainConsole* console = startProfile();
         QVERIFY2(console, "the profile did not start");
         TScrollBox* box = nullptr;
-        TConsole* mini = miniConsoleInAScrollBox(console, 500, box);
+        TConsole* mini = miniConsoleInAScrollBox(console, 500, &box);
         QVERIFY(mini);
         QScrollBar* bar = box->verticalScrollBar();
         QTRY_VERIFY2(bar->maximum() > 0, "the scroll box has nothing to scroll");
