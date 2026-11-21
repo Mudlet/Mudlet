@@ -2784,8 +2784,8 @@ describe("Tests mapper functions against a shared fixture", function()
         end))
         assert.is_true(enableMapInfo("MapperSpecNameFontPaints"))
         assert.is_true(centerview(rA1))
-        -- Checked in each test, as a failed hook skips its tests unreported and
-        -- mudlet-headless never paints the map
+        -- Asserted in each test, not here: mudlet-headless never paints the map, and
+        -- CI can list a failing test as known but not a failing hook
         painted = waitForPaint(5000)
         -- let the paints this set off settle, so only the change under test is counted
         pumpEvents(100)
