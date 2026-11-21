@@ -549,6 +549,20 @@ private:
         return mpHost->mpMap->mapper();
     }
 
+    // The overlay's buttons carry no object names, so the text is the only
+    // handle on the right one - through translate() rather than a literal,
+    // so a run with a translator loaded still finds it.
+    static QPushButton* emptyStateDownloadButton(const QFrame* overlay)
+    {
+        const auto buttons = overlay->findChildren<QPushButton*>();
+        for (QPushButton* button : buttons) {
+            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
+                return button;
+            }
+        }
+        return nullptr;
+    }
+
     // A reply reports its progress no more often than an interval of Qt's own,
     // merging everything that lands inside one into a single report - so what a
     // server writes in parts can be answered in fewer reports than it had
@@ -1424,17 +1438,7 @@ private slots:
 
         auto* overlay = pMapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
         QVERIFY2(overlay, "the mapper has no empty-state overlay");
-        // The overlay's buttons carry no object names, so the text is the only
-        // handle on the right one - through translate() rather than a literal,
-        // so a run with a translator loaded still finds it.
-        QPushButton* downloadButton = nullptr;
-        const auto buttons = overlay->findChildren<QPushButton*>();
-        for (QPushButton* button : buttons) {
-            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
-                downloadButton = button;
-                break;
-            }
-        }
+        QPushButton* downloadButton = emptyStateDownloadButton(overlay);
         QVERIFY2(downloadButton, "the mapper's empty state has no \"Download from game\" button");
         QVERIFY2(downloadButton->isHidden(), "the download button was offered before the game had advertised a map");
 
@@ -1499,14 +1503,7 @@ private slots:
         auto* progress = pMapper->findChild<QFrame*>(qsl("mapProgressOverlay"));
         QVERIFY(emptyState && progress);
         QVERIFY2(emptyState->isVisible(), "an empty map with an MMP location did not offer its empty state");
-        QPushButton* downloadButton = nullptr;
-        const auto buttons = emptyState->findChildren<QPushButton*>();
-        for (QPushButton* button : buttons) {
-            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
-                downloadButton = button;
-                break;
-            }
-        }
+        QPushButton* downloadButton = emptyStateDownloadButton(emptyState);
         QVERIFY(downloadButton);
 
         downloadButton->click();
