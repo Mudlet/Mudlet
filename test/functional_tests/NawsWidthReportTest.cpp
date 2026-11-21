@@ -34,8 +34,8 @@
 #include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
-#include "TTabBar.h"
 #include "TSplitter.h"
+#include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TUiTour.h"
 #include "TelnetServerStub.h"
@@ -118,6 +118,13 @@ private:
     void runLua(Host* pHost, const QString& code) const { QVERIFY2(pHost->getLuaInterpreter()->compileAndExecuteScript(code), qPrintable(code)); }
 
     void fillScrollback() const { runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end")); }
+
+    void scrollBack()
+    {
+        fillScrollback();
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+    }
 
     // 0 for a global that is not a number
     static int luaGlobalNumber(Host* pHost, const char* name)
@@ -393,9 +400,7 @@ private slots:
     // still resize while reading back.
     void resizingWhileScrolledBackReportsTheNewSize()
     {
-        fillScrollback();
-        runLua(mpHost, qsl("scrollUp(50)"));
-        settle();
+        scrollBack();
         QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
 
         mpServer->clearNawsUpdates();
@@ -417,9 +422,7 @@ private slots:
     // depends on the platform's fonts and toolbars.
     void aSmallShrinkWhileScrolledBackReportsTheUnsplitRows()
     {
-        fillScrollback();
-        runLua(mpHost, qsl("scrollUp(50)"));
-        settle();
+        scrollBack();
         TTextEdit* upper = mpHost->mainConsoleView()->mUpperPane;
         TTextEdit* lower = mpHost->mainConsoleView()->mLowerPane;
         QVERIFY2(!lower->isHidden(), "scrolling back did not split the window");
@@ -443,11 +446,9 @@ private slots:
 
     // Dragging the split to the top leaves the upper pane no width to measure,
     // and the game still has the whole window's
-    void draggingTheSplitToTheTopLeavesTheReportedSizeAlone()
+    void draggingTheSplitToTheTopKeepsTheReportedSizeRight()
     {
-        fillScrollback();
-        runLua(mpHost, qsl("scrollUp(50)"));
-        settle();
+        scrollBack();
         auto* console = mpHost->mainConsoleView();
         QVERIFY2(!console->mLowerPane->isHidden(), "scrolling back did not split the window");
         // a dragged split stays where the player left it
@@ -461,6 +462,17 @@ private slots:
 
         QVERIFY2(console->mUpperPane->height() == 0, "the split would not go all the way to the top, so this case tests nothing");
         QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
+
+        // with the upper pane out of sight, only the lower one can measure the width
+        mudlet::self()->resize(700, 500);
+        settle();
+        const auto whileDragged = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(measurableWidth(mpHost), "the narrowed window gives a width that cannot show a stale one");
+        QVERIFY2(!whileDragged.isEmpty(), "resizing the window told the game nothing");
+        QCOMPARE(whileDragged.constLast(), QSize(reportableWidth(mpHost), mpHost->mScreenHeight));
     }
 
     // An overlay along the bottom that covers the whole of the lower pane
@@ -636,9 +648,7 @@ private slots:
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
         runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
-        fillScrollback();
-        runLua(mpHost, qsl("scrollUp(50)"));
-        settle();
+        scrollBack();
         showTab(mSecondHostname);
         settle();
         QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
