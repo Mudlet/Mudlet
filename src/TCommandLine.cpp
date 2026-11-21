@@ -240,11 +240,12 @@ void TCommandLine::processInputMethod(QEvent* event)
     adjustHeight();
 
     // The preedit is not in toPlainText(), so only an event that changed the committed text counts as an edit
-    if (toPlainText() == before) {
+    const QString after = toPlainText();
+    if (after == before) {
         return;
     }
     mHistoryBuffer = 0;
-    if (mCompletion.lineEdited(toPlainText())) {
+    if (mCompletion.lineEdited(after)) {
         mCompletion.restartHistoryWalk();
     }
     spellCheck();
