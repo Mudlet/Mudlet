@@ -64,6 +64,10 @@ local function inLibrary(source)
   return libraryDirectory ~= nil and source:sub(2, #libraryDirectory + 1) == libraryDirectory
 end
 
+local function hasLine(frame)
+  return frame.what ~= "tail" and frame.what ~= "C"
+end
+
 -- undocumented, internal function
 local function printX(options)
   local errorc = errc and errc or errorc
@@ -82,8 +86,8 @@ local function printX(options)
   local callerLevel = 3
   local nearestLibraryLine
   local dinfo = debug.getinfo(callerLevel, "Sl")
-  while dinfo and (dinfo.what == "tail" or dinfo.what == "C" or inLibrary(dinfo.source)) do
-    if not nearestLibraryLine and dinfo.what ~= "tail" and dinfo.what ~= "C" then
+  while dinfo and (not hasLine(dinfo) or inLibrary(dinfo.source)) do
+    if not nearestLibraryLine and hasLine(dinfo) then
       nearestLibraryLine = dinfo
     end
     callerLevel = callerLevel + 1
