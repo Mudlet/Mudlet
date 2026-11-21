@@ -202,6 +202,15 @@ they have been removed.</numerusform>
             <numerusform>The %n IP addresses of %1 have been found. They are:</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <location filename="../../src/ctelnet.cpp" line="1326"/>
+        <source>%n day(s), %1</source>
+        <extracomment>Connection time of a day or more. %n is the number of whole days, %1 the rest of the time, in the &quot;hh:mm:ss.zzz&quot; connection time format</extracomment>
+        <translation>
+            <numerusform>%n day, %1</numerusform>
+            <numerusform>%n days, %1</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>dlgPackageExporter</name>
