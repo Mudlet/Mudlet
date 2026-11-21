@@ -17,7 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAccessible>
+#include <QAccessibleAnnouncementEvent>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -26,6 +29,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAccessibleTextEdit.h"
 #include "TBuffer.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -60,6 +64,38 @@ private:
     const QString mMiniConsole = qsl("rewrapTest");
     // U+6F22 U+5B57 - East Asian Wide, so two columns are needed per glyph
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
+
+    class AnnouncementRecorder
+    {
+    public:
+        AnnouncementRecorder()
+        : mWasActive(QAccessible::isActive())
+        , mpPrevious(QAccessible::installUpdateHandler(record))
+        {
+            QAccessible::setActive(true);
+            heard().clear();
+        }
+        ~AnnouncementRecorder()
+        {
+            QAccessible::installUpdateHandler(mpPrevious);
+            QAccessible::setActive(mWasActive);
+        }
+        static QStringList& heard()
+        {
+            static QStringList messages;
+            return messages;
+        }
+
+    private:
+        static void record(QAccessibleEvent* event)
+        {
+            if (event->type() == QAccessible::Announcement && event->object() == mudlet::self()) {
+                heard().append(static_cast<QAccessibleAnnouncementEvent*>(event)->message());
+            }
+        }
+        const bool mWasActive;
+        const QAccessible::UpdateHandler mpPrevious;
+    };
 
 private slots:
     void initTestCase()
@@ -132,6 +168,52 @@ private slots:
         QVERIFY(!console->buffer.lineBuffer.constLast().isEmpty());
         QCOMPARE(console->buffer.wrapLine(0, 200, 0, 0), 3);
         QCOMPARE(joinedText(console), qsl("first linesecond linethird linefourth line"));
+    }
+
+    void test_silencingFiltersAnnouncementsButPreservesAccessibleText()
+    {
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+        QCOMPARE(mudlet::self()->getActiveHost(), host);
+        const bool wasAnnouncing = host->mAnnounceIncomingText;
+        auto restore = qScopeGuard([host, wasAnnouncing]() {
+            host->mAnnounceIncomingText = wasAnnouncing;
+        });
+        host->mAnnounceIncomingText = false;
+        console->buffer.clear();
+        console->showNewLines();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap('main', 200)\n"
+                                                                       "tempExactMatchTrigger('Status: health is full; mana is low', function() silenceText('health is full; ') end)\n"
+                                                                       "tempExactMatchTrigger('Hidden line', function() silenceLine() end)")));
+
+        AnnouncementRecorder recorder;
+#if QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+        if (!QAccessible::isActive()) {
+            QSKIP("before Qt 6.10, setActive(true) cannot activate accessibility without a screen reader");
+        }
+#endif
+        QVERIFY(QAccessible::isActive());
+        host->mAnnounceIncomingText = true;
+        auto& heard = AnnouncementRecorder::heard();
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('Control line\\n')")));
+        QCOMPARE(heard, QStringList{qsl("Control line")});
+        heard.clear();
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('Status: health is full; mana is low\\n')")));
+        QCOMPARE(heard, QStringList{qsl("Status: mana is low")});
+        heard.clear();
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('Hidden line\\n')")));
+        QVERIFY(heard.isEmpty());
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('Next audible line\\n')")));
+        QCOMPARE(heard, QStringList{qsl("Next audible line")});
+
+        TAccessibleTextEdit accessible(console->mUpperPane);
+        QCOMPARE(accessible.text(0, accessible.characterCount()), qsl("Control line\nStatus: health is full; mana is low\nHidden line\nNext audible line\n"));
     }
 
     void test_silenceLineUsesTheTriggerContext_data()
