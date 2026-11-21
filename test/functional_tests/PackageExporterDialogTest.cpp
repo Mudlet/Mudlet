@@ -830,12 +830,12 @@ private slots:
         QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
     }
 
+    // Neither view is a label's buddy, so its accessibleName is all a screen reader has to announce
     void test_theExportTreeAndFileListAreNamedForAScreenReader()
     {
         openExporter();
         for (QWidget* pWidget : std::initializer_list<QWidget*>{tree(), addedFiles()}) {
             QVERIFY(pWidget);
-            // Neither view is a label's buddy, so its accessibleName is all a screen reader has to announce
             QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pWidget->objectName())));
         }
     }
