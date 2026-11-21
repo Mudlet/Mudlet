@@ -524,6 +524,29 @@ describe("Tests that the other bad-argument refusals stay on one line", function
   end)
 end)
 
+-- setRoomEnv() and roomExists() have no range check of their own, so these
+-- exercise getVerifiedInt()'s; getRoomEnv() hands back the int setRoomEnv() stored
+describe("Tests the range of numbers an integer argument takes", function()
+
+  -- A fraction is truncated, so these still land on an int
+  for _, case in ipairs({{2147483647, 2147483647}, {-2147483648, -2147483648},
+      {2147483647.5, 2147483647}, {-2147483648.5, -2147483648}}) do
+    it("takes " .. case[1] .. " as " .. case[2], function()
+      local id = createRoomID()
+      assert.is_true(addRoom(id))
+      finally(function() deleteRoom(id) end)
+      assert.is_true(setRoomEnv(id, case[1]))
+      assert.are.equal(case[2], getRoomEnv(id))
+    end)
+  end
+
+  for _, case in ipairs({{"2147483648", 2147483648}, {"-2147483649", -2147483649}, {"1e10", 1e10}, {"NaN", 0 / 0}}) do
+    it("refuses " .. case[1] .. " rather than wrapping it into range", function()
+      assertArgError(function() return roomExists(case[2]) end, "roomExists: integer over/under-flow in argument #1")
+    end)
+  end
+end)
+
 describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
 
   local function registryEntryCount()

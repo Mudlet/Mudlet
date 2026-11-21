@@ -30,15 +30,18 @@
 
 std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
 {
-    if (!mpHost || id <= 0) {
+    return windowLink(qsl("main"), id);
+}
+
+std::optional<THeadlessSession::Link> THeadlessSession::windowLink(const QString& window, const int id) const
+{
+    const TConsoleModel* pModel = windowTextModel(window);
+    if (!pModel || !pModel->buffer.linkHeld(id)) {
         return std::nullopt;
     }
-    const TConsoleModel& model = mpHost->mainConsoleModel();
+    const TConsoleModel& model = *pModel;
     const TBuffer& buffer = model.buffer;
     const TLinkStore& store = buffer.mLinkStore;
-    if (!buffer.linkHeld(id)) {
-        return std::nullopt;
-    }
     const Mudlet::HyperlinkStyling styling = buffer.getEffectiveHyperlinkStyling(id);
     Link link;
     link.tooltip = store.tooltip(id);
@@ -53,7 +56,7 @@ std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
     link.concealed = model.mHyperlinkVisibilityManager.isLinkConcealed(id);
     link.visited = buffer.isLinkVisited(id);
     link.selected = buffer.isLinkSelected(id);
-    // As TBuffer::updateLinkCharacters() paints the link's characters
+    // As TBuffer::drawingOf() turns the style into what goes on the characters
     if (styling.hasCustomStyling) {
         if (styling.hasForegroundColor) {
             link.foreground = styling.foregroundColor;
@@ -62,26 +65,40 @@ std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
             link.background = styling.backgroundColor;
         }
         TextStyles styles;
-        styles.setFlag(TextStyle::Bold, styling.isBold);
-        styles.setFlag(TextStyle::Italic, styling.isItalic);
-        styles.setFlag(TextStyle::Underline, styling.isUnderlined);
-        styles.setFlag(TextStyle::Overline, styling.isOverlined);
-        styles.setFlag(TextStyle::StrikeOut, styling.isStrikeOut);
-        link.styles = styles;
+        const auto give = [&styles, &link](const TextStyle style, const bool names, const bool on) {
+            if (names || on) {
+                link.stylesGiven.setFlag(style);
+                styles.setFlag(style, on);
+            }
+        };
+        give(TextStyle::Bold, styling.namesBold, styling.isBold);
+        give(TextStyle::Italic, styling.namesItalic, styling.isItalic);
+        give(TextStyle::Underline, styling.namesUnderline, styling.isUnderlined);
+        give(TextStyle::Overline, styling.namesOverline, styling.isOverlined);
+        give(TextStyle::StrikeOut, styling.namesStrikeOut, styling.isStrikeOut);
+        if (link.stylesGiven.toInt()) {
+            link.styles = styles;
+        }
     }
     return link;
 }
 
 THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const std::optional<int> item)
 {
+    return followWindowLink(qsl("main"), link, item);
+}
+
+THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& window, const int link, const std::optional<int> item)
+{
     if (!usable()) {
         return LinkResult::refused;
     }
-    TConsoleModel& model = mpHost->mainConsoleModel();
-    const TLinkStore& store = model.buffer.mLinkStore;
-    if (!model.buffer.linkHeld(link)) {
+    TConsoleModel* pModel = windowTextModel(window);
+    if (!pModel || !pModel->buffer.linkHeld(link)) {
         return LinkResult::unknown;
     }
+    TConsoleModel& model = *pModel;
+    const TLinkStore& store = model.buffer.mLinkStore;
     const QList<TLinkStore::MenuItem> items = store.menuItems(link);
     if (item && (*item < 0 || *item >= items.size())) {
         return LinkResult::noSuchItem;

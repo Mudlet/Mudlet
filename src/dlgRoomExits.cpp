@@ -486,7 +486,8 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Checked);
         break;
 
-    default:; //noop for other columns?
+    default: //noop for other columns?
+        break;
     }
 }
 
