@@ -35,6 +35,14 @@ set(MUDLET_PRECOMPILED_HEADERS
   <QNetworkCookieJar> <QNetworkReply> <QNetworkRequest> <QSslConfiguration>
   <QSslPreSharedKeyAuthenticator> <QSslSocket>
 )
+if(NOT QT_FEATURE_future)
+  list(REMOVE_ITEM MUDLET_PRECOMPILED_HEADERS <QFuture>)
+endif()
+# Qt for WebAssembly, built without SSL, ships the other QSsl headers but not this one; QT_FEATURE_ssl
+# cannot tell, as Qt Network is found later
+if(EMSCRIPTEN)
+  list(REMOVE_ITEM MUDLET_PRECOMPILED_HEADERS <QSslPreSharedKeyAuthenticator>)
+endif()
 
 # Qt Widgets, which mudlet_core does not link: only for mudlet_app and the tests.
 set(MUDLET_PRECOMPILED_WIDGET_HEADERS

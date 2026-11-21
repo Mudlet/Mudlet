@@ -192,6 +192,7 @@ bool TPasswordEntry::event(QEvent* event)
         // would disable all application shortcuts
         if (mpCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
+            TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
             return true;
         }
         return QLineEdit::event(event);
