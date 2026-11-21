@@ -55,6 +55,7 @@ struct TLabelModel
 
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
+    QString effectiveAccessibleName(const QString& shownText) const;
     // The label's text as a screen reader would say it
     QString spokenText() const;
     bool namedByToolTip() const;
@@ -67,15 +68,21 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
-    void setLiveRegion(TLabelLiveRegion liveRegion);
+    // The view speaks or drops any text still waiting out its pacing
+    void setLiveRegion(TLabelLiveRegion liveRegion)
+    {
+        if (liveRegion != mLiveRegion) {
+            mLiveRegion = liveRegion;
+            accessibilityChanged(AccessibilityChange::LiveRegion);
+        }
+    }
     // The view's copies of what the label shows, which name it unless a script named it
     void setText(const QString& text);
     void setToolTip(const QString& toolTip);
 
-    // KeyboardAccess: the profile's accessibleLabels setting changed. LiveRegion: how a change of its text is
-    // announced, which a widget needs only as the text next changes, and a frontend without one reads as content
+    // KeyboardAccess: the profile's accessibleLabels setting changed
     enum class AccessibilityChange { Name, Role, KeyboardAccess, LiveRegion };
-    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
+    // Set by the widget, if there is one, to update its focus policy, tell assistive technology of a change and pace its announcements
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 
