@@ -23,6 +23,7 @@
 #include "TArea.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TNullMapView.h"
 #include "TRoomDB.h"
 
 #include <QCoreApplication>
@@ -215,6 +216,7 @@ std::pair<int, QString> TNullMapViews::createView(const int initialAreaId)
     const int viewId = mNextViewId++;
     //: Title for a secondary map view window, %1 is the view number, %2 is the profile name
     const QString title = QCoreApplication::translate("TMapViewManager", "Map View %1 - %2").arg(viewId).arg(mpHost->getName());
+    TNullMapView::announceEditing(mpHost);
     auto* pView = new TNullSecondaryMapView(mpHost, mpMap, this);
     pView->mDock = {title, true, QSize(400, 500), true};
     // Before the view is listed, as the sysMapAreaChanged this can raise comes before TMapViewManager lists it

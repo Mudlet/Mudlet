@@ -129,13 +129,11 @@ private:
         QVERIFY2(!words.contains(QChar(0x2026)) && !words.endsWith(qsl("...")), qPrintable(qsl("the warning is cut to a fragment rather than shown whole or not at all: \"%1\"").arg(words)));
     }
 
-    // The wait gives the strip its chance to measure again
+    // Settled, so the strip has measured again for the new width
     void atWidth(const int width) const
     {
         mpNotepad->resize(width, 520);
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
-        QCoreApplication::processEvents();
+        TestPixels::settle();
     }
 
     void theCrossOnTabIsTheRecipes(const int index) const
@@ -618,7 +616,6 @@ private slots:
         QVERIFY2(pTabBar->count() == 2, "the strip does not hold the two tabs this reads");
         mpNotepad->tabWidget->setCurrentIndex(0);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
         const QColor lit = uiDesign::blend(tokens.page, tokens.accent, uiDesign::scmSoftWashStrength);
