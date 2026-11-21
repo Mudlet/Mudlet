@@ -585,6 +585,8 @@ function Adjustable.Container:adjustBorder()
         self.attached = false
         return
     end
+    -- recorded before writing: setAxisBorders() re-measures borderSize without reserving it
+    self.reservedBorder = self.borderSize
     setAxisBorders(where)
 end
 
@@ -852,11 +854,13 @@ function Adjustable.Container:detach()
     -- only unregister while it is still ours - the same guard type_delete uses
     local where = self.attached
     self.hiddenAttached = nil
+    self.minimizedAttached = nil
     local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
     end
     self.borderSize = nil
+    self.reservedBorder = nil
     -- unhooked first: handing the border back raises an event we would answer by re-reserving
     self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
@@ -1057,10 +1061,18 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
--- hides everything beside the title; does nothing if it is already minimized
+-- hides everything beside the title; does nothing if it is already minimized.
+-- One attached to a border, or hidden while attached, gives the border back while minimized, and
+-- restore() attaches it again if it still can
 function Adjustable.Container:minimize()
     if self.minimized == true then
         return
+    end
+    local attached = self.attached or self.hiddenAttached or nil
+    -- restore() takes the border back instead: show() cannot attach a minimized container.
+    -- detach() also kills the resize handler hide() kept for show()
+    if self.hiddenAttached then
+        self:detach()
     end
     self.origh = self.height
     self.Inside:hide()
@@ -1070,15 +1082,23 @@ function Adjustable.Container:minimize()
         self:disconnect()
     end
     self:adjustBorder()
+    -- set after adjustBorder(): the detach() it makes for an attached container clears minimizedAttached
+    self.minimizedAttached = attached
 end
 
---- restores the container after it was minimized
+--- restores the container after it was minimized, attaching it again to the border it had,
+-- unless detach() was called meanwhile or it has since been moved too far from that border
 function Adjustable.Container:restore()
     if self.minimized == true then
         self.origh = self.origh or "25%"
         self.Inside:show()
         self:resize(nil,self.origh)
         self.minimized = false
+        local border = self.minimizedAttached
+        self.minimizedAttached = nil
+        if border then
+            self:attachToBorder(border)
+        end
         self:adjustBorder()
     end
 end
@@ -1241,7 +1261,8 @@ end
 -- like position/size and some other variables in your Mudlet Profile Dir/ AdjustableContainer 
 -- to be reliable it is important that the Adjustable.Container has an unique 'name'
 -- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
--- @param dir defines save directory [optional]
+-- @param dir defines save directory [optional]; any missing directories in it are created
+-- @return true, or nil and an error message if the settings could not be written
 -- @see Adjustable.Container:load
 function Adjustable.Container:save(slot, dir)
     assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.save: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
@@ -1272,6 +1293,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.locked = self.locked
     mytable.attached = self.attached
     mytable.hiddenAttached = self.hiddenAttached
+    mytable.minimizedAttached = self.minimizedAttached
     mytable.lockStyle = self.pendingLockStyle or self.lockStyle
     mytable.padding = self.padding
     mytable.attachedMargin = self.attachedMargin
@@ -1281,8 +1303,16 @@ function Adjustable.Container:save(slot, dir)
     mytable.connectedContainers = self.connectedContainers
     mytable.windowname = self.windowname
     mytable.draggedOut = self.draggedOut
+    -- every missing directory on the way, as lfs.mkdir() only makes the last one
+    for separator in dir:gmatch("()[/\\]") do
+        local parent = dir:sub(1, separator - 1)
+        if parent ~= "" and not io.exists(parent) then lfs.mkdir(parent) end
+    end
     if not(io.exists(dir)) then lfs.mkdir(dir) end
-    table.save(saveDir, mainTable)
+    local saved, err = table.save(saveDir, mainTable)
+    if not saved then
+        return nil, string.format("Adjustable.Container.save: couldn't save settings to %s: %s", saveDir, tostring(err))
+    end
     return true
 end
 
@@ -1379,6 +1409,9 @@ function Adjustable.Container:load(slot, dir)
     if mytable.attached or mytable.hiddenAttached then
         self:attachToBorder(mytable.attached or mytable.hiddenAttached)
     end
+    if self.minimized then
+        self.minimizedAttached = mytable.minimizedAttached
+    end
 
     self:adjustBorder()
 
@@ -1405,9 +1438,13 @@ end
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
-    -- set_constraints() places the container through here, so a script laying it out again moves its border too
+    -- set_constraints() places the container through here, so a script laying it out again moves its border too;
+    -- this runs on every resize event, so re-reserving an unchanged request would fight a script's own border forever
     if self.attached and settlingBorders == 0 then
-        self:adjustBorder()
+        if not self:measureBorder() or self.borderSize ~= self.reservedBorder or self.minimized or self.hidden
+            or not table.contains(self:validAttachPositions(), self.attached:lower()) then
+            self:adjustBorder()
+        end
     end
     local x, y, width, height = self:pixel_geometry()
     raiseEvent(

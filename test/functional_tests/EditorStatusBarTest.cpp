@@ -31,7 +31,6 @@
 #include <QListWidget>
 #include <QStatusBar>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -41,8 +40,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorStatusBarTest : public QObject
 {
@@ -94,7 +91,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 800);
@@ -109,7 +106,7 @@ private slots:
         mpEditor->slot_showTriggers();
         mpEditor->addTrigger(false);
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("-- somewhere for the caret to be\n"));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanup()

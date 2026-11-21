@@ -1821,15 +1821,13 @@ int TLuaInterpreter::getMouseEvents(lua_State* L)
 int TLuaInterpreter::getMousePosition(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-
-    if (!host.hasConsoleView()) {
+    const std::optional<QPoint> pos = host.consoleFrontend()->mousePosition();
+    if (!pos) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
 
-    const QPoint pos = host.consoleFrontend()->mousePosition();
-
-    lua_pushnumber(L, pos.x());
-    lua_pushnumber(L, pos.y());
+    lua_pushnumber(L, pos->x());
+    lua_pushnumber(L, pos->y());
 
     return 2;
 }
@@ -3243,9 +3241,23 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     const int luaRed = getVerifiedInt(L, __func__, 1, "red");
     const int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     const int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
+    // QColor makes an out-of-range component an invalid colour, which draws as black
+    const auto outOfRange = [](const int value) {
+        return value < 0 || value > 255;
+    };
+    if (outOfRange(luaRed)) {
+        return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(luaRed));
+    }
+    if (outOfRange(luaGreen)) {
+        return warnArgumentValue(L, __func__, csmInvalidGreenValue.arg(luaGreen));
+    }
+    if (outOfRange(luaBlue)) {
+        return warnArgumentValue(L, __func__, csmInvalidBlueValue.arg(luaBlue));
+    }
     const Host& host = getHostFromLua(L);
     host.consoleFrontend()->setBorderColor(QColor(luaRed, luaGreen, luaBlue));
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderLeft

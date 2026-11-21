@@ -31,6 +31,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
+#include <utility>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
@@ -81,10 +82,6 @@ static void cleanupSquirrelTempFiles()
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 : QObject(parent)
-#if !defined(Q_OS_MACOS)
-//: Label for the update/restart button in the main toolbar
-, mpInstallOrRestart(new QPushButton(tr("Update")))
-#endif
 , mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
@@ -285,13 +282,29 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 
-void Updater::showFullChangelog() const
+void Updater::showFullChangelog()
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, feed.get(), [=, this]() {
+        // Asked again while the feed is still loading: the first request will open it
+        if (mChangelogFeedReady) {
+            return;
+        }
+        // Both go once either answers, or the other would answer some later
+        // update check with a changelog or an error box nobody asked for
+        const auto stopWaiting = [this]() {
+            disconnect(std::exchange(mChangelogFeedReady, {}));
+            disconnect(std::exchange(mChangelogFeedError, {}));
+        };
+        mChangelogFeedReady = connect(feed.get(), &dblsqd::Feed::ready, this, [this, stopWaiting]() {
+            stopWaiting();
             showFullChangelog();
         });
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, feed.get(), [](const QString& error) {
+        mChangelogFeedError = connect(feed.get(), &dblsqd::Feed::loadError, this, [this, stopWaiting](const QString& error) {
+            // Feed::load() refusing to start a second load: the one running still answers
+            if (feed->isLoading()) {
+                return;
+            }
+            stopWaiting();
             qWarning() << "Failed to load feed for changelog:" << error;
             //: Error title for dialog shown when changelog fails to load
             QMessageBox::warning(nullptr,
@@ -299,7 +312,9 @@ void Updater::showFullChangelog() const
                                  //: Error message shown when changelog fails to load from the server
                                  tr("Could not load the changelog. Please try again later."));
         });
-        feed->load();
+        if (!feed->isLoading()) {
+            feed->load();
+        }
         return;
     }
 
@@ -424,8 +439,9 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -469,8 +485,9 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -726,14 +743,17 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
-        if (mUpdateInstalled) {
-            //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
-            mpInstallOrRestart->setText(tr("Restart to apply update"));
-        } else {
-            //: Label for the update button shown when the update installation failed
-            mpInstallOrRestart->setText(tr("Update failed"));
+        // Gone with its dialog once the application is quitting
+        if (mpInstallOrRestart) {
+            if (mUpdateInstalled) {
+                //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
+                mpInstallOrRestart->setText(tr("Restart to apply update"));
+            } else {
+                //: Label for the update button shown when the update installation failed
+                mpInstallOrRestart->setText(tr("Update failed"));
+            }
+            mpInstallOrRestart->setEnabled(true);
         }
-        mpInstallOrRestart->setEnabled(true);
         watcher->deleteLater();
     });
     watcher->setFuture(future);

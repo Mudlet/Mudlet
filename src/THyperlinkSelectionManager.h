@@ -44,11 +44,11 @@ public:
     bool isSelected(const QString& group, const QString& value) const;
     void setSelected(const QString& group, const QString& value, bool selected);
     void toggleSelection(const QString& group, const QString& value);
-    
+
     QStringList getGroupMembers(const QString& group) const;
     void clearGroup(const QString& group);
     void clearAllSelections();
-    
+
     void setGroupExclusive(const QString& group, bool exclusive);
     bool isGroupExclusive(const QString& group) const;
 
@@ -68,16 +68,16 @@ private:
 
     // Selection state tracking: group -> (value -> selected)
     QHash<QString, QHash<QString, bool>> mSelectionState;
-    
+
     // Group membership tracking: group -> set of values (O(1) membership checks)
     QHash<QString, QSet<QString>> mGroupMembers;
-    
+
     // Group exclusivity settings: group -> exclusive mode (true = radio, false = checkbox)
     QHash<QString, bool> mGroupExclusivity;
-    
+
     // Register a value in a group (called when link is created)
     void registerGroupMember(const QString& group, const QString& value);
-    
+
     // Handle exclusive selection (radio button: deselect others in group)
     void handleExclusiveSelection(const QString& group, const QString& value);
 };

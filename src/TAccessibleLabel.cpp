@@ -51,7 +51,8 @@ QAccessible::Role TAccessibleLabel::role() const
 QString TAccessibleLabel::text(QAccessible::Text t) const
 {
     if (t == QAccessible::Name) {
-        return label()->model().effectiveAccessibleName();
+        // QLabel::setText() sends NameChanged before the model is given the new text, so read what the label shows
+        return label()->model().effectiveAccessibleName(label()->text());
     }
     // A tooltip serving as the name would otherwise be read a second time as the description
     if (t == QAccessible::Description && label()->model().namedByToolTip()) {

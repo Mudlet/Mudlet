@@ -35,6 +35,7 @@
 
 #include <QAction>
 #include <QCursor>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
@@ -3502,6 +3503,104 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // The dialog opens ready to type the label's text; Enter in the text box
+    // starts a new line, and Enter in the font field saves the label.
+    void test_theLabelDialogTypesIntoTheTextAndEnterSaves()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QPointer<dlgMapLabel> dialog = mp2dMap->mpDlgMapLabel.data();
+        QVERIFY(dialog);
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->plainTextEdit_labelText));
+
+        QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Market"));
+        QTest::keyClick(dialog->plainTextEdit_labelText, Qt::Key_Return);
+        QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Square"));
+        QVERIFY2(dialog && dialog->isVisible(), "Enter in the text box saved the label instead of starting a new line");
+        dialog->lineEdit_font->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->lineEdit_font));
+        QTest::keyClick(dialog->lineEdit_font, Qt::Key_Return);
+
+        QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the label");
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().text, qsl("Market\nSquare"));
+    }
+
+    void test_enterDoesNotSaveAnImageLabelWithNoImage()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QPointer<dlgMapLabel> dialog = mp2dMap->mpDlgMapLabel;
+        QVERIFY(dialog);
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+
+        dialog->comboBox_type->setCurrentIndex(1);
+        QVERIFY(!dialog->pushButton_save->isEnabled());
+        dialog->comboBox_type->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->comboBox_type));
+        QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
+        QTest::qWait(100);
+        QVERIFY2(dialog && dialog->isVisible(), "Enter saved an image label that has no image");
+        dialog->comboBox_type->setCurrentIndex(0);
+        QVERIFY2(dialog->pushButton_save->isEnabled(), "Save stayed disabled after switching back to a text label");
+        dialog->comboBox_type->setCurrentIndex(1);
+
+        const QString image = mConfigDir.filePath(qsl("label.png"));
+        QPixmap pixmap(8, 8);
+        pixmap.fill(Qt::red);
+        QVERIFY(pixmap.save(image));
+        auto answerFilePicker = [this](const QString& path) {
+            answerNextModalDialog([path](QWidget* pDialog) {
+                auto* picker = qobject_cast<QFileDialog*>(pDialog);
+                if (!picker) {
+                    return false;
+                }
+                if (!path.isEmpty()) {
+                    // Left unanswered, so the fixture closes the picker and the case fails
+                    auto* name = picker->findChild<QLineEdit*>(qsl("fileNameEdit"));
+                    if (!name) {
+                        return false;
+                    }
+                    picker->setDirectory(QFileInfo(path).absolutePath());
+                    name->setText(QFileInfo(path).fileName());
+                }
+                QMetaObject::invokeMethod(static_cast<QDialog*>(picker), path.isEmpty() ? &QDialog::reject : &QDialog::accept, Qt::QueuedConnection);
+                return true;
+            });
+        };
+        // A native picker has no file name field to type into
+        const bool priorNative = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
+        const auto restoreNative = qScopeGuard([priorNative]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, priorNative);
+        });
+        answerFilePicker(image);
+        QTest::mouseClick(dialog->toolButton_imagePick, Qt::LeftButton);
+        QTRY_COMPARE(dialog->getImagePath(), image);
+        QVERIFY(dialog->pushButton_save->isEnabled());
+
+        answerFilePicker(QString());
+        QTest::mouseClick(dialog->toolButton_imagePick, Qt::LeftButton);
+        QVERIFY2(mModalDialogAnswered, "The file picker did not open a second time");
+        QVERIFY2(dialog->getImagePath() == image, "Cancelling the file picker dropped the chosen image");
+        QVERIFY(dialog->pushButton_save->isEnabled());
+
+        // The same key on the same box saves once there is an image, so the refusal above was Save's
+        dialog->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+        dialog->comboBox_type->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->comboBox_type));
+        QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
+        QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the image label");
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY(area()->mMapLabels.first().text.isEmpty());
+        const QPixmap& pix = area()->mMapLabels.first().pix;
+        QCOMPARE(pix.toImage().pixelColor(pix.rect().center()), QColor(Qt::red));
+    }
+
     // A box is a box whichever corner it was dragged out from: the label goes
     // in it exactly, at the size it was drawn.
     void test_theLabelBoxLandsWhereItWasDrawnFromAnyCorner()
@@ -3538,6 +3637,30 @@ private slots:
             mp2dMap->mpDlgMapLabel->close();
             QVERIFY(area()->mMapLabels.isEmpty());
         }
+    }
+
+    // The dialog stays open while the map is zoomed, panned or moved to another
+    // level, and every edit in it redraws the label: that must keep it where it was drawn.
+    void test_editingANewLabelAfterPanningKeepsItWhereItWasDrawn()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+
+        const float roomWidthBeforeZoom = mp2dMap->mRoomWidth;
+        rollWheelAt(viewCentre(), 3);
+        renderFrame();
+        QVERIFY2(!qFuzzyCompare(mp2dMap->mRoomWidth, roomWidthBeforeZoom), "the wheel did not zoom the map");
+        mp2dMap->mMapCenterX = 3;
+        mp2dMap->mMapCenterY = -2;
+        mp2dMap->mMapCenterZ = 1;
+        emit mp2dMap->mpDlgMapLabel->updated();
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().pos, QVector3D(-5, 5, 0));
+        QCOMPARE(area()->mMapLabels.first().size, QSizeF(3, 2));
+        mp2dMap->mpDlgMapLabel->close();
     }
 
     // A click with no drag has no box to put a label in, so nothing is made
@@ -3594,7 +3717,8 @@ private slots:
 
     // The dialog is not modal, so the mapper can be switched to another area
     // while it is open. The label belongs to the area its box was dragged out
-    // in: typing keeps it there, and cancelling takes it back out of there.
+    // in: typing keeps it there and announces a change to that area, and cancelling
+    // takes it back out of there.
     void test_theLabelDialogStaysWithTheAreaItsBoxWasDraggedOutIn()
     {
         buildMap();
@@ -3607,9 +3731,14 @@ private slots:
         QVERIFY(map()->addRoom(nextDoorRoomId) && map()->setRoomArea(nextDoorRoomId, otherAreaId) && map()->setRoomCoordinates(nextDoorRoomId, 0, 0, 0));
         mp2dMap->switchArea(otherAreaId);
         QCOMPARE(mp2dMap->mAreaID, otherAreaId);
+        // Announcements are merged until the next event loop pass, so let the one from the label's first draw go out
+        QCoreApplication::processEvents();
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
 
         mp2dMap->mpDlgMapLabel->plainTextEdit_labelText->setPlainText(qsl("typed in another area"));
 
+        QTRY_COMPARE(areaChanged.size(), 1);
+        QCOMPARE(areaChanged.first().first().toInt(), mAreaId);
         QCOMPARE(area()->mMapLabels.size(), 1);
         QVERIFY2(map()->mpRoomDB->getArea(otherAreaId)->mMapLabels.isEmpty(), "the label landed in the area the mapper was switched to");
 
