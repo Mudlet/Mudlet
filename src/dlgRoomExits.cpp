@@ -1580,9 +1580,8 @@ void dlgRoomExits::initExit(int direction,
                             QSpinBox* weight,
                             const QString& validExitToolTip)
 {
-    // The checkboxes, door buttons and weight box carry no text and their
-    // tooltips don't name the direction, so without these a screen reader
-    // cannot tell the player which exit a control belongs to
+    // These controls carry no text and their tooltips don't name the direction,
+    // so a screen reader can't otherwise tell which exit a control belongs to
     const QString directionName = qobject_cast<QGroupBox*>(exitLineEdit->parentWidget())->title();
     //: Screen reader name for the room number field of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
     exitLineEdit->setAccessibleName(tr("%1 exit room ID").arg(directionName));
