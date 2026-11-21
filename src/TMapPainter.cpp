@@ -637,8 +637,8 @@ void TMapPainter::drawRoom(QPainter& painter,
                 */
 
             const QSizeF symbolSize = pix->deviceIndependentSize();
-            const int symbolLeft = qRound(roomRectangle.left() + ((roomRectangle.width() - symbolSize.width()) / 2.0));
-            const int symbolTop = qRound(roomRectangle.top() + ((roomRectangle.height() - symbolSize.height()) / 2.0));
+            const int symbolLeft = qRound(roomRectangle.left() + (roomRectangle.width() - symbolSize.width()) / 2.0);
+            const int symbolTop = qRound(roomRectangle.top() + (roomRectangle.height() - symbolSize.height()) / 2.0);
             painter.drawPixmap(QPoint(symbolLeft, symbolTop), *pix);
         }
 
