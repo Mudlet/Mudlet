@@ -3268,9 +3268,10 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
         used = true;
     }
 
-    if (xDelta != 0 && mpConsole->mHScrollBarEnabled && !mpConsole->mpHScrollBar->isHidden()) {
+    QScrollBar* hScrollBar = mpConsole->mpHScrollBar;
+    if (xDelta != 0 && mpConsole->mHScrollBarEnabled && !hScrollBar->isHidden()) {
         // Qt's convention: a positive x delta scrolls towards the start of the line
-        mpConsole->mpHScrollBar->setValue(mpConsole->mpHScrollBar->value() - xDelta);
+        hScrollBar->setValue(hScrollBar->value() - xDelta);
         used = true;
     }
 

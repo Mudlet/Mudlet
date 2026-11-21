@@ -52,10 +52,10 @@ private:
     const QString mpLocalhost = qsl("localhost");
     QString mpPort;
 
-    static void wheelSideways(TTextEdit* pane, const int angle)
+    static void wheelSideways(TTextEdit* pane, const int angle, const Qt::KeyboardModifiers modifiers = Qt::NoModifier)
     {
         const QPointF position(pane->width() / 2.0, pane->height() / 2.0);
-        QWheelEvent event(position, pane->mapToGlobal(position), QPoint(), QPoint(angle, 0), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QWheelEvent event(position, pane->mapToGlobal(position), QPoint(), QPoint(angle, 0), Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
         QApplication::sendEvent(pane, &event);
     }
 
@@ -113,7 +113,6 @@ private slots:
         console->setWrapAt(1000);
         console->setHorizontalScrollBar(true);
         console->print(QString(800, QChar('x')) + qsl("\n"));
-        qApp->processEvents();
         QScrollBar* bar = console->mpHScrollBar;
         QTRY_VERIFY2(!bar->isHidden(), "a line wider than the pane did not bring up the horizontal scroll bar");
         QVERIFY(bar->maximum() > 10);
@@ -138,6 +137,15 @@ private slots:
         QCOMPARE(bar->value(), 2 * oneStep);
         qApp->processEvents();
         QCOMPARE(bar->value(), 2 * oneStep);
+
+        // One notch moves three columns, as a vertical one moves three lines; Shift slows it to one, Ctrl speeds it to ten
+        const std::pair<Qt::KeyboardModifiers, int> steps[] = {{Qt::NoModifier, 3}, {Qt::ShiftModifier, 1}, {Qt::ControlModifier, 10}};
+        for (const auto& [modifiers, columns] : steps) {
+            bar->setValue(0);
+            qApp->processEvents();
+            wheelSideways(upper, -120, modifiers);
+            QCOMPARE(bar->value(), columns);
+        }
     }
 };
 
