@@ -3502,12 +3502,11 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                 profile_name,
                 "character",
                 [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
-        // as in Host::lookUpSecuredPassword(): on Android Unavailable is a KeyStore error, on a desktop
-        // only the missing keychain service it reports on every read
+                    bool readFailed = outcome == CredentialManager::ReadOutcome::TimedOut || outcome == CredentialManager::ReadOutcome::Unreadable;
 #if defined(Q_OS_ANDROID)
-                    const bool readFailed = outcome != CredentialManager::ReadOutcome::Found && outcome != CredentialManager::ReadOutcome::NothingStored;
-#else
-                    const bool readFailed = outcome == CredentialManager::ReadOutcome::TimedOut || outcome == CredentialManager::ReadOutcome::Unreadable;
+                    // as in Host::lookUpSecuredPassword(): on Android Unavailable is a KeyStore error, on a desktop
+                    // only the missing keychain service it reports on every read
+                    readFailed = readFailed || outcome == CredentialManager::ReadOutcome::Unavailable;
 #endif
                     passwordRetrieved(profile_name, success, retrievedPassword, errorMessage, readFailed);
 

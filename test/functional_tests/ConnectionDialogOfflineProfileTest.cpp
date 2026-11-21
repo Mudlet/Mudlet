@@ -640,20 +640,20 @@ private slots:
         QVERIFY2(dialog(), "No connection dialog to test against");
         const QString profile = qsl("RefusedRead-ConnDialogOffline");
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
-        mudlet::self()->setStorePasswordsSecurely(true);
-        dialog()->fillout_form();
-        selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
         const QByteArray testMode = qgetenv("MUDLET_TEST_MODE");
         const auto restore = qScopeGuard([this, testMode]() {
             CredentialManager::jobStartHookForTesting() = nullptr;
             CredentialManager::forgetStoreRefusal();
-            qputenv("MUDLET_TEST_MODE", testMode);
+            testMode.isNull() ? qunsetenv("MUDLET_TEST_MODE") : qputenv("MUDLET_TEST_MODE", testMode);
             dialog()->mKeychainOperationProfile.clear();
             dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
             dialog()->clearKeychainWait();
             mudlet::self()->setStorePasswordsSecurely(false);
         });
+        mudlet::self()->setStorePasswordsSecurely(true);
+        dialog()->fillout_form();
+        selectTestProfile();
+        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
         // in test mode the credential store never asks the keychain
         qunsetenv("MUDLET_TEST_MODE");
         CredentialManager::jobStartHookForTesting() = [](QKeychain::Job* job) {
