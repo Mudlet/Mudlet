@@ -22,6 +22,9 @@
 
 #include <QObject>
 
+class TLineFormat;
+Q_MOC_INCLUDE("TBuffer.h")
+
 // What a console model's buffer tells the view showing it, and for the main
 // console's model, Host. The buffer only emits, so it needs no view check of
 // its own.
@@ -49,8 +52,9 @@ signals:
     void lineShown(int lineIndex, int lastSegment);
     // Client output (echo(), print(), the command echo, Mudlet's messages), in pieces that need not end
     // a line; also an echo() or command echo written into a trigger's or a prompt's line, which --mirror
-    // does not copy.
-    void textPrinted(const QString& text);
+    // does not copy. format has one entry for each character of text, as it was written. continuesLine
+    // is for a piece the view shows on the end of a line that was already whole, a trigger's or a prompt's.
+    void textPrinted(const QString& text, const TLineFormat& format, bool continuesLine);
     // A line that may have been wrapped by the game is being held back for its
     // continuation, which may never come.
     void serverWrapLineHeld();
@@ -76,6 +80,9 @@ signals:
     // What a link offers changed: its state, its selection, its spoiler, or it was expired, swept from the store or
     // a line holding it was deleted. Not for a trim, which leaves the link to the sweep.
     void linkChanged(int linkIndex);
+    // The buffer's rows changed with none of the signals above sent, as the view showing it repaints only later:
+    // a script's deleteLine() or wrapLine().
+    void contentEdited();
 };
 
 #endif // MUDLET_TCONSOLEMODELNOTIFIER_H

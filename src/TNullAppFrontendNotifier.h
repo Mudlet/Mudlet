@@ -35,6 +35,7 @@ public:
 signals:
     // A command of the profile was added, removed or changed. The Host may be going, so compare it, never use it.
     void addonCommandsChanged(const Host* pHost);
+    void configWritten();
 };
 
 #endif // MUDLET_TNULLAPPFRONTENDNOTIFIER_H

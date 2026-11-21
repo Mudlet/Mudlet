@@ -92,12 +92,14 @@ public:
     // pointer to its setter.
     void setProfileOpenedHook(std::function<void(Host*)> hook) { mProfileOpenedHook = std::move(hook); }
     static QStringList defaultPackages(const QString& address, const QString& profileName, bool serverGuiAccepted);
-    // A profile tab's close button, with no window: sysExitEvent and the save now, out of the pool once
-    // no script of its own is running. False if no such profile is open.
+    // A profile tab's close button, with no window: sysExitEvent now and the save started, out of the pool once
+    // it is written and no script of its own is running. False if no such profile is open.
     bool requestProfileClose(const QString& name);
     // closeMudlet() with no main window, less the quit: closes and saves every profile, then empties the
-    // pool, leaving one still running a script or a map operation until that ends. Not during a load.
-    void closeAllProfiles();
+    // pool, leaving one still running a script or a map operation until that ends. Not during a load. It
+    // returns once every sysExitEvent has run; done runs once the saves are written and the pool is empty,
+    // or at once if it is going down. A call while one is under way adds its done to that one's.
+    void closeAllProfiles(std::function<void()> done = {});
     int getHostCount();
     void deleteHost(const QString&);
     // For a frontend closing every profile as it goes, ahead of the pool's own destruction
@@ -134,6 +136,9 @@ private:
     // process, before any profile, as reading them again would undo what has changed since.
     void readSettings(const QSettings&);
     void deleteHostOnceUnwound(Host*, std::chrono::milliseconds delay);
+    void startClosingPass();
+    void closingPassClosedOne();
+    void tellOnceLeft();
 
     inline static HostManager* smpSelf = nullptr;
     inline static bool sSettingsReadWithoutWindow = false;
@@ -156,6 +161,19 @@ private:
     bool mDeletionPending = false;
     int mProfileLoadsInProgress = 0;
     std::function<void(Host*)> mProfileOpenedHook;
+    // While closeAllProfiles() waits for the saves of its pass
+    struct ClosingAll
+    {
+        QList<QSharedPointer<Host>> met;
+        QList<std::function<void()>> done;
+        int pending = 0;
+        bool closedOne = false;
+    };
+    std::unique_ptr<ClosingAll> mpClosingAll;
+    // A pass's profiles still running a script or a map operation, whose done waits for them to leave the pool
+    QList<QWeakPointer<Host>> mLeaving;
+    QList<std::function<void()>> mDoneOnceLeft;
+    bool mTellingOnceLeft = false;
     // Expires with the pool, for timers tied to a profile that may outlive it
     const std::shared_ptr<bool> mAlive = std::make_shared<bool>(true);
 };
