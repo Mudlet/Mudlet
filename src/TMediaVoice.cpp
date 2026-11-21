@@ -157,6 +157,11 @@ void TMediaVoice::probeUnnamedBackend()
     if (smProbeStarted.exchange(true)) {
         return;
     }
+#if defined(Q_OS_WASM)
+    // The browser plays the sound itself and hands Qt no audio to mix, and Qt 6.9's player there crashes on a sound
+    // given no QAudioOutput, so it never passes
+    return;
+#endif
 
     auto* player = new QMediaPlayer(QCoreApplication::instance());
     // A file, not a QBuffer: Qt before 6.12.1 never frees the 32 KB it reads a device through

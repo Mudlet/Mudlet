@@ -287,26 +287,26 @@ private slots:
         // <!ELEMENT Ex '<SEND>'>
         // <Ex EXPIRE='Exits' HREF='north'>North</Ex>
         // Should result in: <SEND EXPIRE='Exits' HREF='north'>North</SEND>
-        
+
         TMxpStubHandlerContext ctx;
         TMxpStubClient stub;
-        
+
         // Define custom element that expands to <SEND>
         auto defTag = parseNode("<!ELEMENT Ex '<SEND>'>");
         TMxpElementDefinitionHandler definitionHandler;
         definitionHandler.handleTag(ctx, stub, defTag->asStartTag());
-        
+
         // Use custom element with EXPIRE and HREF attributes
         auto startTag = parseNode("<Ex EXPIRE='Exits' HREF='north'>");
         auto endTag = parseNode("</Ex>");
-        
+
         TMxpCustomElementTagHandler customElementTagHandler;
         TMxpTagHandler& tagHandler = customElementTagHandler;
-        
+
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("North");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
-        
+
         // Verify the attributes were passed through correctly
         QCOMPARE(stub.mHrefs.size(), 1);
         QCOMPARE(stub.mHrefs[0], "send([[\nnorth]])");
