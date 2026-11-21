@@ -1065,7 +1065,7 @@ private slots:
     pEditor->slot_showTriggers();
     pTree->setCurrentItem(pItem);
     pEditor->slot_triggerSelected(pItem);
-    // A save marks it no longer new, and only a new trigger gets switched on by the save that follows
+    // No longer new, so the final save below cannot switch it back on and hide what the reset did
     pEditor->slot_saveSelectedItem();
     pEditor->mpSourceEditorEdbeeDocument->setText(qsl("if ("));
 
