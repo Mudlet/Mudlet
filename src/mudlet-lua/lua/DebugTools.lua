@@ -56,8 +56,8 @@ if getProfileName() ~= "Mudlet self-test" then
   errc = errorc
   _G.errorc = nil       -- and set to nil since it is internal only for the following functions.
 end
--- Mudlet's own Lua files load from beside this one, so a printError() they make is
--- reported at the script line that called into them
+-- Mudlet's own Lua files load from this file's folder and below, so a printError() or
+-- printDebug() they make is reported at the script line that called into them
 local libraryDirectory = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
 
 local function inLibrary(source)
@@ -85,8 +85,8 @@ local function printX(options)
     callerLevel = callerLevel + 1
     dinfo = debug.getinfo(callerLevel, "Sl")
   end
-  -- called straight from C++, e.g. a trigger whose code is "return printError(...)", there is
-  -- no Lua line to name, so name the outermost frame as the traceback does
+  -- no script frame was found (e.g. a trigger whose code is "return printError(...)", called
+  -- straight from C++, or only Mudlet's own Lua on the stack), so fall back to the traceback's last level
   dinfo = dinfo or debug.getinfo(level, "Sl")
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then
