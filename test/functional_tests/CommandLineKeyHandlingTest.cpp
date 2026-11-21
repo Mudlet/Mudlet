@@ -1207,6 +1207,56 @@ private slots:
         QCOMPARE(pClipboard->text(), lineText);
     }
 
+    // A double-click on a separator leaves a region that copies nothing, which
+    // must not stop the game window's selection from being copied
+    void test_copySkipsAMiniconsoleSeparatorDoubleClick()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const QString mainSentinel = qsl("qzxgamewindowseparator");
+        pConsole->print(qsl("%1\n").arg(mainSentinel));
+        QVERIFY(runLua(qsl("createMiniConsole('copySeparator', 0, 0, 400, 200)\necho('copySeparator', 'qzx mini\\n')")));
+        TConsole* pMini = pConsole->subConsoleWidget(qsl("copySeparator"));
+        QVERIFY(pMini);
+
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, pMini, windowSize]() {
+            pConsole->clearSelection();
+            pMini->clearSelection();
+            runLua(qsl("hideWindow('copySeparator')"));
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+        });
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        TTextEdit* pPane = pMini->mUpperPane;
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0 && pPane->height() > 0, "the windows were never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        const int line = pPane->mpBuffer->lineBuffer.indexOf(qsl("qzx mini"));
+        QVERIFY2(line >= 0, "the miniconsole never got its line");
+        const QPointF space((3 + 0.5) * pPane->mFontWidth, (line - pPane->imageTopLine() + 0.5) * pPane->mFontHeight);
+        for (const QEvent::Type type : {QEvent::MouseButtonPress, QEvent::MouseButtonRelease, QEvent::MouseButtonPress, QEvent::MouseButtonRelease}) {
+            const bool down = type == QEvent::MouseButtonPress;
+            QMouseEvent event(type, space, pPane->mapToGlobal(space.toPoint()), Qt::LeftButton, down ? Qt::LeftButton : Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(pPane, &event);
+        }
+        QVERIFY2(!pPane->hasSelectedText(), "the double-click on the space selected something, so this proves nothing");
+
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(mainSentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the game window's selection").arg(pClipboard->text().left(60))));
+    }
+
     // Switching spell checking off strips the marks from every command line,
     // which must not count as the player selecting text in one of them
     void test_switchingSpellCheckOffKeepsTheGameWindowsSelection()

@@ -1683,7 +1683,7 @@ bool TCommandLine::copyConsoleSelection()
         pLastSelected = nullptr;
     }
     for (TTextEdit* pPane : {pLastSelected, mpConsole ? mpConsole->mUpperPane : nullptr, mpConsole ? mpConsole->mLowerPane : nullptr}) {
-        if (pPane && !pPane->mSelectedRegion.isEmpty()) {
+        if (pPane && pPane->hasSelectedText()) {
             pPane->slot_copySelectionToClipboard();
             return true;
         }
