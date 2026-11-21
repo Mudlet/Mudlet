@@ -122,7 +122,7 @@ void TMapView::followMapperSettings()
     mp2dMap->mBubbleMode = mpHost->mBubbleMode;
     mp2dMap->mShowGrid = mpHost->mMapperShowGrid;
     if (mp2dMap->rSize != mpHost->mRoomSize) {
-        // Symbols are cached at the size of the room they were drawn for
+        // Symbol and label pixmaps are cached at the room size they were drawn for
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->flushTextLabelPixmapCache();
         mp2dMap->rSize = mpHost->mRoomSize;
