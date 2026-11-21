@@ -220,14 +220,14 @@ public:
     QString getLargeImageText(Host* pHost) const { return mLargeImageTexts.value(pHost); }
     QString getSmallImage(Host* pHost) const { return mSmallImages.value(pHost); }
     QString getSmallImageText(Host* pHost) const { return mSmallImageTexts.value(pHost); }
-    QPair<int64_t ,int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
+    QPair<int64_t, int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
     QPair<int, int> getParty(Host* pHost) const { return qMakePair(mPartySize.value(pHost), mPartyMax.value(pHost)); }
 
     // Runs the Host::discordUserIdMatch(...) check for the given Host:
     bool discordUserIdMatch(Host* pHost) const;
 
 
-    const static QString mMudletApplicationId;
+    static const QString mMudletApplicationId;
 
 
 private:
