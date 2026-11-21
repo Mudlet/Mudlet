@@ -147,7 +147,7 @@ private:
 
     // Shows the test profile in the dialog with this login saved for it. The
     // password box is filled a turn of the event loop after the profile is
-    // picked, over whatever it holds by then, so nothing may be typed before.
+    // picked, so each case waits for that before typing.
     bool showTheTestProfileWithSavedLogin(const QString& name, const QString& password) const
     {
         if (!reopenDialog() || !MudletApp::writeProfileData(mProfileName, qsl("login"), name).first || !MudletApp::writeProfileData(mProfileName, qsl("password"), password).first
@@ -474,11 +474,25 @@ private slots:
         QVERIFY2(showTheTestProfileWithSavedLogin(mSavedName, shownPassword), "The dialog did not show the profile's saved login");
         QVERIFY2(!dialog()->character_password_entry->isModified(), "The box was typed in, so this case cannot cover one the dialog filled");
 
+        const ScopedAutoLoginDelays delays(200, 200);
+        const qsizetype before = mpServer->receivedSoFar().size();
         QVERIFY2(connectFromTheDialog(), "The open profile was not connected, so the dialog was never asked");
         QVERIFY2(pHost->getPass().isEmpty(), "The dialog's copy was taken ahead of the open profile's pending lookup");
+        QVERIFY2(sentSince(before, mSavedName.toUtf8() + "\r\n"), "The automatic login did not send the name");
+        // A masked password prompt: the only proof a password sent late still has one to answer
+        mpServer->sendRaw(QByteArrayLiteral("Password: \xff\xfb\x01"));
+        QVERIFY2(QTest::qWaitFor(
+                         [pHost]() {
+                             return pHost->isRemoteEchoingActive();
+                         },
+                         5s),
+                 "The game's password prompt did not mask input");
+        // past the password step, which had nothing to send yet
+        QTest::qWait(1000);
 
         pHost->securedPasswordAnswered(false, QString(), qsl("denied"), false);
         QCOMPARE(pHost->getPass(), shownPassword);
+        QVERIFY2(sentSince(before, shownPassword.toUtf8() + "\r\n"), "The password the dialog showed was not sent once the lookup brought none");
     }
 
     // An emptied name box is the player turning the automatic login off

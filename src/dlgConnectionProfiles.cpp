@@ -2759,7 +2759,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         if (character_password_entry->isModified()) {
             pHostBeforeLoad->setPassTypedByPlayer(password);
         } else if (!password.isEmpty()) {
-            // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
+            // Filled in from the store, not typed; one the dialog left empty may only mean the store could not be read here
             pHostBeforeLoad->setPassFilledInByDialog(password);
         }
     }

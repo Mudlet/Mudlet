@@ -6664,7 +6664,7 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     if (success && !password.isEmpty()) {
         mPassFilledInByDialog.clear();
         // A later answer replaces an earlier one, as the keychain's does the encrypted file's at a deadline,
-        // but not one given for the run
+        // but not one given for the run or typed in the connection dialog
         if (!mPassGiven) {
             setPass(password);
         }
@@ -6679,9 +6679,8 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
             qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
         }
         if (!mSecuredPasswordPending && !mPassFilledInByDialog.isEmpty()) {
-            const QString filledIn = mPassFilledInByDialog;
+            setPassFilledInByDialog(mPassFilledInByDialog);
             mPassFilledInByDialog.clear();
-            setPassFilledInByDialog(filledIn);
             mTelnet.sendOutstandingAutoLoginPassword();
         }
     }
