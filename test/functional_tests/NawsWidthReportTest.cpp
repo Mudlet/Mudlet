@@ -407,25 +407,33 @@ private slots:
     }
 
     // A shrink too small to take a pixel from the lower pane only moves it up,
-    // and must still leave the game the rows the unsplit window has.
+    // and must still leave the game the rows the unsplit window has. Counting
+    // the pixel the lower pane hung below the window by only costs a row where
+    // the split is an exact number of rows tall, and which shrink lands there
+    // depends on the platform's fonts and toolbars.
     void aSmallShrinkWhileScrolledBackReportsTheUnsplitRows()
     {
         runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
         runLua(mpHost, qsl("scrollUp(50)"));
         settle();
+        TTextEdit* upper = mpHost->mainConsoleView()->mUpperPane;
         TTextEdit* lower = mpHost->mainConsoleView()->mLowerPane;
         QVERIFY2(!lower->isHidden(), "scrolling back did not split the window");
-        const int lowerHeight = lower->height();
 
-        mpServer->clearNawsUpdates();
-        mudlet::self()->resize(1200, 799);
-        settle();
-        const auto whileScrolledBack = mpServer->nawsUpdates();
-        const bool lowerOnlyMoved = lower->height() == lowerHeight;
+        QVector<QSize> whileScrolledBack;
+        bool found = false;
+        for (int shrinks = 0; shrinks < 4 * upper->mFontHeight && !found; ++shrinks) {
+            const int lowerHeight = lower->height();
+            mpServer->clearNawsUpdates();
+            mudlet::self()->resize(1200, mudlet::self()->height() - 1);
+            settle();
+            whileScrolledBack = mpServer->nawsUpdates();
+            found = lower->height() == lowerHeight && (lower->y() + lower->height()) % upper->mFontHeight == 0;
+        }
         runLua(mpHost, qsl("scrollTo()"));
         settle();
 
-        QVERIFY2(lowerOnlyMoved, "the shrink resized the lower pane, so this case tests nothing");
+        QVERIFY2(found, "no shrink moved the lower pane alone onto a whole number of rows, so this case tests nothing");
         QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
     }
 
