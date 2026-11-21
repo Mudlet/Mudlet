@@ -65,16 +65,7 @@ private:
 
     QString storedProxyPasswordPath() const { return qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname)); }
 
-    bool warnedOfAnUndeletablePassword() const
-    {
-        TBuffer& buffer = mpHost->mainConsoleModel().buffer;
-        for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
-            if (buffer.line(i).contains(qsl("proxy password could not be deleted"))) {
-                return true;
-            }
-        }
-        return false;
-    }
+    bool warnedOfAnUndeletablePassword() const { return mpHost->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("proxy password could not be deleted")); }
 
     void save()
     {
