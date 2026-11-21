@@ -246,13 +246,12 @@ QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
             continue;
         }
         if (const std::optional<TNullMxpFrameFrontend::Tabs> tabs = pView->nullMxpFrames().tabs(window.name)) {
-            ScriptWindow::FrameTabs frameTabs;
+            ScriptWindow::FrameTabs& frameTabs = window.frameTabs.emplace();
             for (const auto& [page, title] : tabs->pages) {
                 frameTabs.pages.append({page, title});
             }
             frameTabs.current = static_cast<int>(tabs->current);
             frameTabs.shown = tabs->shown;
-            window.frameTabs = std::move(frameTabs);
         }
     }
     return windows;

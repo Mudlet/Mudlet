@@ -1087,7 +1087,7 @@ std::optional<TNullMxpFrameFrontend::Tabs> TNullMxpFrameFrontend::tabs(const QSt
         const auto title = mTitles.find(page);
         tabs.pages.emplace_back(page, title != mTitles.end() ? title->second : page);
     }
-    // The header shows where the page in front of it does
+    // Only what holds the page in front can hide the header: pageShown() leaves out a script hiding that page itself
     tabs.shown = pageShown(header->second.pages.at(header->second.current));
     return tabs;
 }
