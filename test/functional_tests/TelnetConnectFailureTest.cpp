@@ -299,6 +299,39 @@ private slots:
         QCOMPARE(mpServer->connectionCount(), connectionsBefore);
     }
 
+    // A script that reconnects from sysDisconnectionEvent starts its attempt before the failure it
+    // was told of decides whether to retry, and that decision is still the player's to make.
+    void test_aCalledOffAttemptIsNotRetriedWhenAScriptReconnectsFromItsEvent()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        host->mTelnet.setAutoReconnect(true);
+        host->mTelnet.mFailedConnectionRetryDelay = 200ms;
+
+        const quint16 deadPort = connectToADeadPort(host);
+        QVERIFY(deadPort);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("local handler\n"
+                                                                       "handler = registerAnonymousEventHandler(\"sysDisconnectionEvent\", function()\n"
+                                                                       "  killAnonymousEventHandler(handler)\n"
+                                                                       "  connectToServer(\"127.0.0.1\", %1)\n"
+                                                                       "end)")
+                                                                           .arg(mpServer->serverPort())));
+        const int connectionsBefore = mpServer->connectionCount();
+        // Called off while the dial to the dead port is still under way, which Qt lets run to its end
+        host->mTelnet.disconnectIt();
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > connectionsBefore;
+                         },
+                         10s),
+                 "the script's own connection never reached the game");
+        QTest::qWait(2s);
+        QVERIFY2(!bufferContains(host, qsl("Trying again")), "the attempt the player called off was scheduled to be tried again");
+        QCOMPARE(mpServer->connectionCount(), connectionsBefore + 1);
+        QCOMPARE(host->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState);
+    }
+
     // Every ordinary disconnection reaches the new error handling as well, because Qt reports the
     // remote host closing as a socket error before it signals the disconnection. Those already
     // have their own message and their own event, and must not collect a second of either.
