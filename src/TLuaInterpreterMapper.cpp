@@ -54,6 +54,8 @@
 #include <cstring>
 #include <limits>
 #include <math.h>
+#include <memory>
+#include <string>
 
 #include <QCollator>
 #include <QCoreApplication>
