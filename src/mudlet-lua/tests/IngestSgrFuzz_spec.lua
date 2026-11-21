@@ -235,7 +235,9 @@ local function pass(lines, oneRead, cut)
   for i = getLastLineNumber("main"), 0, -1 do
     local text = getLines("main", i, i + 1)[1]
     if not closingLine then
-      closingLine = text == closing and i or nil
+      if text == closing then
+        closingLine = i
+      end
     elseif text == opening then
       from = i + 1
       break
@@ -291,7 +293,6 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
 
   for round = 1, ROUNDS do
     junk = pick({0, 0, 0, 1, 3, 10, 30, 100, 400})
-    local roundJunk = junk
     local lines = {}
     for i = 1, rrange(16, 70) do
       lines[i] = line()
@@ -299,7 +300,7 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
     local joinedLength = #concat(lines, "\r\n") + 2
     local cut = rrange(1, joinedLength - 1)
 
-    it(string.format("round %d (seed %d, %d per mille malformed) leaves the same buffer from one read as from a read per line", round, SEED, roundJunk), function()
+    it(string.format("round %d (seed %d, %d per mille malformed) leaves the same buffer from one read as from a read per line", round, SEED, junk), function()
       dump(round, lines)
       local apart, apartReset = pass(lines, false)
       local together, togetherReset = pass(lines, true)
