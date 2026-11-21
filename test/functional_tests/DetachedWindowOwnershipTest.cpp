@@ -754,11 +754,7 @@ private slots:
         mudlet::self()->activateProfile(pFirstHost);
         QCOMPARE(mudlet::self()->getActiveHost(), pFirstHost);
         TLuaInterpreter* pLua = pFirstHost->getLuaInterpreter();
-        // Bounded, so that without the fix the case fails rather than overflowing the stack
-        QVERIFY(pLua->compileAndExecuteScript(qsl("qaFocusLost = 0 "
-                                                  "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
-                                                  "if not gained then qaFocusLost = qaFocusLost + 1 if qaFocusLost < 5 then setActiveProfile('%1') end end end)")
-                                                      .arg(mSecondHostname)));
+        QVERIFY(pLua->compileAndExecuteScript(focusLostHandlerScript(mSecondHostname)));
         auto removeHandler = qScopeGuard([pLua]() {
             pLua->compileAndExecuteScript(qsl("killAnonymousEventHandler(qaFocusHandler)"));
         });
@@ -784,10 +780,7 @@ private slots:
         QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
         QCOMPARE(mudlet::self()->mpTabBar->currentIndex(), mudlet::self()->mpTabBar->tabIndex(mThirdHostname));
         TLuaInterpreter* pLua = pSecondHost->getLuaInterpreter();
-        QVERIFY(pLua->compileAndExecuteScript(qsl("qaFocusLost = 0 "
-                                                  "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
-                                                  "if not gained then qaFocusLost = qaFocusLost + 1 if qaFocusLost < 5 then setActiveProfile('%1') end end end)")
-                                                      .arg(mFirstHostname)));
+        QVERIFY(pLua->compileAndExecuteScript(focusLostHandlerScript(mFirstHostname)));
         auto removeHandler = qScopeGuard([pLua]() {
             pLua->compileAndExecuteScript(qsl("killAnonymousEventHandler(qaFocusHandler)"));
         });
@@ -836,10 +829,7 @@ private slots:
         mudlet::self()->activateProfile(pFirstHost);
         mpDetachedWindow->switchToProfile(mSecondHostname);
         TLuaInterpreter* pLua = pFirstHost->getLuaInterpreter();
-        QVERIFY(pLua->compileAndExecuteScript(qsl("qaFocusLost = 0 "
-                                                  "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
-                                                  "if not gained then qaFocusLost = qaFocusLost + 1 if qaFocusLost < 5 then setActiveProfile('%1') end end end)")
-                                                      .arg(mThirdHostname)));
+        QVERIFY(pLua->compileAndExecuteScript(focusLostHandlerScript(mThirdHostname)));
         auto removeHandler = qScopeGuard([pLua]() {
             pLua->compileAndExecuteScript(qsl("killAnonymousEventHandler(qaFocusHandler)"));
         });
@@ -922,6 +912,15 @@ private slots:
     }
 
 private:
+    // Bounded, so that a switch that repeats fails its case rather than overflowing the stack
+    static QString focusLostHandlerScript(const QString& profileName)
+    {
+        return qsl("qaFocusLost = 0 "
+                   "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
+                   "if not gained then qaFocusLost = qaFocusLost + 1 if qaFocusLost < 5 then setActiveProfile('%1') end end end)")
+                .arg(profileName);
+    }
+
     // init() detached the second profile, so this puts it back to open its map in the main window
     QDockWidget* showSecondProfilesMapDock()
     {

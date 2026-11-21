@@ -4521,8 +4521,8 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
             }
             pDetachedWindow->raise();
             pDetachedWindow->activateWindow();
-            if (pDetachedHost->mainConsoleView()) {
-                pDetachedHost->mainConsoleView()->focusActiveCommandLine(pDetachedWindow);
+            if (TMainConsole* pConsole = pDetachedHost->mainConsoleView()) {
+                pConsole->focusActiveCommandLine(pDetachedWindow);
             }
         });
         return true;
