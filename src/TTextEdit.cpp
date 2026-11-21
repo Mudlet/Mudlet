@@ -449,8 +449,8 @@ void TTextEdit::updateScreenView()
         // available for NAWS. The lower pane is laid out after the upper one,
         // so it is the one that knows the split's height once both have moved;
         // the width is the upper pane's unless it is dragged out of sight.
-        const bool upperPaneOutOfSight = mpConsole->mUpperPane->drawableSize().isEmpty();
-        const int columns = mIsLowerPane == upperPaneOutOfSight ? mScreenWidth : mpHost->mScreenWidth;
+        const TTextEdit* widthPane = mpConsole->mUpperPane->drawableSize().isEmpty() ? mpConsole->mLowerPane : mpConsole->mUpperPane;
+        const int columns = this == widthPane && !drawable.isEmpty() ? mScreenWidth : mpHost->mScreenWidth;
         mpHost->setScreenDimensions(columns, mpConsole->mUpperPane->mainWindowRows());
     } else {
         mScreenWidth = currentScreenWidth;

@@ -644,6 +644,30 @@ private slots:
 
     // A profile left scrolled back in a background tab is told the size it
     // comes back to all the same - its rows do not depend on the split.
+    // A script can scroll a profile back while its tab is in the background,
+    // where neither pane can see enough of itself to measure a width
+    void scrollingBackABackgroundedProfileKeepsItsWidth()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        fillScrollback();
+        settle();
+        const int width = mpHost->mScreenWidth;
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        runLua(mpHost, qsl("scrollUp(5)"));
+        const int widthWhileHidden = mpHost->mScreenWidth;
+        const bool split = !mpHost->mainConsoleView()->mLowerPane->isHidden();
+        showTab(mHostname);
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(split, "scrolling back did not split the window");
+        QCOMPARE(widthWhileHidden, width);
+    }
+
     void aBackgroundedScrolledBackProfileIsToldTheSizeItComesBackTo()
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
