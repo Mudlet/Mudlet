@@ -71,6 +71,24 @@ static constexpr int scmPackagesListShareDenominator = 3;
 static constexpr char scmPackagesSplitterKey[] = "packageManagerSplitterState";
 
 
+namespace {
+// The list sorts its rows, and QListWidgetItem's own order puts "Zeta" before "alpha"
+class PackageListItem : public QListWidgetItem
+{
+public:
+    explicit PackageListItem(const QString& name)
+    : QListWidgetItem(name)
+    {
+    }
+
+    bool operator<(const QListWidgetItem& other) const override
+    {
+        const int byLetters = text().compare(other.text(), Qt::CaseInsensitive);
+        return byLetters ? byLetters < 0 : text() < other.text();
+    }
+};
+} // namespace
+
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 : QDialog(parent)
 , mpHost(pHost)
@@ -679,7 +697,6 @@ void dlgPackageManager::slot_installPackageFromFile()
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
     const QString failures = installPackageFiles(fileNames);
-
     resetPackageList();
     comeBackToFront();
 
@@ -688,35 +705,23 @@ void dlgPackageManager::slot_installPackageFromFile()
     }
 }
 
-static QString installFailure(const QString& name, const QString& reason)
-{
-    if (reason.isEmpty()) {
-        return name.toHtmlEscaped();
-    }
-    //: Package manager - one line of the notice listing packages that could not be installed. %1 is the package or file name, %2 the reason it was not installed
-    return dlgPackageManager::tr("%1: %2").arg(name, reason).toHtmlEscaped();
-}
-
-// Returns the notice to show, empty if every file installed. Split from the slot so the
-// wording can be tested: the slot opens a file dialog.
+// Returns the notice naming each file that failed and why, empty if none. The reason
+// otherwise goes only to the main console, behind this window.
 QString dlgPackageManager::installPackageFiles(const QStringList& fileNames)
 {
     QStringList failures;
     for (const QString& fileName : fileNames) {
-        // During a save an install is put off and reports success before it has run
+        // Mid-save, installPackage() answers yes and tries later, leaving no reason to report
         mpHost->waitForProfileSave();
-        if (auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package); !installed) {
-            const QString baseName = QFileInfo(fileName).fileName();
-            failures << installFailure(baseName, reason);
-            qWarning() << "dlgPackageManager::installPackageFiles() ERROR - failed to import" << baseName;
+        const auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+        if (installed) {
+            continue;
         }
+        //: Package manager - one line of the notice listing packages that failed to import. %1 is the file name, %2 the reason it was refused
+        failures << tr("Failed to import %1: %2").arg(QFileInfo(fileName).fileName(), reason).toHtmlEscaped();
     }
-    mpHost->waitForProfileSave();
-    if (failures.isEmpty()) {
-        return {};
-    }
-    //: Package manager - status message shown when some packages failed to import. %1 is a list of the files, one per line, each with the reason it was not imported
-    return tr("Failed to import:<br>%1").arg(failures.join(qsl("<br>")));
+    // The notice shows rich text
+    return failures.join(qsl("<br>"));
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()
@@ -770,14 +775,15 @@ void dlgPackageManager::slot_installPackageFromRepository()
                     readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (!readyToInstall) {
                         // Installing over a still-listed package fails as "already installed", so the update would vanish unreported
-                        //: Package manager - why a package from the repository was not updated
-                        failedPackages << installFailure(packageName, tr("the installed version could not be removed to make way for the new one"));
+                        //: Package manager - one line of the notice listing packages from the repository that failed to install. %1 is the package name
+                        failedPackages << tr("Failed to install %1: the installed version could not be removed to make way for the new one").arg(packageName).toHtmlEscaped();
                         qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
                     }
                 }
                 if (readyToInstall) {
-                    if (auto [installed, reason] = mpHost->installPackage(filePath, enums::PackageModuleType::Package); !installed) {
-                        failedPackages << installFailure(packageName, reason);
+                    if (const auto [installed, reason] = mpHost->installPackage(filePath, enums::PackageModuleType::Package); !installed) {
+                        //: Package manager - one line of the notice listing packages from the repository that failed to install. %1 is the package name, %2 the reason it was refused
+                        failedPackages << tr("Failed to install %1: %2").arg(packageName, reason).toHtmlEscaped();
                         qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
                     }
                 }
@@ -796,8 +802,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
         comeBackToFront();
 
         if (!failedPackages.isEmpty()) {
-            //: Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a list of the packages, one per line, each with the reason it was not installed
-            showImportStatus(tr("Failed to install:<br>%1").arg(failedPackages.join(qsl("<br>"))));
+            // The notice shows rich text
+            showImportStatus(failedPackages.join(qsl("<br>")));
         }
     };
 
@@ -1156,7 +1162,7 @@ void dlgPackageManager::slot_removePackages()
 
 QListWidgetItem* dlgPackageManager::installedPackageItem(const QString& packageName) const
 {
-    auto* item = new QListWidgetItem(packageName);
+    auto* item = new PackageListItem(packageName);
     const auto packageInfo = mpHost->mPackageInfo.value(packageName);
     if (const QString title = packageInfo.value(qsl("title")); !title.isEmpty()) {
         item->setData(Qt::UserRole, title);
@@ -1196,7 +1202,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 
             if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
                 || author.contains(searchText, Qt::CaseInsensitive)) {
-                QListWidgetItem* item = new QListWidgetItem(name);
+                QListWidgetItem* item = new PackageListItem(name);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }
@@ -1242,11 +1248,10 @@ void dlgPackageManager::slot_setPackageList()
         // No early return: the button toggles at the end must still run for this view
         if (readPackageRepositoryFile()) {
             for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
-                auto item = new QListWidgetItem();
                 const QJsonObject packageObj = packageVal.toObject();
                 const QString packageName = packageObj.value("mpackage").toString();
                 const QString title = packageObj.value("title").toString();
-                item->setText(packageName);
+                auto item = new PackageListItem(packageName);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }

@@ -41,11 +41,8 @@ using namespace std::chrono_literals;
 // loop - a package's sysUninstall handler is free to take a sibling away, and
 // the rows were drawn before any of that.
 //
-// An import that fails has to give the reason next to the file's name in the
-// notice, not only on the console behind the dialog.
-//
 // A spec cannot reach this: the dialog is C++ only, with no Lua way to open it
-// or to run its removal or import.
+// or to run its removal.
 class PackageManagerRemovalTest : public QObject
 {
     Q_OBJECT
@@ -128,34 +125,6 @@ private slots:
         QVERIFY2(msg.contains(qsl("no longer installed")) && msg.contains(qsl("removal-b")), qPrintable(qsl("The package that had gone was not named as such: %1").arg(msg)));
     }
 
-    // Even when a save is running as it is tried, and with the name escaped for the rich-text notice
-    void test_aFailedImportSaysWhy()
-    {
-        auto* host = startProfile();
-        QVERIFY2(host, "Could not start the profile");
-
-        QTemporaryDir packageDir;
-        QVERIFY(packageDir.isValid());
-        const QString packageFile = packageDir.filePath(qsl("import&twice.xml"));
-        QFile file(packageFile);
-        QVERIFY(file.open(QIODevice::WriteOnly));
-        QVERIFY(file.write(R"(<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>)") > 0);
-        file.close();
-
-        auto* manager = new dlgPackageManager(nullptr, host);
-        const QString first = manager->installPackageFiles({packageFile});
-        host->saveProfile();
-        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the second import did not meet a running save");
-        const QString second = manager->installPackageFiles({packageFile, packageDir.filePath(qsl("never-written.xml"))});
-        delete manager;
-
-        QVERIFY2(first.isEmpty(), qPrintable(qsl("SETUP: the package did not install the first time: %1").arg(first)));
-        QVERIFY2(second.contains(qsl("import&amp;twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
-        QVERIFY2(!second.contains(qsl("import&twice")), qPrintable(qsl("The package name is not escaped everywhere in the rich-text notice: %1").arg(second)));
-        QVERIFY2(second.contains(qsl("already installed")), qPrintable(qsl("The notice does not say why the import failed: %1").arg(second)));
-        QVERIFY2(second.contains(qsl("<br>never-written.xml: ")), qPrintable(qsl("The second failure is not on a line of its own with its reason: %1").arg(second)));
-    }
-
     // The other half of the same wording: a save really running is still the
     // thing to say, and it names every package it turned away.
     void test_aRemovalRefusedByASaveStillSaysSo()
@@ -176,6 +145,43 @@ private slots:
         QVERIFY2(!msg.contains(qsl("no longer installed")), qPrintable(qsl("A package still installed was reported as gone: %1").arg(msg)));
 
         host->waitForProfileSave();
+    }
+
+    // An import asked for while the profile is saving still says why it failed,
+    // not just in the console behind this window once the save is over
+    void test_aFailedImportDuringASaveSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgPackageManager(nullptr, host);
+        host->saveProfile();
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the import would not have been put off");
+        const QString msg = manager->installPackageFiles(QStringList({qsl("%1/no-such-package.xml").arg(mConfigDir.path())}));
+        host->waitForProfileSave();
+        delete manager;
+
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
+    }
+
+    // The reason a file was refused otherwise goes only to the main console, behind the dialog
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgPackageManager(nullptr, host);
+        const QString msg = manager->installPackageFiles(QStringList({qsl("%1/no<such>package.xml").arg(mConfigDir.path()), qsl("%1/also-missing.xml").arg(mConfigDir.path())}));
+        delete manager;
+
+        // One line per file, and the notice is rich text, so only <br> breaks a line
+        // The reason repeats the path, so check the name where the line leads with it
+        QVERIFY2(msg.contains(qsl("Failed to import also-missing.xml: ")), qPrintable(qsl("The second refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.count(qsl("<br>")) == 1, qPrintable(qsl("The two refusals are not on lines of their own: %1").arg(msg)));
+
+        QVERIFY2(msg.contains(qsl("Failed to import no&lt;such&gt;package.xml: ")), qPrintable(qsl("The refused file was not named, or not escaped for the rich-text notice: %1").arg(msg)));
+        QVERIFY2(!msg.contains(qsl("<such>")), qPrintable(qsl("Part of the notice was not escaped for rich text: %1").arg(msg)));
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
     }
 
     // A package taken away by a script leaves the listing with it: the dialog

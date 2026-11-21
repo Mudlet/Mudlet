@@ -58,3 +58,7 @@ __pycache__/
 
 # Playwright MCP browser-session scratch
 .playwright-mcp/
+
+# Claude Code personal files (may hold secrets)
+**/.claude/settings.local.json
+CLAUDE.local.md

@@ -636,7 +636,7 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
 
         const QString shown = notice->text();
-        QVERIFY2(shown.contains(qsl("unreadable-package: ")), qPrintable(qsl("The notice does not give a reason after the package's name: %1").arg(shown)));
+        QVERIFY2(shown.contains(qsl("Failed to install unreadable-package: ")), qPrintable(qsl("The notice does not give a reason after the package's name: %1").arg(shown)));
 
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);

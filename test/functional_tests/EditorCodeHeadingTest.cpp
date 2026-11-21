@@ -32,7 +32,6 @@
 #include <QStatusBar>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -49,8 +48,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorCodeHeadingTest : public QObject
 {
@@ -143,7 +140,7 @@ private:
             mpEditor->populateScripts();
             mpEditor->mpScriptsBaseItem->setExpanded(true);
         }
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     struct MarginInk
@@ -176,7 +173,7 @@ private:
     {
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(script);
         mpEditor->slot_saveEdits();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
 private slots:
@@ -190,7 +187,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1200, 800);
@@ -208,14 +205,14 @@ private slots:
         // with none reports that through the same channel a failed compile does
         mpEditor->mTriggerPatternEdit.at(0)->singleLineTextEdit_pattern->setPlainText(qsl("EditorCodeHeading"));
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("-- somewhere for the caret to be\n"));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanup()
     {
         if (mpEditor) {
             mpEditor->resize(1200, 800);
-            QTest::qWait(20ms);
+            QCoreApplication::processEvents();
         }
     }
 
@@ -386,7 +383,6 @@ private slots:
 
         mpEditor->resize(mpEditor->minimumSizeHint());
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QTRY_VERIFY2(pCaret->width() >= pCaret->sizeHint().width(), "the strip never made room for the caret reading's words");
 
@@ -505,7 +501,7 @@ private slots:
         dragTo(pHandle, pressedAt + QPointF(0, scmDragTravel));
         dragTo(pHandle, pressedAt);
         QTest::mouseRelease(pHandle, Qt::LeftButton, Qt::NoModifier, pHandle->mapFromGlobal(pressedAt).toPoint());
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         QVERIFY2(caretLine() == 0, qPrintable(qsl("the caret moved to line %1, so a drag of the panes that came back to where it started was heard as a click").arg(QString::number(caretLine()))));
         QCOMPARE(mpEditor->splitter_right->sizes(), before);
@@ -536,7 +532,7 @@ private slots:
             dragTo(pHandle, at);
         }
         QTest::mouseRelease(pHandle, Qt::LeftButton, Qt::NoModifier, pHandle->mapFromGlobal(at).toPoint());
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         const QList<int> after = mpEditor->splitter_right->sizes();
         qInfo().noquote() << qsl("  the panes went from %1 to %2 over %3 steps of %4px")
@@ -592,7 +588,7 @@ private slots:
         QVERIFY2(!pBroken->state(), "the script this case meant to leave broken compiles after all");
 
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         rebuildScriptRows();
 
         QVERIFY2(!mpEditor->mpSystemMessageArea->isVisible(),
@@ -641,7 +637,7 @@ private slots:
         pBroken->registerScript();
         QVERIFY2(!pBroken->state(), "SETUP: the script this case repairs compiles already");
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         rebuildScriptRows();
         mpEditor->slot_scriptsSelected(TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pBroken->getID()));
         QTRY_VERIFY2(compileNote()->isVisible(), "SETUP: opening the broken script left no note");
@@ -668,7 +664,7 @@ private slots:
         pBroken->registerScript();
         QVERIFY2(!pBroken->state() && pFolder->state(), "SETUP: the child compiles, or the folder does not");
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         rebuildScriptRows();
         QTreeWidgetItem* pFolderRow = TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pFolder->getID());
         QVERIFY2(pFolderRow != nullptr && pFolderRow->childCount() == 1, "SETUP: the folder has no row, or not one child under it");
@@ -698,7 +694,7 @@ private slots:
         pClean->registerScript();
 
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         rebuildScriptRows();
         QTreeWidgetItem* pBrokenRow = TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pBroken->getID());
         QTreeWidgetItem* pCleanRow = TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pClean->getID());
@@ -741,7 +737,7 @@ private slots:
         QVERIFY2(!pBroken->packageName(pBroken).isEmpty(), "the broken script is not read as part of a package, so no package notice is due");
 
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         rebuildScriptRows();
         QTreeWidgetItem* pPackageRow = TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pPackage->getID());
         QVERIFY2(pPackageRow != nullptr, "the package has no row in the Scripts tree");
