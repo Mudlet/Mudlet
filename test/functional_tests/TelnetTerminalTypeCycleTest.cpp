@@ -93,7 +93,7 @@ private:
     {
         QList<QByteArray> types;
         for (const Subnegotiation& reply : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_TERMINAL_TYPE))) {
-            if (!reply.payload.isEmpty() && reply.payload.front() == TNSB_IS) {
+            if (reply.payload.startsWith(TNSB_IS)) {
                 types.append(reply.payload.mid(1));
             }
         }
