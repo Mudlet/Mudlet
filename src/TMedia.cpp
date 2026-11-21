@@ -145,6 +145,11 @@ std::optional<double> mediaNumber(const QJsonValue& value)
 
 // Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
 constexpr int maxQueuedLoops = 10000;
+
+bool pendingDownloadMeetsCriteria(const TMediaData& pending, const TMediaData& criteria)
+{
+    return pending.mediaProtocol() == criteria.mediaProtocol() && (criteria.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == criteria.mediaType());
+}
 } // namespace
 
 // Public
@@ -414,11 +419,17 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
 
     const TMediaData fileRequest = requestForFilePlayers(mediaData);
     const auto stops = [&](const TMediaData& candidate) {
-        if (!isMediaMatch(candidate, candidate.mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
+        const TMediaData& request = candidate.mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData;
+        if (!isMediaMatch(candidate, request, BareName::AlsoMatchesSourceFile)) {
             return false;
         }
-        return mediaData.mediaPriority() == TMediaData::MediaPriorityNotSet || candidate.mediaPriority() == TMediaData::MediaPriorityNotSet
-               || (priorityStop == PriorityStop::Below ? candidate.mediaPriority() < mediaData.mediaPriority() : candidate.mediaPriority() <= mediaData.mediaPriority());
+        if (mediaData.mediaPriority() == TMediaData::MediaPriorityNotSet || candidate.mediaPriority() == TMediaData::MediaPriorityNotSet) {
+            return true;
+        }
+        if (priorityStop == PriorityStop::Below) {
+            return candidate.mediaPriority() < mediaData.mediaPriority();
+        }
+        return candidate.mediaPriority() <= mediaData.mediaPriority();
     };
 
     // A file still downloading has no player yet, and would start once it lands; as a preload it is
@@ -426,7 +437,7 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
     // name, and scripts rely on a sound they asked for still playing once its download lands.
     if (priorityStop != PriorityStop::Below) {
         for (TMediaData& pending : mMediaDownloads) {
-            if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType()) && stops(pending)) {
+            if (pendingDownloadMeetsCriteria(pending, mediaData) && stops(pending)) {
                 pending.setMediaVolume(TMediaData::MediaVolumePreload);
             }
         }
@@ -964,8 +975,7 @@ void TMedia::updateMedia(TMediaData& mediaData, const std::optional<int> volume,
     // A file still downloading has no player yet, and plays as its download says once it lands. A
     // preload is left alone: given a volume, it would play.
     for (TMediaData& pending : mMediaDownloads) {
-        if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType())
-            && pending.mediaVolume() != TMediaData::MediaVolumePreload && selected(pending)) {
+        if (pendingDownloadMeetsCriteria(pending, mediaData) && pending.mediaVolume() != TMediaData::MediaVolumePreload && selected(pending)) {
             update(pending);
         }
     }
