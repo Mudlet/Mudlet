@@ -237,7 +237,8 @@ public:
     qreal getZoom() const { return xyzoom; }
     int getZLevel() const { return mMapCenterZ; }
 
-    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
+    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events. The main view is panned
+    // there, leaving the player's room alone, and follows the player again once they move.
     std::pair<bool, QString> centerview(int roomId);
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
@@ -348,6 +349,7 @@ public:
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
 
 public slots:
     void slot_roomSelectionChanged();

@@ -43,22 +43,28 @@ class CheckHeadlessLuaFailures(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.log_path = os.path.join(self.directory.name, "headless-lua.log")
         self.known_path = os.path.join(self.directory.name, "known.txt")
+        self.browser_path = os.path.join(self.directory.name, "browser.txt")
 
     def tearDown(self):
         self.directory.cleanup()
 
-    def check(self, log_text, known_text=KNOWN, write=False):
+    def check(self, log_text, known_text=KNOWN, write=False, browser_text=None):
         with open(self.log_path, "w", encoding="utf-8") as out:
             out.write(log_text)
         with open(self.known_path, "w", encoding="utf-8") as out:
             out.write(known_text)
-        command = [sys.executable, "-I", CHECKER, self.log_path, self.known_path] + (["--write"] if write else [])
+        lists = [self.known_path]
+        if browser_text is not None:
+            with open(self.browser_path, "w", encoding="utf-8") as out:
+                out.write(browser_text)
+            lists.append(self.browser_path)
+        command = [sys.executable, "-I", CHECKER, self.log_path] + lists + (["--write"] if write else [])
         environment = {key: value for key, value in os.environ.items() if key != "GITHUB_ACTIONS"}
         result = subprocess.run(command, capture_output=True, text=True, env=environment)
         return result.returncode, result.stdout
 
-    def known(self):
-        with open(self.known_path, encoding="utf-8") as known:
+    def known(self, path=None):
+        with open(path or self.known_path, encoding="utf-8") as known:
             return known.read()
 
     def test_passes_a_run_that_fails_exactly_the_listed_tests(self):
@@ -126,6 +132,32 @@ class CheckHeadlessLuaFailures(unittest.TestCase):
         status, output = self.check(log(12, [], [hook]), write=True)
         self.assertEqual(status, 1, output)
         self.assertEqual(self.known(), KNOWN)
+
+    def test_takes_several_lists_together(self):
+        status, output = self.check(log(10, ["Example group one test", "Example group the other test"]), browser_text=f"Failure {OTHER}\n")
+        self.assertEqual(status, 0, output)
+
+    def test_a_not_line_takes_an_entry_off_another_list(self):
+        status, output = self.check(log(11), browser_text=f"Not Failure {ONE}\n")
+        self.assertEqual(status, 0, output)
+        status, output = self.check(log(10, ["Example group one test"]), browser_text=f"Not Failure {ONE}\n")
+        self.assertEqual(status, 1, output)
+        self.assertIn(f"not listed in {self.known_path} or {self.browser_path}", output)
+
+    def test_fails_a_not_line_that_takes_off_nothing(self):
+        status, output = self.check(log(10, ["Example group one test"]), browser_text=f"Not Failure {OTHER}\n")
+        self.assertEqual(status, 1, output)
+        self.assertIn(f"Not Failure {OTHER}", output)
+
+    def test_write_puts_in_the_last_list_only_what_the_others_lack(self):
+        browser = f"# Browser only\nNot Failure {ONE}\nFailure Example_spec.lua: Example group a stale test\n"
+        status, output = self.check(log(10, ["Example group the other test"]), write=True, browser_text=browser)
+        self.assertEqual(status, 0, output)
+        self.assertEqual(self.known(self.browser_path), f"# Browser only\nNot Failure {ONE}\nFailure {OTHER}\n")
+        self.assertEqual(self.known(), KNOWN)
+        status, output = self.check(log(10, ["Example group one test", "Example group the other test"]), write=True, browser_text=self.known(self.browser_path))
+        self.assertEqual(status, 0, output)
+        self.assertEqual(self.known(self.browser_path), f"# Browser only\nFailure {OTHER}\n")
 
 
 if __name__ == "__main__":

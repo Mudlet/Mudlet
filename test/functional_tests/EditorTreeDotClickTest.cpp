@@ -130,12 +130,12 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showScriptDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->slot_showTriggers();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(dotDelegate() != nullptr, "The triggers tree should be drawn by an EditorTreeDelegate");
     }
 

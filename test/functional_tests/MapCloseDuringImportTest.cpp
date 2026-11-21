@@ -23,9 +23,10 @@
  * running.
  *
  * Mudlet is single threaded, so nothing here is a race. The interleaving is
- * re-entrancy: TMap::readJsonMapFile() and TMap::writeJsonMapFile() call
- * qApp->processEvents() once per area to keep their progress display alive and
- * its Abort button clickable, and that pump delivers whatever else the event
+ * re-entrancy: in the GUI, TMap::readJsonMapFile() and TMap::writeJsonMapFile()
+ * run the event loop once per area, through signal_mapProgressRepaintWanted(), to
+ * keep their progress display alive and its Abort button clickable, and that
+ * pump delivers whatever else the event
  * loop is holding - including the zero-millisecond timer that
  * mudlet::slot_closeProfileByName() posts to run mudlet::closeHost(). That call
  * takes the profile's QSharedPointer<Host> out of the host pool, which destroys
@@ -33,7 +34,8 @@
  * the reader touches after that is freed memory.
  *
  * These tests stage exactly that, through the same public slot the tab close
- * and closeProfile() use, and let the operation's own pump deliver the timer. A
+ * and closeProfile() use, and let the operation's pump, connected here as the
+ * main window connects it, deliver the timer. A
  * QPointer to the map is how they tell: it goes null the moment the TMap is
  * destroyed, so the failure is reported rather than left to whatever the freed
  * memory happens to hold. Without the fix that assertion fails - and under ASan
@@ -110,7 +112,12 @@ private:
         if (!hostManager->addHost(name, qsl("23"), QString(), QString())) {
             return nullptr;
         }
-        return hostManager->getHost(name);
+        Host* pHost = hostManager->getHost(name);
+        // As TMainConsole::repaintMapProgressDialog() does for the progress dialog
+        QObject::connect(pHost->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, pHost, []() {
+            QCoreApplication::processEvents();
+        });
+        return pHost;
     }
 
     static bool setModified(const QString& path, const QDateTime& when)
@@ -217,7 +224,7 @@ private slots:
             closeRequested = true;
             // The same slot the tab's close button and closeProfile() use: it
             // posts closeHost() as a zero-millisecond timer, which the import's
-            // own processEvents() then delivers with the import on the stack.
+            // pump then delivers with the import on the stack.
             mudlet::self()->slot_closeProfileByName(mImportTargetName);
         });
         const auto [read, readMessage] = pTargetMap->readJsonMapFile(mMapFile);
@@ -324,7 +331,7 @@ private slots:
         QVERIFY2(fillMapFolder(name, {qsl("new1.dat"), qsl("new2.dat"), qsl("new3.dat")}), "failed to write the profile's map files");
         TMap* pMap = pTarget->mpMap.data();
 
-        // Delivered by the processEvents() restore() runs after the first file fails
+        // Delivered by the pump restore() asks for after the first file fails
         QTimer::singleShot(0, pMap, [name]() {
             mudlet::self()->slot_closeProfileByName(name);
         });

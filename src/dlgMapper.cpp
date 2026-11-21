@@ -47,6 +47,7 @@
 #include <QProgressBar>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -513,7 +514,11 @@ void dlgMapper::loadMapFromFile()
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
-        dialog->deleteLater();
+        // Only once the load is done: it pumps events to repaint its progress, and on macOS the native dialog's result
+        // arrives outside any Qt event, where that pump would run this delete while QFileDialog::done() is still running
+        const auto deleteDialog = qScopeGuard([dialog]() {
+            dialog->deleteLater();
+        });
         if (result != QDialog::Accepted || dialog->selectedFiles().isEmpty()) {
             return;
         }
@@ -728,6 +733,25 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 #else
     return mp2dMap->setMapZoom(zoom, areaId);
 #endif
+}
+
+std::pair<bool, QString> dlgMapper::centerViewOn(const int roomId)
+{
+    auto centered = mp2dMap->centerview(roomId);
+    if (!centered.first) {
+        return centered;
+    }
+    // The pan is the later request, so a recentre on the player still pending from earlier would undo it at the
+    // next 2D frame. The 3D view is not panned by this, so while it shows, its pending recentre is left to it.
+    if (!showing3DView()) {
+        mpMap->mNewMove = false;
+    }
+    // Set by text, which is not an activation, so the chooser does not switch the area a second time
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mp2dMap->getAreaId());
+    if (!areaName.isEmpty()) {
+        comboBox_showArea->setCurrentText(areaName);
+    }
+    return centered;
 }
 
 int dlgMapper::shownAreaId() const
