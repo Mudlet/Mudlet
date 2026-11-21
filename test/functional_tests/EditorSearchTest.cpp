@@ -919,11 +919,14 @@ private slots:
     {
         QTest::addColumn<int>("doubleClickInterval");
         QTest::addColumn<int>("searchStallMs");
+        QTest::addColumn<int>("pauseBeforeSecondClickMs");
+        QTest::addColumn<bool>("secondClickOpens");
 
         // A minute-long interval, so a slow runner's wait for the results still keeps the second click inside it
-        QTest::newRow("prompt search") << 60000 << 0;
+        QTest::newRow("prompt search") << 60000 << 0 << 0 << false;
         // A search slower than a double-click must not use up the window that swallows its second click
-        QTest::newRow("search slower than a double-click") << 1000 << 1200;
+        QTest::newRow("search slower than a double-click") << 1000 << 1200 << 0 << false;
+        QTest::newRow("click after the window") << 200 << 0 << 400 << true;
     }
 
     // Its search fills the panel at once, so a double-click's second click would otherwise open whatever landed under it
@@ -931,6 +934,8 @@ private slots:
     {
         QFETCH(int, doubleClickInterval);
         QFETCH(int, searchStallMs);
+        QFETCH(int, pauseBeforeSecondClickMs);
+        QFETCH(bool, secondClickOpens);
 
         const int savedInterval = QApplication::doubleClickInterval();
         QApplication::setDoubleClickInterval(doubleClickInterval);
@@ -954,37 +959,10 @@ private slots:
         QTreeWidgetItem* landed = tree->itemAt(pos);
         QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
 
+        QTest::qWait(pauseBeforeSecondClickMs);
         QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
         QCoreApplication::processEvents();
-        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
-    }
-
-    void test_aClickAfterTheDoubleClickWindowOpensTheResult()
-    {
-        const int savedInterval = QApplication::doubleClickInterval();
-        QApplication::setDoubleClickInterval(200);
-        const auto restoreInterval = qScopeGuard([savedInterval]() {
-            QApplication::setDoubleClickInterval(savedInterval);
-        });
-        mpEditor->slot_showVariables();
-        search(mNeedle);
-        QTreeWidgetItem* offer = offerToSearchVariables();
-        QVERIFY(offer);
-        auto* tree = mpEditor->treeWidget_searchResults;
-        tree->scrollToItem(offer);
-        QCoreApplication::processEvents();
-        const QPoint pos = tree->visualItemRect(offer).center();
-        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
-        QVERIFY(QTest::qWaitFor([this]() {
-            return topLevelResultFor(qsl("Variable")) != nullptr;
-        }));
-        QTreeWidgetItem* landed = tree->itemAt(pos);
-        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
-
-        QTest::qWait(400ms);
-        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
-        QCoreApplication::processEvents();
-        QVERIFY2(mpEditor->treeWidget_variables->currentItem() != mpEditor->treeWidget_variables->topLevelItem(0), "a click well after the offer was taken was still swallowed");
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem() != mpEditor->treeWidget_variables->topLevelItem(0), secondClickOpens);
     }
 
     void test_theOfferCanBeTakenFromTheKeyboard()
