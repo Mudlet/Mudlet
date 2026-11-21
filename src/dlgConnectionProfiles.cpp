@@ -2605,9 +2605,10 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     const CopiedProfileData data = captureProfileData();
     // A full copy may still be running and owns the flag until it finishes
     const bool fullCopyRunning = mCopyingProfile;
+    const bool securePasswords = MudletApp::storingPasswordsSecurely();
     // With secure storage the copy's password slot is still empty, so selecting the copy must not blank the field and read it;
     // without, the "password" file the copy takes is what should be read back
-    if (MudletApp::storingPasswordsSecurely()) {
+    if (securePasswords) {
         mCopyingProfile = true;
     }
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
@@ -2651,7 +2652,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     // before the password is saved, as it clears the notification a failed save shows
     validateProfile();
     // the "password" file copied above only holds it when passwords are not stored securely
-    if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+    if (securePasswords && !oldPassword.trimmed().isEmpty()) {
         writeSecurePassword(profile_name, oldPassword);
     }
 }
