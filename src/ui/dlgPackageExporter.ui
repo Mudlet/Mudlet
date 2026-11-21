@@ -87,7 +87,7 @@
        <item>
         <widget class="QTreeWidget" name="treeWidget_exportSelection">
          <property name="accessibleName">
-          <string extracomment="Screen reader name of the tree of triggers, aliases, scripts and other items to put in the package, under a heading that is not linked to it">Items to export</string>
+          <string extracomment="Screen reader name of the tree of triggers, aliases, scripts and other items to put in the package or module, under a heading that is not linked to it">Items to include</string>
          </property>
          <attribute name="headerVisible">
           <bool>false</bool>
