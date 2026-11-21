@@ -3502,7 +3502,14 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
                 profile_name,
                 "character",
                 [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
-                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
+        // as in Host::lookUpSecuredPassword(): on Android Unavailable is a KeyStore error, on a desktop
+        // only the missing keychain service it reports on every read
+#if defined(Q_OS_ANDROID)
+                    const bool readFailed = outcome != CredentialManager::ReadOutcome::Found && outcome != CredentialManager::ReadOutcome::NothingStored;
+#else
+                    const bool readFailed = outcome == CredentialManager::ReadOutcome::TimedOut || outcome == CredentialManager::ReadOutcome::Unreadable;
+#endif
+                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage, readFailed);
 
                     credManager->deleteLater();
                 },
@@ -3522,7 +3529,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     }
 }
 
-void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool timedOut)
+void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool readFailed)
 {
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
     bool passwordUnreadable = false;
@@ -3574,7 +3581,7 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // Offline sends no password, so its load goes ahead.
     const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
     // A copy waits only to take the password, so one whose read gave none it should have is not made
-    const bool noPasswordToCopy = passwordUnreadable || (timedOut && character_password_entry->text().isEmpty());
+    const bool noPasswordToCopy = passwordUnreadable || (readFailed && character_password_entry->text().isEmpty());
     if (noPasswordToCopy && dropPendingCopy(profileName)) {
         abandonPendingProfileLoad();
         //: Shown in the connection dialog when a profile was to be copied but its saved password could not be read from the keychain or its file

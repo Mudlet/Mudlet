@@ -232,8 +232,8 @@ private:
     bool queueCopyBehindPasswordRead(void (dlgConnectionProfiles::*copy)());
     void runPendingCopy(const QString& profileName);
     bool dropPendingCopy(const QString& profileName);
-    // What a keychain read answers with
-    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool timedOut = false);
+    // What a keychain read answers with; readFailed when it timed out or was refused, not when nothing is stored
+    void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool readFailed = false);
     void schedulePasswordLoad(const QString& profile_name);
     // What a read that had timed out answers with afterwards, while the dialog is still open - a
     // load that ran closed it - so all it may do is fill a password field the user has not typed in.

@@ -53,6 +53,12 @@
 #include <QTimer>
 #include <algorithm>
 
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <qtkeychain/keychain.h>
+#else
+#include <qt6keychain/keychain.h>
+#endif
+
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
@@ -621,6 +627,49 @@ private slots:
         dialog()->passwordRetrieved(profile, false, QString(), CredentialManager::unreadableFileError(profile));
 
         QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("1"))).exists(), "a copy was made without the password that could not be read");
+        QVERIFY2(dialog()->notificationAreaMessageBox->text().contains(qsl("copied")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+        QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
+    }
+
+    // A keychain refusing the read, as when its prompt is dismissed, leaves no password to copy either
+    void test_aCopyWaitingOnARefusedKeychainReadSaysSo()
+    {
+#if defined(Q_OS_ANDROID)
+        QSKIP("the KeyStore never refuses a read outright");
+#endif
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("RefusedRead-ConnDialogOffline");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        dialog()->fillout_form();
+        selectTestProfile();
+        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        const QByteArray testMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restore = qScopeGuard([this, testMode]() {
+            CredentialManager::jobStartHookForTesting() = nullptr;
+            CredentialManager::forgetStoreRefusal();
+            qputenv("MUDLET_TEST_MODE", testMode);
+            dialog()->mKeychainOperationProfile.clear();
+            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
+            dialog()->clearKeychainWait();
+            mudlet::self()->setStorePasswordsSecurely(false);
+        });
+        // in test mode the credential store never asks the keychain
+        qunsetenv("MUDLET_TEST_MODE");
+        CredentialManager::jobStartHookForTesting() = [](QKeychain::Job* job) {
+            const QKeychain::Error error = qobject_cast<QKeychain::ReadPasswordJob*>(job) ? QKeychain::AccessDenied : QKeychain::NoError;
+            QTimer::singleShot(100ms, job, [job, error]() {
+                job->emitFinishedWithError(error, qsl("synthetic: refused"));
+            });
+            return false;
+        };
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->mKeychainOperationProfile, profile);
+
+        dialog()->slot_copyProfile();
+        QTRY_VERIFY_WITH_TIMEOUT(dialog()->mKeychainOperationProfile.isEmpty(), 10000);
+
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("1"))).exists(), "a copy was made without the password the keychain would not give");
         QVERIFY2(dialog()->notificationAreaMessageBox->text().contains(qsl("copied")), qPrintable(dialog()->notificationAreaMessageBox->text()));
         QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
     }
