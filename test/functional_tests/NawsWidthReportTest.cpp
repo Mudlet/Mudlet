@@ -19,6 +19,7 @@
 
 #include <QElapsedTimer>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -34,6 +35,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTabBar.h"
+#include "TSplitter.h"
 #include "TTextEdit.h"
 #include "TUiTour.h"
 #include "TelnetServerStub.h"
@@ -437,6 +439,28 @@ private slots:
 
         QVERIFY2(found, "no shrink moved the lower pane alone onto a whole number of rows, so this case tests nothing");
         QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
+    }
+
+    // Dragging the split to the top leaves the upper pane no width to measure,
+    // and the game still has the whole window's
+    void draggingTheSplitToTheTopLeavesTheReportedSizeAlone()
+    {
+        fillScrollback();
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        auto* console = mpHost->mainConsoleView();
+        QVERIFY2(!console->mLowerPane->isHidden(), "scrolling back did not split the window");
+        // a dragged split stays where the player left it
+        const auto restoreSplit = qScopeGuard([console, sizes = console->splitter->sizes()]() {
+            console->splitter->setSizes(sizes);
+        });
+
+        mpServer->clearNawsUpdates();
+        console->splitter->setSizes({0, console->mUpperPane->height() + console->mLowerPane->height()});
+        settle();
+
+        QVERIFY2(console->mUpperPane->height() == 0, "the split would not go all the way to the top, so this case tests nothing");
+        QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
     }
 
     // An overlay along the bottom that covers the whole of the lower pane
