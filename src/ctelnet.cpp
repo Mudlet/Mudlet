@@ -1595,7 +1595,9 @@ void cTelnet::finishDisconnection()
         event.mArgumentList.append(qsl("sysDisconnectionEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
-        mDontReconnect = mDontReconnect || calledOff;
+        if (calledOff) {
+            mDontReconnect = true;
+        }
     }
 
     QTime timeDiff(0, 0, 0, 0);

@@ -316,8 +316,8 @@ private slots:
                                                                        "end)")
                                                                            .arg(mpServer->serverPort())));
         const int connectionsBefore = mpServer->connectionCount();
-        // A refused dial to this machine fails within connectToHost(), leaving no moment to call it
-        // off in, so this is the state a Disconnect leaves a slower dial in, and that dial's end
+        // A refused local dial fails inside connectToHost(), too fast to call off, so this sets up
+        // what a Disconnect during a slower dial leaves behind and then ends that dial
         host->mTelnet.mDontReconnect = true;
         host->mTelnet.handleFailedConnection();
 
