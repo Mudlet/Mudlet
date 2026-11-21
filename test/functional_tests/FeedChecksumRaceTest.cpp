@@ -1149,13 +1149,11 @@ void FeedChecksumRaceTest::aManualCheckOnlyAnswersItsOwnRequest()
     QVERIFY2(feedReady.wait(waitMs), "the repaired feed never loaded, so the failOnWarning above would test nothing");
 
     QTest::ignoreMessage(QtWarningMsg, opensTheDialog.constData());
-    feedReady.clear();
     updater.manuallyCheckUpdates();
     QVERIFY2(feedReady.wait(waitMs), "the second manual check never loaded the feed");
 
     // And a twice-daily check that fails after it
     harness.server().setFeedBody("not json");
-    feedError.clear();
     feed->load();
     QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load the second time");
     // Only the player's own failed check is reported, not the background one
@@ -1201,8 +1199,7 @@ void FeedChecksumRaceTest::aManualCheckWaitsOutALoadThatWasTurnedAway()
     feed->load();
     QVERIFY2(checkFailed.isEmpty(), qPrintable(qsl("the refused second load was reported as the player's check failing: %1").arg(checkFailed.value(0).value(0).toString())));
 
-    // A manual check that succeeds goes on to show the update dialog, which this Updater, never
-    // started, lacks - so it says so, and saying it is how the check is seen to finish
+    // Seen to finish by the warning showDialogManually() gives on an Updater that was never started
     QTest::ignoreMessage(QtWarningMsg, "showDialogManually called but update dialog not initialized");
     QVERIFY2(feedReady.wait(waitMs), "the player's check never loaded the feed");
     QVERIFY(checkFailed.isEmpty());
