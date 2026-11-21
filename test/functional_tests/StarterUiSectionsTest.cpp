@@ -454,6 +454,7 @@ private slots:
         for (QPushButton* button : overlay->findChildren<QPushButton*>()) {
             if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
                 downloadButton = button;
+                break;
             }
         }
         QVERIFY2(downloadButton && downloadButton->isVisible(), "the dock does not offer the game's map for download");
