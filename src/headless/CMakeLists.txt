@@ -29,6 +29,8 @@ add_library(mudlet_headless STATIC
     THeadlessSessionCompletion.cpp
     THeadlessSessionLinks.cpp
     THeadlessSessionMap.cpp
+    THeadlessSessionWindows.cpp
+    THeadlessSessionWindowText.cpp
 )
 set_target_properties(mudlet_headless PROPERTIES AUTOMOC ON POSITION_INDEPENDENT_CODE ON)
 target_include_directories(mudlet_headless INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -43,7 +45,7 @@ endif()
 # A console program on Windows too, unlike mudlet_executable, so that its standard streams work
 add_executable(mudlet_headless_executable main.cpp ../HardwareDeviceTypes.h)
 target_compile_definitions(mudlet_headless_executable PRIVATE APP_TARGET="${HEADLESS_APP_TARGET}")
-target_link_libraries(mudlet_headless_executable mudlet_headless mudlet_lsan_hooks)
+target_link_libraries(mudlet_headless_executable PRIVATE mudlet_headless mudlet_lsan_hooks)
 set_target_properties(mudlet_headless_executable PROPERTIES
   OUTPUT_NAME mudlet-headless
   # Beside the GUI's binary, which on Windows has the Qt libraries deployed next to it
@@ -55,8 +57,21 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # RPATH finds it beside our Qt. The GUI loads it through Qt Widgets, first on its link line.
   target_link_options(mudlet_headless_executable PRIVATE "LINKER:--disable-new-dtags")
 endif()
+# A browser build starts through Qt's own loader, which this sets up as qt_add_executable() would. The
+# page passes environment variables through the loader's qt.environment, which needs ENV exported.
+if(EMSCRIPTEN)
+  # The page's own connection to the game, which it passes the loader as mudletTransport, and its mudletConfigSaved
+  target_sources(mudlet_headless_executable PRIVATE BrowserTransport.cpp BrowserTransport.h)
+  # IDBFS and the run dependencies let a page keep the config folder in IndexedDB, loading it before main() runs
+  set_target_properties(mudlet_headless_executable PROPERTIES QT_WASM_EXTRA_EXPORTED_METHODS "ENV,addRunDependency,removeRunDependency")
+  target_link_options(mudlet_headless_executable PRIVATE -lidbfs.js)
+  set(emscripten_rename_fix "${CMAKE_CURRENT_SOURCE_DIR}/emscripten-rename-fix.js")
+  target_link_options(mudlet_headless_executable PRIVATE "SHELL:--post-js \"${emscripten_rename_fix}\"")
+  set_property(TARGET mudlet_headless_executable APPEND PROPERTY LINK_DEPENDS "${emscripten_rename_fix}")
+  qt_finalize_target(mudlet_headless_executable)
+endif()
 if(WIN32)
-  target_link_libraries(mudlet_headless_executable ws2_32)
+  target_link_libraries(mudlet_headless_executable PRIVATE ws2_32)
   if(MINGW)
     # See mudlet_executable: Qt's WinMain library can drop off the link line, and main() is called directly
     set_target_properties(mudlet_headless_executable PROPERTIES qt_no_entrypoint ON)

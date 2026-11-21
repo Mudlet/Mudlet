@@ -886,9 +886,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRemappedArea.next();
             const int faultyAreaId = itRemappedArea.key();
             int replacementAreaId = 0;
-            do {
-                ; // No-op, increment done in test
-            } while (areas.contains(++replacementAreaId));
+            while (areas.contains(++replacementAreaId)) {
+                // No-op, increment done in test
+            }
             // Insert replacement value into hash
             itRemappedArea.setValue(replacementAreaId);
             if (TMap::smShowMapAuditErrors) {
@@ -972,9 +972,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         while (itRenumberedRoomId.hasNext()) {
             itRenumberedRoomId.next();
             int newRoomId = 0;
-            do {
-                ; // No-op - needed increment is done in test condition!
-            } while (rooms.contains(++newRoomId) || newRoomIds.contains(newRoomId));
+            while (rooms.contains(++newRoomId) || newRoomIds.contains(newRoomId)) {
+                // No-op - needed increment is done in test condition!
+            }
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
             newRoomIds.insert(newRoomId);
@@ -1376,7 +1376,6 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                 mpMap->appendAreaErrorMsg(areaNamesMap.key(itRemappedNames.value()),
                                           tr(R"([ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: "%1", new name: "%2".)").arg(oldName, itRemappedNames.value()),
                                           true);
-                ;
             }
             detailText.chop(1); // Trim last "\n" off
         }
