@@ -676,9 +676,18 @@ describe("Tests connectExitStub with a direction code on a map without those roo
     finally(function() deleteArea(area) end)
     local a = createRoomID(12); addRoom(a); setRoomArea(a, area)
     for _, id in ipairs({2147483648, -2147483649, math.huge, -math.huge, 0/0}) do
-      local ok, err = pcall(connectExitStub, a, id)
-      assert.is_false(ok, tostring(id))
-      assert.truthy(tostring(err):find("toID", 1, true), tostring(err))
+      assert.error_matches(function() connectExitStub(a, id) end, "toID", nil, true, tostring(id))
+    end
+  end)
+
+  it("connectExitStub treats a number that rounds past int's range as a missing room", function()
+    local area = addAreaName("connectExitStub rounds huge")
+    finally(function() deleteArea(area) end)
+    local a = createRoomID(12); addRoom(a); setRoomArea(a, area)
+    for _, id in ipairs({2147483647.5, -2147483648.5}) do
+      local ok, err = connectExitStub(a, id)
+      assert.is_nil(ok, tostring(id))
+      assert.is_string(err, tostring(id))
     end
   end)
 end)
