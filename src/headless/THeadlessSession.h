@@ -686,7 +686,8 @@ public:
         // An MXP frame's tab header, as the GUI's QTabWidget draws it along the top of the frame, in the 30 pixels
         // above its console: each page by the name of the MXP frame it shows and the title on its tab, the first
         // being this frame's own console, and the index of the one in front. A page shows where its header's frame
-        // does, at the place and size of the console under the header; the pages behind are not shown. None for an
+        // does, at the place and size of the console under the header; the pages behind are not shown, and one whose
+        // console a script moved out or deleted keeps its tab, which the GUI leaves empty. None for an
         // MXP frame without a header (one with no TITLE, a FLOATING or EXTERNAL one, one under 50 pixels tall unless
         // sized in characters, and a page, which has none of its own), for one whose own console a script moved out
         // of the frame or deleted, which leaves the GUI's header in place with its first page empty, and for the
@@ -800,8 +801,8 @@ public:
     // GUI does: it shows, and the page that was in front, with the frames opened in it, no longer does. The header's
     // frame is named in scriptWindowsChanged, with the two pages. That raises no event in the GUI, so none here.
     // True, changing nothing, for the page already in front. False for a name that is no page of a header, for a
-    // header whose page in front is not shown (as inside an EXTERNAL frame that is hidden), whose tabs a player could
-    // not click, for one not in frameTabs, and where runLua() is refused.
+    // header a player could not click (inside an EXTERNAL frame that is hidden, or on a page behind another tab; a
+    // script hiding the page in front leaves the header), for one not in frameTabs, and where runLua() is refused.
     bool selectFrameTab(const QString& page);
     // What the app's mouse did over one of the windows, for pointer(); mapPointer() takes a MapPointerEvent
     struct WindowPointerEvent

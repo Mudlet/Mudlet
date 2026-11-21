@@ -632,14 +632,17 @@ end)
         // A page has no header of its own, nor has a frame with no title
         QCOMPARE(tabsOf(qsl("chat")), qsl("none"));
         QCOMPARE(tabsOf(qsl("side")), qsl("none"));
+        QVERIFY(feed(qsl(R"(<DEST chat><FRAME Name="deep" Align="bottom" Height="40"></DEST>)")));
+        told();
+        QCOMPARE(shown({qsl("deep")}), qsl("1"));
 
         // A tab brought forward shows its page where the page in front was, at its size, and that one no longer
-        // shows; the header's frame is named with the two pages
+        // shows, nor do the frames opened in it; the header's frame is named with them
         const QRect front = session.scriptWindow(qsl("chat"))->geometry;
         QVERIFY(session.selectFrameTab(qsl("log")));
-        QCOMPARE(told(), qsl("chat,log,tabs"));
+        QCOMPARE(told(), qsl("chat,deep,log,tabs"));
         QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,chat=Chat,log=log @2"));
-        QCOMPARE(shown(pages), qsl("0 0 1"));
+        QCOMPARE(shown(pages + QStringList{qsl("deep")}), qsl("0 0 1 0"));
         QCOMPARE(session.scriptWindow(qsl("log"))->geometry, front);
         // The tab in front again changes nothing
         QVERIFY(session.selectFrameTab(qsl("log")));
@@ -649,6 +652,18 @@ end)
         QCOMPARE(told(), qsl("log,tabs"));
         QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,chat=Chat,log=log @0"));
         QCOMPARE(shown(pages), qsl("1 0 0"));
+        QVERIFY(session.selectFrameTab(qsl("chat")));
+        QCOMPARE(told(), qsl("chat,deep,tabs"));
+        QCOMPARE(shown(pages + QStringList{qsl("deep")}), qsl("0 1 0 1"));
+        // A script hiding the page in front hides its console, not the header, whose tabs a player can still click
+        QVERIFY(session.runLua(qsl("hideWindow('chat')")));
+        told();
+        QCOMPARE(shown(pages), qsl("0 0 0"));
+        QVERIFY(session.selectFrameTab(qsl("log")));
+        QCOMPARE(shown(pages), qsl("0 0 1"));
+        QVERIFY(session.runLua(qsl("showWindow('chat')")));
+        QVERIFY(session.selectFrameTab(qsl("tabs")));
+        told();
 
         // Refused for a frame with no header, which is no page, and for a name that is no frame's
         for (const QString& other : {qsl("side"), qsl("nonesuch")}) {
@@ -718,7 +733,16 @@ end)
         settle();
         QCOMPARE(withTabs(), qsl("tabs in ''"));
 
-        QVERIFY(session.runLua(qsl("openUserWindow('uw') setWindow('uw', 'tabs', 10, 20, true)")));
+        // A page moved out keeps its tab, as the GUI leaves it there, empty
+        QVERIFY(session.runLua(qsl("openUserWindow('uw') setWindow('uw', 'chat', 10, 20, true)")));
+        settle();
+        QCOMPARE(session.scriptWindow(qsl("chat"))->parent, qsl("uw"));
+        const std::optional<THeadlessSession::ScriptWindow> header = session.scriptWindow(qsl("tabs"));
+        QVERIFY(header && header->frameTabs);
+        QCOMPARE(header->frameTabs->pages.size(), 3);
+        QCOMPARE(header->frameTabs->pages.at(1).name, qsl("chat"));
+
+        QVERIFY(session.runLua(qsl("setWindow('uw', 'tabs', 10, 20, true)")));
         settle();
         QCOMPARE(withTabs(), QString());
         QVERIFY(!session.selectFrameTab(qsl("log")));
@@ -730,6 +754,7 @@ end)
         QVERIFY(session.scriptWindow(qsl("chat")));
         QCOMPARE(withTabs(), QString());
         QVERIFY(!session.selectFrameTab(qsl("log")));
+        QVERIFY2(session.errorString().contains(qsl("tabs")), qPrintable(session.errorString()));
         QVERIFY(session.shutdown(false));
     }
 

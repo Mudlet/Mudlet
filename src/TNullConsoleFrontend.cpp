@@ -1106,10 +1106,14 @@ void TNullMxpFrameFrontend::selectPage(const QString& headerName, const QString&
     if (header == mHeaders.end()) {
         return;
     }
-    const auto found = std::find(header->second.pages.cbegin(), header->second.pages.cend(), pageName);
-    const auto page = static_cast<size_t>(found - header->second.pages.cbegin());
+    const std::vector<QString>& pages = header->second.pages;
+    const auto found = std::find(pages.cbegin(), pages.cend(), pageName);
+    if (found == pages.cend()) {
+        return;
+    }
+    const auto page = static_cast<size_t>(found - pages.cbegin());
     // QTabWidget::setCurrentIndex() to the index already in front changes nothing
-    if (found == header->second.pages.cend() || page == header->second.current) {
+    if (page == header->second.current) {
         return;
     }
     header->second.current = page;

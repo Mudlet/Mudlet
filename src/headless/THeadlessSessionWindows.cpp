@@ -529,21 +529,26 @@ bool THeadlessSession::selectFrameTab(const QString& page)
         return false;
     }
     auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
-    TNullMxpFrameFrontend* pFrames = pView ? &pView->nullMxpFrames() : nullptr;
-    const std::optional<QString> header = pFrames ? pFrames->headerOf(page) : std::nullopt;
+    const std::optional<QString> header = pView ? pView->nullMxpFrames().headerOf(page) : std::nullopt;
     if (!header) {
         //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) that is no page of any frame's tab header; %1 is the name it gave
         mErrorString = tr("No MXP frame has a tab called \"%1\".").arg(page);
         return false;
     }
-    const std::optional<TNullMxpFrameFrontend::Tabs> tabs = pFrames->tabs(*header);
+    TNullMxpFrameFrontend& frames = pView->nullMxpFrames();
+    const std::optional<TNullMxpFrameFrontend::Tabs> tabs = frames.tabs(*header);
+    if (!tabs) {
+        //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) whose own console a script moved out of the frame or deleted, so its tab header is not given to the frontend; %1 is the name of the frame the header is on
+        mErrorString = tr("A script moved the console of the MXP frame \"%1\" out of it or deleted it, so its tabs cannot be brought forward here.").arg(*header);
+        return false;
+    }
     // The header shows where the page in front of it does
-    if (!tabs || !pFrames->pageShown(tabs->pages.at(tabs->current).first)) {
-        //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) whose tab header is hidden, as inside a hidden window, or not told, as when a script moved the frame's own console out of it, so a player could not click it; %1 is the name of the frame the header is on
+    if (!frames.pageShown(tabs->pages.at(tabs->current).first)) {
+        //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) whose tab header is hidden, as inside a hidden window, so a player could not click it; %1 is the name of the frame the header is on
         mErrorString = tr("The tabs of the MXP frame \"%1\" are not shown, so none of them can be brought forward.").arg(*header);
         return false;
     }
-    pFrames->selectPage(*header, page);
+    frames.selectPage(*header, page);
     return true;
 }
 
