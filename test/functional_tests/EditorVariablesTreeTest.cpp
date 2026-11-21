@@ -76,7 +76,7 @@ private:
     dlgTriggerEditor* mpEditor = nullptr;
     Host* mpHost = nullptr;
     TTreeWidget* mpVariablesTree = nullptr;
-    // Singular forms come from it, and the machine's locale could load another English one
+    // %n strings only read "1 key" through a translation, and the machine's locale could pick another English one
     QTranslator mAmericanEnglish;
     const QString mProfileName = qsl("EditorVariablesTree-Test-Profile");
     // Written out rather than read from the code under test, so the test fails
