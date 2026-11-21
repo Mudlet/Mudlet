@@ -1480,6 +1480,13 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkForHoverTest', [[ ]], '', true)\n")), "the echoLink() call failed");
         QVERIFY2(waitForTextInBuffer(qsl("LinkForHoverTest")), "the link text never reached the buffer");
+        // A link without a hover style of its own never takes the hover state
+        TLinkStore& links = pane->mpBuffer->mLinkStore;
+        Mudlet::HyperlinkStyling styling;
+        styling.hasCustomStyling = true;
+        styling.hoverStyle.hasCustomStyling = true;
+        styling.hoverStyle.isBold = true;
+        links.setStyling(links.getCurrentLinkID(), styling);
         QTest::qWait(100ms);
 
         int hoveredLink = 0;
