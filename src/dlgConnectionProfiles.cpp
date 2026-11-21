@@ -2603,9 +2603,13 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
     const CopiedProfileData data = captureProfileData();
-    // with secure storage, stops selecting the copy from blanking the password field and reading its still empty slot;
-    // without, the "password" file the copy takes is read back. A full copy may still be running, and holds the flag until it finishes
-    const bool fullCopyRunning = std::exchange(mCopyingProfile, mCopyingProfile || MudletApp::storingPasswordsSecurely());
+    // A full copy may still be running and owns the flag until it finishes
+    const bool fullCopyRunning = mCopyingProfile;
+    // With secure storage the copy's password slot is still empty, so selecting the copy must not blank the field and read it;
+    // without, the "password" file the copy takes is what should be read back
+    if (MudletApp::storingPasswordsSecurely()) {
+        mCopyingProfile = true;
+    }
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
         mCopyingProfile = fullCopyRunning;
         return;
