@@ -3574,7 +3574,8 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // Offline sends no password, so its load goes ahead.
     const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
     // A copy waits only to take the password, so one whose read gave none it should have is not made
-    if ((passwordUnreadable || (timedOut && character_password_entry->text().isEmpty())) && dropPendingCopy(profileName)) {
+    const bool noPasswordToCopy = passwordUnreadable || (timedOut && character_password_entry->text().isEmpty());
+    if (noPasswordToCopy && dropPendingCopy(profileName)) {
         abandonPendingProfileLoad();
         //: Shown in the connection dialog when a profile was to be copied but its saved password could not be read from the keychain or its file
         showNotification(tr("The saved password for this profile could not be read, so the profile was not copied. Enter the password, then copy the profile again."),

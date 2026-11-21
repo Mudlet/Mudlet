@@ -113,7 +113,18 @@ private:
         });
     }
 
-    QStringList mProfileListOnDisk() const { return QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot); }
+    QStringList profileDirsOnDisk() const { return QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot); }
+
+    QStringList profileDirsMadeSince(const QStringList& before) const
+    {
+        QStringList made;
+        for (const QString& name : profileDirsOnDisk()) {
+            if (!before.contains(name)) {
+                made << name;
+            }
+        }
+        return made;
+    }
 
     bool waitForTheCopy() const
     {
@@ -135,7 +146,7 @@ private:
         mudlet::self()->setStorePasswordsSecurely(true);
         const auto restore = qScopeGuard([this, profile, copiedProfile]() {
             dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(profile);
+            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
             dialog()->clearKeychainWait();
             mudlet::self()->setStorePasswordsSecurely(false);
             CredentialManager::removeCredential(profile, qsl("character"));
@@ -489,18 +500,16 @@ private slots:
         QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileHomePath, game)).exists());
         mudlet::self()->setStorePasswordsSecurely(true);
         const int shownTab = dialog()->mpTabBar->currentIndex();
-        QStringList listedBefore = mProfileListOnDisk();
+        const QStringList listedBefore = profileDirsOnDisk();
         const auto restore = qScopeGuard([this, game, shownTab, listedBefore]() {
             dialog()->mKeychainOperationProfile.clear();
             dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
             dialog()->clearKeychainWait();
             mudlet::self()->setStorePasswordsSecurely(false);
             CredentialManager::removeCredential(game, qsl("character"));
-            for (const QString& made : mProfileListOnDisk()) {
-                if (!listedBefore.contains(made)) {
-                    CredentialManager::removeCredential(made, qsl("character"));
-                    QDir(MudletApp::getMudletPath(enums::profileHomePath, made)).removeRecursively();
-                }
+            for (const QString& made : profileDirsMadeSince(listedBefore)) {
+                CredentialManager::removeCredential(made, qsl("character"));
+                QDir(MudletApp::getMudletPath(enums::profileHomePath, made)).removeRecursively();
             }
             dialog()->mpTabBar->setCurrentIndex(shownTab);
         });
@@ -520,13 +529,7 @@ private slots:
         QVERIFY2(waitForTheCopy(), "the copy never finished");
         QTest::qWait(50ms);
 
-        QStringList made;
-        for (const QString& name : mProfileListOnDisk()) {
-            if (!listedBefore.contains(name)) {
-                made << name;
-            }
-        }
-        QCOMPARE(made, QStringList{game + qsl("1")});
+        QCOMPARE(profileDirsMadeSince(listedBefore), QStringList{game + qsl("1")});
         QTRY_COMPARE(CredentialManager::retrieveCredential(game + qsl("1"), qsl("character")), password);
         QVERIFY2(!dialog()->mKeychainWaitShown, "the dialog was left waiting for the keychain");
     }
@@ -570,7 +573,7 @@ private slots:
         const auto restore = qScopeGuard([this, profile, settingsCopy]() {
             dialog()->mKeychainOperationProfile.clear();
             dialog()->mDeferredPasswordLoadProfile.clear();
-            dialog()->dropPendingCopy(profile);
+            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
             dialog()->clearKeychainWait();
             mudlet::self()->setStorePasswordsSecurely(false);
             CredentialManager::removeCredential(profile, qsl("character"));
@@ -602,9 +605,9 @@ private slots:
         const QString profile = qsl("UnreadableRead-ConnDialogOffline");
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
         mudlet::self()->setStorePasswordsSecurely(true);
-        const auto restore = qScopeGuard([this, profile]() {
+        const auto restore = qScopeGuard([this]() {
             dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(profile);
+            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
             dialog()->clearKeychainWait();
             mudlet::self()->setStorePasswordsSecurely(false);
         });
