@@ -859,7 +859,6 @@ private slots:
         QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma delta\n"));
     }
 
-    // A search that finds nothing with variables left out offers to search them
     void test_aSearchThatLeftVariablesOutOffersToSearchThemToo()
     {
         mpEditor->slot_showScripts();
@@ -896,7 +895,7 @@ private slots:
         QTest::addColumn<int>("doubleClickInterval");
         QTest::addColumn<int>("searchStallMs");
 
-        // Waiting for the new results between the clicks must not outlast a double-click on a slow runner
+        // A minute-long interval, so a slow runner's wait for the results still keeps the second click inside it
         QTest::newRow("prompt search") << 60000 << 0;
         // A search slower than a double-click must not use up the window that swallows its second click
         QTest::newRow("search slower than a double-click") << 1000 << 1200;

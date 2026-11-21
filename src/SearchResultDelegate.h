@@ -44,7 +44,7 @@ class SearchResultDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    // An ActionRow is a notice that does something when clicked
+    // An ActionRow is a notice that does something when clicked or activated
     enum RowKind { ItemRow = 0, MatchRow = 1, NoticeRow = 2, ActionRow = 3 };
 
     // Clear of dlgTriggerEditor's private navigation roles, which start at
