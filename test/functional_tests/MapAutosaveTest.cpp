@@ -195,7 +195,7 @@ private:
                 mpHost->autoSaveMap();
             }
         });
-        // No main window here to connect this, as TMainConsole::repaintMapProgressDialog() would
+        // addHost() gives this profile no TMainConsole to connect this to repaintMapProgressDialog(), which does the same
         connect(map(), &TMap::signal_mapProgressRepaintWanted, &ticker, []() {
             QCoreApplication::processEvents();
         });
