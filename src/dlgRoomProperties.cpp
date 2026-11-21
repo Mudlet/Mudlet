@@ -30,6 +30,7 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 #include "uiDesign.h"
+#include "widgetutils.h"
 
 #include <QColorDialog>
 #include <QListWidget>
@@ -67,6 +68,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(mpSymbolColour, &uiDesign::ColourValue::colourEntered, this, &dlgRoomProperties::slot_symbolColorSelected);
     connect(mpSymbolColour, &uiDesign::ColourValue::defaultEntered, this, &dlgRoomProperties::slot_resetSymbolColor);
     connect(mpBorderColour, &uiDesign::ColourValue::colourEntered, this, &dlgRoomProperties::slot_borderColorSelected);
+    connect(mpBorderColour, &uiDesign::ColourValue::opacityEntered, this, &dlgRoomProperties::slot_borderOpacitySelected);
     connect(mpBorderColour, &uiDesign::ColourValue::defaultEntered, this, &dlgRoomProperties::slot_resetBorderColor);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
@@ -81,6 +83,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(spinBox_borderThickness, qOverload<int>(&QSpinBox::valueChanged), this, &dlgRoomProperties::slot_borderThicknessChanged);
 
     setAttribute(Qt::WA_DeleteOnClose);
+}
+
+dlgRoomProperties::~dlgRoomProperties()
+{
+    // ~QDialog hides the dialog once this destructor is done, and a colour field or the opacity box still holding an
+    // edit takes it on losing the focus, emitting into these slots when this object is no longer a valid receiver
+    widgetutils::disconnectChildSignals(this);
 }
 
 void dlgRoomProperties::init(
@@ -450,7 +459,8 @@ void dlgRoomProperties::accept()
         }
     }
 
-    // Find border settings to return back
+    // Find border settings to return back. An opacity set alone for rooms that differ in colour has no one colour to
+    // go with the save, and the preview has already given it to each room with that room's own colour.
     bool changeBorderColor = mBorderColorWasChanged;
     QColor newBorderColor = selectedBorderColor;
     bool changeBorderThickness = mBorderThicknessWasChanged;
@@ -603,6 +613,14 @@ void dlgRoomProperties::restyleColourRows()
 bool dlgRoomProperties::resetOffered(const QColor& chosen) const
 {
     return mRoomIds.size() > 1 || chosen.isValid();
+}
+
+bool dlgRoomProperties::borderColoursDiffer() const
+{
+    const QList<QColor> colours = mOriginalBorderColors.values();
+    return std::any_of(colours.cbegin(), colours.cend(), [&colours](const QColor& colour) {
+        return colour != colours.constFirst();
+    });
 }
 
 void dlgRoomProperties::showBorderColour()
@@ -788,6 +806,20 @@ void dlgRoomProperties::slot_borderColorSelected(const QColor& color)
     emitBorderPreview();
 }
 
+// The field shows the first room's colour, so it is everyone's only while the rooms agree or once one was decided for
+// them all; until then each room takes the opacity alone
+void dlgRoomProperties::slot_borderOpacitySelected(const QColor& colour)
+{
+    if (mBorderColorWasChanged || !borderColoursDiffer()) {
+        slot_borderColorSelected(colour);
+        return;
+    }
+    // What the field shows, for the colours window to open on
+    selectedBorderColor = colour;
+    mBorderAlphaOnly = colour.alpha();
+    emitBorderPreview();
+}
+
 void dlgRoomProperties::slot_resetBorderColor()
 {
     selectedBorderColor = QColor();
@@ -835,6 +867,13 @@ void dlgRoomProperties::emitBorderPreview()
         }
         if (mBorderColorWasChanged) {
             room->mBorderColor = selectedBorderColor;
+        } else if (mBorderAlphaOnly) {
+            // A room with no colour of its own keeps following the map's
+            QColor colour = mOriginalBorderColors.value(roomId);
+            if (colour.isValid()) {
+                colour.setAlpha(*mBorderAlphaOnly);
+            }
+            room->mBorderColor = colour;
         }
         if (mBorderThicknessWasChanged) {
             room->mBorderThickness = mBorderThickness;

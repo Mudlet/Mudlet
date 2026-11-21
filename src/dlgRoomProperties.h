@@ -43,6 +43,7 @@ class dlgRoomProperties : public QDialog, public Ui::room_properties
 public:
     Q_DISABLE_COPY(dlgRoomProperties)
     explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
+    ~dlgRoomProperties() override;
     void
     init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, int hiddenRoomCount, const QSet<int>& roomIds);
     void accept() override;
@@ -74,6 +75,7 @@ private:
     QColor backgroundBasedColor(QColor);
     void restyleColourRows();
     bool resetOffered(const QColor& chosen) const;
+    bool borderColoursDiffer() const;
     void showBorderColour();
     QColor defaultSymbolColor();
     QString getNewSymbol();
@@ -106,6 +108,8 @@ private:
     QColor selectedBorderColor;
     int mBorderThickness = 0;
     bool mBorderColorWasChanged = false;
+    // An opacity set for rooms that differ in colour, which each room takes with its own colour
+    std::optional<int> mBorderAlphaOnly;
     bool mBorderThicknessWasChanged = false;
     QHash<int, QColor> mOriginalBorderColors;
     QHash<int, int> mOriginalBorderThicknesses;
@@ -125,6 +129,7 @@ private slots:
 
     void slot_openBorderColorSelector();
     void slot_borderColorSelected(const QColor&);
+    void slot_borderOpacitySelected(const QColor&);
     void slot_resetBorderColor();
     void slot_borderThicknessChanged(int);
 };

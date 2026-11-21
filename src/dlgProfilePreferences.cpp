@@ -2550,19 +2550,21 @@ void dlgProfilePreferences::reflowMapperCards()
     // One width for both whatever their ranges, so their percent signs stand one over the other as the opacities' do,
     // and the colour rows' compact height, so a ring's row is one height across
     uiDesign::fitNumberBoxes({spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter}, uiDesign::scmColourWellHeight);
-    // A typed colour goes the way one chosen in the colours window does
-    connect(mpColourValue_playerRoomOuter, &uiDesign::ColourValue::colourEntered, this, [this](const QColor& colour) {
-        if (mpHost && mpHost->mpMap) {
-            mpHost->mpMap->mPlayerRoomOuterColor = colour;
-            passOnPlayerRoomColour(true);
-        }
-    });
-    connect(mpColourValue_playerRoomInner, &uiDesign::ColourValue::colourEntered, this, [this](const QColor& colour) {
-        if (mpHost && mpHost->mpMap) {
-            mpHost->mpMap->mPlayerRoomInnerColor = colour;
-            passOnPlayerRoomColour(false);
-        }
-    });
+    // A typed colour or opacity goes the way one chosen in the colours window does
+    for (const auto entry : {&uiDesign::ColourValue::colourEntered, &uiDesign::ColourValue::opacityEntered}) {
+        connect(mpColourValue_playerRoomOuter, entry, this, [this](const QColor& colour) {
+            if (mpHost && mpHost->mpMap) {
+                mpHost->mpMap->mPlayerRoomOuterColor = colour;
+                passOnPlayerRoomColour(true);
+            }
+        });
+        connect(mpColourValue_playerRoomInner, entry, this, [this](const QColor& colour) {
+            if (mpHost && mpHost->mpMap) {
+                mpHost->mpMap->mPlayerRoomInnerColor = colour;
+                passOnPlayerRoomColour(false);
+            }
+        });
+    }
     gridLayout_groupBox_playerRoomStyle->setVerticalSpacing(scmFlowRowGap);
 }
 
@@ -2778,18 +2780,20 @@ void dlgProfilePreferences::reflowColourCards()
             }
             colour.pName->setBuddy(colour.pValue);
             colour.pValue->setChooseButton(colour.pChoose);
-            // A typed colour goes the way one chosen in the colours window does
-            connect(colour.pValue, &uiDesign::ColourValue::colourEntered, this, [this, pChoose = colour.pChoose, pHeld = colour.pHeld](const QColor& entered) {
-                Host* pHost = mpHost;
-                if (!pHost) {
-                    return;
-                }
-                takeColour(pChoose, pHost->*pHeld, entered);
-                // As slot_setMapBgColor() does once the colours window closes
-                if (pChoose == pushButton_background_color_2 && pHost->mpMap) {
-                    pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
-                }
-            });
+            // A typed colour or opacity goes the way one chosen in the colours window does
+            for (const auto entry : {&uiDesign::ColourValue::colourEntered, &uiDesign::ColourValue::opacityEntered}) {
+                connect(colour.pValue, entry, this, [this, pChoose = colour.pChoose, pHeld = colour.pHeld](const QColor& entered) {
+                    Host* pHost = mpHost;
+                    if (!pHost) {
+                        return;
+                    }
+                    takeColour(pChoose, pHost->*pHeld, entered);
+                    // As slot_setMapBgColor() does once the colours window closes
+                    if (pChoose == pushButton_background_color_2 && pHost->mpMap) {
+                        pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
+                    }
+                });
+            }
         }
     };
     giveFields(groupBox_displayColors, mDisplayColours);

@@ -240,7 +240,7 @@ void ColourValue::takeOpacity(const int percent)
         return;
     }
     setColour(colour);
-    emit colourEntered(colour);
+    emit opacityEntered(colour);
 }
 
 void ColourValue::keepTextClearOfSwatch()

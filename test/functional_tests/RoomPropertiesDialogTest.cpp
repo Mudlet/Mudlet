@@ -443,6 +443,28 @@ private:
         });
     }
 
+    static QColor atAlpha(QColor colour, const int alpha)
+    {
+        colour.setAlpha(alpha);
+        return colour;
+    }
+    static QColor firstOwnBorder() { return {200, 40, 80}; }
+    static QColor secondOwnBorder() { return {10, 20, 200}; }
+
+    // Two rooms with border colours of their own that differ, and a third with none, drawn in the map's; OK lands on
+    // the map
+    dlgRoomProperties* openDialogOnRoomsThatDifferInBorderColour()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        room(scmFirstRoom)->mBorderColor = firstOwnBorder();
+        room(scmSecondRoom)->mBorderColor = secondOwnBorder();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom, scmThirdRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->show();
+        return pDlg;
+    }
+
     // The colours window is opened rather than run, so it is among the dialog's children as soon as Choose is clicked
     static bool chooseInTheColoursWindow(dlgRoomProperties* pDlg, QPushButton* pChoose, const QColor& colour)
     {
@@ -1023,6 +1045,123 @@ private slots:
         }
     }
 
+    // The field shows one room's colour, so an opacity set for rooms that differ in colour goes to each with its own,
+    // in the preview and on OK, and a room with none of its own keeps following the map's
+    void anOpacitySetForRoomsThatDifferInColourKeepsEachRoomsOwn()
+    {
+        auto* pDlg = openDialogOnRoomsThatDifferInBorderColour();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+
+        typeInto(borderOpacity(pDlg), qsl("60"), Qt::Key_Return);
+        QCOMPARE(room(scmFirstRoom)->mBorderColor, atAlpha(firstOwnBorder(), 153));
+        QCOMPARE(room(scmSecondRoom)->mBorderColor, atAlpha(secondOwnBorder(), 153));
+        QVERIFY2(!room(scmThirdRoom)->mBorderColor.isValid(), qPrintable(qsl("the room drawn in the map's border colour was given %1").arg(room(scmThirdRoom)->mBorderColor.name(QColor::HexArgb))));
+        // A second step sets the opacity anew rather than on top of the first
+        typeInto(borderOpacity(pDlg), qsl("30"), Qt::Key_Return);
+        QCOMPARE(room(scmFirstRoom)->mBorderColor, atAlpha(firstOwnBorder(), 77));
+        QCOMPARE(room(scmSecondRoom)->mBorderColor, atAlpha(secondOwnBorder(), 77));
+        QVERIFY(!room(scmThirdRoom)->mBorderColor.isValid());
+
+        pDlg->accept();
+        QCOMPARE(mEmitted.emitCount, 1);
+        QCOMPARE(room(scmFirstRoom)->mBorderColor, atAlpha(firstOwnBorder(), 77));
+        QCOMPARE(room(scmSecondRoom)->mBorderColor, atAlpha(secondOwnBorder(), 77));
+        QVERIFY2(!room(scmThirdRoom)->mBorderColor.isValid(), qPrintable(qsl("OK gave the room drawn in the map's border colour %1").arg(room(scmThirdRoom)->mBorderColor.name(QColor::HexArgb))));
+    }
+
+    void cancelAfterAnOpacitySetForRoomsThatDifferPutsEveryRoomBack()
+    {
+        auto* pDlg = openDialogOnRoomsThatDifferInBorderColour();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        typeInto(borderOpacity(pDlg), qsl("60"), Qt::Key_Return);
+        QCOMPARE(room(scmFirstRoom)->mBorderColor, atAlpha(firstOwnBorder(), 153));
+
+        pDlg->reject();
+        QCOMPARE(mEmitted.emitCount, 0);
+        QCOMPARE(room(scmFirstRoom)->mBorderColor, firstOwnBorder());
+        QCOMPARE(room(scmSecondRoom)->mBorderColor, secondOwnBorder());
+        QVERIFY(!room(scmThirdRoom)->mBorderColor.isValid());
+    }
+
+    // Once a colour is chosen for them all, typed or in the colours window, the opacity goes with that colour to every
+    // room, a room that had none of its own too
+    void anOpacitySetAfterAColourIsChosenGoesWithItToEveryRoom()
+    {
+        for (const bool inTheColoursWindow : {false, true}) {
+            const QString way = inTheColoursWindow ? qsl("chosen in the colours window") : qsl("typed");
+            auto* pDlg = openDialogOnRoomsThatDifferInBorderColour();
+            QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+            if (inTheColoursWindow) {
+                QVERIFY2(chooseInTheColoursWindow(pDlg, pDlg->pushButton_setBorderColor, QColor(0, 255, 0)), "Choose opened no colours window for the border");
+            } else {
+                typeInto(borderColour(pDlg), qsl("#00ff00"), Qt::Key_Return);
+            }
+            QCOMPARE(borderColour(pDlg)->text(), qsl("#00FF00"));
+            for (const int roomId : {scmFirstRoom, scmSecondRoom, scmThirdRoom}) {
+                QVERIFY2(room(roomId)->mBorderColor == borderColour(pDlg)->colour(), qPrintable(qsl("a colour %1 did not reach room %2").arg(way).arg(roomId)));
+            }
+
+            typeInto(borderOpacity(pDlg), qsl("60"), Qt::Key_Return);
+            for (const int roomId : {scmFirstRoom, scmSecondRoom, scmThirdRoom}) {
+                QVERIFY2(room(roomId)->mBorderColor == QColor(0, 255, 0, 153),
+                         qPrintable(qsl("with a colour %1, an opacity left room %2 at %3").arg(way).arg(roomId).arg(room(roomId)->mBorderColor.name(QColor::HexArgb))));
+            }
+
+            pDlg->accept();
+            QVERIFY(mEmitted.changeBorderColor);
+            QCOMPARE(mEmitted.newBorderColor, QColor(0, 255, 0, 153));
+            for (const int roomId : {scmFirstRoom, scmSecondRoom, scmThirdRoom}) {
+                QCOMPARE(room(roomId)->mBorderColor, QColor(0, 255, 0, 153));
+            }
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+    }
+
+    // Reset decides for every room, whatever opacity was set before it
+    void aResetAfterAnOpacitySetClearsEveryRoom()
+    {
+        auto* pDlg = openDialogOnRoomsThatDifferInBorderColour();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        typeInto(borderOpacity(pDlg), qsl("60"), Qt::Key_Return);
+        pDlg->pushButton_resetBorderColor->click();
+        for (const int roomId : {scmFirstRoom, scmSecondRoom, scmThirdRoom}) {
+            QVERIFY2(!room(roomId)->mBorderColor.isValid(), qPrintable(qsl("Reset left room %1 at %2").arg(roomId).arg(room(roomId)->mBorderColor.name(QColor::HexArgb))));
+        }
+
+        pDlg->accept();
+        QVERIFY(mEmitted.changeBorderColor);
+        QVERIFY(!mEmitted.newBorderColor.isValid());
+        for (const int roomId : {scmFirstRoom, scmSecondRoom, scmThirdRoom}) {
+            QVERIFY(!room(roomId)->mBorderColor.isValid());
+        }
+    }
+
+    // One room's colour is the one the field shows, so an opacity set for it gives it that colour, the map's included
+    void anOpacitySetForOneRoomGivesItTheColourShown()
+    {
+        for (const bool ownColour : {true, false}) {
+            buildMap();
+            mp2dMap->mAreaID = mAreaId;
+            if (ownColour) {
+                room(scmFirstRoom)->mBorderColor = firstOwnBorder();
+            }
+            auto* pDlg = openDialogOn({scmFirstRoom});
+            connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+            pDlg->show();
+            QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+            const QColor shown = ownColour ? firstOwnBorder() : mpHost->mRoomBorderColor;
+            QCOMPARE(borderColour(pDlg)->colour(), shown);
+
+            typeInto(borderOpacity(pDlg), qsl("60"), Qt::Key_Return);
+            QCOMPARE(room(scmFirstRoom)->mBorderColor, atAlpha(shown, 153));
+            pDlg->accept();
+            QVERIFY2(mEmitted.changeBorderColor, "an opacity set for one room was not reported as its border colour");
+            QCOMPARE(mEmitted.newBorderColor, atAlpha(shown, 153));
+            QCOMPARE(room(scmFirstRoom)->mBorderColor, atAlpha(shown, 153));
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+    }
+
     // Rooms with different symbols show no one colour, and a code typed for them goes to every one
     void aCodeTypedForRoomsWithDifferentSymbolsReachesThemAll()
     {
@@ -1098,6 +1237,36 @@ private slots:
             QVERIFY2(pRoom->mBorderColor == QColor(Qt::darkGreen),
                      qPrintable(qsl("%1 left the room's border %2, the code typed but not taken").arg(way, pRoom->mBorderColor.name(QColor::HexArgb).toUpper())));
             QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+    }
+
+    // Destroying the dialog, as its map going does, takes the focus from a field still holding an edit, which the
+    // field then takes after the dialog's own part is gone; neither the dialog nor the room may see it
+    void destroyingTheDialogWithAnEditStillTypedLeavesTheRoomAsItWas()
+    {
+        const QList<std::pair<QString, QString>> edits{
+                {qsl("roomPropertiesBorderColour"), qsl("#ff0000")}, {qsl("roomPropertiesBorderOpacity"), qsl("60")}, {qsl("roomPropertiesSymbolColour"), qsl("#ff0000")}};
+        for (const auto& [field, typed] : edits) {
+            buildMap();
+            TRoom* pRoom = room(scmFirstRoom);
+            pRoom->mSymbol = qsl("=");
+            pRoom->mSymbolColor = QColor(Qt::magenta);
+            pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+            auto* pDlg = openDialogOn({scmFirstRoom});
+            auto* pField = pDlg->findChild<QWidget*>(field);
+            QVERIFY2(pField && focusInTheActiveDialog(pDlg, pField), qPrintable(qsl("%1 never had the focus, so it had none to lose").arg(field)));
+            if (auto* pLineEdit = qobject_cast<QLineEdit*>(pField)) {
+                pLineEdit->selectAll();
+            } else if (auto* pSpinBox = qobject_cast<QSpinBox*>(pField)) {
+                pSpinBox->selectAll();
+            }
+            QTest::keyClicks(pField, typed);
+
+            delete pDlg;
+            QVERIFY2(pRoom->mBorderColor == QColor(Qt::darkGreen),
+                     qPrintable(qsl("destroying the dialog with %1 typed in %2 left the room's border %3").arg(typed, field, pRoom->mBorderColor.name(QColor::HexArgb).toUpper())));
+            QCOMPARE(pRoom->mSymbolColor, QColor(Qt::magenta));
         }
     }
 
