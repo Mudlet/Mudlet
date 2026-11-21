@@ -267,6 +267,7 @@ public:
     // On the regions, not the window: Host::setProfileStyleSheet() gives the window the profile's Lua sheet. Reads the
     // application palette: a sheet freezes its widget's palette, and the palette change is undelivered in changeEvent().
     void applyEditorShellStyle();
+    void inkEditorTrees();
     // The options menu hangs off the window, out of the shell sheets' reach, and is built after the first style
     // pass, so both call this
     void styleSearchOptionsMenu();

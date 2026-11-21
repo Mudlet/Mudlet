@@ -544,6 +544,36 @@ private slots:
         QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }
 
+    // As above, but with the whole of the read already taken from the socket, so nothing is left unread to hold the
+    // disconnection back
+    void aCloseSeenInsideANestedEventLoopWaitsForTheRestOfTheRead()
+    {
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        lua_register(lua->getLuaGlobalState(), "spinNestedEventLoop", spinNestedEventLoop);
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            nestedSeen = ""
+            registerAnonymousEventHandler("sysDisconnectionEvent", function() nestedSeenAtDisconnection = nestedSeen end, true)
+            tempRegexTrigger("^NESTED LINE ([AB])$", function()
+                nestedSeen = nestedSeen .. matches[2]
+                if matches[2] == "A" then
+                    spinNestedEventLoop()
+                end
+            end, 2)
+        )")));
+
+        mpServer->sendRaw("NESTED LINE A\r\nNESTED LINE B\r\n");
+        mpServer->closeClient();
+        QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
+
+        lua_State* L = lua->getLuaGlobalState();
+        lua_getglobal(L, "nestedSeenAtDisconnection");
+        const QString seenAtDisconnection = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(seenAtDisconnection, qsl("AB"));
+    }
+
     // Reconnecting aborts the live connection, which empties its socket: there
     // is nothing left of it to read
     void aReconnectOnALiveConnectionReadsNothingFromItsClosedSocket()
