@@ -585,6 +585,8 @@ function Adjustable.Container:adjustBorder()
         self.attached = false
         return
     end
+    -- recorded before writing: setAxisBorders() re-measures borderSize without reserving it
+    self.reservedBorder = self.borderSize
     setAxisBorders(where)
 end
 
@@ -858,6 +860,7 @@ function Adjustable.Container:detach()
         attachedTo[self.name] = nil
     end
     self.borderSize = nil
+    self.reservedBorder = nil
     -- unhooked first: handing the border back raises an event we would answer by re-reserving
     self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
@@ -1435,9 +1438,13 @@ end
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
-    -- set_constraints() places the container through here, so a script laying it out again moves its border too
+    -- set_constraints() places the container through here, so a script laying it out again moves its border too;
+    -- this runs on every resize event, so re-reserving an unchanged request would fight a script's own border forever
     if self.attached and settlingBorders == 0 then
-        self:adjustBorder()
+        if not self:measureBorder() or self.borderSize ~= self.reservedBorder or self.minimized or self.hidden
+            or not table.contains(self:validAttachPositions(), self.attached:lower()) then
+            self:adjustBorder()
+        end
     end
     local x, y, width, height = self:pixel_geometry()
     raiseEvent(
