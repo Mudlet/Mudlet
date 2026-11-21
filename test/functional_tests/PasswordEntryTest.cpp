@@ -1124,6 +1124,31 @@ private slots:
         drainFocusRetries();
     }
 
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the box's claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutLeavesTheBoxForThePane()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+        });
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::MetaModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(box(), &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode on from the box");
+        QTRY_COMPARE(focusWidget(), mpHost->mpConsole->mUpperPane);
+        drainFocusRetries();
+#endif
+    }
+
     void test_aSyntheticKeySentToTheCommandLineLandsInTheBox()
     {
         serverSaysEcho(TN_WILL);

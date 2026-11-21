@@ -289,6 +289,24 @@ private slots:
         QVERIFY2(overrideClaimed(Qt::Key_Tab, nextProfileModifier), "A user key binding on Ctrl+Tab did not claim the key");
     }
 
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to run the binding
+    void test_userBindingOnCtrlTabRunsWhenTheKeyArrivesOnlyAsAShortcut()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        QVERIFY(createCountingKey(qsl("Ctrl+Tab binding"), Qt::Key_Tab, nextProfileModifier, qsl("_testCtrlTabShortcutOnly")) > 0);
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent event(QEvent::ShortcutOverride, Qt::Key_Tab, nextProfileModifier, 0, 0x30, 0, qsl("\t"));
+        event.ignore();
+        QApplication::sendEvent(commandLine(), &event);
+        QVERIFY(event.isAccepted());
+
+        QTRY_COMPARE(luaCounter(qsl("_testCtrlTabShortcutOnly")), 1);
+#endif
+    }
+
     // Shift+Tab reaches the widget as Key_Backtab while the sequence is spelt
     // with Key_Tab, so the match has to bridge the two spellings
     void test_userBindingOnCtrlShiftTabClaimsTheShortcut()

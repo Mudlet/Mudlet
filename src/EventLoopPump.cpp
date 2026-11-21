@@ -22,10 +22,16 @@
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QThread>
 
 using namespace std::chrono_literals;
+
+namespace {
+// Counted so a pass that ran a wait of its own is not taken for one that held the timers up
+thread_local int pumpsStarted = 0;
+} // namespace
 
 // A nested QEventLoop::exec() cannot be used here. exec() sets
 // QEventLoop::EventLoopExec, which QCocoaEventDispatcher answers by re-entering
@@ -42,13 +48,21 @@ bool EventLoopPump::pumpFor(const int timeoutMs, const std::function<bool()>& st
         return false;
     }
 
+    ++pumpsStarted;
     QDeadlineTimer deadline(qMax(timeoutMs, 0));
     if (stopCondition && stopCondition()) {
         return true;
     }
 
+    QElapsedTimer pass;
     while (true) {
+        pass.start();
+        const int pumpsBeforePass = pumpsStarted;
         QCoreApplication::processEvents(QEventLoop::AllEvents);
+        // Whatever ran in that pass held up every timer meanwhile, which a wait that then times out cannot say
+        if (const qint64 took = pass.elapsed(); took > 1000 && pumpsStarted == pumpsBeforePass) {
+            qWarning().nospace() << "EventLoopPump::pumpFor() WARNING - one pass of the event loop took " << took << " ms";
+        }
         if (stopCondition && stopCondition()) {
             return true;
         }
