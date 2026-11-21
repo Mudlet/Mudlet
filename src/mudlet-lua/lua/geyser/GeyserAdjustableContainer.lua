@@ -121,6 +121,18 @@ local function keepRelativePosition(constraint, value, total, origin)
     return value
 end
 
+-- Internal function: a pixel position constraint for an offset from the parent's origin.
+-- Rounded, as the subtraction can land a hair under a whole pixel that "%dpx" would then truncate;
+-- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin
+-- @param offset the offset from the parent's origin in pixels
+local function pixelPosition(offset)
+    offset = math.floor(offset + 0.5)
+    if offset < 0 then
+        return "0%" .. offset
+    end
+    return offset
+end
+
 -- Internal function: works out what a constraint measures in a given container,
 -- by letting Geyser compile it against that container rather than by parsing it
 -- @param self the Adjustable.Container itself
@@ -1553,16 +1565,7 @@ function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute
     if position_as_absolute then
         -- get_x/get_y are on screen, while x and y are taken from the parent's origin
         local originX, originY = parentFrame(self)
-        -- rounded, as the subtraction can land a hair under a whole pixel that "%dpx" would then truncate;
-        -- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin
-        local function fromOrigin(offset)
-            offset = math.floor(offset + 0.5)
-            if offset < 0 then
-                return "0%" .. offset
-            end
-            return offset
-        end
-        self.x, self.y = fromOrigin(self.get_x() - originX), fromOrigin(self.get_y() - originY)
+        self.x, self.y = pixelPosition(self.get_x() - originX), pixelPosition(self.get_y() - originY)
     end
     if size_as_absolute then
         self.width, self.height = self.get_width(), self.get_height()
