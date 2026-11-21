@@ -27,7 +27,7 @@
  * uninstall then destroys the Host while that save is still owed, and the save
  * ran anyway: against a freed Host, reading its writer map. Under
  * AddressSanitizer that is a heap-use-after-free at
- * Host::pendingXmlSaveFutures(); in a release build it is a crash or silent
+ * Host::pendingXmlSaves(); in a release build it is a crash or silent
  * memory corruption on the way out, i.e. a "Mudlet crashed when I closed it"
  * report.
  *

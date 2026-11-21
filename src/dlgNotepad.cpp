@@ -920,8 +920,8 @@ void dlgNotepad::finishSending(const bool stopped)
 
     if (mSending) {
         if (stopped) {
-            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %2 how many there were in all.
-            mudlet::self()->announce(tr("Stopped after %1 of %2 lines").arg(QString::number(mLinesSent), QString::number(mLinesToSendCount)));
+            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %n how many there were in all.
+            mudlet::self()->announce(tr("Stopped after %1 of %n lines", nullptr, mLinesToSendCount).arg(QString::number(mLinesSent)));
         } else {
             //: Announced when the notepad has sent a note to the game. %n is how many lines went.
             mudlet::self()->announce(mLinesSent == 1 ? tr("Sent 1 line") : tr("Sent %n lines", "", mLinesSent));

@@ -21,6 +21,7 @@
 
 #include <IrcConnection>
 #include <ircnetwork_p.h>
+#include <QTranslator>
 #include <QtTest/QtTest>
 
 /*
@@ -540,6 +541,23 @@ private slots:
         message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("alice"), QStringLiteral("bob")});
         QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("! #mudlet has 2 users: alice bob"));
         QVERIFY2(IrcMessageFormatter::formatMessage(message, false).contains(QStringLiteral("! #mudlet has 2 users")), "the window form should carry the count");
+    }
+
+    // The source string is always plural; the singular comes from the en_US translation
+    void names_saysUserForALoneUserInTheWindow()
+    {
+        QTranslator americanEnglish;
+        QVERIFY2(americanEnglish.load(QStringLiteral(MUDLET_EN_US_QM)), MUDLET_EN_US_QM " could not be loaded");
+        QCoreApplication::installTranslator(&americanEnglish);
+        auto* lone = new IrcNamesMessage(&mConnection);
+        lone->setParameters({QStringLiteral("#mudlet"), QStringLiteral("alice")});
+        const QString loneText = IrcMessageFormatter::formatMessage(lone, false);
+        auto* pair = new IrcNamesMessage(&mConnection);
+        pair->setParameters({QStringLiteral("#mudlet"), QStringLiteral("alice"), QStringLiteral("bob")});
+        const QString pairText = IrcMessageFormatter::formatMessage(pair, false);
+        QCoreApplication::removeTranslator(&americanEnglish);
+        QVERIFY2(loneText.contains(QStringLiteral("! #mudlet has 1 user</")), qPrintable(loneText));
+        QVERIFY2(pairText.contains(QStringLiteral("! #mudlet has 2 users")), qPrintable(pairText));
     }
 
     void motd_putsEveryLineOnItsOwn()
