@@ -21,6 +21,7 @@
 #include <QTemporaryDir>
 #include <QWheelEvent>
 #include <QtTest/QtTest>
+#include <utility>
 
 #include "Host.h"
 #include "MudletApp.h"
@@ -150,7 +151,7 @@ private slots:
         // A touchpad sends many small deltas, which must add up to whole columns
         bar->setValue(0);
         qApp->processEvents();
-        for (int i = 0; i < 15; ++i) {
+        for (int i = 0; i < 120 / 8; ++i) {
             wheelSideways(upper, -8);
         }
         QCOMPARE(bar->value(), 3);
