@@ -30,7 +30,6 @@
 #include <QScopeGuard>
 #include <QHash>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -41,8 +40,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorToolBarOverflowTest : public QObject
 {
@@ -117,7 +114,7 @@ private:
         }
         mpEditor->applyEditorToolbarButtonStyles();
         mpEditor->fitEditorToolBarToItsLength();
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
     }
 
     // As a window width, which is what the sweeps compare it against
@@ -129,7 +126,7 @@ private:
             group.labelsShown = false;
         }
         mpEditor->applyEditorToolbarButtonStyles();
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         const int wanted = barLengthWanted() + chrome;
         undoTheForcing();
         return wanted;
@@ -143,7 +140,7 @@ private:
         mpEditor->mEditorToolBarGroups[scmProfileGroup].labelsShown = false;
         mpEditor->mEditorToolBarGroups[scmItemGroup].labelsShown = true;
         mpEditor->applyEditorToolbarButtonStyles();
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         const int wanted = barLengthWanted() + chrome;
         undoTheForcing();
         return wanted;
@@ -206,7 +203,6 @@ private:
         mudlet::self()->setToolBarIconSize(value == 1 ? 2 : 1);
         mudlet::self()->setToolBarIconSize(value);
         QCoreApplication::sendPostedEvents();
-        QTest::qWait(50ms);
     }
 
 private slots:
@@ -220,7 +216,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         QVERIFY2(mpEditor->mEditorToolBarGroups.count() == 2, "The bar is expected to have a profile group and an item group");
@@ -364,15 +360,15 @@ private slots:
 
         resizeTo(scmSweepWidest);
         mpEditor->slot_showTriggers();
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         resizeTo(between);
         const bool namedInTriggerView = groupIsNamed(scmItemGroup);
         mpEditor->slot_showAliases();
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         const bool namedAfterSwitching = groupIsNamed(scmItemGroup);
 
         resizeTo(scmSweepWidest);
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         resizeTo(between);
         const bool namedAfterResizing = groupIsNamed(scmItemGroup);
 
@@ -442,11 +438,11 @@ private slots:
         const auto restore = qScopeGuard([this, was]() {
             static_cast<QMainWindow*>(mpEditor)->addToolBar(Qt::TopToolBarArea, mpEditor->toolBar);
             mpEditor->resize(was);
-            QTest::qWait(50ms);
+            QCoreApplication::processEvents();
         });
         static_cast<QMainWindow*>(mpEditor)->addToolBar(Qt::LeftToolBarArea, mpEditor->toolBar);
         mpEditor->resize(scmSweepWidest, mpEditor->minimumHeight());
-        QTest::qWait(150ms);
+        QCoreApplication::processEvents();
         QVERIFY2(pExtension->isVisible(), "Nothing folded in the shortest window, so the width below proves nothing");
 
         QCOMPARE(pExtension->toolButtonStyle(), Qt::ToolButtonTextUnderIcon);
@@ -477,7 +473,7 @@ private slots:
         // In one step, as a window snapped narrow does: the bar folds and names go in the same layout pass
         resizeTo(scmSweepWidest);
         resizeTo(narrowestWindowWidth());
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         int hidden = 0;
         for (QAction* pAction : mpEditor->toolBar->actions()) {

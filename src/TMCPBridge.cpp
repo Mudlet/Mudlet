@@ -931,7 +931,7 @@ QString tomlBasicString(const QString& value)
             escaped += u'\\';
             escaped += c;
         } else if (c.unicode() < 0x20 || c.unicode() == 0x7f) {
-            escaped += qsl("\\u%1").arg(int(c.unicode()), 4, 16, QLatin1Char('0'));
+            escaped += qsl("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QLatin1Char('0'));
         } else {
             escaped += c;
         }
