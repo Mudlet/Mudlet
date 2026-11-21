@@ -72,7 +72,7 @@
 #endif
 
 #include <chrono>
-#include <filesystem> // NOLINT(build/c++17): Qt cannot tell whether two paths are the same file
+#include <filesystem>
 #include <vector>
 #include <QtConcurrentRun>
 #include <QAbstractScrollArea>
