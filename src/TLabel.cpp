@@ -244,6 +244,47 @@ void TLabel::announceTextChange(const QString& spokenBefore)
     if (spoken.isEmpty() || spoken == spokenBefore) {
         return;
     }
+    if (mpAnnouncementTimer && mpAnnouncementTimer->isActive()) {
+        mAnnouncementPending = true;
+        // Already heard as its name, so not repeated when the interval ends
+        if (readAsName()) {
+            mLastAnnounced = spoken;
+        }
+        return;
+    }
+    announce(spoken);
+}
+
+bool TLabel::readAsName() const
+{
+    // QLabel tells a screen reader of a focused label's new name, which for an unnamed label is its text
+    return hasFocus() && mpModel->mAccessibleName.isEmpty();
+}
+
+void TLabel::announcePendingText()
+{
+    if (!std::exchange(mAnnouncementPending, false) || !announcesTextChanges()) {
+        return;
+    }
+    const QString spoken = mpModel->spokenText();
+    if (!spoken.isEmpty() && spoken != mLastAnnounced) {
+        announce(spoken);
+    }
+}
+
+void TLabel::announce(const QString& spoken)
+{
+    mLastAnnounced = spoken;
+    if (!mpAnnouncementTimer) {
+        mpAnnouncementTimer = new QTimer(this);
+        mpAnnouncementTimer->setSingleShot(true);
+        mpAnnouncementTimer->setInterval(scmAnnouncementInterval);
+        connect(mpAnnouncementTimer, &QTimer::timeout, this, &TLabel::announcePendingText);
+    }
+    mpAnnouncementTimer->start();
+    if (readAsName()) {
+        return;
+    }
     QAccessibleAnnouncementEvent event(this, spoken);
     event.setPoliteness(mpModel->mLiveRegion == TLabelLiveRegion::Assertive ? QAccessible::AnnouncementPoliteness::Assertive : QAccessible::AnnouncementPoliteness::Polite);
     QAccessible::updateAccessibility(&event);
@@ -348,6 +389,15 @@ void TLabel::syncTextAnnouncedByQt()
 
 void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
 {
+    if (change == TLabelModel::AccessibilityChange::LiveRegion) {
+        // Text waiting out the interval is spoken now at the new politeness, or dropped with the region switched off;
+        // with none waiting, the next change is spoken at once
+        if (mpAnnouncementTimer && mpAnnouncementTimer->isActive()) {
+            mpAnnouncementTimer->stop();
+            announcePendingText();
+        }
+        return;
+    }
     if (change == TLabelModel::AccessibilityChange::Name) {
         // QLabel::setText() announces the text as the new name whenever the widget's own name is empty,
         // so the widget carries a script's name too, and an unnamed label's text is announced once
@@ -809,18 +859,35 @@ void TLabel::changeEvent(QEvent* event)
 // QWidget::event() doesn't pass ToolTipChange on to changeEvent()
 bool TLabel::event(QEvent* event)
 {
+    // Qt sends it for a hidden parent too, and text waiting when a label goes from view is stale once it is back
+    if (event->type() == QEvent::Hide) {
+        mAnnouncementPending = false;
+    }
     // The caret shortcut has to beat an application-wide QShortcut on the same key, as in TTextEdit::event()
     if (event->type() == QEvent::ShortcutOverride && mainWindowConsole() && hasFocus() && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
         event->accept();
+        TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
         return true;
     }
+#if defined(Q_OS_MACOS)
+    // QWidget::event() steps the focus on a Tab unless Command or Option is held, so a Ctrl+Tab would not reach keyPressEvent()
+    if (event->type() == QEvent::KeyPress && (static_cast<QKeyEvent*>(event)->modifiers() & Qt::MetaModifier) && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
+        keyPressEvent(static_cast<QKeyEvent*>(event));
+        return true;
+    }
+#endif
     if (event->type() == QEvent::ToolTipChange) {
         mpModel->setToolTip(toolTip());
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
+        const bool announcing = announcesTextChanges();
+        const QString spokenBefore = announcing ? mpModel->spokenText() : QString();
         syncTextAnnouncedByQt();
+        if (announcing) {
+            announceTextChange(spokenBefore);
+        }
     }
     return handled;
 }
