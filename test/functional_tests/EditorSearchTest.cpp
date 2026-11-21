@@ -737,8 +737,7 @@ private slots:
                                                   "tempTimer(600, [[-- %1]]),"
                                                   "tempAlias('^%1 alias$', [[-- %1]]),"
                                                   "tempKey(%2, [[-- %1]])}")
-                                                      .arg(token)
-                                                      .arg(static_cast<int>(Qt::Key_F35))));
+                                                      .arg(token, QString::number(Qt::Key_F35))));
         QVERIFY2(pLua->compileAndExecuteScript(qsl("for i = 1, 5 do assert(type(qaTempIds[i]) == 'number') end")), "a temporary item was not created, so its absence below would prove nothing");
         // The editor's tree never shows a temporary trigger's children either, even permanent ones
         QVERIFY(pLua->compileAndExecuteScript(qsl("qaTempChildId = permRegexTrigger('qaTempChild', tostring(qaTempIds[1]), {'^%1 child$'}, '')").arg(token)));
