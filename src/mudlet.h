@@ -65,6 +65,7 @@ class QDockWidget;
 class QKeyEvent;
 class QMediaPlayer;
 class QMenu;
+class QMessageBox;
 class QLabel;
 class QListWidget;
 class QPushButton;
@@ -190,6 +191,7 @@ public:
     // The marker the main window carries, for any profile it holds
     QString mainWindowMicrophoneMarker() const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
+    bool multiView() const { return mMultiView; }
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
@@ -475,8 +477,6 @@ public slots:
     void slot_minimize();
     void slot_newMapWindow();
     void updateWindowMenu();
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
     void slot_replay();
@@ -517,6 +517,7 @@ public slots:
     void slot_showUiTour();
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
+    static void bringWindowToFront(QWidget* window);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
@@ -684,6 +685,7 @@ private:
     QPointer<QAction> mpActionAboutWithUpdates;
 #if defined(INCLUDE_UPDATER)
     bool mUpdateInstalled = false;
+    QPointer<QMessageBox> mpUpdateFailedBox;
 #endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
