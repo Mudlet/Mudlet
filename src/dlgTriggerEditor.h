@@ -752,7 +752,7 @@ private:
         pItem->setData(0, IndexRole, subInstance);
     }
 
-    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0)
+    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& line = 0, const int& subInstance = 0)
     {
         // Which is it? A Trigger, an alias etc:
         pItem->setData(0, ItemRole, static_cast<int>(EditorViewType::cmVarsView));
@@ -767,8 +767,8 @@ private:
         // How far into the line/string is the start of the match, used to
         // position cursor there when chosen in search results
         pItem->setData(0, PositionRole, pos);
-        // Not used for variables:
-        pItem->setData(0, PatternOrLineRole, 0);
+        // Which line of a multi-line value the match is on (starting at 0):
+        pItem->setData(0, PatternOrLineRole, line);
         // If there is more than one match within what the above specify - which
         // one is it, (not all things support/need to support multiples)
         pItem->setData(0, IndexRole, subInstance);
@@ -808,6 +808,7 @@ private:
     void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+    void paintColorPatternButtons(dlgTriggerPatternEdit* pItem);
     void createPatternItem(int index);
     void showPatternItems(int count);
     void updatePatternPlaceholders();
