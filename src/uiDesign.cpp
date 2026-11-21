@@ -679,14 +679,14 @@ QColor primaryPressedInk(const ThemeTokens& tokens)
 QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& tokens, const QColor& surface)
 {
     const QColor groove = surface.isValid() ? surface : tokens.page;
-    return qsl("%1 QScrollBar:vertical { background-color: %2; width: 12px; margin: 0px; border: none; }"
-               "%1 QScrollBar:horizontal { background-color: %2; height: 12px; margin: 0px; border: none; }"
+    return qsl("%1 QScrollBar:vertical { background-color: %2; width: %5px; margin: 0px; border: none; }"
+               "%1 QScrollBar:horizontal { background-color: %2; height: %5px; margin: 0px; border: none; }"
                "%1 QScrollBar::handle:vertical { background-color: %3; border-radius: 5px; min-height: 32px; margin: 1px; }"
                "%1 QScrollBar::handle:horizontal { background-color: %3; border-radius: 5px; min-width: 32px; margin: 1px; }"
                "%1 QScrollBar::handle:hover { background-color: %4; }"
                "%1 QScrollBar::add-line, %1 QScrollBar::sub-line { width: 0px; height: 0px; }"
                "%1 QScrollBar::add-page, %1 QScrollBar::sub-page { background-color: %2; }")
-            .arg(selectorPrefix, groove.name(), blend(groove, tokens.text, 0.22).name(), blend(groove, tokens.text, 0.40).name());
+            .arg(selectorPrefix, groove.name(), blend(groove, tokens.text, 0.22).name(), blend(groove, tokens.text, 0.40).name(), QString::number(scmScrollBarThickness));
 }
 
 QString itemRowStyleSheet(const QString& viewSelector, const ThemeTokens& tokens, const QColor& surface, const int rowGutter)
