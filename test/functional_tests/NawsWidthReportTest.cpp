@@ -642,32 +642,35 @@ private slots:
         QVERIFY2(mpServer->nawsUpdates().size() == updates.size(), describe(mpServer->nawsUpdates()).constData());
     }
 
-    // A profile left scrolled back in a background tab is told the size it
-    // comes back to all the same - its rows do not depend on the split.
     // A script can scroll a profile back while its tab is in the background,
-    // where neither pane can see enough of itself to measure a width
-    void scrollingBackABackgroundedProfileKeepsItsWidth()
+    // where neither pane can see enough of itself to measure anything
+    void scrollingBackABackgroundedProfileKeepsItsSize()
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
         runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
         fillScrollback();
         settle();
-        const int width = mpHost->mScreenWidth;
         showTab(mSecondHostname);
         settle();
         QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+        // the size it last measured on screen is no longer the one it will come back to
+        mudlet::self()->resize(1000, 600);
+        settle();
+        const QSize predicted = screenSize(mpHost);
 
         runLua(mpHost, qsl("scrollUp(5)"));
-        const int widthWhileHidden = mpHost->mScreenWidth;
+        const QSize whileHidden = screenSize(mpHost);
         const bool split = !mpHost->mainConsoleView()->mLowerPane->isHidden();
         showTab(mHostname);
         runLua(mpHost, qsl("scrollTo()"));
         settle();
 
         QVERIFY2(split, "scrolling back did not split the window");
-        QCOMPARE(widthWhileHidden, width);
+        QCOMPARE(whileHidden, predicted);
     }
 
+    // A profile left scrolled back in a background tab is told the size it
+    // comes back to all the same - its rows do not depend on the split.
     void aBackgroundedScrolledBackProfileIsToldTheSizeItComesBackTo()
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
