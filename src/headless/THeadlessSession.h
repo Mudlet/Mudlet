@@ -688,7 +688,9 @@ public:
         // being this frame's own console, and the index of the one in front. A page shows where its header's frame
         // does, at the place and size of the console under the header; the pages behind are not shown. None for an
         // MXP frame without a header (one with no TITLE, a FLOATING or EXTERNAL one, one under 50 pixels tall unless
-        // sized in characters, and a page, which has none of its own) and for the other kinds.
+        // sized in characters, and a page, which has none of its own), for one whose own console a script moved out
+        // of the frame or deleted, which leaves the GUI's header in place with its first page empty, and for the
+        // other kinds.
         struct FrameTabs
         {
             struct Page
@@ -799,7 +801,7 @@ public:
     // frame is named in scriptWindowsChanged, with the two pages. That raises no event in the GUI, so none here.
     // True, changing nothing, for the page already in front. False for a name that is no page of a header, for a
     // header whose page in front is not shown (as inside an EXTERNAL frame that is hidden), whose tabs a player could
-    // not click, and where runLua() is refused.
+    // not click, for one not in frameTabs, and where runLua() is refused.
     bool selectFrameTab(const QString& page);
     // What the app's mouse did over one of the windows, for pointer(); mapPointer() takes a MapPointerEvent
     struct WindowPointerEvent

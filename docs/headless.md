@@ -1169,11 +1169,13 @@ internal frame given a `TITLE`, not `FLOATING`, and at least 50 pixels tall (or 
 header, which the GUI draws along the frame's top, in the 30 pixels above its console: its `frameTabs` lists the pages, the frame's own console first, each by the name of the frame it
 shows and the `title` on its tab (a `DOCK` frame's `TITLE`, or its name), with `current` the index of the one
 in front. Each page is an `mxpFrame` of its own at the place and size of the console under the header, and
-only the one in front is `shown`; a page, and a frame with no header, has no `frameTabs`.
+only the one in front is `shown`; a page, and a frame with no header, has no `frameTabs`, nor has a frame whose
+own console a script moved out with `setWindow()` or deleted, though the GUI goes on drawing its header.
 `selectFrameTab(page)` is the player's click on a tab: it brings that page forward, so the header's frame and
 the two pages are named in `scriptWindowsChanged`. As in the GUI no event is raised. It is true, changing
 nothing, for the page already in front, and false for a name that is no page of a header, for a header whose
-page in front is not shown, as inside a hidden `EXTERNAL` frame, whose tabs a player could not click, and where
+page in front is not shown, as inside a hidden `EXTERNAL` frame, whose tabs a player could not click, for one
+not in `frameTabs`, and where
 `runLua()` is refused. A frame's `<DEST … EOF>` empties it and `<DEST … EOL>` drops its last line before
 the text that follows, so however much one packet brought, `windowTextChanged` names the frame once
 and `windowLines()` then has only what is left. `setMainWindowSize()` does not lay the frames out
@@ -1524,7 +1526,8 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 - the 3D mapper's view, the 2D map but for an app that calls `renderMap()`, and map symbols
   drawn with a font's Private Use Area;
 - the main window's own command line, button bars and docks, which an app draws outside the area
-  it gives (see "Embedding it: the main window's size").
+  it gives (see "Embedding it: the main window's size");
+- the tab header of an MXP frame whose own console a script moved out of it or deleted.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.

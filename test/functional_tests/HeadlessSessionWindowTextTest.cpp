@@ -690,6 +690,49 @@ end)
         QVERIFY(session.shutdown(false));
     }
 
+    // A script can move the header frame's own console out with setWindow() or delete it, which leaves the GUI's
+    // tab header where it was, its first page empty; the tabs are not told on a console no longer under them
+    void test_anMxpFramesTabsAreNotToldOnItsConsoleMovedOutOrDeleted()
+    {
+        const QString name = qsl("Headless Window Text Frame Tabs Moved");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl("setBorderTop(0) setBorderBottom(0) setConfig('specialForceMXPProcessorOn', true)")));
+        const auto feed = [&session](const QString& text) {
+            return session.runLua(qsl("feedTriggers([[%1]] .. '\\n')").arg(text));
+        };
+        const auto withTabs = [&session]() {
+            QStringList all;
+            for (const THeadlessSession::ScriptWindow& window : session.scriptWindows()) {
+                if (window.frameTabs) {
+                    all << qsl("%1 in '%2'").arg(window.name, window.parent);
+                }
+            }
+            return all.join(QLatin1Char(','));
+        };
+        QVERIFY(feed(qsl(R"(<FRAME Name="tabs" Title="Tabs" Align="left" Width="200" Height="300">)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="chat" Title="Chat" DOCK="tabs" Align="client">)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="log" DOCK="tabs" Align="client">)")));
+        settle();
+        QCOMPARE(withTabs(), qsl("tabs in ''"));
+
+        QVERIFY(session.runLua(qsl("openUserWindow('uw') setWindow('uw', 'tabs', 10, 20, true)")));
+        settle();
+        QCOMPARE(withTabs(), QString());
+        QVERIFY(!session.selectFrameTab(qsl("log")));
+        QVERIFY2(session.errorString().contains(qsl("tabs")), qPrintable(session.errorString()));
+
+        QVERIFY(session.runLua(qsl("deleteMiniConsole('tabs')")));
+        settle();
+        QVERIFY(!session.scriptWindow(qsl("tabs")));
+        QVERIFY(session.scriptWindow(qsl("chat")));
+        QCOMPARE(withTabs(), QString());
+        QVERIFY(!session.selectFrameTab(qsl("log")));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_eachWayAScriptChangesAConsolesTextIsTold_data()
     {
         QTest::addColumn<QString>("lua");

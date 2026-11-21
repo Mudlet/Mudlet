@@ -1077,7 +1077,8 @@ QPoint TNullMxpFrameFrontend::consolePlace(const QString& name) const
 std::optional<TNullMxpFrameFrontend::Tabs> TNullMxpFrameFrontend::tabs(const QString& name) const
 {
     const auto header = mHeaders.find(name);
-    if (header == mHeaders.end()) {
+    // The GUI's header stays in the frame when a script moves the frame's console out of it or deletes it
+    if (header == mHeaders.end() || !mView.inOwnFrame(name)) {
         return std::nullopt;
     }
     Tabs tabs;
