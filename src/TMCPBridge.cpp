@@ -38,6 +38,7 @@
 #include <QStandardPaths>
 #include <QTcpServer>
 
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -931,7 +932,7 @@ QString tomlBasicString(const QString& value)
             escaped += u'\\';
             escaped += c;
         } else if (c.unicode() < 0x20 || c.unicode() == 0x7f) {
-            escaped += qsl("\\u%1").arg(int(c.unicode()), 4, 16, QLatin1Char('0'));
+            escaped += qsl("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QLatin1Char('0'));
         } else {
             escaped += c;
         }
@@ -1111,6 +1112,12 @@ QByteArray TMCPBridge::mergeCodexConfig(const QByteArray& existingConfig, const 
         bool envDottedSeen = false;
         bool envDottedXdgSeen = false;
         bool droppingValue = false;
+        // TOML allows a sub-table before its parent, but the rebuilt block opens with the
+        // parent's header, so the parent's keys must come before any sub-table header or
+        // they would be read as the sub-table's.
+        std::stable_partition(family.begin(), family.end(), [](const TomlLine& line) {
+            return line.section.size() == 2;
+        });
         for (const TomlLine& line : family) {
             if (line.continuation) {
                 if (!droppingValue) {

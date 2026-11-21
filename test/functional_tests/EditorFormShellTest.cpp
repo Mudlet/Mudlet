@@ -30,7 +30,6 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "ChipRow.h"
 #include "GripSplitter.h"
@@ -49,8 +48,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorFormShellTest : public QObject
 {
@@ -97,7 +94,6 @@ private:
             QFAIL("this test knows nothing about that view");
         }
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     void chooseTheFirstItem(QTreeWidget* pTree)
@@ -110,7 +106,6 @@ private:
         pTree->setCurrentItem(pRow);
         emit pTree->itemClicked(pRow, 0);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     QLineEdit* nameFieldOf(const EditorViewType view) const
@@ -256,11 +251,11 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         // One item of every kind, so no form shows the empty-view notice instead
         mpEditor->slot_showTriggers();
@@ -275,7 +270,7 @@ private slots:
         mpEditor->addScript(false);
         mpEditor->slot_showActions();
         mpEditor->addAction(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY2(mpEditor->mpCurrentActionItem != nullptr, "addAction() left no current button, so the buttons form has nothing to show");
     }
 
@@ -309,7 +304,6 @@ private slots:
             // column's size hint would stop matching its fields
             mpEditor->hideSystemMessageArea();
             QCoreApplication::processEvents();
-            QTest::qWait(50ms);
 
             QWidget* pForm = formAreaOf(view);
             QVERIFY2(pForm != nullptr && pForm->isVisible(), qPrintable(qsl("the %1 form is not showing, so there is nothing to hold to a height").arg(nameOf(view))));
@@ -342,7 +336,6 @@ private slots:
             sizes[0] += scmPush;
             mpEditor->splitter_right->setSizes(sizes);
             QCoreApplication::processEvents();
-            QTest::qWait(50ms);
 
             // The widget's height, not sizes(): QSplitter records the size it asked for, and the
             // column's own maximum is what holds it
@@ -362,7 +355,6 @@ private slots:
         sizes[1] -= scmPush;
         mpEditor->splitter_right->setSizes(sizes);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QVERIFY2(mpEditor->splitter_right->sizes().at(0) > before,
                  qPrintable(qsl("the trigger form column was pushed from %1 and came back to %2").arg(QString::number(before), QString::number(mpEditor->splitter_right->sizes().at(0)))));
@@ -378,7 +370,6 @@ private slots:
         mpEditor->treeWidget_timers->setCurrentItem(pRoot);
         emit mpEditor->treeWidget_timers->itemClicked(pRoot, 0);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QVERIFY2(!mpEditor->mpTimersMainArea->isVisible(), "the timer form is still showing on the root row");
         QVERIFY2(!mpEditor->mpSourceEditorArea->isVisible(), "the code pane is still showing on the timers root row, holding the last timer's script under the placeholder notice");
@@ -425,7 +416,6 @@ private slots:
         mpEditor->slot_showKeys();
         mpEditor->addKey(true);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
 
         QVERIFY2(!mpEditor->mpKeysMainArea->lineEdit_key_binding->isVisible(), "a key group is still offered a keystroke it can never match");
         QVERIFY2(!mpEditor->mpLabel_keyHint->isVisible(), "a key group is still told how to set a keystroke");
@@ -437,7 +427,6 @@ private slots:
         // The previous case left the column capped to a fixed form; the cap comes off on the layout
         // request this view's entry posts, which has to arrive before anything is measured
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         auto* pGrid = qobject_cast<QGridLayout*>(mpEditor->mpActionsMainArea->layout());
         QVERIFY2(pGrid != nullptr, "the buttons form is not laid out as a grid, so it was never shelled over its .ui file");
 
@@ -479,7 +468,6 @@ private slots:
         sizes[1] -= scmPush;
         mpEditor->splitter_right->setSizes(sizes);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         const int formGrew = mpEditor->mpActionsMainArea->height() - formBefore;
         const int styleSheetGrew = pStyleSheet->height() - styleSheetBefore;
