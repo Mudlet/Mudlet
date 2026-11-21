@@ -1091,10 +1091,8 @@ void FeedChecksumRaceTest::theChangelogMenuEntryOnlyAnswersItsOwnRequest()
     QCOMPARE(openChangelogs().size(), 1);
 }
 
-// Help > Check for updates waits for the feed to answer either way. Whichever answer did not
-// come stayed connected and answered the twice-daily check: one that failed after a manual check
-// had succeeded was reported to the player as their own check failing, and one that succeeded
-// after a manual check had failed opened the update dialog unasked.
+// Help > Check for updates listens for either feed answer; once one arrives, a later
+// twice-daily load must neither report a failure nor open the update dialog
 void FeedChecksumRaceTest::aManualCheckOnlyAnswersItsOwnRequest()
 {
 #if defined(Q_OS_MACOS)

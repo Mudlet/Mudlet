@@ -32,7 +32,6 @@
 #include <QtConcurrent>
 #include <chrono>
 #include <utility>
-#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
 
@@ -241,8 +240,7 @@ bool Updater::updateAutomatically() const
 #endif
 }
 
-// Two single-shot connections are not enough: only the one that fires goes, and the
-// other answers some later load that a different caller started
+// Not two single-shot connections: the one that doesn't fire would answer a later caller's load
 void Updater::onNextFeedAnswer(const std::function<void()>& onReady, const std::function<void(const QString&)>& onError)
 {
     auto connections = std::make_shared<std::pair<QMetaObject::Connection, QMetaObject::Connection>>();
