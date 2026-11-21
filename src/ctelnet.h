@@ -404,7 +404,7 @@ private:
     friend class MirrorToStdOutTest;
     friend class NawsWidthReportTest;
 
-    // Reads whether the connection dialog handed an open profile its auto-reconnect setting, and the retry it calls off
+    // Reads mAutoReconnect and the failed-connection retry timer, which have no public face
     friend class ConnectionDialogOpenProfileTest;
 
     // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
