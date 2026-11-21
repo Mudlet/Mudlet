@@ -1583,8 +1583,6 @@ describe("Media playback effects with a generated sound file", function()
     os.remove(downloaded)
     onCleanup(function() os.remove(downloaded) end)
     onCleanup(function() stopSounds() end)
-    local started = {}
-    collect("sysMediaStarted", started)
 
     assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, priority = 80, key = "busted-media-priority-higher"}))
     assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-lower-local"}))
