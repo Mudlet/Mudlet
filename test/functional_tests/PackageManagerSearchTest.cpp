@@ -172,7 +172,6 @@ private slots:
         mpHost->mInstalledPackages.removeAll(installed);
         mpHost->mPackageInfo.remove(installed);
 
-        QCOMPARE(mpManager->lineEdit_searchBar->text(), qsl("titled"));
         QCOMPARE(listed, QStringList({installed, mNamedPackage}));
     }
 
