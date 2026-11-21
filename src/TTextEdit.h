@@ -313,6 +313,8 @@ private:
     int mCtrlDragStartY{};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos = 0;
+    // The buffer's linesTrimmedTotal() when mOldScrollPos was taken
+    qint64 mLinesTrimmedAtOldScrollPos = 0;
     // top-left point of the selection
     QPoint mPA;
     // bottom-right point of the selection
