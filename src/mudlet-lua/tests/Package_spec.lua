@@ -1147,7 +1147,7 @@ describe("Tests the functionality of uninstallPackage", function()
       '</ActionPackage>',
       '<KeyPackage>',
       '<Key isActive="yes" isFolder="no">',
-      '<name>' .. name .. ' key</name><packageName></packageName><script>local _ = 1</script>',
+      '<name>' .. name .. ' keybind</name><packageName></packageName><script>local _ = 1</script>',
       '<command></command><keyCode>16777268</keyCode><keyModifier>67108864</keyModifier>',
       '</Key>',
       '</KeyPackage>',
@@ -1160,7 +1160,7 @@ describe("Tests the functionality of uninstallPackage", function()
 
     local functionNames = {}
     for itemType, prefix in pairs({trigger = "Trigger", alias = "Alias", keybind = "Key", button = "Action"}) do
-      local ids = findItems(name .. " " .. (itemType == "keybind" and "key" or itemType), itemType)
+      local ids = findItems(name .. " " .. itemType, itemType)
       assert.equals(1, #ids, "the package's " .. itemType .. " was not installed")
       local functionName = prefix .. ids[1]
       assert.equals("function", type(_G[functionName]), "the " .. itemType .. "'s script is not compiled under " .. functionName)

@@ -668,7 +668,7 @@ TTrigger::~TTrigger()
         mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
         // one compiled before the ID was assigned is named Trigger0, which other items share.
-        if (mID > 0 && mFuncName == qsl("Trigger%1").arg(QString::number(mID))) {
+        if (mID > 0 && mFuncName == qsl("Trigger%1").arg(mID)) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
@@ -2436,7 +2436,7 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = qsl("Trigger%1").arg(QString::number(mID));
+    mFuncName = qsl("Trigger%1").arg(mID);
     const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
     if (mpLua->compile(code, error, qsl("Trigger: %1").arg(getName()))) {

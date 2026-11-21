@@ -295,21 +295,20 @@ private slots:
             QString function;
         };
         const QList<Deleted> items{
-                {EditorViewType::cmTriggerView, luaInteger("tctScriptTriggerId"), qsl("tct script trigger"), qsl("Trigger")},
-                {EditorViewType::cmAliasView, luaInteger("tctScriptAliasId"), qsl("tct script alias"), qsl("Alias")},
-                {EditorViewType::cmTimerView, luaInteger("tctScriptTimerId"), qsl("tct script timer"), qsl("Timer")},
-                {EditorViewType::cmKeysView, luaInteger("tctScriptKeyId"), qsl("tct script key"), qsl("Key")},
-                {EditorViewType::cmActionView, button->getID(), button->getName(), qsl("Action")},
+                {EditorViewType::cmTriggerView, luaInteger("tctScriptTriggerId"), qsl("tct script trigger"), qsl("Trigger%1").arg(luaInteger("tctScriptTriggerId"))},
+                {EditorViewType::cmAliasView, luaInteger("tctScriptAliasId"), qsl("tct script alias"), qsl("Alias%1").arg(luaInteger("tctScriptAliasId"))},
+                {EditorViewType::cmTimerView, luaInteger("tctScriptTimerId"), qsl("tct script timer"), qsl("Timer%1").arg(luaInteger("tctScriptTimerId"))},
+                {EditorViewType::cmKeysView, luaInteger("tctScriptKeyId"), qsl("tct script key"), qsl("Key%1").arg(luaInteger("tctScriptKeyId"))},
+                {EditorViewType::cmActionView, button->getID(), button->getName(), qsl("Action%1").arg(button->getID())},
         };
         for (const auto& item : items) {
-            const QString function = item.function + QString::number(item.id);
             QVERIFY2(item.id > 0, qPrintable(item.name));
-            QVERIFY2(luaGlobalIsFunction(function), qPrintable(qsl("%1 was not compiled as %2").arg(item.name, function)));
+            QVERIFY2(luaGlobalIsFunction(item.function), qPrintable(qsl("%1 was not compiled as %2").arg(item.name, item.function)));
 
             EditorDeleteItemCommand command(item.view, {{item.id, -1, 0, QString(), item.name}}, mpHost);
             command.redo();
 
-            QVERIFY2(!luaGlobalIsFunction(function), qPrintable(qsl("%1 outlived the deletion of %2").arg(function, item.name)));
+            QVERIFY2(!luaGlobalIsFunction(item.function), qPrintable(qsl("%1 outlived the deletion of %2").arg(item.function, item.name)));
         }
     }
 

@@ -71,7 +71,7 @@ TAlias::~TAlias()
         mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
         // one compiled before the ID was assigned is named Alias0, which other items share.
-        if (mID > 0 && mFuncName == qsl("Alias%1").arg(QString::number(mID))) {
+        if (mID > 0 && mFuncName == qsl("Alias%1").arg(mID)) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
@@ -368,7 +368,7 @@ bool TAlias::compileScript()
 {
     QString code = qsl("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
     QString aliasName = qsl("Alias: %1").arg(getName());
-    mFuncName = qsl("Alias%1").arg(QString::number(mID));
+    mFuncName = qsl("Alias%1").arg(mID);
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
