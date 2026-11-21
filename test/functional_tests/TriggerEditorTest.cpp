@@ -1029,6 +1029,59 @@ private slots:
     QCOMPARE(mpHost->getTriggerUnit()->getTrigger(ids.front())->getScript(), qsl("-- typed but not saved"));
   }
 
+  void test_editorResetKeepsUnsavedVariableEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaResetVar = \"old\"")));
+    pEditor->slot_showVariables();
+    QTreeWidgetItem *pItem = nullptr;
+    QTRY_VERIFY([&]() {
+      QTreeWidgetItem *pBase = pEditor->treeWidget_variables->topLevelItem(0);
+      for (int i = 0; pBase && i < pBase->childCount(); ++i) {
+        if (pBase->child(i)->text(0) == qsl("qaResetVar")) {
+          pItem = pBase->child(i);
+        }
+      }
+      return pItem != nullptr;
+    }());
+    pEditor->treeWidget_variables->setCurrentItem(pItem);
+    pEditor->slot_variableSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("new"));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetVar == \"new\")")));
+  }
+
+  // Nobody sees the compile error once the reset clears the form, so it must not leave the trigger switched off
+  void test_editorResetWithHalfTypedTriggerLeavesItActive() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permSubstringTrigger(\"qaHalfTyped\", \"\", {\"qaHalfTyped\"}, [[-- ok]])")));
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = resetAndFindItem(pEditor, pTree, qsl("qaHalfTyped"));
+    QVERIFY(pItem);
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("if ("));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    const auto ids = mpHost->getTriggerUnit()->findItems(qsl("qaHalfTyped"));
+    QCOMPARE(ids.size(), 1);
+    QVERIFY(mpHost->getTriggerUnit()->getTrigger(ids.front())->shouldBeActive());
+    QVERIFY2(pEditor->systemMessage().contains(qsl("unsaved edit")), qPrintable(pEditor->systemMessage()));
+  }
+
   // Saving a script runs its body, which an untouched script must not get from a reset
   void test_editorResetLeavesAnUneditedScriptUnrun() {
     mudlet::self()->slot_showScriptDialog();

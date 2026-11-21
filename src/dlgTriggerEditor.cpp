@@ -14135,8 +14135,17 @@ void dlgTriggerEditor::resetTrees()
         openScriptUnchanged = pOpenScript->getScript() == mpSourceEditorEdbeeDocument->text() && pOpenScript->getName() == mpScriptsMainArea->lineEdit_script_name->text()
                               && storedHandlers == mpChipRow_scriptEvents->items();
     }
+    // Saving code that does not compile switches a trigger off, which nobody asked for here
+    TTrigger* pOpenTrigger = mCurrentView == EditorViewType::cmTriggerView ? getTriggerFromTreeItem(mpCurrentTriggerItem) : nullptr;
+    const bool openTriggerWasOn = pOpenTrigger && pOpenTrigger->shouldBeActive();
+    QString saveError;
     if (!openScriptUnchanged) {
+        mEditorSaveErrorCaptured.clear();
         saveOpenChanges();
+        saveError = mEditorSaveErrorCaptured;
+    }
+    if (openTriggerWasOn) {
+        pOpenTrigger->setShouldBeActive(true);
     }
 
     // Clear all current item pointers before clearing the tree widgets
@@ -14151,6 +14160,11 @@ void dlgTriggerEditor::resetTrees()
     clearTypeTrees();
     fillout_form();
     slot_showTriggers();
+    // The rebuild clears the code heading the save reported into
+    if (!saveError.isEmpty()) {
+        //: Editor banner after the editor reloaded for a package or module change and kept an unsaved edit that has an error. %1 is the error.
+        showError(tr("<p>Your unsaved edit was kept when the editor reloaded, but it has an error: %1</p>").arg(saveError));
+    }
 }
 
 // A notice posted since the build was put off has to outlive it, as populating a tree clears the message
