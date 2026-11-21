@@ -7176,7 +7176,7 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
 // GMCP is UTF-8 whatever the game's encoding, and a packager's MUDLET_VERSION_BUILD can make the suffix non-ASCII
 std::string cTelnet::coreHelloMessage(const QString& buildSuffix)
 {
-    return escapeIac(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + buildSuffix.toUtf8().constData() + std::string(R"("})"));
+    return escapeIac(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + buildSuffix.toUtf8().constData() + R"("})");
 }
 
 // A lone 0xff byte in outbound data would be read as the start of a telnet

@@ -89,8 +89,7 @@ private:
         }
         const QByteArray stream = mpServer->received();
         mpServer->forgetReceived();
-        const int markerAt = stream.indexOf(marker);
-        return markerAt >= 0 ? stream.left(markerAt) : stream;
+        return stream.left(stream.indexOf(marker));
     }
 
     bool luaSucceeds(const QString& call) { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(call)); }
@@ -195,11 +194,9 @@ private slots:
     }
 
     // A packager's MUDLET_VERSION_BUILD can put any text in the build suffix
-    void test_coreHelloVersionIsUtf8OnALatin1Game()
+    void test_coreHelloVersionIsUtf8()
     {
-        QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
-
-        const std::string hello = mpHost->mTelnet.coreHelloMessage(qsl("-tëst€"));
+        const std::string hello = cTelnet::coreHelloMessage(qsl("-tëst€"));
         QCOMPARE(QByteArray::fromStdString(hello), QByteArray(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + QByteArray("-tëst€") + QByteArray(R"("})"));
     }
 
@@ -207,6 +204,15 @@ private slots:
     {
         const QByteArray payload = sentGmcpPayload(qsl(R"(sendGMCP("Test.Raw \255", "\255"))"));
         QCOMPARE(payload, QByteArray("Test.Raw \xEF\xBF\xBD \xEF\xBF\xBD"));
+    }
+
+    void test_invalidUtf8BecomesAReplacementCharacterOnALatin1Game()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        sentBytes();
+
+        const QByteArray payload = sentGmcpPayload(qsl(R"(sendGMCP("Test.Raw caf\233", "\255"))"));
+        QCOMPARE(payload, QByteArray("Test.Raw caf\xEF\xBF\xBD \xEF\xBF\xBD"));
     }
 };
 
