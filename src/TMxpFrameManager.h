@@ -82,19 +82,19 @@ struct TMxpFrame {
     // The space every page of this frame's tab header gets, as the view last
     // reported it; nothing for a frame without a header
     std::optional<QSize> tabArea;
-    
+
     // Hierarchy tracking (non-owning references - see ownership model above)
     TMxpFrame* parentFrame = nullptr;
     QList<TMxpFrame*> childFrames;
-    
+
     // Destruction state flag - set true when destructor begins to prevent
     // re-entrant access from children/parents during cleanup
     bool mBeingDestroyed = false;
-    
+
     // VBox-style layout tracking
     int usedHeight = 0;     // Pixels used by child frames (for VBox stacking)
     int usedWidth = 0;      // Pixels used by child frames (for HBox stacking)
-    
+
     ~TMxpFrame();
 };
 
@@ -103,14 +103,14 @@ class TMxpFrameManager
 public:
     explicit TMxpFrameManager(Host* host);
     ~TMxpFrameManager();
-    
+
     // Frame lifecycle operations
     bool createFrame(const QString& name, const QMap<QString, QString>& attributes);
     bool closeFrame(const QString& name);
     bool focusFrame(const QString& name);
     bool showFrame(const QString& name);
     void resetAllFrames();
-    
+
     // Output destination management
     void setDestination(const QString& frameName, bool eol, bool eof);
     void clearDestination();
@@ -119,7 +119,7 @@ public:
     // is set, its frame has gone, or it resolves to the main console (which would recurse).
     TPrintSink* currentDestinationSink() const;
     bool hasActiveDestination() const { return !mCurrentDestination.isEmpty(); }
-    
+
     // Frame queries
     TMxpFrame* getFrame(const QString& name);
     const TMxpFrame* getFrame(const QString& name) const;
@@ -147,7 +147,7 @@ public:
 
     // Configuration
     static constexpr int MAX_FRAMES = 20;
-    
+
 private:
     Host* mpHost;
     QMap<QString, TMxpFrame*> mFrames;

@@ -37,9 +37,7 @@ class TLinkStore
     inline static const int scmMaxLinks = 20000;
 
 public:
-    // We don't use explicit for this one so that the default argument is used,
-    // if a value is not provided:
-    TLinkStore(int maxLinks = scmMaxLinks)
+    explicit TLinkStore(int maxLinks = scmMaxLinks)
     : mMaxLinks(maxLinks)
     {
     }
