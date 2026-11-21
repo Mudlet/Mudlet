@@ -986,26 +986,26 @@ void dlgRoomExits::save()
 
     // checkedId() is -1 for no button checked, then -2, -3... in creation order (none, open, closed, locked).
     // The buttons grey out, still checked, when the roomID is cleared, so a door only counts where an exit or stub was saved
-    const auto saveDoor = [this](const QString& doorKey, const int dirCode, const QButtonGroup* pDoorType) {
+    const auto saveDoor = [this](const int dirCode, const QButtonGroup* pDoorType) {
         const int checkedId = pDoorType->checkedId();
         if (checkedId >= -1) {
             return;
         }
         const bool exitOrStubSaved = pR->getExit(dirCode) > 0 || pR->hasExitStub(dirCode);
-        pR->setDoor(doorKey, exitOrStubSaved ? -2 - checkedId : 0);
+        pR->setDoor(TRoom::dirCodeToShortString(dirCode), exitOrStubSaved ? -2 - checkedId : 0);
     };
-    saveDoor(qsl("nw"), DIR_NORTHWEST, doortype_nw);
-    saveDoor(qsl("n"), DIR_NORTH, doortype_n);
-    saveDoor(qsl("ne"), DIR_NORTHEAST, doortype_ne);
-    saveDoor(qsl("up"), DIR_UP, doortype_up);
-    saveDoor(qsl("w"), DIR_WEST, doortype_w);
-    saveDoor(qsl("e"), DIR_EAST, doortype_e);
-    saveDoor(qsl("down"), DIR_DOWN, doortype_down);
-    saveDoor(qsl("sw"), DIR_SOUTHWEST, doortype_sw);
-    saveDoor(qsl("s"), DIR_SOUTH, doortype_s);
-    saveDoor(qsl("se"), DIR_SOUTHEAST, doortype_se);
-    saveDoor(qsl("in"), DIR_IN, doortype_in);
-    saveDoor(qsl("out"), DIR_OUT, doortype_out);
+    saveDoor(DIR_NORTHWEST, doortype_nw);
+    saveDoor(DIR_NORTH, doortype_n);
+    saveDoor(DIR_NORTHEAST, doortype_ne);
+    saveDoor(DIR_UP, doortype_up);
+    saveDoor(DIR_WEST, doortype_w);
+    saveDoor(DIR_EAST, doortype_e);
+    saveDoor(DIR_DOWN, doortype_down);
+    saveDoor(DIR_SOUTHWEST, doortype_sw);
+    saveDoor(DIR_SOUTH, doortype_s);
+    saveDoor(DIR_SOUTHEAST, doortype_se);
+    saveDoor(DIR_IN, doortype_in);
+    saveDoor(DIR_OUT, doortype_out);
 
     TArea* pA = mpHost->mpMap->mpRoomDB->getArea(pR->getArea());
     if (pA) {
