@@ -582,7 +582,7 @@ void dlgMapper::updateEmptyStateOverlay()
         mpEmptyStateOverlay->hide();
     }
     // Don't clobber the progress overlay's own suppression of the empty-state text.
-    if (mp2dMap && !isMapProgressVisible() && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
+    if (mp2dMap && !progressShown && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
         mp2dMap->mSuppressEmptyStateMessage = shouldShow;
         mp2dMap->update();
     }

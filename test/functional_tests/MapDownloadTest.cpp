@@ -73,6 +73,7 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+#include "T2DMap.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
@@ -1533,6 +1534,31 @@ private slots:
                  "the map download never finished");
         QVERIFY2(consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(!emptyState->isVisible(), "the empty state came back over the map that was just downloaded");
+    }
+
+    // A mapper hidden mid-download still has the progress overlay to come back to, so an
+    // update meanwhile must leave the 2D map's own empty-map text suppressed under it
+    void test_theEmptyMapTextStaysSuppressedUnderADownloadWhileTheMapperIsHidden()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper && pMapper->isVisible(), "the mapper is not on screen to show the download's progress");
+        auto* p2dMap = pMapper->findChild<T2DMap*>();
+        auto* progress = pMapper->findChild<QFrame*>(qsl("mapProgressOverlay"));
+        QVERIFY(p2dMap && progress);
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+
+        pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml")));
+        QVERIFY2(progress->isVisible(), "the download put no progress overlay on the mapper");
+        QVERIFY(p2dMap->mSuppressEmptyStateMessage);
+
+        pMapper->hide();
+        pMapper->updateEmptyStateOverlay();
+        pMapper->show();
+        const bool suppressed = p2dMap->mSuppressEmptyStateMessage;
+        pMap->slot_downloadCancel();
+        QVERIFY2(!pMap->hasActiveTransferProgress(), "the stalled download could not be cancelled");
+        QVERIFY2(suppressed, "the 2D map's empty-map text came back under the download's progress");
     }
 
     // The empty map's "Load map..." loads from its file dialog's finished(), while QFileDialog::done() is still running.
