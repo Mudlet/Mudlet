@@ -1622,7 +1622,7 @@ void cTelnet::finishDisconnection()
                 sslErrors.removeAll(QSslError(QSslError::SelfSignedCertificate, cert));
             }
 
-            sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll);
+            sslerr = !sslErrors.isEmpty() && !mpHost->mSslIgnoreAll;
             QStringList reasons;
             if (mDontReconnect) {
                 /*: A reason why a connection to a game server ended, could be

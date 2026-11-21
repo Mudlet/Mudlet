@@ -675,15 +675,17 @@ private:
                 },
                 20s);
         if (countLines(host, qsl("Secure connection made")) == connectionsBefore) {
-            // A TLS backend can object to the stub's 100-year, CA-flagged certificate on more than its being self-signed
-            QStringList otherErrors;
-            for (const auto& sslError : host->mTelnet.getSslErrors()) {
-                if (sslError.error() != QSslError::SelfSignedCertificate) {
-                    otherErrors << sslError.errorString();
+            if (!ignoreAll) {
+                // A TLS backend can object to the stub's 100-year, CA-flagged certificate on more than its being self-signed
+                QStringList otherErrors;
+                for (const auto& sslError : host->mTelnet.getSslErrors()) {
+                    if (sslError.error() != QSslError::SelfSignedCertificate) {
+                        otherErrors << sslError.errorString();
+                    }
                 }
-            }
-            if (!ignoreAll && !otherErrors.isEmpty()) {
-                QSKIP(qPrintable(qsl("this TLS backend raises more than a self-signed error for the stub's certificate: %1").arg(otherErrors.join(qsl("; ")))));
+                if (!otherErrors.isEmpty()) {
+                    QSKIP(qPrintable(qsl("this TLS backend raises more than a self-signed error for the stub's certificate: %1").arg(otherErrors.join(qsl("; ")))));
+                }
             }
             QFAIL("the stub's certificate was not accepted");
         }
