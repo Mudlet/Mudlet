@@ -244,8 +244,7 @@ local function pass(lines, oneRead, cut)
     end
   end
   assert.is_truthy(from, "the pass markers did not both reach the buffer")
-  local to = closingLine - 1
-  local result = snapshot(from, to)
+  local result = snapshot(from, closingLine - 1)
   -- the marker's first character, as the markers differ in length
   local reset = snapshot(closingLine, closingLine)[1]:match("^[^|]*|[^|]*|([^|]*)")
   return result, reset
