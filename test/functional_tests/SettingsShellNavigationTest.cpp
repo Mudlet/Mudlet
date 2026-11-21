@@ -1087,8 +1087,9 @@ private slots:
         const QString category = sidebar()->item(rowOf(qsl("general")))->text();
         const QString support = sidebar()->item(sidebar()->count() - 1)->text();
         const QString wordmark = mpPreferences->findChild<QLabel*>(qsl("settingsWordmark"))->text();
-        const QString placeholder = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"))->placeholderText();
-        const QString searchName = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"))->accessibleName();
+        const auto* pSearchField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        const QString placeholder = pSearchField->placeholderText();
+        const QString searchName = pSearchField->accessibleName();
         const QString cardTitle = mpPreferences->findChild<QGroupBox*>(qsl("card_theme"))->title();
         const QString pageTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"))->text();
         QCoreApplication::removeTranslator(&translator);
