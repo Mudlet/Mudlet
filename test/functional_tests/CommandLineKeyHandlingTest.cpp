@@ -1250,6 +1250,8 @@ private slots:
             QMouseEvent event(type, space, pPane->mapToGlobal(space.toPoint()), Qt::LeftButton, down ? Qt::LeftButton : Qt::NoButton, Qt::NoModifier);
             QApplication::sendEvent(pPane, &event);
         }
+        QVERIFY2(!pPane->mSelectedRegion.isEmpty(), "the double-click never registered, so this proves nothing");
+        QVERIFY2(pConsole->mpLastSelectedPane == pPane, "the double-click did not make the miniconsole the latest selection");
         QVERIFY2(!pPane->hasSelectedText(), "the double-click on the space selected something, so this proves nothing");
 
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
