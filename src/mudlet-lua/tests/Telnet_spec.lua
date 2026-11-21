@@ -2212,6 +2212,41 @@ describe("Tests CHARSET negotiation", function()
     assert.equals("ASCII", getServerEncoding())
   end)
 
+  -- RFC 2066 names come from the IANA registry, where each has aliases, and
+  -- servers also offer the codec names of the language they are written in
+  it("recognises a character set offered by an alias", function()
+    local cases = {
+      {"UTF8", "UTF-8"},
+      {"ANSI_X3.4-1968", "ASCII"},
+      {"latin1", "ISO 8859-1"},
+      {"ISO_8859-1:1987", "ISO 8859-1"},
+      {"ISO_8859-15", "ISO 8859-15"},
+      {"IBM437", "CP437"},
+      {"cp1252", "WINDOWS-1252"},
+      {"CP1251", "WINDOWS-1251"},
+      {"SJIS", "SHIFT_JIS"},
+      {"Big-5", "BIG5"},
+    }
+    for _, case in ipairs(cases) do
+      local offered, expected = case[1], case[2]
+      setServerEncoding(expected == "UTF-8" and "CP437" or "UTF-8")
+      request(offered)
+      assert.equals(expected, getServerEncoding(), "offering " .. offered)
+    end
+  end)
+
+  it("does not take GB2312 as GBK", function()
+    -- GBK decodes GB2312, but what Mudlet sends would be GBK, which a GB2312 game cannot read
+    request("GB2312")
+    assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  it("still prefers the encoding in use over an alias for another", function()
+    setServerEncoding("ISO 8859-1")
+    request("UTF-8", "latin1")
+    assert.equals("ISO 8859-1", getServerEncoding())
+  end)
+
   it("ignores a request with nothing on offer after the separator", function()
     setServerEncoding("CP437")
 
