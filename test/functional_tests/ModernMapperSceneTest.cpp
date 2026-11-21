@@ -3101,7 +3101,7 @@ private slots:
         QElapsedTimer timer;
         timer.start();
         search.refresh(*map());
-        std::printf("METRIC search_entries %lld\n", static_cast<long long>(search.size()));
+        std::printf("METRIC search_entries %lld\n", static_cast<qint64>(search.size()));
         std::printf("METRIC search_index_ms %.2f\n", static_cast<double>(timer.nsecsElapsed()) / 1.0e6);
         for (const QString& query : {qsl("a"), qsl("market"), qsl("temple gate 12"), qsl("12345"), qsl("nowhere")}) {
             constexpr int runs = 20;
@@ -3110,7 +3110,7 @@ private slots:
             for (int run = 0; run < runs; ++run) {
                 search.find(query, 1, true, MapSearch::scmMaxResults, &total);
             }
-            std::printf("METRIC search_query_ms{%s} %.2f (%lld found)\n", qPrintable(query), static_cast<double>(timer.nsecsElapsed()) / 1.0e6 / runs, static_cast<long long>(total));
+            std::printf("METRIC search_query_ms{%s} %.2f (%lld found)\n", qPrintable(query), static_cast<double>(timer.nsecsElapsed()) / 1.0e6 / runs, static_cast<qint64>(total));
         }
         std::fflush(stdout);
     }
