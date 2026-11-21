@@ -98,6 +98,10 @@ public:
     void handleIreComposerEdit(const QByteArray& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
+    // A Lua C module linked into the program, which require() then finds under that name ahead of any on
+    // disk, in every Lua state made afterwards. The last one given for a name is the one found; one with
+    // no name or no function is refused.
+    static void preloadModule(const QByteArray& name, lua_CFunction open);
     void abortAllDownloads();
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();

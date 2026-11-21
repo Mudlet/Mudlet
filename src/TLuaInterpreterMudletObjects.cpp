@@ -305,7 +305,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
             autoStart = false;
             hasName = true;
         } else if (lua_type(L, s) == LUA_TNIL) {
-            ; // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
+            // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
             // note that 'nil' will still count towards the stack's gettop amount
         } else {
             lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", s, luaL_typename(L, s));
