@@ -287,18 +287,15 @@ private slots:
         QVERIFY(mpHost->getActionUnit()->registerAction(button));
         QVERIFY(button->setScript(qsl("local _ = 1")));
 
-        struct Deleted
-        {
-            EditorViewType view;
-            int id;
-            QString name;
-            QString function;
-        };
+        const int triggerID = luaInteger("tctScriptTriggerId");
+        const int aliasID = luaInteger("tctScriptAliasId");
+        const int timerID = luaInteger("tctScriptTimerId");
+        const int keyID = luaInteger("tctScriptKeyId");
         const QList<Deleted> items{
-                {EditorViewType::cmTriggerView, luaInteger("tctScriptTriggerId"), qsl("tct script trigger"), qsl("Trigger%1").arg(luaInteger("tctScriptTriggerId"))},
-                {EditorViewType::cmAliasView, luaInteger("tctScriptAliasId"), qsl("tct script alias"), qsl("Alias%1").arg(luaInteger("tctScriptAliasId"))},
-                {EditorViewType::cmTimerView, luaInteger("tctScriptTimerId"), qsl("tct script timer"), qsl("Timer%1").arg(luaInteger("tctScriptTimerId"))},
-                {EditorViewType::cmKeysView, luaInteger("tctScriptKeyId"), qsl("tct script key"), qsl("Key%1").arg(luaInteger("tctScriptKeyId"))},
+                {EditorViewType::cmTriggerView, triggerID, qsl("tct script trigger"), qsl("Trigger%1").arg(triggerID)},
+                {EditorViewType::cmAliasView, aliasID, qsl("tct script alias"), qsl("Alias%1").arg(aliasID)},
+                {EditorViewType::cmTimerView, timerID, qsl("tct script timer"), qsl("Timer%1").arg(timerID)},
+                {EditorViewType::cmKeysView, keyID, qsl("tct script key"), qsl("Key%1").arg(keyID)},
                 {EditorViewType::cmActionView, button->getID(), button->getName(), qsl("Action%1").arg(button->getID())},
         };
         for (const auto& item : items) {
@@ -331,13 +328,6 @@ private slots:
         alias->setScript(QString());
         key->setScript(QString());
 
-        struct Deleted
-        {
-            EditorViewType view;
-            int id;
-            QString name;
-            QString function;
-        };
         const QList<Deleted> items{
                 {EditorViewType::cmTriggerView, triggerID, trigger->getName(), qsl("Trigger%1").arg(triggerID)},
                 {EditorViewType::cmAliasView, aliasID, alias->getName(), qsl("Alias%1").arg(aliasID)},
@@ -422,6 +412,14 @@ private slots:
     }
 
 private:
+    struct Deleted
+    {
+        EditorViewType view;
+        int id;
+        QString name;
+        QString function;
+    };
+
     bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
 
     bool luaGlobalIsFunction(const QString& name)
