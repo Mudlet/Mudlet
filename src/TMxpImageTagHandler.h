@@ -27,7 +27,7 @@ class TMxpImageTagHandler : public TMxpSingleTagHandler
 public:
     TMxpImageTagHandler()
         : TMxpSingleTagHandler(qsl("IMAGE")) {}
-    
+
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
 

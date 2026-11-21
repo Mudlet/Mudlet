@@ -547,9 +547,8 @@ tempTimer(0.1, function() feedTriggers("headless tick\n") end, true))lua")
         QCOMPARE(saveCount(name), 2);
     }
 
-    // As above, with the reader gone before the load is over, and a load that runs the event loop (as one
-    // trying a map file that will not read does) before the runner's own loop starts: the timer's line
-    // comes before sysLoadEvent's
+    // As above, with the reader gone before the load is over, and a load that runs the event loop before the
+    // runner's own loop starts: the timer's line comes before sysLoadEvent's
     void test_outputClosedDuringTheLoadSavesAndExits()
     {
         const QString name = qsl("Headless Runner Early Reader");
@@ -563,14 +562,9 @@ end
 registerAnonymousEventHandler("sysExitEvent", function() record("sysExitEvent") end)
 registerAnonymousEventHandler("sysLoadEvent", function() record("sysLoadEvent") end)
 tempTimer(0, function() record("timer") end)
-feedTriggers("headless during the load\n"))lua")
+feedTriggers("headless during the load\n")
+pumpEvents(100))lua")
                                      .arg(recordPath)));
-        const QString mapFolder = qsl("%1/map").arg(profileFolder(name));
-        QVERIFY(QDir().mkpath(mapFolder));
-        QFile mapFile(qsl("%1/2020-01-01#00-00-00map.dat").arg(mapFolder));
-        QVERIFY(mapFile.open(QIODevice::WriteOnly));
-        mapFile.write(QByteArray(64, 'x'));
-        mapFile.close();
 
         int output[2];
         QVERIFY(::pipe(output) == 0);
@@ -1040,12 +1034,7 @@ registerAnonymousEventHandler("sysExitEvent", function() send("exit event", fals
 tempAlias("^bye$", [[closeProfile()]]))lua")
                                               .arg(other),
                                       recordPath));
-        QVERIFY(writeProfile(other, QString()));
-        // TMap::restore() pumps the event loop as it reports a map file it cannot read
-        QVERIFY(QDir().mkpath(qsl("%1/map").arg(profileFolder(other))));
-        QFile map(qsl("%1/map/map.json").arg(profileFolder(other)));
-        QVERIFY(map.open(QIODevice::WriteOnly) && map.write("not a map") > 0);
-        map.close();
+        QVERIFY(writeProfile(other, qsl("pumpEvents(100)")));
 
         RecordingGame game;
         QVERIFY(game.start());

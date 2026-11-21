@@ -35,6 +35,7 @@
 #include <QPointer>
 
 class Host;
+class QLabel;
 class TMap;
 
 
@@ -92,6 +93,8 @@ private:
     bool contextCreationFailed() const;
     void applyBackgroundTranslucency();
     QPointer<Host> mpHost;
+    // In place of the map while the window cannot show what this view draws
+    QLabel* mpUnsharedLabel = nullptr;
     bool is2DView = false;
     bool mPanMode = false;
     float mPanXStart = 0;
