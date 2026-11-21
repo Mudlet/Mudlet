@@ -70,7 +70,6 @@
 #include <QTimeZone>
 #include <array>
 #include <chrono>
-#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -833,14 +832,23 @@ bool dlgConnectionProfiles::queueCopyBehindPasswordRead(void (dlgConnectionProfi
 
 void dlgConnectionProfiles::runPendingCopy(const QString& profileName)
 {
-    if (!mPendingCopy || mPendingCopyProfile != profileName) {
+    const auto copy = mPendingCopy;
+    if (!dropPendingCopy(profileName)) {
         return;
     }
 
-    const auto copy = std::exchange(mPendingCopy, nullptr);
-    mPendingCopyProfile.clear();
     clearKeychainWait();
     (this->*copy)();
+}
+
+bool dlgConnectionProfiles::dropPendingCopy(const QString& profileName)
+{
+    if (!mPendingCopy || mPendingCopyProfile != profileName) {
+        return false;
+    }
+    mPendingCopy = nullptr;
+    mPendingCopyProfile.clear();
+    return true;
 }
 
 bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
@@ -3477,11 +3485,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     if (currentProfileName != profile_name) {
         qDebug() << "dlgConnectionProfiles: Dropping the password load for" << profile_name << "as the selection has changed";
         // A Connect or a copy waiting on this load would otherwise wait for good
-        const bool copyWaiting = mPendingCopyProfile == profile_name;
-        if (copyWaiting) {
-            mPendingCopy = nullptr;
-            mPendingCopyProfile.clear();
-        }
+        const bool copyWaiting = dropPendingCopy(profile_name);
         if (mPendingProfileLoad == profile_name || copyWaiting) {
             abandonPendingProfileLoad();
         }
@@ -3569,10 +3573,7 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
     if (passwordUnreadable && !offlineLoadQueued) {
         // as with Connect, the warning stays up for the password to be typed before copying again
-        if (mPendingCopyProfile == profileName) {
-            mPendingCopy = nullptr;
-            mPendingCopyProfile.clear();
-        }
+        dropPendingCopy(profileName);
         abandonPendingProfileLoad();
         //: Shown in the connection dialog when a password was saved for the profile but its file could not be opened or decrypted, for example because it is damaged
         showNotification(tr("The saved password for this profile could not be read. Please enter it again."), notificationAreaIconLabelWarning);

@@ -230,6 +230,7 @@ private:
     // being read is held back until that read answers
     bool queueCopyBehindPasswordRead(void (dlgConnectionProfiles::*copy)());
     void runPendingCopy(const QString& profileName);
+    bool dropPendingCopy(const QString& profileName);
     // What a keychain read answers with
     void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
     void schedulePasswordLoad(const QString& profile_name);

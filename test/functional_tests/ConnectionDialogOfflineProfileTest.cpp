@@ -108,8 +108,7 @@ private:
 
     bool passwordLoadScheduled() const
     {
-        const auto timers = dialog()->findChildren<QTimer*>();
-        return std::any_of(timers.cbegin(), timers.cend(), [](const QTimer* timer) {
+        return std::ranges::any_of(dialog()->findChildren<QTimer*>(), [](const QTimer* timer) {
             return timer->isActive() && timer->property("profileName").isValid();
         });
     }
