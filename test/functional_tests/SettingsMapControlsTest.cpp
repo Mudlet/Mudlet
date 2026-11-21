@@ -351,13 +351,13 @@ private slots:
         // A warm-up load, so a mapper that loading may create is not counted below
         QVERIFY(mpHost->loadMapFile(path));
 
-        quint64 before = pMap->revision();
+        const quint64 beforeHostLoad = pMap->revision();
         QVERIFY(mpHost->loadMapFile(path));
-        const quint64 hostLoadChange = pMap->revision() - before;
+        const quint64 hostLoadChange = pMap->revision() - beforeHostLoad;
 
-        before = pMap->revision();
+        const quint64 beforeDialogLoad = pMap->revision();
         mpPreferences->loadMap(path);
-        QCOMPARE(pMap->revision() - before, hostLoadChange);
+        QCOMPARE(pMap->revision() - beforeDialogLoad, hostLoadChange);
     }
 };
 
