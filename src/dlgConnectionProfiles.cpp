@@ -2757,8 +2757,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         pHostBeforeLoad->setLogin(login_entry->text().trimmed());
         const QString password = character_password_entry->text().trimmed();
         // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
-        if (!password.isEmpty() || character_password_entry->isModified()) {
+        if (character_password_entry->isModified()) {
             pHostBeforeLoad->setPassTypedByPlayer(password);
+        } else if (!password.isEmpty()) {
+            // Read from the store, as the profile's own lookup is, whose later answer may be the newer
+            pHostBeforeLoad->setPass(password);
         }
     }
 

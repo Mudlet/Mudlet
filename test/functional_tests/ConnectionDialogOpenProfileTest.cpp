@@ -164,8 +164,8 @@ private:
         return pDialog && pDialog->login_entry->text() == name;
     }
 
-    // as a player does, over what the box holds: the dialog saves on the
-    // edited signals, which setText() does not raise
+    // Typed, not setText(): the login box saves on textEdited, and loadProfile() trusts an emptied password box only
+    // when isModified(), neither of which setText() gives
     static void typeOver(QLineEdit* pBox, const QString& text)
     {
         pBox->setFocus();
@@ -180,7 +180,21 @@ private:
             return nullptr;
         }
         auto* pHost = mudlet::self()->getActiveHost();
-        return (pHost && pHost->getName() == mProfileName) ? pHost : nullptr;
+        if (!pHost || pHost->getName() != mProfileName) {
+            return nullptr;
+        }
+        // The cases share the one open profile; each starts as one just opened, whose password nobody has given yet
+        pHost->mPassGiven = false;
+        return pHost;
+    }
+
+    static bool waitForAConnection(const QSignalSpy& connections)
+    {
+        return QTest::qWaitFor(
+                [&connections]() {
+                    return !connections.isEmpty();
+                },
+                15s);
     }
 
 private slots:
@@ -330,12 +344,7 @@ private slots:
             dialog()->slot_load();
         }
 
-        QVERIFY2(QTest::qWaitFor(
-                         [&connections]() {
-                             return !connections.isEmpty();
-                         },
-                         15s),
-                 "The open profile was not connected, so no login could be sent");
+        QVERIFY2(waitForAConnection(connections), "The open profile was not connected, so no login could be sent");
         const QByteArray nameLine = typedName.toUtf8() + "\r\n";
         const QByteArray passwordLine = typedPassword.toUtf8() + "\r\n";
         const bool passwordSent = QTest::qWaitFor(
@@ -344,8 +353,9 @@ private slots:
                 },
                 10s);
         const QByteArray sent = mpServer->receivedSoFar().mid(before);
-        QVERIFY2(passwordSent, qPrintable(qsl("The game was not sent the password typed in the dialog, but: %1").arg(QString::fromLatin1(sent.toPercentEncoding(" ")))));
-        QVERIFY2(sent.contains(nameLine), qPrintable(qsl("The game was not sent the name typed in the dialog, but: %1").arg(QString::fromLatin1(sent.toPercentEncoding(" ")))));
+        const QString sentText = QString::fromLatin1(sent.toPercentEncoding(" "));
+        QVERIFY2(passwordSent, qPrintable(qsl("The game was not sent the password typed in the dialog, but: %1").arg(sentText)));
+        QVERIFY2(sent.contains(nameLine), qPrintable(qsl("The game was not sent the name typed in the dialog, but: %1").arg(sentText)));
         QVERIFY2(sent.indexOf(nameLine) < sent.indexOf(passwordLine), "The password went out ahead of the name");
     }
 
@@ -369,12 +379,7 @@ private slots:
         QVERIFY(connections.isValid());
         dialog()->accept();
 
-        QVERIFY2(QTest::qWaitFor(
-                         [&connections]() {
-                             return !connections.isEmpty();
-                         },
-                         15s),
-                 "The open profile was not connected, so the dialog was never asked");
+        QVERIFY2(waitForAConnection(connections), "The open profile was not connected, so the dialog was never asked");
         QVERIFY2(pHost->getPass().isEmpty(), "The open profile kept the password that was erased in the dialog");
         QCOMPARE(pHost->getLogin(), savedName);
     }
@@ -405,16 +410,35 @@ private slots:
         QSignalSpy connections(mpServer, &QTcpServer::newConnection);
         QVERIFY(connections.isValid());
         dialog()->accept();
-        QVERIFY2(QTest::qWaitFor(
-                         [&connections]() {
-                             return !connections.isEmpty();
-                         },
-                         15s),
-                 "The open profile was not connected, so the dialog was never asked");
+        QVERIFY2(waitForAConnection(connections), "The open profile was not connected, so the dialog was never asked");
         QCOMPARE(pHost->getPass(), typedPassword);
 
         pHost->securedPasswordAnswered(true, savedPassword, QString(), false);
         QCOMPARE(pHost->getPass(), typedPassword);
+    }
+
+    // The dialog may show an older copy than the profile's own lookup brings, as the encrypted file's at a deadline
+    void test_aPasswordTheDialogFilledInGivesWayToTheOpenProfilesLookup()
+    {
+        const QString savedName = qsl("savedname");
+        const QString shownPassword = qsl("oldersecret");
+        const QString lookedUpPassword = qsl("newersecret");
+
+        auto* pHost = theOpenTestProfile();
+        QVERIFY2(pHost, "The test profile could not be opened, so the dialog has no open profile to be asked about");
+        pHost->setLogin(savedName);
+        pHost->setPass(shownPassword);
+        QVERIFY2(showTheTestProfileWithSavedLogin(savedName, shownPassword), "The dialog did not show the profile's saved login");
+        QVERIFY2(!dialog()->character_password_entry->isModified(), "The box was typed in, so this case cannot cover one the dialog filled");
+
+        QSignalSpy connections(mpServer, &QTcpServer::newConnection);
+        QVERIFY(connections.isValid());
+        dialog()->accept();
+        QVERIFY2(waitForAConnection(connections), "The open profile was not connected, so the dialog was never asked");
+        QCOMPARE(pHost->getPass(), shownPassword);
+
+        pHost->securedPasswordAnswered(true, lookedUpPassword, QString(), false);
+        QCOMPARE(pHost->getPass(), lookedUpPassword);
     }
 
     // The dialog cannot always show a saved password - a locked keychain leaves
@@ -437,12 +461,7 @@ private slots:
         QVERIFY(connections.isValid());
         dialog()->accept();
 
-        QVERIFY2(QTest::qWaitFor(
-                         [&connections]() {
-                             return !connections.isEmpty();
-                         },
-                         15s),
-                 "The open profile was not connected, so the dialog was never asked");
+        QVERIFY2(waitForAConnection(connections), "The open profile was not connected, so the dialog was never asked");
         QCOMPARE(pHost->getPass(), heldPassword);
         QCOMPARE(pHost->getLogin(), savedName);
     }
