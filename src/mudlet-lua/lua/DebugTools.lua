@@ -78,7 +78,7 @@ local function printX(options)
   table.remove(stackTable,2)
   local level = #stackTable + 1
   -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them;
-  -- a tail call or a C function such as pcall() has no line, so take the nearest Lua line above it
+  -- a tail call or a C function such as pcall() has no line, so walk out to the nearest Lua caller
   local callerLevel = 3
   local dinfo = debug.getinfo(callerLevel, "Sl")
   while dinfo and (dinfo.what == "tail" or dinfo.what == "C" or inLibrary(dinfo.source)) do
