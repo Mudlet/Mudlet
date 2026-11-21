@@ -348,16 +348,15 @@ private slots:
         QVERIFY(pMap->mpRoomDB->addRoom(pMap->createNewRoomID()));
         QVERIFY(mpHost->saveMapFile(path));
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
-        // A warm-up load, so a mapper that loading may create is not counted below
-        QVERIFY(mpHost->loadMapFile(path));
-
-        const quint64 beforeHostLoad = pMap->revision();
-        QVERIFY(mpHost->loadMapFile(path));
-        const quint64 hostLoadChange = pMap->revision() - beforeHostLoad;
-
-        const quint64 beforeDialogLoad = pMap->revision();
+        // Every audit ends by calling the Lua condenseMapLoad(), so counting those calls counts audits
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("specAudits = 0 specCondense = condenseMapLoad "
+                                                  "condenseMapLoad = function() specAudits = specAudits + 1 return specCondense() end")));
+        const auto restoreCondense = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("condenseMapLoad = specCondense specCondense = nil specAudits = nil"));
+        });
         mpPreferences->loadMap(path);
-        QCOMPARE(pMap->revision() - beforeDialogLoad, hostLoadChange);
+        QCOMPARE(pLua->getLuaString(qsl("tostring(specAudits)")), qsl("1"));
     }
 };
 
