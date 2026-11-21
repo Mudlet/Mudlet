@@ -2898,9 +2898,11 @@ function BaseUI.applyVitals(source, readings, snapshot)
   end
   for _, stat in ipairs(vitalsStats) do
     local reading = readings[stat.key]
-    if snapshot and stat.transient then
-      BaseUI.vitalsData[stat.key] = reading
-    elseif reading and not stat.transient then
+    if stat.transient then
+      if snapshot then
+        BaseUI.vitalsData[stat.key] = reading
+      end
+    elseif reading then
       local data = BaseUI.vitalsData[stat.key] or {}
       data.current = reading.current or data.current
       data.max = reading.max or data.max
