@@ -80,14 +80,18 @@ local function printX(options)
   -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them;
   -- a tail call or a C function such as pcall() has no line, so walk out to the nearest Lua caller
   local callerLevel = 3
+  local nearestLibraryLine
   local dinfo = debug.getinfo(callerLevel, "Sl")
   while dinfo and (dinfo.what == "tail" or dinfo.what == "C" or inLibrary(dinfo.source)) do
+    if not nearestLibraryLine and dinfo.what ~= "tail" and dinfo.what ~= "C" then
+      nearestLibraryLine = dinfo
+    end
     callerLevel = callerLevel + 1
     dinfo = debug.getinfo(callerLevel, "Sl")
   end
-  -- no script frame was found (e.g. a trigger whose code is "return printError(...)", called
-  -- straight from C++, or only Mudlet's own Lua on the stack), so fall back to the traceback's last level
-  dinfo = dinfo or debug.getinfo(level, "Sl")
+  -- no script frame was found (e.g. a trigger that tail calls into Mudlet's own Lua, called
+  -- straight from C++), so name Mudlet's line that reported it, or else the traceback's last level
+  dinfo = dinfo or nearestLibraryLine or debug.getinfo(level, "Sl")
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then
     header = "\n" .. header
