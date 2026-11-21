@@ -4235,12 +4235,12 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
     // The symbols were drawn at the export's room size, which the view's next frame would otherwise reuse as its own
     flushSymbolPixmapCache();
 
-    // Each export has a watcher of its own: several can be in flight at once,
-    // from calls made back to back or one per z level
     // A QImage, as only the GUI thread may use a QPixmap
     const TBackgroundResult save = TBackgroundTask::runForReason([image = pixmap.toImage(), filePath, format = TMap::exportImageFormat(filePath)]() {
         return performImageSave(image, filePath, format);
     });
+    // Each export has a watcher of its own: several can be in flight at once,
+    // from calls made back to back or one per z level
     save.whenFinished(saveOwner, QString(), [save, pHost = QPointer<Host>(mpHost), profileName = mpHost->getName()]() {
         const QString errorMessage = save.reason();
         if (!errorMessage.isEmpty()) {

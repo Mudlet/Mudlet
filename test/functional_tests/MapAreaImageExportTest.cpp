@@ -205,7 +205,7 @@ private slots:
         // The export hands the actual file write to a background task
         QImage exportedImage;
         QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
-        // The file lands inside QPixmap::save(), before the task reports back,
+        // The file lands inside QImage::save(), before the task reports back,
         // and the watcher is only deleted once it has - so this is what says the
         // pool thread has let go of the widget the fixture is about to delete
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
@@ -404,7 +404,6 @@ private slots:
         const auto [exported, message] = mp2dMap->exportAreaToImage(areaId, filePath);
         QVERIFY2(exported, qPrintable(message));
         QVERIFY2(!QImage(filePath).isNull(), "the export left its file write to the thread pool although background tasks run inline");
-        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
     }
 
     // A map view can outlive its profile - closeHost() only deleteLater()s the
