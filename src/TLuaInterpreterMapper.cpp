@@ -3169,10 +3169,10 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                     } else {
                         errorMessage.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
                     }
-                    constexpr qsizetype maxReportedErrors = 16;
-                    if (const QString text = QString::fromStdString(errorMessage); reportedErrors->size() <= maxReportedErrors && !reportedErrors->contains(text)) {
+                    constexpr qsizetype maxReportedErrors = 17;
+                    if (const QString text = QString::fromStdString(errorMessage); reportedErrors->size() < maxReportedErrors && !reportedErrors->contains(text)) {
                         reportedErrors->insert(text);
-                        if (reportedErrors->size() > maxReportedErrors) {
+                        if (reportedErrors->size() == maxReportedErrors) {
                             errorMessage.append(" (further errors from this map info are not shown until it is registered again)");
                         }
                         pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
