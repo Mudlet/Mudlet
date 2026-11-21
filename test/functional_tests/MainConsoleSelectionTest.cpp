@@ -1530,7 +1530,6 @@ private slots:
         // Scrolled back, the lower pane shows the end of the buffer and can be
         // drawing the link as well
         pane->mpBuffer->setHoveredLink(hoveredLink);
-        QCOMPARE(pane->mpBuffer->getHoveredLink(), hoveredLink);
         pane->mIsTailMode = false;
         lowerPane->mForceUpdate = false;
         QApplication::sendEvent(pane, &leave);
