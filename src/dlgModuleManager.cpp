@@ -392,7 +392,7 @@ void dlgModuleManager::buildShell()
     pShellLayout->setContentsMargins(scmModulesInset, scmModulesInset, scmModulesInset, scmModulesInset);
     pShellLayout->setSpacing(scmModulesInset);
 
-    for (QWidget* pWidget : {static_cast<QWidget*>(moduleTable), static_cast<QWidget*>(textEdit), static_cast<QWidget*>(label_importStatus), widget_2}) {
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{moduleTable, textEdit, label_importStatus, widget_2}) {
         uiDesign::removeFromLayoutTree(gridLayout, pWidget);
     }
     delete gridLayout;
@@ -426,7 +426,7 @@ void dlgModuleManager::buildShell()
 
     // The .ui file orders the row by drawing it right to left, which also puts every button's glyph after its words
     widget_2->unsetLayoutDirection();
-    for (QWidget* pButton : {static_cast<QWidget*>(helpButton), static_cast<QWidget*>(installButton), static_cast<QWidget*>(uninstallButton)}) {
+    for (QPushButton* pButton : {helpButton, installButton, uninstallButton}) {
         horizontalLayout->removeWidget(pButton);
         horizontalLayout->addWidget(pButton);
     }
@@ -452,13 +452,11 @@ void dlgModuleManager::applyModuleManagerShellStyle()
     installButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/packages-install-file.svg"), tokens));
     uninstallButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-delete.svg"), tokens));
     helpButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/about-docs.svg"), tokens));
-    for (QAbstractButton* pButton : {static_cast<QAbstractButton*>(installButton), static_cast<QAbstractButton*>(uninstallButton), static_cast<QAbstractButton*>(helpButton)}) {
+    for (QPushButton* pButton : {installButton, uninstallButton, helpButton}) {
         pButton->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
     }
-    if (QToolButton* pClose = mpNotice ? mpNotice->messageAreaCloseButton : nullptr) {
-        pClose->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
-        pClose->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
-    }
+    mpNotice->messageAreaCloseButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
+    mpNotice->messageAreaCloseButton->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
 
     uiDesign::keepClickFocusOffControls(mpShell);
 }
@@ -466,9 +464,6 @@ void dlgModuleManager::applyModuleManagerShellStyle()
 // No timeout: a failure that hides itself can go unread. The next install clears it too.
 void dlgModuleManager::showImportStatus(const QString& message)
 {
-    if (!mpNotice) {
-        return;
-    }
     mpNotice->notificationAreaMessageBox->setText(message);
     mpNotice->show();
 }
