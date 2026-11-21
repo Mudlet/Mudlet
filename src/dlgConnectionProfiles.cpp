@@ -215,9 +215,8 @@ static QChar charAt(const QString& text, const qsizetype index)
     return index < text.size() ? text.at(index) : QChar();
 }
 
-// The zone takes up room in the list of a profile's saves and tells nothing there, and formatting
-// it sends every entry through the platform's time zone database. Since Qt 6.8 a locale writes it
-// as "tttt", or "t" through "ttt" for shorter forms, so the whole unquoted run has to go.
+// The zone tells nothing in the list of saves, and formatting it looks the zone up for every entry - on Windows
+// through ICU, which has crashed there (#12984). Any unquoted run of t's is a zone field, the offset as well as the name.
 QString dlgConnectionProfiles::dateTimeFormatWithoutZone(const QString& format)
 {
     QString result;

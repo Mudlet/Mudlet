@@ -18,8 +18,9 @@
  ***************************************************************************/
 
 /*
- * The connection dialog dates a profile's saves without the time zone, since formatting the
- * zone looks it up in the platform's time zone database for every entry. See issue #12984.
+ * The connection dialog dates a profile's saves without the time zone: formatting the zone
+ * looks it up for every entry, which on Windows goes through ICU and has crashed there.
+ * See issue #12984.
  *
  * Run with: ctest -R ConnectionDialogDateFormatTest -V
  */
