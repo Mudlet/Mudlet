@@ -8224,13 +8224,15 @@ bool Host::caretShortcutMatches(const CaretShortcut shortcut, const QKeyCombinat
     constexpr Qt::KeyboardModifier controlKey = caretControlKey;
     const Qt::Key key = combination.key();
     const Qt::KeyboardModifiers modifiers = combination.keyboardModifiers();
+    // A Shift+Tab press arrives as Key_Backtab, so a shortcut spelt with Shift and Tab is never the caret key's
+    const bool tab = key == Qt::Key_Tab && !(modifiers & Qt::ShiftModifier);
     switch (shortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return key == Qt::Key_Tab && !(modifiers & controlKey);
+        return tab && !(modifiers & controlKey);
     case CaretShortcut::CtrlTab:
-        return key == Qt::Key_Tab && (modifiers & controlKey);
+        return tab && (modifiers & controlKey);
     case CaretShortcut::F6:
         return key == Qt::Key_F6 && (modifiers & allModifiers) == Qt::NoModifier;
     }

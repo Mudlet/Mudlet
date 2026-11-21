@@ -1495,9 +1495,14 @@ private slots:
         setShortcut(pPreviousProfile, QKeySequence(Qt::Key_F8));
         QVERIFY2(pNote->isHidden(), qPrintable(qsl("moving both profile shortcuts off Ctrl+Tab left the note up: %1").arg(pNote->text())));
 
-        // The caret key takes Ctrl+Tab with more modifiers held, and a sequence never gets past its first press
-        setShortcut(pPreviousProfile, QKeySequence(Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab).keyboardModifiers() | Qt::ShiftModifier | Qt::Key_Tab));
-        QVERIFY2(!pNote->isHidden(), "Ctrl+Shift+Tab, which the Ctrl+Tab caret key takes, was not said to clash");
+        // A Ctrl+Shift+Tab press arrives as Backtab, which the caret key leaves to the shortcut
+        const Qt::KeyboardModifiers caretModifiers = Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab).keyboardModifiers();
+        setShortcut(pPreviousProfile, QKeySequence(caretModifiers | Qt::ShiftModifier | Qt::Key_Tab));
+        QVERIFY2(pNote->isHidden(), qPrintable(qsl("Ctrl+Shift+Tab, which the Ctrl+Tab caret key leaves alone, was said to clash: %1").arg(pNote->text())));
+
+        // The caret key takes Ctrl+Tab with other modifiers held, and a sequence never gets past its first press
+        setShortcut(pPreviousProfile, QKeySequence(caretModifiers | Qt::AltModifier | Qt::Key_Tab));
+        QVERIFY2(!pNote->isHidden(), "Ctrl+Alt+Tab, which the Ctrl+Tab caret key takes, was not said to clash");
         QVERIFY2(pNote->text().contains(previousLabel) && !pNote->text().contains(nextLabel), qPrintable(pNote->text()));
         setShortcut(pPreviousProfile, QKeySequence(Qt::Key_F8));
         const QKeyCombination ctrlTab = Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab);
