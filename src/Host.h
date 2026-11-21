@@ -246,10 +246,10 @@ public:
         mPass = password;
         mPassGiven = true;
     }
-    // A password still being fetched from the keychain counts: the auto-login is timer based, so
-    // the password step has to be armed before the read that answers it comes back, or there is
-    // no prompt left for a late answer to be typed at.
-    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
+    // A password still being fetched from the keychain counts, unless one given or typed stands in for it: the
+    // auto-login is timer based, so the password step has to be armed before the read that answers it comes back,
+    // or there is no prompt left for a late answer to be typed at.
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || (mSecuredPasswordPending && !mPassGiven)); }
     // At the auto-login's password step, by when the connection dialog has handed over any password typed into it
     void reportUnreadableSavedPassword();
     // True once the user has sent any command to the game on the current connection. It gates whether

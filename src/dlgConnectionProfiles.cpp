@@ -2759,8 +2759,9 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
         if (character_password_entry->isModified()) {
             pHostBeforeLoad->setPassTypedByPlayer(password);
-        } else if (!password.isEmpty()) {
-            // Read from the store, as the profile's own lookup is, whose later answer may be the newer
+        } else if (!password.isEmpty() && pHostBeforeLoad->getPass().isEmpty()) {
+            // Filled in by the dialog, which can fall back to an older copy than the profile holds; a pending lookup of
+            // the profile's own may still answer with a newer one
             pHostBeforeLoad->setPass(password);
         }
     }
