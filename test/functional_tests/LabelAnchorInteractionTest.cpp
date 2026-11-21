@@ -418,6 +418,28 @@ private slots:
         QVERIFY2(luaHolds(qsl("anchorReleases == 1")), "the label's release callback did not fire");
     }
 
+    void test_aDoubleClickOnALabelWithNoCallbackForItClicks()
+    {
+        const QString name = qsl("doubleClickFallbackLabel");
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([this, name]() {
+            mpHost->mainConsoleView()->deleteLabel(name);
+        });
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(name);
+        QVERIFY(pLabel);
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("fallbackClicks = 0\n"
+                                                                 "fallbackRegistered = setLabelClickCallback('%1', function() fallbackClicks = fallbackClicks + 1 end)\n")
+                                                                     .arg(name));
+        QVERIFY2(luaHolds(qsl("fallbackRegistered")), "the click callback did not reach the label");
+
+        const QPointF centre = pLabel->rect().center();
+        QMouseEvent doubleClick(QEvent::MouseButtonDblClick, centre, pLabel->mapToGlobal(centre), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(pLabel, &doubleClick);
+
+        QVERIFY2(luaHolds(qsl("fallbackClicks == 1")), "a double-click on a label with only a click callback did not run it");
+    }
+
     void test_aLinkShowsThePointingHand()
     {
         label()->resetLinkStyle();

@@ -33,7 +33,6 @@
 #include <QStyleOptionViewItem>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "EditorTreeRowMetrics.h"
 #include "Host.h"
@@ -53,8 +52,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 namespace {
 // indexFromItem() is protected and an off-screen row has no rect for indexAt();
@@ -101,7 +98,6 @@ private:
     {
         mpEditor->slot_showVariables();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         mpVariablesTree->expandAll();
         QCoreApplication::processEvents();
     }
@@ -143,7 +139,6 @@ private:
         mpVariablesTree->setCurrentItem(pItem);
         mpEditor->slot_variableSelected(pItem);
         QCoreApplication::processEvents();
-        QTest::qWait(20ms);
     }
 
     QString previewOf(QTreeWidgetItem* pItem) const { return pItem ? pItem->data(0, uiDesign::scmRole_variablePreview).toString() : QString(); }
@@ -175,7 +170,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
@@ -196,7 +191,7 @@ private slots:
 
         // So the triggers tree has a row to measure a variable's row against
         mpEditor->slot_showTriggers();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         mpEditor->addTrigger(false);
         QCoreApplication::processEvents();
 
@@ -225,7 +220,7 @@ private slots:
                  "the variables tree is not drawn by VariableTreeDelegate, so its rows are whatever the platform makes of them");
 
         mpEditor->slot_showTriggers();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         const int triggerHeading = mpEditor->treeWidget_triggers->visualItemRect(mpEditor->mpTriggerBaseItem).height();
         QVERIFY2(triggerHeading > 0, "the triggers tree was not laid out, so there is nothing to measure against");
 
