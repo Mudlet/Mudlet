@@ -582,7 +582,7 @@ private slots:
         mpHost->mTelnet.mFORCE_GA_OFF = true;
         mpHost->mTelnet.mGA_Driver = false;
         QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
-        // A link in the prompt's text expires on that prompt only if the text is posted before the prompt counts
+        // A link in the prompt's text must be registered before its own prompt counts, or it skips the next prompt instead and outlives it
         bool textPostedFirst = false;
         QObject promptProbe;
         connect(&mpHost->mTelnet, &cTelnet::signal_promptReceived, &promptProbe, [this, &textPostedFirst]() {
@@ -591,15 +591,19 @@ private slots:
         QByteArray chunk("\r\nPROMPT_S> ");
         chunk += TN_IAC;
         chunk += TN_GA;
+        chunk += "PROMPT_T> ";
+        chunk += TN_IAC;
+        chunk += TN_GA;
         chunk += "AFTER_S\r\n";
 
         feedReplayChunk(chunk);
 
         TMainConsole* console = mpHost->mainConsoleView();
-        const int promptLine = console->buffer.getLastLineNumber() - 2;
-        QCOMPARE(linesFrom(qsl("PROMPT_S")), (QStringList{qsl("PROMPT_S> "), qsl("AFTER_S"), QString()}));
+        const int promptLine = console->buffer.getLastLineNumber() - 3;
+        QCOMPARE(linesFrom(qsl("PROMPT_S")), (QStringList{qsl("PROMPT_S> "), qsl("PROMPT_T> "), qsl("AFTER_S"), QString()}));
         QVERIFY2(!console->buffer.promptBuffer.at(promptLine), "a GA forced off still marked a replayed line as a prompt");
-        QCOMPARE(prompts.count(), 1);
+        QVERIFY2(!console->buffer.promptBuffer.at(promptLine + 1), "a second GA forced off still marked a replayed line as a prompt");
+        QCOMPARE(prompts.count(), 2);
         QVERIFY2(textPostedFirst, "a forced-off replayed prompt counted before its text was posted");
         QVERIFY2(!mpHost->mTelnet.mGA_Driver, "a forced-off GA in a replay made the game a GA driver");
     }
