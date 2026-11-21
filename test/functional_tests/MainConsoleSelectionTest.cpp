@@ -681,9 +681,10 @@ private slots:
         releaseElsewhere();
         QTest::qWait(150ms);
 
+        const QPoint rightOfMiddle = middle + QPoint(60, 0);
         QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
-        QTest::mouseMove(pane, middle + QPoint(60, 0));
-        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle + QPoint(60, 0));
+        QTest::mouseMove(pane, rightOfMiddle);
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, rightOfMiddle);
         QVERIFY2(pane->mPA.x() > 0, "A plain press after a Ctrl-drag whose release was lost still selected whole lines");
     }
 
