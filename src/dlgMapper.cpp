@@ -564,7 +564,7 @@ void dlgMapper::updateEmptyStateOverlay()
     if (!mpMap->mpRoomDB->isEmpty()) {
         mEmptyStateDismissed = false;
     }
-    // Gives way to a download or import in progress, and returns if that leaves the map empty
+    // isHidden(), not isMapProgressVisible(): a download keeps its overlay while the mapper itself is hidden
     const bool progressShown = mpProgressOverlay && !mpProgressOverlay->isHidden();
     const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed && !progressShown;
     const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
