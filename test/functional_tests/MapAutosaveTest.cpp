@@ -195,6 +195,10 @@ private:
                 mpHost->autoSaveMap();
             }
         });
+        // No main window here to connect this, as TMainConsole::repaintMapProgressDialog() would
+        connect(map(), &TMap::signal_mapProgressRepaintWanted, &ticker, []() {
+            QCoreApplication::processEvents();
+        });
         ticker.start(0);
         return mpHost->importMapFile(path, errMsg);
     }
