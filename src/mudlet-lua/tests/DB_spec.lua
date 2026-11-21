@@ -1889,6 +1889,111 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests db query-expression builders on columns named after SQL keywords", function()
+    local function names(results)
+      assert.is_table(results, "the fetch failed, which db:fetch reports as nil")
+      local t = {}
+      for _, row in ipairs(results) do
+        t[#t + 1] = row.name
+      end
+      table.sort(t)
+      return t
+    end
+
+    before_each(function()
+      mydb = db:create("keywordcolumnstestingonly", {
+        items = {
+          name = "",
+          group = 0,
+          order = "",
+        }
+      })
+      db:add(mydb.items,
+        {name = "Ada",  group = 1, order = "first"},
+        {name = "Bram", group = 2, order = "second"},
+        {name = "Cyra", group = 3, order = "third"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_keywordcolumnstestingonly.db")
+      mydb = nil
+    end)
+
+    local cases = {
+      { "db:eq", function() return db:eq(mydb.items.group, 2) end, {"Bram"} },
+      { "db:not_eq", function() return db:not_eq(mydb.items.group, 2) end, {"Ada", "Cyra"} },
+      { "db:not_eq with case_insensitive", function() return db:not_eq(mydb.items.order, "SECOND", true) end, {"Ada", "Cyra"} },
+      { "db:lt", function() return db:lt(mydb.items.group, 2) end, {"Ada"} },
+      { "db:lte", function() return db:lte(mydb.items.group, 2) end, {"Ada", "Bram"} },
+      { "db:gt", function() return db:gt(mydb.items.group, 2) end, {"Cyra"} },
+      { "db:gte", function() return db:gte(mydb.items.group, 2) end, {"Bram", "Cyra"} },
+      { "db:is_nil", function() return db:is_nil(mydb.items.order) end, {} },
+      { "db:is_not_nil", function() return db:is_not_nil(mydb.items.order) end, {"Ada", "Bram", "Cyra"} },
+      { "db:like", function() return db:like(mydb.items.order, "s%") end, {"Bram"} },
+      { "db:not_like", function() return db:not_like(mydb.items.order, "s%") end, {"Ada", "Cyra"} },
+      { "db:between", function() return db:between(mydb.items.group, 2, 3) end, {"Bram", "Cyra"} },
+      { "db:not_between", function() return db:not_between(mydb.items.group, 2, 3) end, {"Ada"} },
+      { "db:in_", function() return db:in_(mydb.items.order, {"first", "third"}) end, {"Ada", "Cyra"} },
+      { "db:not_in", function() return db:not_in(mydb.items.order, {"first", "third"}) end, {"Bram"} },
+      { "db:query_by_example", function() return db:query_by_example(mydb.items, {group = "<3"}) end, {"Ada", "Bram"} },
+      -- a script's own field table can carry an expression, which quoting would break
+      { "a hand-built field naming an expression", function() return db:gt({name = "items.`group` + 10", type = "number"}, 11) end, {"Bram", "Cyra"} },
+    }
+
+    for _, case in ipairs(cases) do
+      it(case[1] .. " fetches the rows it selects", function()
+        assert.are.same(case[3], names(db:fetch(mydb.items, case[2]())))
+      end)
+    end
+
+    it("db:aggregate sums the column", function()
+      assert.are.equal(6, db:aggregate(mydb.items.group, "sum"))
+    end)
+  end)
+
+  describe("Tests db query-expression builders on a column whose name holds a backtick", function()
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_backtickcolumntestingonly.db")
+      mydb = nil
+    end)
+
+    it("db:lt and db:delete select only the rows the filter names", function()
+      mydb = db:create("backtickcolumntestingonly", { items = { name = "", ["it`s"] = 0 } })
+      db:add(mydb.items, {name = "Ada", ["it`s"] = 1}, {name = "Bram", ["it`s"] = 5})
+      local rows = db:fetch(mydb.items, db:lt(mydb.items["it`s"], 3))
+      assert.is_table(rows, "the fetch failed, which db:fetch reports as nil")
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+
+      db:delete(mydb.items, db:gt(mydb.items["it`s"], 3))
+      rows = db:fetch(mydb.items)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+    end)
+  end)
+
+  describe("Tests db query-expression builders on a column db:create could not add", function()
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_missingcolumntestingonly.db")
+      mydb = nil
+    end)
+
+    -- sqlite will not add a column defaulting to CURRENT_TIMESTAMP to a sheet that
+    -- holds rows, yet the schema keeps it, so a field for it can still be had
+    it("db:delete with db:is_not_nil on it raises and deletes nothing", function()
+      mydb = db:create("missingcolumntestingonly", { items = { name = "" } })
+      db:add(mydb.items, {name = "Ada"}, {name = "Bram"})
+      mydb = db:create("missingcolumntestingonly", { items = { name = "", seen = db:Timestamp("CURRENT_TIMESTAMP") } })
+      assert.are.equal("seen", mydb.items.seen.name)
+
+      assert.has_error(function() db:delete(mydb.items, db:is_not_nil(mydb.items.seen)) end)
+      assert.are.equal(2, #db:fetch(mydb.items))
+    end)
+  end)
+
   describe("Tests db:delete", function()
     before_each(function()
       mydb = db:create("deletetestingonly", {

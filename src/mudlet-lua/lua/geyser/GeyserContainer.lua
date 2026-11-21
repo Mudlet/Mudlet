@@ -74,8 +74,9 @@ function Geyser.Container:calculate_dynamic_window_size()
   local dynamic_horizontal_count = 0.0
   local dynamic_vertical_count = 0.0
 
-  if total_count <= 1 then
-    --If there is only one window it can have all the width/height, if there are none then it doesn't matter
+  -- A lone window still goes through the split: the box multiplies the share by
+  -- its stretch factor, so handing it the full size would overflow the box
+  if total_count == 0 then
     return ret_size
   end
   for _, window in pairs(self.windowList) do

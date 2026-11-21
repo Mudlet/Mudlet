@@ -158,6 +158,18 @@ void TAction::execute()
     runScript();
 }
 
+void TAction::press(const bool checked)
+{
+    const bool state = mIsPushDownButton && checked;
+    if (state != mButtonState) {
+        mButtonState = state;
+        emit mpHost->signal_buttonsChanged();
+    }
+    // Before execute(), as an alias the button's command sets off reads it with getButtonState()
+    mpHost->mainConsoleModel().mButtonState = mButtonState ? 2 : 1;
+    execute();
+}
+
 void TAction::runScript()
 {
     // Recorded before the compile step below, which returns early on failure

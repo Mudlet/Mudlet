@@ -83,7 +83,8 @@ void TForkedProcess::slot_receivedData()
             return;
         }
         lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(L, readLine().constData());
+        const QByteArray line = readLine();
+        lua_pushlstring(L, line.constData(), line.size());
         mpInterpreter->callReference(L, qsl("spawn() callback"), 1);
     }
 }
@@ -105,7 +106,12 @@ int TForkedProcess::sendMessage(lua_State* L)
     }
     size_t writedBytes = 0;
     while (stringLength > writedBytes) {
-        int res = (*forkedProcess)->write(toWrite + writedBytes, stringLength - writedBytes);
+        const qint64 res = (*forkedProcess)->write(toWrite + writedBytes, stringLength - writedBytes);
+        // QProcess writes nothing, rather than failing, once close() has shut the input
+        if (res == 0) {
+            lua_pushstring(L, "Unable to send data to process. Its input has been closed.");
+            return lua_error(L);
+        }
         if (res == -1) {
             lua_pushstring(L, "Unable to send data to process.");
             return lua_error(L);

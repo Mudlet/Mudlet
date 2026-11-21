@@ -211,6 +211,7 @@ bool TMxpProcessor::setMode(int modeCode)
         break;
     case MXP_MODE_CODE_RESET: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
         mMxpTagBuilder.reset();
+        mIgnoreNextNewline = false;
         mpMxpClient->resetTextProperties();
         // Open, not the default: a secure default would let this line use secure tags
         mMXP_MODE = MXP_MODE_OPEN;
@@ -268,10 +269,10 @@ bool TMxpProcessor::isEnabled() const
     return mMXP;
 }
 
-void TMxpProcessor::resetToDefaultMode()
+void TMxpProcessor::resetToDefaultMode(const bool closeOpenTags)
 {
     // Also, when in OPEN mode, any unclosed OPEN tags are automatically closed when a newline is received from the MUD.
-    if (mMXP_MODE == MXP_MODE_OPEN) {
+    if (closeOpenTags && mMXP_MODE == MXP_MODE_OPEN) {
         mpMxpClient->resetTextProperties();
     }
     mMXP_MODE = mMXP_DEFAULT;
@@ -285,6 +286,18 @@ void TMxpProcessor::enable()
 void TMxpProcessor::disable()
 {
     mMXP = false;
+    mIgnoreNextNewline = false;
+}
+
+// TBuffer ignores this newline, so it is no part of the text a <SEND> wraps either
+bool TMxpProcessor::newlineIgnored(const char ch) const
+{
+    return ch == '\n' && mIgnoreNextNewline && !mReadingLocalText;
+}
+
+bool TMxpProcessor::takeIgnoredNewline()
+{
+    return std::exchange(mIgnoreNextNewline, false);
 }
 
 TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
@@ -367,11 +380,31 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             return HANDLER_INSERT_ENTITY_SYS;
         }
 
-        TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+        const bool softBreak = tag->isStartTag() && tag->isNamed(qsl("SBR"));
+        const bool noBreak = tag->isStartTag() && tag->isNamed(qsl("NOBR"));
+        TMxpTagHandlerResult const result = (softBreak || noBreak) ? MXP_TAG_HANDLED : mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
 
         // The line's mode, not the default: an open line under a secure default would stay secure
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mModeBeforeTempSecure;
+        }
+
+        if (softBreak || noBreak) {
+            // An '&' left unfinished before the tag is text, or it would take in the space or the newline
+            const QString partialEntity = mEntityHandler.takePartialEntity();
+            if (noBreak && !mReadingLocalText) {
+                mIgnoreNextNewline = true;
+            }
+            if (softBreak) {
+                // Not handed to the tag handlers when it is re-read, so given to a <SEND> for its caption here
+                mMxpTagProcessor.handleContent(' ');
+            }
+            if (!softBreak && partialEntity.isEmpty()) {
+                return HANDLER_NEXT_CHAR;
+            }
+            // Re-read as text, so the space joins the link and the style it falls inside
+            lastEntityValue = softBreak ? partialEntity + qsl(" ") : partialEntity;
+            return HANDLER_INSERT_ENTITY_LIT;
         }
 
         // If tag was not handled (not valid MXP and not a custom element), display it as-is
@@ -383,6 +416,13 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         }
 
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
+    }
+
+    // Given up on as text here rather than with the newline, which would then be read back as
+    // literal text, past the line end handling that takes up a <NOBR> and resets the line mode
+    if (ch == '\n' && mEntityHandler.readingEntity()) {
+        lastEntityValue = mEntityHandler.takePartialEntity();
+        return HANDLER_INSERT_AND_REPROCESS;
     }
 
     if (mEntityHandler.handle(ch, resolveCustomEntities)) { // ch is part of an entity
@@ -399,6 +439,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
             }
         }
         return HANDLER_NEXT_CHAR;
+    }
+
+    if (newlineIgnored(ch)) {
+        return HANDLER_FALL_THROUGH;
     }
 
     mMxpTagProcessor.handleContent(ch);
@@ -461,6 +505,9 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 
 void TMxpProcessor::processRawInput(char ch)
 {
+    if (newlineIgnored(ch)) {
+        return;
+    }
     mMxpTagProcessor.handleContent(ch);
 }
 

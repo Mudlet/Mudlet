@@ -544,13 +544,6 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
              <property name="toolTip">
               <string>Drag and drop files and folders, or use the browse button below</string>
              </property>
-             <property name="styleSheet">
-              <string notr="true">QListWidget {
-    border-style: dashed;
-    border-width: 2px;
-    border-color: grey;
-}</string>
-             </property>
             </widget>
            </item>
            <item>

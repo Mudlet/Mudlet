@@ -3332,6 +3332,30 @@ private slots:
         QVERIFY(!consoleText().contains(qsl("Cannot find a path")));
     }
 
+    // The double-click is spent with the frame that shows no rooms, or the first frame that has them would walk to
+    // whichever is then under it
+    void test_doubleClickingAMapWithNoRoomsStartsNoLaterWalk()
+    {
+        buildMap();
+        showMapper(true);
+        const QList<int> roomIds = map()->mpRoomDB->getRoomIDList();
+        for (const int roomId : roomIds) {
+            QVERIFY(map()->mpRoomDB->removeRoom(roomId));
+        }
+        QVERIFY(runLua(qsl("walked = false\nfunction doSpeedWalk() walked = true end")));
+
+        doubleClickAt(pointUnitsFromCentre(1, 0));
+        renderFrame();
+        QVERIFY(!mp2dMap->mPick);
+        QVERIFY(!mp2dMap->mStartSpeedWalk);
+
+        QVERIFY(addRoomAt(kPlayerRoomId, 0, 0, 0));
+        QVERIFY(addRoomAt(kEastRoomId, 1, 0, 0));
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        renderFrame();
+        QVERIFY(runLua(qsl("assert(not walked, 'doSpeedWalk was called for a double-click on a map with no rooms')")));
+    }
+
     void test_creatingAMapFromTheMenuWhileAlreadyEditingStaysInEditing()
     {
         buildMap();

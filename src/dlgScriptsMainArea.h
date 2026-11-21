@@ -31,16 +31,14 @@ class dlgScriptsMainArea : public QWidget, public Ui::scripts_main_area
 
 public:
     Q_DISABLE_COPY(dlgScriptsMainArea)
-    dlgScriptsMainArea(QWidget*);
+    explicit dlgScriptsMainArea(QWidget*);
 
     // public function allow to trim even when QLineEdit::editingFinished()
     // is not raised. Example: When the user saves without leaving the LineEdit
     void trimName();
-    void trimEventHandlerName();
 
 private slots:
     void slot_editingNameFinished();
-    void slot_editingEventNameFinished();
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

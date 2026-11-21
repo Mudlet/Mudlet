@@ -145,6 +145,19 @@ list of variables.
 Some seeds abort today: the fuzzers reach bugs that are still open, so treat an
 abort as a finding to reduce and report rather than as a broken harness.
 
+`MapFileFuzz_spec.lua` and `XmlImportFuzz_spec.lua` aim at the file loaders
+instead. The first saves a map in each binary format version the save side
+offers and as JSON, then loads mutated copies of those files; the second imports
+mutated copies of the map and package fixtures through `loadMap(".xml")` and
+`installPackage()`. Both put the profile's map back when they finish, and, given a
+dump path, copy each file to `<dump path>.input` before loading it, as the runner deletes the
+profile on exit. The map file fuzzer's base files hold the labels' rendered
+images, which depend on the fonts installed, so keep that copy: its seed only
+replays on the machine that ran it. To run one
+fuzzer on its own, point `TESTS_DIRECTORY` at a directory holding only that spec;
+`XmlImportFuzz_spec.lua` reads its corpus from the `fixtures` directory beside it,
+so link that in too.
+
 ## Creating tests
 
 See [Busted manual](https://lunarmodules.github.io/busted/) and currently existing tests for examples on how to write tests.

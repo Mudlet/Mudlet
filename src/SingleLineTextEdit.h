@@ -30,8 +30,13 @@ class SingleLineTextEdit : public QPlainTextEdit
 
 public:
     explicit SingleLineTextEdit(QWidget* parent = nullptr);
+    // QPlainTextEdit's default of 4 pushed the descenders under the frame of a one-line field.
+    // Whatever sizes the field adds this to the frame and padding the stylesheet gives inputs.
+    static constexpr int scmDocumentMargin = 1;
     void setHighlightingEnabled(bool enabled);
+    // Token colours only: a pattern row is a form input, so its fill comes from setFieldColors()
     void setTheme(const QString&);
+    void setFieldColors(const QColor& background, const QColor& text);
     void rehighlight();
 
 signals:

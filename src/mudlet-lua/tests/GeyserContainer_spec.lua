@@ -1031,6 +1031,12 @@ describe("Tests functionality of Geyser.Container", function()
       -- the stretch factor counts as three shares against one, so a share is a quarter
       assert.are.equal(100, container:calculate_dynamic_window_size().height)
     end)
+
+    it("divides by the stretch factor of a lone window", function()
+      local container = track(Geyser.Container:new({name = "gcsDyn6", x = 0, y = 0, width = 400, height = 300}))
+      track(Geyser.Label:new({name = "gcsDyn6A", h_stretch_factor = 2, v_stretch_factor = 3}, container))
+      assert.are.same({width = 200, height = 100}, container:calculate_dynamic_window_size())
+    end)
   end)
 
   describe("Geyser.Container:flash", function()

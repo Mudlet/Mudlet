@@ -3171,6 +3171,24 @@ local function find_link(name, exits, dir, max_distance)
     end
 end
 
+local function echo_move_queue(what, wait)
+    -- checked here as well as in map.echo, so the queue is not joined on every move with debug off
+    if map.configs.debug then
+        map.echo(string.format("%s - move queue: %s", what, next(move_queue) and table.concat(move_queue, ", ") or "empty"), true, false, wait)
+    end
+end
+
+local function clear_move_queue(why, wait)
+    if next(move_queue) then echo_move_queue(why .. ", dropping the queue", wait) end
+    move_queue = {}
+end
+
+local function queue_move(move, priority)
+    table.insert(move_queue, priority and 1 or #move_queue + 1, move)
+    -- waits for the prompt, as printing now would split the line the command is sent from
+    echo_move_queue("Queued move " .. move, true)
+end
+
 local function move_map()
     -- tries to move the map to the next room
     local move = table.remove(move_queue,1)
@@ -3191,6 +3209,7 @@ local function move_map()
                 end
             end
         end
+        echo_move_queue(move and ("Following move " .. move) or "No move queued, treating it as a random move")
         if find_portal then
             map.find_me(map.currentName,map.currentExits,move)
             find_portal = false
@@ -3262,24 +3281,16 @@ local function capture_move_cmd(dir,priority)
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
       if dir ~= "look" then
-        if priority then
-            table.insert(move_queue,1,exitmap[dir] or dir)
-        else
-            table.insert(move_queue,exitmap[dir] or dir)
-        end
+        queue_move(exitmap[dir] or dir, priority)
       else
         if configs.search_on_look == true then
-          table.insert(move_queue, dir)
+          queue_move(dir)
         end
     end				
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
-            if priority then
-                table.insert(move_queue,1,dir)
-            else
-                table.insert(move_queue,dir)
-            end
+            queue_move(dir, priority)
         end
     end
 end
@@ -3345,7 +3356,7 @@ local function forget_position()
     map.set("currentRoom", nil)
     map.set("currentArea", nil)
     map.set("prevRoom", nil)
-    move_queue = {}
+    clear_move_queue("Map loaded")
     random_move = false
     if was_mapping then
         map.echo("Mapping off. Use &lt;yellow&gt;map me&lt;reset&gt; to find yourself on the loaded map.")
@@ -3574,7 +3585,8 @@ function map.set_portal(name, is_auto)
             name = string.gsub(name,"^-f ","")
             force_portal = name
         end
-        move_queue = {name}
+        clear_move_queue("Portal set", true)
+        queue_move(name)
         if not is_auto then
             send(name)
         end
@@ -3598,7 +3610,7 @@ function map.start_mapping(area_name)
         show_err("Room detection not yet working, see &lt;yellow&gt;map basics&lt;reset&gt; for guidance.")
     end
     local rooms
-    move_queue = {}
+    clear_move_queue("Mapping started")
     area_name = area_name ~= "" and area_name or nil
     if map.currentArea and not area_name then
         local areas = getAreaTableSwap()
@@ -3746,7 +3758,7 @@ end
 function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
-    if move ~= "recall" then move_queue = {} end
+    if move ~= "recall" then clear_move_queue("Locating you") end
     -- find from room hash id - map.find_me(nil, nil, nil, false)
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
@@ -4604,8 +4616,8 @@ function map.eventHandler(event, ...)
         print_wait_echoes()
         map.echo("Prompt Captured",true)
     elseif event == "onMoveFail" then
-        map.echo("onMoveFail",true)
-        table.remove(move_queue,1)
+        local dropped = table.remove(move_queue,1)
+        echo_move_queue(dropped and ("onMoveFail, dropped move " .. dropped) or "onMoveFail, no move to drop")
     elseif event == "onVisionFail" then
         map.echo("onVisionFail",true)
         vision_fail = true
@@ -4613,7 +4625,7 @@ function map.eventHandler(event, ...)
     elseif event == "onRandomMove" then
         map.echo("onRandomMove",true)
         random_move = true
-        move_queue = {}
+        clear_move_queue("Random move")
     elseif event == "onForcedMove" then
         map.echo("onForcedMove",true)
         capture_move_cmd(arg1,arg2=="true")

@@ -86,7 +86,13 @@ int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints, cons
 
 void TMxpMudlet::expireLinks(const QString& expireName)
 {
-    getLinkStore().expireLinks(expireName, mpHost);
+    const QList<int> expired = getLinkStore().expireLinks(expireName, mpHost);
+    TConsoleModelNotifier& notifier = mpHost->mainConsoleModel().mNotifier;
+    if (notifier.linkChangedConnected()) {
+        for (const int linkIndex : expired) {
+            emit notifier.linkChanged(linkIndex);
+        }
+    }
 }
 
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)

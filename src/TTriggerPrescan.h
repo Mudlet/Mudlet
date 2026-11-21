@@ -66,9 +66,11 @@ private:
     static constexpr int scmMinimumWaste = 64;
     static constexpr quint32 scmGramBitsLog = 16;
     static constexpr quint32 scmGramBitsMask = (1u << scmGramBitsLog) - 1;
+    static constexpr quint32 scmPrefixCount = 1u << 16;
 
     static quint32 gramBit(quint64 gram);
-    static int gramLength(const quint64 gram) { return static_cast<int>(gram >> 32); }
+    static int gramLength(const quint64 gram) { return static_cast<int>((gram >> 32) & 0xFF); }
+    static quint32 gramPrefix(const quint64 gram) { return static_cast<quint32>(gram >> 40); }
 
     // A slot's slice of mGramPool; a count of 0 marks a free slot
     struct GramRange
@@ -78,6 +80,7 @@ private:
     };
 
     void fileGrams(int slot, const std::vector<quint64>& grams);
+    void setBits(quint64 gram);
     void unfileGrams(int slot);
     void compactIfWasteful();
     void reindex();
@@ -86,6 +89,9 @@ private:
     // Unfiling leaves bits set, as grams share them, and keeps emptied buckets for the next trigger
     // filed under them, both until reindex().
     std::vector<quint64> mGramBits;
+    // The same for the prefixes filed grams start with, kept the same way: most of a line's positions
+    // start no filed gram, and this rules them out before any hashing
+    std::vector<quint64> mPrefixBits;
     std::unordered_map<quint64, std::vector<int>> mIndex;
     // Lets unfiling a slot find its buckets without a scan. mGramPool is append-only, so a removed or
     // refiled slot abandons its entries until reindex() reclaims them.
@@ -93,7 +99,7 @@ private:
     std::vector<quint64> mGramPool;
     int mFiledGrams = 0;
     std::vector<int> mFreeSlots;
-    // Grams filed per length, so a line is only walked at lengths in use
+    // Grams filed per length, so hits() stops at the longest in use and looks up no gram of an unused one
     std::array<int, scmMaxGramLength + 1> mLengthUse{};
     mutable std::vector<quint32> mSeen;
     mutable quint32 mGeneration = 0;

@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "uiDesign.h"
+
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QPointer>
@@ -189,6 +191,7 @@ private:
     void createMenus();
     void showMuteState();
     void createToolBar();
+    void restyleToolBarIcons();
     void connectToolBarActions();
     void closeProfileByName(const QString& profileName);
     bool closeProfileHere(const QString& profileName);
@@ -215,6 +218,7 @@ private:
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
     QMenu* mpOptionsMenu{nullptr};
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
 
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};

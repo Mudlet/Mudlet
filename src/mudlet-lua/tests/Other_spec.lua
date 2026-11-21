@@ -726,9 +726,16 @@ describe("Tests Other.lua functions", function()
         assert(waitForEvent("speedwalkSpecSettled", 5000))
       end
 
+      -- A wait that times out says nothing of how far the walk got, which is what tells a stalled timer from a lost event
+      local function waitForWalk(eventName)
+        local got, err = waitForEvent(eventName, 5000)
+        assert(got, string.format("%s - steps sent: {%s}, events seen: {%s}", tostring(err), table.concat(sent, ", "), table.concat(seen, ", ")))
+        return got
+      end
+
       it("leaves nothing to pause or stop once a delayed walk has finished", function()
         assert.is_true(speedwalk("n;e;s", false, 0.01))
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         assert.are.same({"n", "e", "s"}, sent)
 
         local ok, err = pauseSpeedwalk()
@@ -743,7 +750,7 @@ describe("Tests Other.lua functions", function()
       it("stops a running delayed walk before starting another", function()
         speedwalk("3n", false, 0.01)
         speedwalk("3s", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         settle()
         assert.are.same({"n", "s", "s", "s"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
@@ -753,7 +760,7 @@ describe("Tests Other.lua functions", function()
         speedwalk("4n", false, 0.01)
         onceOn("sysSpeedwalkStopped", function() speedwalk("3e", false, 0.01) end)
         local ok, err = speedwalk("2s", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         settle()
         assert.are.same({"n", "e", "e", "e"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
@@ -764,7 +771,7 @@ describe("Tests Other.lua functions", function()
       it("hands over to a walk a sysSpeedwalkStarted handler starts", function()
         onceOn("sysSpeedwalkStarted", function() speedwalk("3e", false, 0.01) end)
         speedwalk("2n", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         settle()
         assert.are.same({"e", "e", "e"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
@@ -773,7 +780,7 @@ describe("Tests Other.lua functions", function()
       it("hands over to a walk a sysDataSendRequest handler starts during the last step", function()
         onStep(2, function() speedwalk("3e", false, 10) end)
         speedwalk("2n", false, 0.01)
-        assert.are.equal("sysSpeedwalkStarted", waitForEvent("sysSpeedwalkStarted", 5000))
+        assert.are.equal("sysSpeedwalkStarted", waitForWalk("sysSpeedwalkStarted"))
         settle()
         assert.is_true(pauseSpeedwalk())
         assert.is_true(stopSpeedwalk())
@@ -785,12 +792,12 @@ describe("Tests Other.lua functions", function()
         local result
         onStep(2, function() result = {pauseSpeedwalk()} end)
         speedwalk("4n", false, 0.01)
-        assert.are.equal("sysSpeedwalkPaused", waitForEvent("sysSpeedwalkPaused", 5000))
+        assert.are.equal("sysSpeedwalkPaused", waitForWalk("sysSpeedwalkPaused"))
         settle()
         assert.are.same({true}, result)
         assert.are.same({"n", "n"}, sent)
         assert.is_true(resumeSpeedwalk())
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         settle()
         assert.are.same({"n", "n", "n", "n"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
@@ -800,7 +807,7 @@ describe("Tests Other.lua functions", function()
         local result
         onStep(2, function() result = {pauseSpeedwalk()} end)
         speedwalk("2n", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         settle()
         assert.are.same({nil, "pauseSpeedwalk(): no active speedwalk found"}, result)
         assert.are.same({"n", "n"}, sent)
@@ -813,7 +820,7 @@ describe("Tests Other.lua functions", function()
           resumeSpeedwalk()
         end)
         speedwalk("4n", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.equal("sysSpeedwalkFinished", waitForWalk("sysSpeedwalkFinished"))
         settle()
         assert.are.same({"n", "n", "n", "n"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
@@ -1054,6 +1061,33 @@ describe("Tests Other.lua functions", function()
       timeframe("TIMEFRAME_TEST_VARIABLE", 0, 0)
 
       assert.is_nil(TIMEFRAME_TEST_VARIABLE)
+    end)
+
+    it("Should set a string value exactly, whatever characters it holds", function()
+      for _, value in ipairs({ "don't", [[C:\new\table]], "line one\nline two", [[say "hi"]], "]]" }) do
+        timeframe("TIMEFRAME_TEST_VARIABLE", { 0, value })
+
+        assert.are.equal(value, TIMEFRAME_TEST_VARIABLE)
+      end
+    end)
+
+    it("Should set a number value without losing precision", function()
+      for _, value in ipairs({ 1 / 3, math.huge, -math.huge }) do
+        timeframe("TIMEFRAME_TEST_VARIABLE", { 0, value })
+
+        assert.are.equal(value, TIMEFRAME_TEST_VARIABLE)
+      end
+    end)
+
+    it("Should set a field of a table named by a dotted path", function()
+      -- the assignment timeframe compiles runs in _G, not in this spec's environment
+      _G.TIMEFRAME_TEST_TABLE = {}
+      finally(function() _G.TIMEFRAME_TEST_TABLE = nil end)
+
+      timeframe("TIMEFRAME_TEST_TABLE.state", { 0, "it's on" })
+
+      assert.are.equal("it's on", _G.TIMEFRAME_TEST_TABLE.state)
+      killtimeframe("TIMEFRAME_TEST_TABLE.state")
     end)
   end)
 
@@ -3169,16 +3203,87 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of translateTable", function()
+    local language = "xx_TRANSLATETABLE"
+
+    before_each(function()
+      mudlet.translations[language] = { north = "nord", south = "sud" }
+    end)
+
+    after_each(function()
+      mudlet.translations[language] = nil
+    end)
+
+    it("should translate each entry into the language asked for, in order", function()
+      assert.are.same({ "sud", "nord" }, translateTable({ "south", "north" }, language))
+    end)
+
+    it("should keep an entry the language has no translation for", function()
+      assert.are.same({ "nord", "up" }, translateTable({ "north", "up" }, language))
+    end)
+
+    it("should return nil and a message for a language with no translations", function()
+      local result, msg = translateTable({ "north" }, "xx_NOSUCHLANGUAGE")
+      assert.is_nil(result)
+      assert.are.equal("xx_NOSUCHLANGUAGE doesn't have any translations for it", msg)
+    end)
+
+    it("should refuse data that is not a table", function()
+      assert.has_error(function() translateTable("north", language) end,
+        "translateTable: bad argument #1 type (input as table expected, got string!)")
+    end)
+  end)
+
+  describe("Tests the functionality of getColorWildcard", function()
+    -- 31 is the SGR code for red, which isAnsiFgColor() numbers 4
+    local red = 4
+
+    local function wildcardsFor(text)
+      local results
+      local id = tempTrigger("getColorWildcardMarker", function() results = { getColorWildcard(red) } end)
+      local ok, msg = feedTelnet("\27[0mgetColorWildcardMarker " .. text .. "\27[0m\r\n")
+      -- killed here rather than in finally(): busted keeps only a test's last finally,
+      -- and one test calls this twice
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      assert.is_truthy(results, "the trigger did not fire")
+      return results[1]
+    end
+
+    it("should return each run of the colour in the order they appear", function()
+      assert.are.same({ "RED", "X" }, wildcardsFor("plain \27[31mRED\27[0m mid \27[31mX\27[0m end"))
+    end)
+
+    it("should return a run that reaches the end of the line", function()
+      assert.are.same({ "tail" }, wildcardsFor("abc \27[31mtail"))
+      assert.are.same({ "T" }, wildcardsFor("abc \27[31mT"))
+    end)
+
+    it("should split runs that another colour separates", function()
+      assert.are.same({ "A", "C" }, wildcardsFor("xx \27[31mA\27[0m\27[32mB\27[31mC\27[0m"))
+    end)
+
+    it("should return false when no text has the colour", function()
+      assert.is_false(wildcardsFor("nothing red here"))
+    end)
+
+    it("should return whole characters from a line with non-ASCII text", function()
+      assert.are.same({ "ÖÄ" }, wildcardsFor("ä \27[31mÖÄ\27[0m z"))
+    end)
+
+    it("should keep its place after a character outside the Basic Multilingual Plane", function()
+      assert.are.same({ "😀x", "€" }, wildcardsFor("😀 \27[31m😀x\27[0m 😀\27[31m€\27[0m"))
+    end)
+  end)
+
     --[[
     TODO:
-      getColorWildcard()
       lockExit()
       hasExitLock()
       registerAnonymousEventHandler()
       killAnonymousEventHandler()
       dispatchEventToFunctions()
       killtimeframe()
-      translateTable()
   ]]
 end)
 
@@ -4742,5 +4847,93 @@ describe("Tests that raiseEvent hands numbers over unchanged", function()
     assert.are.equal(-math.huge, roundTrip(-math.huge))
     local nan = roundTrip(0/0)
     assert.is_true(nan ~= nan)
+  end)
+end)
+
+describe("Tests one-shot event handlers", function()
+  local originalShowHandlerError
+  local reported
+
+  before_each(function()
+    reported = {}
+    originalShowHandlerError = _G.showHandlerError
+    _G.showHandlerError = function(event, message)
+      reported[#reported + 1] = {event, message}
+    end
+  end)
+
+  after_each(function()
+    _G.showHandlerError = originalShowHandlerError
+  end)
+
+  it("removes a one-shot handler after it runs", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotPlain", function() calls = calls + 1 end, true)
+    raiseEvent("otherSpecOneShotPlain")
+    raiseEvent("otherSpecOneShotPlain")
+    killAnonymousEventHandler(id)
+
+    assert.are.equal(1, calls)
+  end)
+
+  it("removes a one-shot handler that raises an error", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotError", function()
+      calls = calls + 1
+      error("otherSpecOneShotError failed")
+    end, true)
+    raiseEvent("otherSpecOneShotError")
+    raiseEvent("otherSpecOneShotError")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(1, calls)
+    assert.is_nil(stillThere)
+  end)
+
+  it("still reports the error of a one-shot handler unchanged", function()
+    registerAnonymousEventHandler("otherSpecOneShotReport", function()
+      error("otherSpecOneShotReport failed")
+    end, true)
+    raiseEvent("otherSpecOneShotReport")
+
+    assert.are.equal(1, #reported)
+    assert.are.equal("otherSpecOneShotReport", reported[1][1])
+    assert.truthy(tostring(reported[1][2]):find("otherSpecOneShotReport failed", 1, true))
+    assert.truthy(tostring(reported[1][2]):find("Other_spec.lua", 1, true))
+  end)
+
+  it("still reports an error value that is not a string as it was raised", function()
+    local raised = {}
+    registerAnonymousEventHandler("otherSpecOneShotTable", function() error(raised) end, true)
+    raiseEvent("otherSpecOneShotTable")
+
+    assert.are.equal(1, #reported)
+    assert.are.equal(raised, reported[1][2])
+  end)
+
+  it("keeps a one-shot handler that returns true, and removes it once it errors", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotKeep", function()
+      calls = calls + 1
+      if calls == 1 then
+        return true
+      end
+      error("otherSpecOneShotKeep failed")
+    end, true)
+    raiseEvent("otherSpecOneShotKeep")
+    raiseEvent("otherSpecOneShotKeep")
+    raiseEvent("otherSpecOneShotKeep")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(2, calls)
+    assert.is_nil(stillThere)
+  end)
+
+  it("hands the event name and arguments to a one-shot handler", function()
+    local received
+    registerAnonymousEventHandler("otherSpecOneShotArgs", function(...) received = {...} end, true)
+    raiseEvent("otherSpecOneShotArgs", "first", 2)
+
+    assert.are.same({"otherSpecOneShotArgs", "first", 2}, received)
   end)
 end)

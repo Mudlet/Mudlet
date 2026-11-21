@@ -20,8 +20,19 @@
 
 #include "MudletProxyStyle.h"
 
+#include "ToolBarOverflow.h"
+#include "utils.h"
+
+#include <QAbstractItemView>
+#include <QApplication>
+#include <QComboBox>
 #include <QScopedValueRollback>
 #include <QStyleFactory>
+#include <QStyleOption>
+#include <QToolBar>
+#include <QToolButton>
+#include <QWheelEvent>
+#include <QWidget>
 
 #if defined(Q_OS_WIN)
 #include <QCoreApplication>
@@ -35,8 +46,6 @@
 #include <QDBusServiceWatcher>
 #include <QDBusVariant>
 #include <QDebug>
-
-#include "utils.h"
 #endif
 
 namespace {
@@ -53,6 +62,65 @@ const QString csmA11yStatusInterface = qsl("org.a11y.Status");
 const QString csmPropertiesInterface = qsl("org.freedesktop.DBus.Properties");
 const QString csmScreenReaderEnabled = qsl("ScreenReaderEnabled");
 #endif
+
+// QComboBox moves its open list's highlight to the item under the pointer on a mouse move only, so a wheel scroll
+// leaves the highlight on an item the list has carried away from the pointer
+class ComboListWheelTracker : public QObject
+{
+public:
+    static constexpr const char* scmName = "mudlet_comboListWheelTracker";
+
+    ComboListWheelTracker(QComboBox* pComboBox, QAbstractItemView* pList)
+    : QObject(pList)
+    , mpComboBox(pComboBox)
+    , mpList(pList)
+    {
+        setObjectName(QLatin1StringView(scmName));
+    }
+
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Wheel) {
+            const QPoint position = static_cast<QWheelEvent*>(pEvent)->position().toPoint();
+            // Queued: the list scrolls when the wheel event reaches it, after this filter
+            QMetaObject::invokeMethod(
+                    this,
+                    [this, position]() {
+                        highlightItemAt(position);
+                    },
+                    Qt::QueuedConnection);
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    void highlightItemAt(const QPoint& position) const
+    {
+        if (!mpList->isVisible() || !mpComboBox->style()->styleHint(QStyle::SH_ComboBox_ListMouseTracking, nullptr, mpComboBox)) {
+            return;
+        }
+        const QModelIndex index = mpList->indexAt(position);
+        // QComboBox's own mouse tracking skips separators the same way
+        if (index.isValid() && index.data(Qt::AccessibleDescriptionRole).toString() != QLatin1StringView("separator")) {
+            mpList->setCurrentIndex(index);
+        }
+    }
+
+    // The box owns the popup that owns the list, which owns this
+    QComboBox* mpComboBox;
+    QAbstractItemView* mpList;
+};
+
+void trackTheWheelInComboLists(QAbstractItemView* pList)
+{
+    // Not QComboBox::view(): on a box whose popup is still being built it would start building a second one
+    QWidget* pPopup = pList->parentWidget();
+    auto* pComboBox = pPopup && pPopup->inherits("QComboBoxPrivateContainer") ? qobject_cast<QComboBox*>(pPopup->parentWidget()) : nullptr;
+    if (!pComboBox || pList->findChild<QObject*>(QLatin1StringView(ComboListWheelTracker::scmName), Qt::FindDirectChildrenOnly)) {
+        return;
+    }
+    pList->viewport()->installEventFilter(new ComboListWheelTracker(pComboBox, pList));
+}
 } // namespace
 
 MudletProxyStyle::MudletProxyStyle()
@@ -138,6 +206,17 @@ void MudletProxyStyle::slot_a11yStatusChanged(const QString& interfaceName, cons
 }
 #endif
 
+int MudletProxyStyle::pixelMetric(PixelMetric metric, const QStyleOption* option, const QWidget* widget) const
+{
+    // QToolBarLayout has no other way to be told how much room the overflow button's word needs
+    if (metric == QStyle::PM_ToolBarExtensionExtent && widget) {
+        if (const int extent = widget->property(uiDesign::scmProp_toolBarOverflowExtent).toInt(); extent > 0) {
+            return extent;
+        }
+    }
+    return QProxyStyle::pixelMetric(metric, option, widget);
+}
+
 int MudletProxyStyle::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
@@ -169,6 +248,31 @@ void MudletProxyStyle::drawControl(ControlElement element, const QStyleOption* o
         return;
     }
     QProxyStyle::drawControl(element, option, painter, widget);
+}
+
+void MudletProxyStyle::polish(QWidget* widget)
+{
+    QProxyStyle::polish(widget);
+    if (auto* pList = qobject_cast<QAbstractItemView*>(widget)) {
+        trackTheWheelInComboLists(pList);
+        return;
+    }
+    // A toolbar's overflow button picks its chevron only when built; setStyle() re-polishes
+    // it, and the application palette is current then while the button's own is not yet
+    auto* pButton = qobject_cast<QToolButton*>(widget);
+    auto* pToolBar = pButton ? qobject_cast<QToolBar*>(pButton->parentWidget()) : nullptr;
+    if (!pToolBar || pButton->objectName() != qsl("qt_toolbar_ext_button")) {
+        return;
+    }
+    // The design's own overflow button draws its own glyph, which a chevron set here would replace
+    if (pButton->property(uiDesign::scmProp_toolBarOverflowOwned).toBool()) {
+        return;
+    }
+    QStyleOption option;
+    option.initFrom(pButton);
+    option.palette = QApplication::palette(pButton);
+    const auto chevron = pToolBar->orientation() == Qt::Horizontal ? SP_ToolBarHorizontalExtensionButton : SP_ToolBarVerticalExtensionButton;
+    pButton->setIcon(pButton->style()->standardIcon(chevron, &option, pButton));
 }
 
 QIcon MudletProxyStyle::standardIcon(StandardPixmap standardIcon, const QStyleOption* option, const QWidget* widget) const

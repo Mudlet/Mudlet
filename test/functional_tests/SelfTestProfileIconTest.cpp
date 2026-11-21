@@ -60,6 +60,7 @@
 #include "TGameDetails.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -212,9 +213,21 @@ private slots:
 
         QListWidgetItem* pItem = listedItem(pDialog, mGameWithArtwork);
         QVERIFY2(pItem, qPrintable(qsl("'%1' is not listed under 'All games' at all").arg(mGameWithArtwork)));
-        const QImage drawn = pItem->icon().pixmap(QSize(120, 30)).toImage();
-        const QImage expected = (artwork.width() == 120 ? artwork : artwork.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)).toImage();
-        QVERIFY2(drawn == expected, qPrintable(qsl("'%1' is no longer drawn with its own artwork").arg(mGameWithArtwork)));
+        const QImage drawn = pItem->icon().pixmap(QSize(120, 30)).toImage().convertToFormat(QImage::Format_ARGB32);
+        const QImage expected = (artwork.width() == 120 ? artwork : artwork.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)).toImage().convertToFormat(QImage::Format_ARGB32);
+        QCOMPARE(drawn.size(), expected.size());
+        // The chip is cut to the design's corner, so the four corner squares are left out of the comparison
+        const int radius = uiDesign::scmRadiusChip;
+        int differing = 0;
+        for (int y = 0; y < drawn.height(); ++y) {
+            for (int x = 0; x < drawn.width(); ++x) {
+                const bool inCornerSquare = (x < radius || x >= drawn.width() - radius) && (y < radius || y >= drawn.height() - radius);
+                if (!inCornerSquare && drawn.pixel(x, y) != expected.pixel(x, y)) {
+                    ++differing;
+                }
+            }
+        }
+        QVERIFY2(differing == 0, qPrintable(qsl("'%1' is no longer drawn with its own artwork: %2 pixels inside its corners differ").arg(mGameWithArtwork, QString::number(differing))));
 
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);

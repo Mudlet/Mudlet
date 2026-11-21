@@ -28,7 +28,11 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAbstractItemView>
+#include <QAccessible>
 #include <QAction>
+#include <QComboBox>
+#include <QHeaderView>
 #include <QClipboard>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -262,7 +266,8 @@ private slots:
     pEditor->slot_showTriggers();
     pTree->setCurrentItem(pItem);
     pEditor->slot_triggerSelected(pItem);
-    QCOMPARE(pEditor->mVisiblePatternCount, 4);
+    // A trigger shows only the rows it uses; there is no empty row waiting below them
+    QCOMPARE(pEditor->mVisiblePatternCount, 3);
 
     auto row = [pEditor](const int index) {
       return pEditor->mTriggerPatternEdit.at(index);
@@ -284,8 +289,7 @@ private slots:
     QCOMPARE(row(3)->comboBox_patternType->currentIndex(), REGEX_PERL);
     QCOMPARE(text(4), qsl("c"));
     QCOMPARE(row(4)->comboBox_patternType->currentIndex(), REGEX_PERL);
-    QCOMPARE(pEditor->mVisiblePatternCount, 6);
-    QVERIFY2(text(5).isEmpty(), "the row waiting for a next pattern was filled");
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
 
     // Lua code split over several patterns would no longer be the code pasted
     row(3)->comboBox_patternType->setCurrentIndex(REGEX_LUA_CODE);
@@ -295,7 +299,7 @@ private slots:
     QTest::keyClick(pLua, Qt::Key_V, Qt::ControlModifier);
     QCOMPARE(text(3), qsl("return true"));
     QCOMPARE(text(4), qsl("c"));
-    QVERIFY(text(5).isEmpty());
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
   }
 
   // The deselect on focus-out exists so a pattern line does not keep showing a
@@ -1010,6 +1014,32 @@ private slots:
     QTest::keyClick(pEditor, Qt::Key_Escape);
     QVERIFY(!pEditor->mIsGrabKey);
     QVERIFY2(pShortcut->isEnabled(), "the \"Script editor\" key did not come back after grabbing a key");
+  }
+  // A list or tree a screen reader cannot name is announced as a bare "tree"
+  // on Tab, with the item types' header hidden and no label beside it (#6159)
+  void test_itemViewsHaveAccessibleNames() {
+    mudlet::self()->slot_showScriptDialog();
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    QStringList unnamed;
+    int checked = 0;
+    for (auto *pView : pEditor->findChildren<QAbstractItemView *>()) {
+      // Popups are named by the combo box or field that opens them, and a
+      // header by its sections
+      if (pView->window() != pEditor || qobject_cast<QHeaderView *>(pView) ||
+          qobject_cast<QComboBox *>(pView->parent())) {
+        continue;
+      }
+      ++checked;
+      QAccessibleInterface *pInterface = QAccessible::queryAccessibleInterface(pView);
+      QVERIFY(pInterface);
+      if (pInterface->text(QAccessible::Name).trimmed().isEmpty()) {
+        unnamed << pView->objectName();
+      }
+    }
+    QVERIFY2(checked == 10, qPrintable(qsl("found %1 item views in the editor, expected 10").arg(checked)));
+    QVERIFY2(unnamed.isEmpty(), qPrintable(qsl("item views without an accessible name: %1").arg(unnamed.join(qsl(", ")))));
   }
 };
 

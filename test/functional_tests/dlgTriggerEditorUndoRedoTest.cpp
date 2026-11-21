@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QFileInfo>
+#include <QRadioButton>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -2427,44 +2428,106 @@ private slots:
     cleanupAll(mItemTypes[2]);
   }
 
-  void testMultiTriggerPasteIntoGroup() {
-    mpEditor->slot_showTriggers();
-    cleanupAll(mItemTypes[0]);
+  void testPasteOntoGroupLandsBeneathIt_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<int>("copied");
 
-    mpEditor->addTrigger(true);
-    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+    const QStringList names{qsl("Trigger"), qsl("Timer"), qsl("Alias"),
+                            qsl("Script"), qsl("Key"), qsl("Action")};
+    for (int i = 0; i < names.size(); ++i) {
+      QTest::newRow(qPrintable(names.at(i) + qsl(" x1"))) << i << 1;
+      QTest::newRow(qPrintable(names.at(i) + qsl(" x2"))) << i << 2;
+    }
+  }
 
-    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
-    int groupID = group->data(0, Qt::UserRole).toInt();
-    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
-    QVERIFY(pGroup != nullptr);
+  // Every item type pastes beneath a selected group rather than into it (#12177)
+  void testPasteOntoGroupLandsBeneathIt() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(int, copied);
 
-    mpEditor->treeWidget_triggers->setCurrentItem(group);
-    mpEditor->addTrigger(false);
-    mpEditor->addTrigger(false);
-    QCOMPARE(group->childCount(), 2);
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
 
-    // copy both triggers, then paste them into the group
-    mpEditor->treeWidget_triggers->clearSelection();
-    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
-    group->child(0)->setSelected(true);
-    group->child(1)->setSelected(true);
-    mpEditor->slot_copyXml();
+    // A temporary item sits in the unit's list but not in the tree, so the
+    // group's tree row is not its place in that list
+    TLuaInterpreter *interpreter = mpHost->getLuaInterpreter();
+    int tempID = 0;
+    switch (itemType.viewType) {
+    case EditorViewType::cmTriggerView:
+      tempID = interpreter->startTempTrigger(qsl("pasteOrderTemp"), QString());
+      break;
+    case EditorViewType::cmTimerView:
+      tempID = interpreter->startTempTimer(600, QString()).first;
+      break;
+    case EditorViewType::cmAliasView:
+      tempID = interpreter->startTempAlias(qsl("^pasteOrderTemp$"), QString());
+      break;
+    default:
+      break;
+    }
+    QVERIFY(tempID >= 0);
 
-    mpEditor->treeWidget_triggers->clearSelection();
-    mpEditor->treeWidget_triggers->setCurrentItem(group);
-    mpEditor->slot_pasteXml();
+    itemType.addFolder();
+    QCOMPARE(itemType.baseItem()->childCount(), 1);
+    const int groupID = itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt();
+    itemType.treeWidget()->setCurrentItem(nullptr);
+    itemType.addFolder();
+    QCOMPARE(itemType.baseItem()->childCount(), 2);
+    int siblingID = itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt();
+    if (siblingID == groupID) {
+      siblingID = itemType.baseItem()->child(1)->data(0, Qt::UserRole).toInt();
+    }
 
-    // each pasted trigger must be linked into the group exactly once
-    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
-
-    // re-render the tree and verify the group shows exactly four children
     QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
     QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
-    QCOMPARE(mpEditor->mpTriggerBaseItem->child(0)->childCount(), 4);
+    QTreeWidgetItem *group = itemType.baseItem()->child(0);
+    QCOMPARE(group->data(0, Qt::UserRole).toInt(), groupID);
 
-    cleanupAll(mItemTypes[0]);
+    itemType.treeWidget()->setCurrentItem(group);
+    itemType.addItem();
+    itemType.addItem();
+    QCOMPARE(group->childCount(), 2);
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(group->child(0));
+    for (int i = 0; i < copied; ++i) {
+      group->child(i)->setSelected(true);
+    }
+    mpEditor->slot_copyXml();
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(itemType.baseItem()->childCount(), 2 + copied);
+    QCOMPARE(itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt(),
+             groupID);
+    QCOMPARE(itemType.baseItem()->child(0)->childCount(), 2);
+    for (int row = 1; row <= copied; ++row) {
+      const int pastedID =
+          itemType.baseItem()->child(row)->data(0, Qt::UserRole).toInt();
+      QVERIFY2(pastedID != groupID && pastedID != siblingID,
+               "a pasted item did not land right beneath the group");
+    }
+    QCOMPARE(itemType.baseItem()->child(1 + copied)->data(0, Qt::UserRole).toInt(),
+             siblingID);
+
+    cleanupAll(itemType);
+    switch (itemType.viewType) {
+    case EditorViewType::cmTriggerView:
+      mpHost->getTriggerUnit()->killTrigger(QString::number(tempID));
+      break;
+    case EditorViewType::cmTimerView:
+      mpHost->getTimerUnit()->killTimer(QString::number(tempID));
+      break;
+    case EditorViewType::cmAliasView:
+      mpHost->getAliasUnit()->killAlias(QString::number(tempID));
+      break;
+    default:
+      break;
+    }
   }
 
   void testMultiTriggerPasteAfterSibling() {
@@ -2509,86 +2572,6 @@ private slots:
     QCOMPARE(childIDs.at(3), secondID);
 
     cleanupAll(mItemTypes[0]);
-  }
-
-  void testMultiAliasPasteIntoGroup() {
-    mpEditor->slot_showAliases();
-    cleanupAll(mItemTypes[2]);
-
-    mpEditor->addAlias(true);
-    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
-
-    QTreeWidgetItem *group = mpEditor->mpAliasBaseItem->child(0);
-    int groupID = group->data(0, Qt::UserRole).toInt();
-    TAlias *pGroup = mpHost->getAliasUnit()->getAlias(groupID);
-    QVERIFY(pGroup != nullptr);
-
-    mpEditor->treeWidget_aliases->setCurrentItem(group);
-    mpEditor->addAlias(false);
-    mpEditor->addAlias(false);
-    QCOMPARE(group->childCount(), 2);
-
-    // copy both aliases, then paste them into the group
-    mpEditor->treeWidget_aliases->clearSelection();
-    mpEditor->treeWidget_aliases->setCurrentItem(group->child(0));
-    group->child(0)->setSelected(true);
-    group->child(1)->setSelected(true);
-    mpEditor->slot_copyXml();
-
-    mpEditor->treeWidget_aliases->clearSelection();
-    mpEditor->treeWidget_aliases->setCurrentItem(group);
-    mpEditor->slot_pasteXml();
-
-    // both pasted aliases must land inside the group, each linked exactly once
-    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
-
-    // re-render the tree: the group shows four children and none at the root
-    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
-    QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
-    QCOMPARE(mpEditor->mpAliasBaseItem->child(0)->childCount(), 4);
-
-    cleanupAll(mItemTypes[2]);
-  }
-
-  void testMultiKeyPasteIntoGroup() {
-    mpEditor->slot_showKeys();
-    cleanupAll(mItemTypes[4]);
-
-    mpEditor->addKey(true);
-    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
-
-    QTreeWidgetItem *group = mpEditor->mpKeyBaseItem->child(0);
-    int groupID = group->data(0, Qt::UserRole).toInt();
-    TKey *pGroup = mpHost->getKeyUnit()->getKey(groupID);
-    QVERIFY(pGroup != nullptr);
-
-    mpEditor->treeWidget_keys->setCurrentItem(group);
-    mpEditor->addKey(false);
-    mpEditor->addKey(false);
-    QCOMPARE(group->childCount(), 2);
-
-    // copy both keys, then paste them into the group
-    mpEditor->treeWidget_keys->clearSelection();
-    mpEditor->treeWidget_keys->setCurrentItem(group->child(0));
-    group->child(0)->setSelected(true);
-    group->child(1)->setSelected(true);
-    mpEditor->slot_copyXml();
-
-    mpEditor->treeWidget_keys->clearSelection();
-    mpEditor->treeWidget_keys->setCurrentItem(group);
-    mpEditor->slot_pasteXml();
-
-    // both pasted keys must land inside the group, each linked exactly once
-    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
-
-    // re-render the tree: the group shows four children and none at the root
-    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
-    QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
-    QCOMPARE(mpEditor->mpKeyBaseItem->child(0)->childCount(), 4);
-
-    cleanupAll(mItemTypes[4]);
   }
 
   // ========================================================================
@@ -2843,6 +2826,212 @@ private slots:
              "correcting the command must clear the loop error flag");
 
     cleanupAll(mItemTypes[2]);
+  }
+
+  // The row widgets are a pool that is never reordered, so a move or delete
+  // copies each row's content, and colour captions and spacer counts with it.
+  void testPatternRowMoveDeleteAndMatchMode() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    const int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->showPatternItems(5);
+    QVERIFY(mpEditor->mTriggerPatternEdit.size() >= 5);
+
+    // Its text is generated rather than typed, and its row carries two captions
+    const QString colorPattern =
+        TTrigger::createColorPatternText(1, TTrigger::scmIgnored);
+
+    // Top down: every content change collapses the rows under the last one that
+    // holds something
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("alpha"));
+    mpEditor->mTriggerPatternEdit[1]->comboBox_patternType->setCurrentIndex(
+        REGEX_COLOR_PATTERN);
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        colorPattern);
+    mpEditor->mTriggerPatternEdit[2]->comboBox_patternType->setCurrentIndex(
+        REGEX_LINE_SPACER);
+    mpEditor->mTriggerPatternEdit[2]->spinBox_lineSpacer->setValue(3);
+    mpEditor->mTriggerPatternEdit[3]->comboBox_patternType->setCurrentIndex(
+        REGEX_PROMPT);
+    mpEditor->mTriggerPatternEdit[4]->singleLineTextEdit_pattern->setPlainText(
+        qsl("beta"));
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({qsl("alpha"), colorPattern, qsl("3"), QString(),
+                          qsl("beta")}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_SUBSTRING, REGEX_COLOR_PATTERN,
+                         REGEX_LINE_SPACER, REGEX_PROMPT, REGEX_SUBSTRING}));
+
+    // The colour captions are read off the pattern text only on load, so they
+    // are right after a move only if the move carried them
+    const QString colorForeground =
+        mpEditor->mTriggerPatternEdit[1]->pushButton_fgColor->text();
+    const QString colorBackground =
+        mpEditor->mTriggerPatternEdit[1]->pushButton_bgColor->text();
+    QVERIFY(!colorForeground.isEmpty());
+
+    mpEditor->deletePatternRow(0);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({colorPattern, qsl("3"), QString(), qsl("beta")}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_COLOR_PATTERN, REGEX_LINE_SPACER, REGEX_PROMPT,
+                         REGEX_SUBSTRING}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_bgColor->text(),
+             colorBackground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->spinBox_lineSpacer->value(), 3);
+
+    mpEditor->movePatternRowContent(3, 0);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({qsl("beta"), colorPattern, qsl("3"), QString()}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_SUBSTRING, REGEX_COLOR_PATTERN,
+                         REGEX_LINE_SPACER, REGEX_PROMPT}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->pushButton_bgColor->text(),
+             colorBackground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[2]->spinBox_lineSpacer->value(), 3);
+
+    mpEditor->movePatternRowContent(0, 2);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({colorPattern, qsl("3"), qsl("beta"), QString()}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_COLOR_PATTERN, REGEX_LINE_SPACER,
+                         REGEX_SUBSTRING, REGEX_PROMPT}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->spinBox_lineSpacer->value(), 3);
+
+    const int lastVisible = mpEditor->lastVisiblePatternRow();
+    QVERIFY(lastVisible < mpEditor->mTriggerPatternEdit.size() - 1);
+    mpEditor->movePatternRowContent(0, lastVisible + 1);
+    QCOMPARE(
+        mpEditor->mTriggerPatternEdit[0]->comboBox_patternType->currentIndex(),
+        REGEX_COLOR_PATTERN);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[lastVisible + 1]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    // The radios are a view of spinBox_lineMargin, which save and load read; OR
+    // mode is the spin box's special first value
+    QVERIFY(mpEditor->mpRadioButton_matchAll != nullptr);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->maximum(),
+             mpEditor->mpSpinBox_matchWithinLines->maximum());
+
+    mpEditor->mpRadioButton_matchAll->setChecked(true);
+    mpEditor->mpSpinBox_matchWithinLines->setValue(7);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 7);
+
+    // Past QSpinBox's default maximum of 99, which a hidden control left at the
+    // default would clamp to
+    mpEditor->mpSpinBox_matchWithinLines->setValue(500);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 500);
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 500);
+
+    mpEditor->mpRadioButton_matchAny->setChecked(true);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), -1);
+    QVERIFY(!mpEditor->mpRadioButton_matchAll->isChecked());
+
+    // Spin box to radios is the path a load or an undo takes
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(4);
+    QVERIFY(mpEditor->mpRadioButton_matchAll->isChecked());
+    QVERIFY(!mpEditor->mpRadioButton_matchAny->isChecked());
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 4);
+
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
+    QVERIFY(mpEditor->mpRadioButton_matchAny->isChecked());
+    QVERIFY(!mpEditor->mpRadioButton_matchAll->isChecked());
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 0);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testPatternRowFloorIsOneRow() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    const int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    QVERIFY(mpEditor->mpLabel_matchModeHint != nullptr);
+    QVERIFY(!mpEditor->mpWidget_matchModeRows->isEnabled());
+    // isHidden(), not isVisible(): the form may not be on screen
+    QVERIFY(!mpEditor->mpLabel_matchModeHint->isHidden());
+
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("alpha"));
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+
+    QTest::keyClick(mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern,
+                    Qt::Key_Return);
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        qsl("beta"));
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+    // Any/All needs two patterns, so the second one enables the radios and hides the hint
+    QVERIFY(mpEditor->mpWidget_matchModeRows->isEnabled());
+    QVERIFY(mpEditor->mpLabel_matchModeHint->isHidden());
+
+    mpEditor->saveTrigger();
+    QCOMPARE(pT->getPatternsList(), QStringList({qsl("alpha"), qsl("beta")}));
+
+    mpEditor->slot_triggerSelected(trigger);
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+
+    mpEditor->deletePatternRow(1);
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    mpEditor->deletePatternRow(0);
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    cleanupAll(mItemTypes[0]);
   }
 };
 

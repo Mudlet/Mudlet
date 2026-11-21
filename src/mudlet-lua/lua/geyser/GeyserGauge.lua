@@ -209,6 +209,229 @@ local function resizesInPlace(fill, front)
     and next(front.windowList) == nil
 end
 
+local stockPixelGeometry = Geyser.Container.pixel_geometry
+
+-- must match roundEdge in GeyserContainer.lua bit for bit, or an in-place size drifts from pixel_geometry()
+local function roundEdge(value)
+  return math.floor(value + 0.5 + 1e-6)
+end
+
+local dimensions = {"x", "y", "width", "height"}
+local rootGetX, rootGetY, rootGetWidth, rootGetHeight = Geyser.get_x, Geyser.get_y, Geyser.get_width, Geyser.get_height
+-- far deeper than any real layout; a container loop would otherwise never end
+local deepestChain = 100
+local weakValues = {__mode = "v"}
+local churnSkips, mostSkips = 32, 1024
+-- recording costs a few pixel_geometry() calls, so a layout pays for itself only after this many reuses
+local paysAfter = 3
+
+-- where the fill starts, the back label's inner length along it and the front
+-- label's size across it: all an in-place resize reads besides the value
+local function measure(fill, front, back, layout)
+  local x, y = front.get_x(), front.get_y()
+  if layout.horizontal then
+    layout.start, layout.inner = x, back.get_width() - fill.left - fill.right
+    layout.across = roundEdge(y + front.get_height()) - roundEdge(y)
+  else
+    layout.start, layout.inner = y, back.get_height() - fill.top - fill.bottom
+    layout.across = roundEdge(x + front.get_width()) - roundEdge(x)
+  end
+  layout.startEdge = roundEdge(layout.start)
+end
+
+local function askAgain(live, length, getter)
+  live[length + 1], live[length + 2] = getter, getter()
+  return length + 2
+end
+
+-- Records the getters measure() goes through, from the front label up. The front
+-- label's own, and any compiled from a pixel or percentage constraint, only have
+-- to stay in place; any other, and the main window's size behind the root, is
+-- asked again.
+-- @param old a layout of this gauge's that no longer holds, whose tables are reused
+-- @return the layout, or nil when the resize has to fall back to pixel_geometry()
+local function recordLayout(gauge, fill, front, old)
+  local back = gauge.back
+  if back.container ~= gauge or front.pixel_geometry ~= stockPixelGeometry then
+    return nil
+  end
+  for _, dimension in ipairs(dimensions) do
+    local constraint, container = Geyser.compiled_from(front, dimension)
+    if constraint ~= fill[dimension] or container ~= gauge then
+      return nil
+    end
+  end
+
+  -- weak, so that a window the gauge has left is not kept alive by it
+  local chain = old and old.chain or setmetatable({}, weakValues)
+  local live = old and old.live or setmetatable({}, weakValues)
+  chain[1], chain[2], chain[3], chain[4], chain[5] = front, front.get_x, front.get_y, front.get_width, front.get_height
+  local length, liveLength, readsMainWindow = 5, 0, false
+  -- the front label's getters read the back label's lengths, and the gauge's x and y above it
+  local window, needX, needY, needWidth, needHeight = back, false, false, true, true
+  local upX, upY, upWidth, upHeight = true, true, false, false
+  while window do
+    if length >= deepestChain * 5 then
+      return nil
+    end
+    local getX, getY, getWidth, getHeight = window.get_x, window.get_y, window.get_width, window.get_height
+    chain[length + 1], chain[length + 2], chain[length + 3], chain[length + 4], chain[length + 5] =
+      window, getX, getY, getWidth, getHeight
+    length = length + 5
+    local container = window.container
+    local against, readsX, readsY, readsWidth, readsHeight
+    if window == Geyser then
+      readsX = getX == rootGetX and 0 or nil
+      readsY = getY == rootGetY and 0 or nil
+      readsWidth = getWidth == rootGetWidth and 0 or nil
+      readsHeight = getHeight == rootGetHeight and 0 or nil
+      readsMainWindow = (needWidth and readsWidth ~= nil) or (needHeight and readsHeight ~= nil)
+    else
+      against, readsX, readsY, readsWidth, readsHeight = Geyser.compiled_reads(window)
+      if against ~= container then
+        readsX, readsY, readsWidth, readsHeight = nil, nil, nil, nil
+      end
+    end
+    -- lengths first, as one measured from the far edge also reads the window's own near edge
+    if needWidth then
+      if readsWidth then
+        upX, upWidth, needX = upX or readsWidth % 2 == 1, upWidth or readsWidth % 4 >= 2, needX or readsWidth >= 4
+      else
+        liveLength = askAgain(live, liveLength, getWidth)
+      end
+    end
+    if needHeight then
+      if readsHeight then
+        upY, upHeight, needY = upY or readsHeight % 2 == 1, upHeight or readsHeight % 4 >= 2, needY or readsHeight >= 4
+      else
+        liveLength = askAgain(live, liveLength, getHeight)
+      end
+    end
+    if needX then
+      if readsX then
+        upX, upWidth = upX or readsX % 2 == 1, upWidth or readsX % 4 >= 2
+      else
+        liveLength = askAgain(live, liveLength, getX)
+      end
+    end
+    if needY then
+      if readsY then
+        upY, upHeight = upY or readsY % 2 == 1, upHeight or readsY % 4 >= 2
+      else
+        liveLength = askAgain(live, liveLength, getY)
+      end
+    end
+    if not (upX or upY or upWidth or upHeight) then
+      break
+    end
+    window, needX, needY, needWidth, needHeight = container, upX, upY, upWidth, upHeight
+    upX, upY, upWidth, upHeight = false, false, false, false
+  end
+
+  local layout = {
+    chain = chain, length = length, live = live, liveLength = liveLength,
+    horizontal = fill.orientation == "horizontal",
+    left = fill.left, right = fill.right, top = fill.top, bottom = fill.bottom,
+    -- updates in a row it has served since it was last measured
+    reused = 0,
+  }
+  if readsMainWindow then
+    local width, height = getMainWindowSize()
+    -- false, as a nil width would read as a layout the main window's size does not matter to
+    layout.mainWidth, layout.mainHeight = width or false, height
+  end
+  measure(fill, front, back, layout)
+  return layout
+end
+
+local function chainHolds(gauge, front, layout)
+  local chain = layout.chain
+  if chain[1] ~= front or chain[6] ~= gauge.back or front.pixel_geometry ~= stockPixelGeometry then
+    return false
+  end
+  for i = 1, layout.length, 5 do
+    local window = chain[i]
+    if window == nil or window.get_x ~= chain[i + 1] or window.get_y ~= chain[i + 2]
+       or window.get_width ~= chain[i + 3] or window.get_height ~= chain[i + 4] then
+      return false
+    end
+  end
+  return true
+end
+
+-- Whether what the layout's measure() read still reads the same, recording
+-- what reads differently now
+local function valuesHold(fill, layout)
+  local holds = true
+  if fill.left ~= layout.left or fill.right ~= layout.right or fill.top ~= layout.top or fill.bottom ~= layout.bottom then
+    layout.left, layout.right, layout.top, layout.bottom = fill.left, fill.right, fill.top, fill.bottom
+    holds = false
+  end
+  if layout.mainWidth ~= nil then
+    local width, height = getMainWindowSize()
+    width = width or false
+    if width ~= layout.mainWidth or height ~= layout.mainHeight then
+      layout.mainWidth, layout.mainHeight = width, height
+      holds = false
+    end
+  end
+  local live = layout.live
+  for i = 1, layout.liveLength, 2 do
+    local value = live[i]()
+    if value ~= live[i + 1] then
+      live[i + 1] = value
+      holds = false
+    end
+  end
+  return holds
+end
+
+-- each layout dropped before it paid for itself turns recording off for twice as long as the last
+local function skipRecording(fill)
+  local skips = fill.backoff or churnSkips
+  fill.skips, fill.backoff = skips, math.min(skips * 2, mostSkips)
+end
+
+-- The front label's size for the fill's current value, worked out the way
+-- pixel_geometry() would without calling every getter up to the root again.
+local function inPlaceSize(gauge, fill, front)
+  local layout = fill.layout
+  -- off the fill until it is whole again, so a getter that raises cannot leave it half updated
+  fill.layout = nil
+  if layout and chainHolds(gauge, front, layout) then
+    local reused = layout.reused
+    if valuesHold(fill, layout) then
+      layout.reused = reused + 1
+      if reused + 1 == paysAfter then
+        fill.backoff = nil
+      end
+    elseif reused == 0 then
+      -- what it rests on answers differently every update, so asking it again costs more than pixel_geometry()
+      skipRecording(fill)
+      layout = nil
+    else
+      layout.reused = 0
+      measure(fill, front, gauge.back, layout)
+    end
+  elseif layout and layout.reused < paysAfter then
+    -- it broke before it paid for itself, so it is probably laid out again too often for recording to pay
+    skipRecording(fill)
+    layout = nil
+  else
+    layout = recordLayout(gauge, fill, front, layout)
+  end
+  if not layout then
+    local _, _, width, height = front:pixel_geometry()
+    return width, height
+  end
+  fill.layout = layout
+  local along = roundEdge(layout.start + layout.inner * (fill.value / 100)) - layout.startEdge
+  if layout.horizontal then
+    return along, layout.across
+  end
+  return layout.across, along
+end
+
 -- Gives the front label the constraints for one orientation. They are functions
 -- rather than "<n>px" because a negative pixel constraint is measured from the
 -- opposite edge, which is not what a negative margin asks for, and they read the
@@ -340,9 +563,13 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     setFrontConstraints(self)
   elseif spaced or (filled and not resizesInPlace(fill, front)) then
     front:reposition()
-  elseif filled then
+  elseif filled and fill.skips then
+    local skips = fill.skips
+    fill.skips = skips > 1 and skips - 1 or nil
     local _, _, width, height = front:pixel_geometry()
     resizeWindow(front.name, width, height)
+  elseif filled then
+    resizeWindow(front.name, inPlaceSize(self, fill, front))
   end
 
   if text then

@@ -71,12 +71,13 @@ private:
     }
 
     // What the console really has to hand out, from its own geometry rather than
-    // from the reporting path under test.
+    // from the reporting path under test: everything above its foot, which holds
+    // the command line and the seam over it
     QSize measuredMainWindowSize() const
     {
         TMainConsole* pConsole = mpHost->mainConsoleView();
-        return {pConsole->width() - (pConsole->mpLeftToolBar->width() + pConsole->mpRightToolBar->width()),
-                pConsole->height() - (pConsole->mpCommandLine->height() + pConsole->mpTopToolBar->height())};
+        const QWidget* pFoot = pConsole->findChild<QWidget*>(qsl("consoleFoot"));
+        return {pConsole->width() - (pConsole->mpLeftToolBar->width() + pConsole->mpRightToolBar->width()), (pFoot ? pFoot->y() : pConsole->height()) - pConsole->mpTopToolBar->height()};
     }
 
     void runLua(const QString& script) { QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script)); }

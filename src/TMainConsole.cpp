@@ -480,6 +480,7 @@ void Host::setMainConsoleView(TMainConsole* view)
         mpNullConsoleFrontend->followView(view);
     } else if (mpConsole) {
         mpNullConsoleFrontend->resumeMainCommandLine();
+        mpNullConsoleFrontend->resumeMainText();
     }
     mpConsole = view;
     mpConsoleFrontend = view;
@@ -1449,6 +1450,10 @@ void TMainConsole::deleteLabel(const QString& name)
             mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
         }
 
+        // Hidden at once: a nested event loop (pumpEvents(), a JSON map import) can hold the deferred delete back, and a
+        // label left showing is painted until then. Its leave callback goes first, as hiding sends one under the mouse
+        pL->model().setLeave(0);
+        pL->hide();
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -2590,7 +2595,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
     return true;
 }
 
-QPoint TMainConsole::mousePosition() const
+std::optional<QPoint> TMainConsole::mousePosition() const
 {
     return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
@@ -3522,7 +3527,7 @@ void TMainConsole::finalize()
     }
 }
 
-void TMainConsole::slot_reloadMap(QList<QString> profilesList)
+void TMainConsole::slot_reloadMap(QList<QString> profilesList, const QString& mapFileName)
 {
     Host* pHost = getHost();
     if (!pHost) {
@@ -3538,7 +3543,14 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
     pHost->postMessage(infoMsg);
 
     QString outcomeMsg;
-    if (pHost->loadMapFile(QString())) {
+    const QString copiedMap = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, mapFileName);
+    // By name and then made the newest file, which is the one this profile opens next time, as an autosave here during the copy can be newer
+    if (pHost->loadMapFile(copiedMap)) {
+        QFile copiedMapFile(copiedMap);
+        if (!copiedMapFile.open(QIODevice::ReadWrite | QIODevice::ExistingOnly) || !copiedMapFile.setFileTime(QDateTime::currentDateTime(), QFileDevice::FileModificationTime)) {
+            // Then the next save writes it as the newest
+            pHost->mpMap->setUnsavedKeepingRevisions(__func__);
+        }
         outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
     } else {
         outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");
@@ -3685,6 +3697,12 @@ void TMainConsole::disableMapProgressDialogCancel()
         }
         mpMapProgressDialog->setCancelButton(nullptr);
     }
+}
+
+// Runs with the map operation on the stack; see TMap::mapOperationInProgress()
+void TMainConsole::repaintMapProgressDialog()
+{
+    QCoreApplication::processEvents();
 }
 
 void TMainConsole::closeMapProgressDialog()
@@ -4127,7 +4145,9 @@ void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
         return;
     }
 
-    player->mediaData().setMediaWidget(widgetType);
+    TMediaData mediaData = player->mediaData();
+    mediaData.setMediaWidget(widgetType);
+    player->setMediaData(mediaData);
 
     QVideoWidget* myVideoWidget = nullptr;
     if (widgetType == TMediaData::MediaWidgetLabel) {
@@ -4175,7 +4195,9 @@ void TMainConsole::hideVideoOutput(TMediaPlayer* player)
         return;
     }
 
-    QWidget* parent = videoOutput->parentWidget();
+    // Only a label is taken back: a request repeated while the video plays replaces the player's
+    // record of which kind of widget the video went to
+    auto* parent = qobject_cast<TLabel*>(videoOutput->parentWidget());
 
     if (parent && parent->isVisible()) {
         parent->hide();
@@ -4253,7 +4275,6 @@ void TMainConsole::showStatistics()
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());
-    ;
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     //: Heading for the system's statistics information displayed in the console
