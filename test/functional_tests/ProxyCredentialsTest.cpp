@@ -130,6 +130,22 @@ private slots:
         QVERIFY2(proxy->password().isEmpty(), "the cleared password is still offered");
     }
 
+    void clearedCredentialsAreNotOfferedToTheSameProxy()
+    {
+        mpHost->mUseProxy = true;
+        mpHost->mProxyAddress = qsl("only-proxy.example");
+        mpHost->mProxyPort = 1080;
+        mpHost->mProxyUsername = qsl("alice");
+        mpHost->mProxyPassword = qsl("secret");
+        mpHost->getConnectionProxy();
+
+        mpHost->mProxyUsername.clear();
+        mpHost->mProxyPassword.clear();
+        const auto& proxy = mpHost->getConnectionProxy();
+        QVERIFY2(proxy->user().isEmpty(), qPrintable(qsl("the cleared username \"%1\" is still offered").arg(proxy->user())));
+        QVERIFY2(proxy->password().isEmpty(), "the cleared password is still offered");
+    }
+
     // The saved profile never holds the password, so loading reads it from secure storage
     void clearedPasswordStaysClearedAfterSaving()
     {
