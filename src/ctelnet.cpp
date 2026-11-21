@@ -5223,15 +5223,14 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         msg = normalisedMsg;
     }
 
-    // A package name holds no whitespace, so the first space, tab or line
-    // ending ends it - a CR left on the name of "Package\r\n{...}" would
-    // file the data under a name no script asks for
+    // A package name holds no whitespace; a CR left on the name of "Package\r\n{...}"
+    // would file the data under a name no script asks for
     const auto separatorAt = std::find_if(msg.begin(), msg.end(), [](const char ch) {
         return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
     });
-    const qsizetype separator = separatorAt == msg.end() ? -1 : separatorAt - msg.begin();
-    QString packageMessage = fromUtf8KeepingBom(separator == -1 ? msg : msg.first(separator));
-    QByteArray data = separator == -1 ? QByteArray() : msg.sliced(separator + 1).toByteArray();
+    const qsizetype nameLength = separatorAt - msg.begin();
+    QString packageMessage = fromUtf8KeepingBom(msg.first(nameLength));
+    QByteArray data = separatorAt == msg.end() ? QByteArray() : msg.sliced(nameLength + 1).toByteArray();
 
     if (onlyWhitespace(data)) { // Example: Core.Ping
         QString emptyObject = qsl("{}");
