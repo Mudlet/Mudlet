@@ -1557,7 +1557,10 @@ function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute
         -- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin
         local function fromOrigin(offset)
             offset = math.floor(offset + 0.5)
-            return offset < 0 and string.format("0%%%d", offset) or offset
+            if offset < 0 then
+                return "0%" .. offset
+            end
+            return offset
         end
         self.x, self.y = fromOrigin(self.get_x() - originX), fromOrigin(self.get_y() - originY)
     end
