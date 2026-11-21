@@ -212,7 +212,8 @@ public:
     // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
     // if it took one.
     bool hiddenInputOpened();
-    // As TCommandLine::enterCommand() empties, behind the box, a line nothing wrote to while it was sent: the empty line a send could not report
+    // As TCommandLine::enterCommand() empties, behind the box, a line nothing wrote to while it was sent: the empty
+    // line a send could not report
     void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;

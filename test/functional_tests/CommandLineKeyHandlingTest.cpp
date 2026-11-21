@@ -520,8 +520,9 @@ private slots:
         type(pCommandLine, qsl("25"));
         press(pCommandLine, Qt::Key_Return);
 
-        QCOMPARE(pCommandLine->toPlainText(), autoClear ? QString() : qsl("250"));
-        QCOMPARE(selection(pCommandLine), autoClear ? QString() : qsl("250"));
+        const QString expected = autoClear ? QString() : qsl("250");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
     }
 
     // As does a one-shot field whose action resets itself before writing its value back
@@ -557,8 +558,9 @@ private slots:
         press(pCommandLine, Qt::Key_Return);
 
         QCOMPARE(luaGlobal("specQuietSaw"), qsl("specQuiet"));
-        QCOMPARE(pCommandLine->toPlainText(), autoClear ? QString() : qsl("specQuiet"));
-        QCOMPARE(selection(pCommandLine), autoClear ? QString() : qsl("specQuiet"));
+        const QString expected = autoClear ? QString() : qsl("specQuiet");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
     }
 
     // Up walks back through what was sent, Down comes forward again, and the
