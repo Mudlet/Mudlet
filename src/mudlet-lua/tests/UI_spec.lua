@@ -8951,13 +8951,30 @@ describe("Toolbar buttons", function()
     end)
 
     it("both refuse an item ID that is not a finite int", function()
-      for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649}) do
+      for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649, 2147483647.5, -2147483648.5}) do
         local getOk, getErr = getButtonState(id)
         assert.is_nil(getOk, tostring(id))
         assert.truthy(tostring(getErr):find("^no button item with ID "), tostring(getErr))
         local setOk, setErr = setButtonState(id, true)
         assert.is_nil(setOk, tostring(id))
         assert.truthy(tostring(setErr):find("^no button item with ID "), tostring(setErr))
+      end
+    end)
+
+    it("both look up an item ID that rounds to the ends of int's range", function()
+      local expected = {
+        [2147483647] = "no button item with ID 2147483647 found",
+        [2147483647.4] = "no button item with ID 2147483647 found",
+        [-2147483648] = "item ID (-2147483648) invalid, it must be equal or greater than zero",
+        [-2147483648.4] = "item ID (-2147483648) invalid, it must be equal or greater than zero",
+      }
+      for id, message in pairs(expected) do
+        local getOk, getErr = getButtonState(id)
+        assert.is_nil(getOk, tostring(id))
+        assert.are.equal(message, getErr)
+        local setOk, setErr = setButtonState(id, true)
+        assert.is_nil(setOk, tostring(id))
+        assert.are.equal(message, setErr)
       end
     end)
 
