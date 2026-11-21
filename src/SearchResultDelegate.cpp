@@ -169,7 +169,6 @@ void SearchResultDelegate::paint(QPainter* pPainter, const QStyleOptionViewItem&
         paintMatchRow(pPainter, viewOption, index, contentRect);
         break;
     case NoticeRow:
-        [[fallthrough]];
     case ActionRow:
         paintNoticeRow(pPainter, viewOption, index, contentRect);
         break;

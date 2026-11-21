@@ -104,9 +104,10 @@ private:
     static QString typeOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::TypeLabelRole).toString(); }
     static QString titleOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::TitleRole).toString(); }
     static QString whereOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::WhereRole).toString(); }
+    static int kindOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt(); }
     static bool isNotice(const QTreeWidgetItem* row)
     {
-        const int kind = row->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt();
+        const int kind = kindOf(row);
         return kind == uiDesign::SearchResultDelegate::NoticeRow || kind == uiDesign::SearchResultDelegate::ActionRow;
     }
 
@@ -115,7 +116,7 @@ private:
         auto* results = mpEditor->treeWidget_searchResults;
         for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
             QTreeWidgetItem* top = results->topLevelItem(i);
-            if (top->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+            if (kindOf(top) == uiDesign::SearchResultDelegate::ActionRow) {
                 return top;
             }
         }
@@ -890,40 +891,25 @@ private slots:
         QVERIFY2(offerToSearchVariables(), "a search from the Variables view left variables out without saying so");
     }
 
+    void test_doubleClickingTheOfferOpensNothingElse_data()
+    {
+        QTest::addColumn<int>("doubleClickInterval");
+        QTest::addColumn<int>("searchStallMs");
+
+        // Waiting for the new results between the clicks must not outlast a double-click on a slow runner
+        QTest::newRow("prompt search") << 60000 << 0;
+        // A search slower than a double-click must not use up the window that swallows its second click
+        QTest::newRow("search slower than a double-click") << 1000 << 1200;
+    }
+
     // Its search fills the panel at once, so a double-click's second click would otherwise open whatever landed under it
     void test_doubleClickingTheOfferOpensNothingElse()
     {
-        // Waiting for the new results between the clicks must not outlast a double-click on a slow runner
-        const int savedInterval = QApplication::doubleClickInterval();
-        QApplication::setDoubleClickInterval(60000);
-        const auto restoreInterval = qScopeGuard([savedInterval]() {
-            QApplication::setDoubleClickInterval(savedInterval);
-        });
-        mpEditor->slot_showVariables();
-        search(mNeedle);
-        QTreeWidgetItem* offer = offerToSearchVariables();
-        QVERIFY(offer);
-        auto* tree = mpEditor->treeWidget_searchResults;
-        tree->scrollToItem(offer);
-        QCoreApplication::processEvents();
-        const QPoint pos = tree->visualItemRect(offer).center();
-        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
-        QVERIFY(QTest::qWaitFor([this]() {
-            return topLevelResultFor(qsl("Variable")) != nullptr;
-        }));
-        QTreeWidgetItem* landed = tree->itemAt(pos);
-        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
+        QFETCH(int, doubleClickInterval);
+        QFETCH(int, searchStallMs);
 
-        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
-        QCoreApplication::processEvents();
-        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
-    }
-
-    // A search slower than a double-click must not use up the window that swallows its second click
-    void test_aSlowVariableSearchStillSwallowsTheSecondClick()
-    {
         const int savedInterval = QApplication::doubleClickInterval();
-        QApplication::setDoubleClickInterval(1000);
+        QApplication::setDoubleClickInterval(doubleClickInterval);
         const auto restoreInterval = qScopeGuard([savedInterval]() {
             QApplication::setDoubleClickInterval(savedInterval);
         });
@@ -937,7 +923,7 @@ private slots:
         const QPoint pos = tree->visualItemRect(offer).center();
         QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
         // Stands in for the search itself running longer than the interval
-        QThread::msleep(1200);
+        QThread::msleep(searchStallMs);
         QVERIFY(QTest::qWaitFor([this]() {
             return topLevelResultFor(qsl("Variable")) != nullptr;
         }));
