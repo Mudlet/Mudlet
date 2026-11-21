@@ -205,6 +205,11 @@ function Geyser:changeContainer (container)
   if type(container) == "string" and container:lower() == "main" then
     container = Geyser
   end
+  -- a container that keeps its windows in another, as Geyser.List keeps its rows in
+  -- a scroll box, has the move go there, as that decides the native parent
+  if type(container) == "table" and container.childContainer then
+    container = container.childContainer
+  end
   --only a container has a windowList
   if not container or not container.windowList or self == container then
     return nil, "didn't get a valid container"
