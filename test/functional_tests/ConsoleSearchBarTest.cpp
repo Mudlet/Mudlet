@@ -31,6 +31,8 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
+#include "TCommandLine.h"
+#include "TUiTour.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
@@ -460,6 +462,25 @@ private slots:
         QCOMPARE(console->buffer.mCursorY, movedTo);
     }
 
+    // The hint names a key that only clears the main console's split
+    void test_aMiniConsoleSplittingDoesNotUseUpTheSplitScreenTutorial()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+        mudlet::self()->mScrollbackTutorialsShown = 0;
+        QVERIFY2(mudlet::self()->showSplitscreenTutorial(), "the tutorial is off, so nothing here would show it");
+
+        QVERIFY(runLua(console, qsl("createMiniConsole('tutorialMini', 0, 0, 300, 100) for i = 1, 50 do echo('tutorialMini', 'chat line ' .. i .. '\\n') end")));
+        TConsole* mini = console->subConsoleWidget(qsl("tutorialMini"));
+        QVERIFY(mini);
+        QVERIFY(runLua(console, qsl("scrollUp('tutorialMini', 5)")));
+        QTest::qWait(100);
+        QVERIFY2(!mini->mLowerPane->isHidden(), "the mini console did not split, so nothing here was exercised");
+
+        QCOMPARE(lineHolding(console, qsl("Split-screen scrollback activated")), -1);
+        QCOMPARE(mudlet::self()->mScrollbackTutorialsShown, 0);
+    }
+
     // A search that has not moved off the end of the buffer yet has nothing
     // below it, and saying so would be worse than staying quiet.
     void test_searchingDownWithNothingBelowTheCurrentLineDoesNothing()
@@ -662,6 +683,43 @@ private slots:
 
         QVERIFY2(console->mpFindBar->isHidden(), "the find bar stayed up");
         QCOMPARE(markedLineCount(console), 0);
+    }
+
+    // Ctrl+F on the command line moves the keyboard into the search box, so
+    // Escape there has to hand it back rather than leave the player stranded.
+    void test_escapeInTheSearchBoxReturnsToTheCommandLine()
+    {
+        // The first-run tour would otherwise open a second after the profile loads and take the keyboard
+        TUiTour::rememberShown();
+        Host* host = startProfile(mHostname, mLocalhost, mPort);
+        QVERIFY2(host, "the profile never started - see the warning above");
+        TMainConsole* console = host->mainConsoleView();
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(mudlet::self()));
+        // A freshly loaded profile puts the keyboard on its command line a moment later
+        QTest::qWait(1500);
+
+        QTest::keyClick(console->mpCommandLine, Qt::Key_F, Qt::ControlModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(console->mpBufferSearchBox));
+        // Nothing else may be moving the focus, or what follows would pass without Escape doing anything
+        QTest::qWait(500);
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(console->mpBufferSearchBox));
+
+        QTest::keyClick(console->mpBufferSearchBox, Qt::Key_Escape);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(console->mpCommandLine));
+
+        // A script's extra command line searches the same buffer, and Escape goes back to it, not the main one
+        auto [created, message] = console->createCommandLine(QString(), qsl("extraLine"), 0, 0, 300, 30);
+        QVERIFY2(created, qPrintable(message));
+        TCommandLine* extraLine = console->subCommandLineWidget(qsl("extraLine"));
+        QVERIFY(extraLine);
+        extraLine->setFocus(Qt::MouseFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(extraLine));
+        QTest::keyClick(extraLine, Qt::Key_F, Qt::ControlModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(console->mpBufferSearchBox));
+        QTest::keyClick(console->mpBufferSearchBox, Qt::Key_Escape);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(extraLine));
     }
 
     // Side by side in multi-view each profile has a split of its own, so
