@@ -978,6 +978,29 @@ private slots:
         QVERIFY2(completedHeight > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(completedHeight).arg(oneRow)));
     }
 
+    // The context menu's Paste, a middle-click and a drop bypass the key handler,
+    // so the line has to grow for a pasted block of rows by itself
+    void test_pastingSeveralRowsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QGuiApplication::clipboard()->setText(qsl("row one\nrow two\nrow three"));
+        pMain->paste();
+        qApp->processEvents();
+
+        QCOMPARE(pMain->document()->blockCount(), 3);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("three pasted rows left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+    }
+
     // Escape leaves completion mode, and selects the line so the next thing
     // typed replaces it.
     void test_escapeSelectsTheWholeLine()

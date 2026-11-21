@@ -573,8 +573,9 @@ Host::~Host()
     mStopWatchMap.clear();
 
     // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
-    if (mpMainConsoleModel) {
-        mpMainConsoleModel->buffer.logRemainingOutput();
+    if (mpMainConsoleModel && mpMainConsoleModel->mLogToLogFile) {
+        mpMainConsoleModel->closeLogFile();
+        mpMainConsoleModel->mLogToLogFile = false;
     }
 
     mErrorLogStream.flush();
@@ -991,6 +992,11 @@ void Host::loadMapAndConnect(const bool connect)
     // on the defaults rather than on the profile's own settings
     mTelnet.cacheHostSettings();
 
+    if (!mLoadedOk) {
+        //: Shown after the error saying the profile's save could not be loaded
+        postMessage(QCoreApplication::translate("mudlet", "[ WARN ]  - Profile \"%1\" opened in offline mode, but its profile save could not be loaded.").arg(getName()));
+        return;
+    }
     const QString infoMsg = QCoreApplication::translate("mudlet", "[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(getName());
     postMessage(infoMsg);
 }
@@ -1335,7 +1341,9 @@ void Host::timerEvent(QTimerEvent* event)
 
 void Host::autoSaveMap()
 {
-    if (mpMap->isUnsaved()) {
+    // A map import, export or download pumps events while the map may be only part built; the map stays unsaved,
+    // so the next autosave writes the whole of it
+    if (mpMap->isUnsaved() && !mpMap->mapOperationInProgress()) {
 #if defined(DEBUG_MAPAUTOSAVE)
         QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
 #endif
@@ -3362,6 +3370,7 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
     mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
+    mTriggerUnit.refreshColorPatterns();
     emit mpMainConsoleModel->mNotifier.colorsChanged();
 }
 
@@ -6148,13 +6157,19 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         Discord::self()->setStateText(this, state.toString());
     }
 
-    auto largeImages = discordInfo.value(qsl("largeimage"));
-    if (largeImages != QJsonValue::Undefined) {
-        auto largeImage = largeImages.toArray().first();
-        if (largeImage != QJsonValue::Undefined) {
-            Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
-            Discord::self()->setLargeImage(this, largeImage.toString());
+    // The standard sends an icon key as a one-element array, but a bare string is taken too
+    const auto iconKey = [&discordInfo](const QString& field) -> QJsonValue {
+        const auto value = discordInfo.value(field);
+        if (value.isArray()) {
+            return value.toArray().first();
         }
+        return value.isString() ? value : QJsonValue(QJsonValue::Undefined);
+    };
+
+    const auto largeImage = iconKey(qsl("largeimage"));
+    if (largeImage != QJsonValue::Undefined) {
+        Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+        Discord::self()->setLargeImage(this, largeImage.toString());
     }
 
     auto largeImageText = discordInfo.value(qsl("largeimagetext"));
@@ -6163,13 +6178,10 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         Discord::self()->setLargeImageText(this, largeImageText.toString());
     }
 
-    auto smallImages = discordInfo.value(qsl("smallimage"));
-    if (smallImages != QJsonValue::Undefined) {
-        auto smallImage = smallImages.toArray().first();
-        if (smallImage != QJsonValue::Undefined) {
-            Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
-            Discord::self()->setSmallImage(this, smallImage.toString());
-        }
+    const auto smallImage = iconKey(qsl("smallimage"));
+    if (smallImage != QJsonValue::Undefined) {
+        Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
+        Discord::self()->setSmallImage(this, smallImage.toString());
     }
 
     auto smallImageText = discordInfo.value(qsl("smallimagetext"));
