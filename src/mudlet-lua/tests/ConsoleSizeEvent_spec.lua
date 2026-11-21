@@ -6,6 +6,7 @@
 describe("Tests sysConsoleSizeChanged for a mini console", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local reports, handler
+  local gutter = #"hh:mm:ss.zzz "
 
   before_each(function()
     reports = {}
@@ -20,8 +21,8 @@ describe("Tests sysConsoleSizeChanged for a mini console", function()
     killAnonymousEventHandler(handler)
   end)
 
-  local function grid(name)
-    return {name, getColumnCount(name), getRowCount(name), 0}
+  local function grid(name, timeStampWidth)
+    return {name, getColumnCount(name), getRowCount(name), timeStampWidth or 0}
   end
 
   local function made(base)
@@ -69,11 +70,9 @@ describe("Tests sysConsoleSizeChanged for a mini console", function()
     local name = made("specSizeTimeStamps")
     finally(function() deleteMiniConsole(name) end)
     reports = {}
-    local gutter = #"hh:mm:ss.zzz "
 
     assert.is_true(enableTimeStamps(name))
-    local shown = grid(name)
-    shown[4] = gutter
+    local shown = grid(name, gutter)
     assert.are.same({shown}, reports)
     assert.is_true(disableTimeStamps(name))
     assert.are.same({shown, grid(name)}, reports)
@@ -88,9 +87,7 @@ describe("Tests sysConsoleSizeChanged for a mini console", function()
     assert.is_true(enableTimeStamps(name))
     assert.are.same({}, reports)
     showWindow(name)
-    local shown = grid(name)
-    shown[4] = #"hh:mm:ss.zzz "
-    assert.are.same({shown}, reports)
+    assert.are.same({grid(name, gutter)}, reports)
   end)
 
   it("reports a resize made while it was hidden once it shows", function()
