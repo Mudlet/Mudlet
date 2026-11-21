@@ -2640,11 +2640,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 /*static*/ QString dlgConnectionProfiles::nameForCopy(const QString& name, const QStringList& takenNames)
 {
     qsizetype digitsStart = name.size();
-    while (digitsStart > 0) {
-        const QChar previous = name.at(digitsStart - 1);
-        if (previous < u'0' || previous > u'9') {
-            break;
-        }
+    while (digitsStart > 0 && name.at(digitsStart - 1) >= u'0' && name.at(digitsStart - 1) <= u'9') {
         --digitsStart;
     }
 
