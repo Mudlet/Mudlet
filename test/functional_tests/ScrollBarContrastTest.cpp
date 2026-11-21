@@ -19,6 +19,7 @@
 
 #include <QPainter>
 #include <QProxyStyle>
+#include <QScopeGuard>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QStyleFactory>
@@ -49,8 +50,7 @@ class ColourSchemeOnlyScrollBarStyle : public QProxyStyle
 {
 public:
     // Named for it as well as drawing like it: the console only paints a handle of
-    // its own when the Windows 11 style is the one that would otherwise draw it, and
-    // that is decided by the application style's name.
+    // its own over a base style named windows11.
     ColourSchemeOnlyScrollBarStyle() { setObjectName(qsl("windows11")); }
 
     void drawComplexControl(const ComplexControl control, const QStyleOptionComplex* pOption, QPainter* pPainter, const QWidget* pWidget) const override
@@ -74,6 +74,8 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
+    // One instance serves every console's scroll bars, and outlives each of them
+    QProxyStyle* mpConsoleScrollBarStyle = nullptr;
     const QString mHostname = "ScrollBarContrast-Test-Host";
     QString mPort;
     const QString mLocalhost = "localhost";
@@ -158,6 +160,33 @@ private:
         QTRY_VERIFY(mpHost->mainConsoleView()->mpScrollBar->maximum() > mpHost->mainConsoleView()->mpScrollBar->minimum());
     }
 
+    // With no handle colour the console leaves the whole bar to its base, and the
+    // stand-in fills it with black at 45% alpha: #8d8d8d over white.
+    bool standInDrawsTheBar()
+    {
+        QScrollBar* pScrollBar = mpHost->mainConsoleView()->mpScrollBar;
+        const QVariant handleColor = pScrollBar->property(csHandleColorProperty);
+        pScrollBar->setProperty(csHandleColorProperty, QVariant());
+        const QColor drawn = renderWidget(pScrollBar, Qt::white).pixelColor(handleRect(pScrollBar).center());
+        pScrollBar->setProperty(csHandleColorProperty, handleColor);
+        return qAbs(drawn.red() - 0x8d) <= 1 && drawn.green() == drawn.red() && drawn.blue() == drawn.red();
+    }
+
+protected:
+    // A console's scroll bar gets its style while it has no parent; once it sits under
+    // the console's style sheets, style() returns a style sheet style wrapped round it.
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::StyleChange) {
+            if (auto* pScrollBar = qobject_cast<QScrollBar*>(pWatched); pScrollBar && pScrollBar->testAttribute(Qt::WA_SetStyle)) {
+                if (auto* pStyle = qobject_cast<QProxyStyle*>(pScrollBar->style())) {
+                    mpConsoleScrollBarStyle = pStyle;
+                }
+            }
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -181,7 +210,9 @@ private slots:
 
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
+        qApp->installEventFilter(this);
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
+        qApp->removeEventFilter(this);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
@@ -197,11 +228,14 @@ private slots:
         QVERIFY(!mpHost->mainConsoleView()->mpScrollBar->size().isEmpty());
         fillConsoleSoTheHandleHasSomewhereToSit();
 
-        // The console keeps its own style, so this only reaches the scroll bar
-        // if the fix is absent. Never put back, which is safe only because every
-        // case in a grouped test binary runs in its own process.
-        qApp->setStyle(new ColourSchemeOnlyScrollBarStyle);
+        // Under the console's own style, where the Windows 11 style sits on Windows 11:
+        // QProxyStyle makes its base from the desktop's style, never the application's.
+        // Never put back, which is safe only because every case in a grouped test
+        // binary runs in its own process.
+        QVERIFY2(mpConsoleScrollBarStyle, "SETUP: the console's scroll bar was given no proxy style of its own");
+        mpConsoleScrollBarStyle->setBaseStyle(new ColourSchemeOnlyScrollBarStyle);
         QTest::qWait(50ms);
+        QVERIFY2(standInDrawsTheBar(), "SETUP: the stand-in did not reach the console's scroll bar");
     }
 
     void cleanupTestCase()
@@ -262,10 +296,13 @@ private slots:
         mudlet::smpDebugArea->show();
         QTest::qWait(100ms);
 
+        // Text to scroll through: the console sets the bar's range from its own lines,
+        // and with none there is no handle to measure, only the groove.
+        for (int i = 1; i <= 500; ++i) {
+            mudlet::smpDebugConsole->print(qsl("scroll bar contrast line %1\n").arg(i));
+        }
         QScrollBar* pScrollBar = mudlet::smpDebugConsole->mpScrollBar;
-        pScrollBar->setRange(0, 100);
-        pScrollBar->setPageStep(10);
-        pScrollBar->setValue(50);
+        QTRY_VERIFY(pScrollBar->maximum() > pScrollBar->minimum());
 
         const QColor background = mudlet::smpDebugConsole->getConsoleBgColor();
         const QRect handle = handleRect(pScrollBar);
@@ -392,19 +429,38 @@ private slots:
         QVERIFY2(painted > 0, "a profile style sheet no longer reaches the console's scroll bar");
     }
 
+    // On Windows the light appearance puts the application on Fusion, while the
+    // console's bar stays on the Windows 11 base, so the handle has to be there
+    // whatever style the application is on.
+    void test_handleStandsOutOnABlackConsoleInBothAppearances()
+    {
+        const auto appearanceBefore = mudlet::self()->mAppearance;
+        auto restore = qScopeGuard([appearanceBefore]() {
+            mudlet::self()->setAppearance(appearanceBefore);
+        });
+
+        const QList<QPair<QString, enums::Appearance>> appearances{{qsl("light"), enums::Appearance::light}, {qsl("dark"), enums::Appearance::dark}};
+        for (const auto& appearance : appearances) {
+            mudlet::self()->setAppearance(appearance.second);
+            QTest::qWait(50ms);
+            // Fusion's own handle clears 3:1 as well, so the check below can only fail while the stand-in draws the bar
+            QVERIFY2(standInDrawsTheBar(), qPrintable(qsl("the %1 appearance took the stand-in off the console's scroll bar").arg(appearance.first)));
+
+            const qreal contrast = handleContrastOn(Qt::black);
+            QVERIFY2(contrast >= 3.0, qPrintable(qsl("handle contrast against a black console in the %1 appearance was only %2:1").arg(appearance.first, QString::number(contrast, 'f', 2))));
+        }
+    }
+
     // The other half of the fix: every other style draws a handle that is visible on
     // its own groove and carries hover and pressed feedback with it, so the console
     // leaves it alone - and the bar then renders identically whether it has been
     // given a handle colour or not.
-    //
-    // Last, because it swaps the application style out and the stand-in it puts back
-    // is not the one the cases above were given.
     void test_anOrdinaryStyleKeepsItsOwnHandle()
     {
         runLua(qsl("setBackgroundColor(0, 0, 0)"));
         QStyle* pOrdinaryStyle = QStyleFactory::create(qsl("fusion"));
         QVERIFY2(pOrdinaryStyle, "Fusion is built into Qt on every platform, so this should not happen");
-        qApp->setStyle(pOrdinaryStyle);
+        mpConsoleScrollBarStyle->setBaseStyle(pOrdinaryStyle);
         QTest::qWait(50ms);
 
         QScrollBar* pScrollBar = mpHost->mainConsoleView()->mpScrollBar;
@@ -416,7 +472,7 @@ private slots:
         const QImage styleOnly = renderScrollBarOn(Qt::black);
         pScrollBar->setProperty(csHandleColorProperty, handleColor);
 
-        qApp->setStyle(new ColourSchemeOnlyScrollBarStyle);
+        mpConsoleScrollBarStyle->setBaseStyle(new ColourSchemeOnlyScrollBarStyle);
         QTest::qWait(50ms);
         QVERIFY2(painted == styleOnly, "the console painted a handle of its own over a style whose handle was fine as it was");
     }
