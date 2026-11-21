@@ -730,8 +730,7 @@ function speedwalk(dirString, backwards, delay, show)
   for k,v in pairs(long_dir) do
     dirString = dirString:gsub(k,v)
   end
-  -- match only real direction names, longest first, so "nne" is n then ne
-  local steps = {}
+  -- longest name first, so "nne" is n then ne; a lone i or o is sent as is, but has no opposite to walk back
   local position = 1
   while true do
     local count, start = dirString:match("([0-9]*)()[neswudio]", position)
@@ -740,22 +739,19 @@ function speedwalk(dirString, backwards, delay, show)
     end
     local direction = dirString:match("^out", start) or dirString:match("^in", start)
       or dirString:match("^[ns][ew]", start) or dirString:sub(start, start)
-    steps[#steps + 1] = {direction, count == "" and 1 or tonumber(count)}
+    for i = 1, tonumber(count) or 1 do
+      walklist[#walklist + 1] = direction
+    end
     position = start + #direction
   end
-  local reversedir = {n = "s", ne = "sw", e = "w", se = "nw", s = "n", sw = "ne", w = "e", nw = "se", u = "d", d = "u", ["in"] = "out", out = "in"}
-  local first, last, increment = 1, #steps, 1
   if backwards then
-    first, last, increment = #steps, 1, -1
-  end
-  for index = first, last, increment do
-    local direction, count = unpack(steps[index])
-    if backwards then
-      direction = reversedir[direction]
-    end
-    if direction then
-      for i = 1, count do
-        walklist[#walklist + 1] = direction
+    local reversedir = {n = "s", ne = "sw", e = "w", se = "nw", s = "n", sw = "ne", w = "e", nw = "se", u = "d", d = "u", ["in"] = "out", out = "in"}
+    local forwards = walklist
+    walklist = {}
+    for index = #forwards, 1, -1 do
+      local opposite = reversedir[forwards[index]]
+      if opposite then
+        walklist[#walklist + 1] = opposite
       end
     end
   end

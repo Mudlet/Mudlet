@@ -382,6 +382,14 @@ describe("Tests Other.lua functions", function()
       sent = {}
       speedwalk("eewwen")
       assert.are.same({"e", "e", "w", "w", "e", "n"}, sent)
+
+      sent = {}
+      speedwalk("nu")
+      assert.are.same({"n", "u"}, sent)
+
+      sent = {}
+      speedwalk("nu", true)
+      assert.are.same({"d", "s"}, sent)
     end)
 
     it("walks each of the twelve directions back the opposite way", function()
