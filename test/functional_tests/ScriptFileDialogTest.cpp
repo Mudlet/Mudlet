@@ -143,7 +143,7 @@ private:
         return value;
     }
 
-    // Made, as a dialog given a missing folder opens somewhere else and would hide a read of the setting
+    // Created on disk: a dialog given a missing folder opens elsewhere, which would hide a read of the setting
     QString seedLastFileDialogLocation()
     {
         const QString lastDir = qsl("%1/lastDir").arg(QDir(mPickDir.path()).absolutePath());
