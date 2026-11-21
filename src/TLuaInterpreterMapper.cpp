@@ -424,7 +424,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     case 3:
                         ++zCount;
                         break;
-                    default:; // No-op
+                    default: // No-op
+                        break;
                     }
                 }
                 lua_pop(L, 1);
@@ -540,7 +541,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                 case 3:
                     z.append(static_cast<int>(lua_tonumber(L, -1)));
                     break;
-                default:; // No-op
+                default: // No-op
+                    break;
                 }
                 lua_pop(L, 1);
             }
@@ -759,10 +761,19 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Optional viewId parameter for secondary views
+    // Optional: a secondary view's id, or for the main view whether the player moves there too (false only pans to it)
     int viewId = 0;
-    if (lua_gettop(L) >= 2) {
-        viewId = getVerifiedInt(L, __func__, 2, "view id", true);
+    bool movePlayer = true;
+    if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+        if (lua_isboolean(L, 2)) {
+            movePlayer = lua_toboolean(L, 2);
+        } else if (lua_isnumber(L, 2)) {
+            // Verified, so an id beyond int's range is refused rather than narrowed to 0, which would move the player
+            viewId = getVerifiedInt(L, __func__, 2, "view id");
+        } else {
+            errorArgumentType(L, __func__, 2, "view id or movePlayer", "number or boolean", true);
+            return lua_error(L);
+        }
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -789,6 +800,14 @@ int TLuaInterpreter::centerview(lua_State* L)
     // Primary mapper behavior (original code)
     if (!host.mapOpen()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+    }
+
+    if (!movePlayer) {
+        if (auto [centered, refusal] = host.mapViewFrontend()->centerViewOn(roomId); !centered) {
+            return warnArgumentValue(L, __func__, refusal);
+        }
+        lua_pushboolean(L, true);
+        return 1;
     }
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
@@ -3122,9 +3141,11 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto& host = getHostFromLua(L);
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
+    // L may be a coroutine, which can be suspended or collected by the time the map paints
+    lua_State* globalL = host.getLuaInterpreter()->getLuaGlobalState();
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
-            [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+            [=, L = globalL](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
                 Q_UNUSED(infoColor)
                 const ScriptCallerScope callerScope(*pHost->getLuaInterpreter(), false);
                 const int callerStackTop = lua_gettop(L);
@@ -3171,7 +3192,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                 lua_settop(L, callerStackTop);
                 return MapInfoProperties{isBold, isItalic, text, color};
             },
-            L,
+            globalL,
             callback);
 
     host.mpMap->updateArea(-1);
@@ -3206,6 +3227,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
     pR->calcRoomDimensions();
+    host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(pR->getArea());
 
     lua_pushboolean(L, true);
