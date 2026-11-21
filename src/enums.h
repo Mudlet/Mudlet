@@ -22,7 +22,7 @@
 
 #include <QObject>
 
-// helper Qt class to declare enums and flags throughout Mudlet that don't have a more specific place elsewhere. 
+// helper Qt class to declare enums and flags throughout Mudlet that don't have a more specific place elsewhere.
 // This class should not include any other files keep compile times down
 class enums : public QObject {
     Q_OBJECT
@@ -48,8 +48,8 @@ public:
         EditorSearchOptionNone = 0x0,
         EditorSearchOptionCaseSensitive = 0x1,
         EditorSearchOptionIncludeVariables = 0x2,
-        EditorSearchOptionWholeWord = 0x4 /*,
-        EditorSearchOptionRegExp = 0x8 */
+        EditorSearchOptionWholeWord = 0x4,
+        // EditorSearchOptionRegExp = 0x8
     };
     Q_DECLARE_FLAGS(EditorSearchOptions, EditorSearchOption)
 

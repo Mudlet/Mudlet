@@ -143,6 +143,7 @@
         <file>icons/editor-variables-fill.svg</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
+        <file>icons/fablerift_480x120.png</file>
         <file>icons/face-plain.png</file>
         <file>icons/face-sad.png</file>
         <file>icons/face-smile.png</file>
@@ -247,7 +248,7 @@
         <file>icons/Slothmud.png</file>
         <file>icons/starmourn.png</file>
         <file>icons/solid-line.png</file>
-        <file>icons/stickmud_icon.jpg</file>
+        <file>icons/stickmud_480x120.png</file>
         <file>icons/system-users.png</file>
         <file>icons/toolbar-about.svg</file>
         <file>icons/toolbar-about-update.svg</file>
