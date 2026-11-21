@@ -738,6 +738,25 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 #endif
 }
 
+std::pair<bool, QString> dlgMapper::centerViewOn(const int roomId)
+{
+    auto centered = mp2dMap->centerview(roomId);
+    if (!centered.first) {
+        return centered;
+    }
+    // The pan is the later request, so a recentre on the player still pending from earlier would undo it at the
+    // next 2D frame. The 3D view is not panned by this, so while it shows, its pending recentre is left to it.
+    if (!showing3DView()) {
+        mpMap->mNewMove = false;
+    }
+    // Set by text, which is not an activation, so the chooser does not switch the area a second time
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mp2dMap->getAreaId());
+    if (!areaName.isEmpty()) {
+        comboBox_showArea->setCurrentText(areaName);
+    }
+    return centered;
+}
+
 int dlgMapper::shownAreaId() const
 {
 #if defined(INCLUDE_3DMAPPER)

@@ -79,6 +79,7 @@ public:
     // The area the view follows, which the next render() draws
     int shownAreaId() const override { return mRecentre ? mFollowedAreaId : mView.mAreaID; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
+    std::pair<bool, QString> centerViewOn(int roomId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;
     // As dlgMapper answers while it shows its 2D map, the only one this keeps
