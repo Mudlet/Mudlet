@@ -501,6 +501,42 @@ private slots:
         hangUp(served, qsl("Kappa"));
     }
 
+    // The handshake of a call we place tells the peer where to call us back.
+    // That is wherever the server is listening - a port the OS picked, here -
+    // and not the 4050 saved in the profile, or the peer would record a port
+    // nobody answers on and pass it on in its connection lists.
+    void test_anOutgoingCallGivesThePortTheServerListensOn()
+    {
+        QVERIFY(server()->isListening());
+        QVERIFY2(mPort != mpHost->getMMCPPort(), "the server happens to listen on the saved port, so this case cannot tell them apart");
+
+        QTcpServer callee;
+        QVERIFY(callee.listen(QHostAddress::LocalHost, 0));
+        QVERIFY(server()->call(qsl("127.0.0.1"), callee.serverPort()).first);
+        QVERIFY2(QTest::qWaitFor(
+                         [&callee]() {
+                             return callee.hasPendingConnections();
+                         },
+                         5s),
+                 "the call never reached the callee");
+        QTcpSocket* pSocket = callee.nextPendingConnection();
+        QVERIFY(pSocket);
+
+        const QByteArray expected = "CHAT:" + csListenerName + "\n127.0.0.1" + QByteArray::number(mPort).leftJustified(csMMCPPortFieldWidth, ' ');
+        QByteArray handshake;
+        QVERIFY2(QTest::qWaitFor(
+                         [pSocket, &handshake, &expected]() {
+                             handshake += pSocket->readAll();
+                             return handshake.size() >= expected.size();
+                         },
+                         5s),
+                 handshake.constData());
+        QCOMPARE(handshake, expected);
+
+        // Unanswered, the call is dropped rather than left waiting for a reply
+        pSocket->abort();
+    }
+
     // Last, since it takes the server down
     void test_stoppingTheServer()
     {
