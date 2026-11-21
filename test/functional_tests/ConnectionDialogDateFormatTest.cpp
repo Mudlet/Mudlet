@@ -59,8 +59,8 @@ private:
         for (const QChar c : format) {
             if (c == u'\'') {
                 quoted = !quoted;
-            }
-            if (quoted || c == u'\'' || (c.isLetter() && c != u't')) {
+                fields.append(c);
+            } else if (quoted || (c.isLetter() && c != u't')) {
                 fields.append(c);
             }
         }
