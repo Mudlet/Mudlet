@@ -641,7 +641,15 @@ local gaugeText = [[background-color: transparent; padding-left: 8px; padding-bo
 local paletteGlyph = "◐"
 local pictureGlyph = "▣"
 
-local mapPlaceholderText = "Your map will appear&lt;br&gt;here as you explore"
+-- The generic mapper maps nothing until the player has set it up for the game,
+-- so with it the map does not simply appear as they explore
+-- sysUninstallPackage arrives while the package is still listed, hence `leaving`
+local function mapPlaceholderText(leaving)
+  if leaving ~= "generic_mapper" and table.contains(getPackages(), "generic_mapper") then
+    return "No map yet&lt;br&gt;Type &lt;b&gt;map basics&lt;/b&gt;&lt;br&gt;to start one"
+  end
+  return "Your map will appear&lt;br&gt;here as you explore"
+end
 
 -- Every stylesheet the dock paints with, rebuilt from `theme` whenever the look
 -- changes; the widgets are then repainted from here.
@@ -2017,7 +2025,7 @@ function BaseUI.restyle()
     BaseUI.mapPlaceholder:setFont(theme.font)
     -- after the setFont, not before: that re-echoes in the colour the label already
     -- had, so the new one has to go on afterwards
-    BaseUI.mapPlaceholder:echo(mapPlaceholderText, theme.textDim)
+    BaseUI.mapPlaceholder:echo(mapPlaceholderText(), theme.textDim)
   end
   for _, key in ipairs(sectionOrder) do
     local section = BaseUI.sections[key]
@@ -2134,6 +2142,16 @@ function BaseUI.standAside(_, packageName)
   end
 end
 
+function BaseUI.refreshMapPlaceholder(packageName, leaving)
+  if packageName == "generic_mapper" and BaseUI.mapPlaceholder then
+    BaseUI.mapPlaceholder:echo(mapPlaceholderText(leaving and packageName), theme.textDim)
+  end
+end
+
+function BaseUI.mapperInstalled(_, packageName)
+  BaseUI.refreshMapPlaceholder(packageName, false)
+end
+
 -- An uninstall of this package and one of the game's own interface arrive on the
 -- same event, so they are told apart here rather than in a handler each.
 function BaseUI.packageRemoved(_, packageName)
@@ -2141,6 +2159,7 @@ function BaseUI.packageRemoved(_, packageName)
     BaseUI.uninstall()
     return
   end
+  BaseUI.refreshMapPlaceholder(packageName, true)
   BaseUI.serverGuiRemoved(nil, packageName)
 end
 
@@ -2225,6 +2244,12 @@ end
 -- getRooms() copies out every room name, so most maps get answered by room 1
 function BaseUI.mapHasData()
   return roomExists(1) or next(getRooms()) ~= nil
+end
+
+function BaseUI.mapPlaceholderClicked()
+  if table.contains(getPackages(), "generic_mapper") then
+    expandAlias("map basics")
+  end
 end
 
 function BaseUI.createMapper()
@@ -2356,7 +2381,8 @@ function BaseUI.build()
       format = "c",
     }, BaseUI.sections.map)
     BaseUI.mapPlaceholder:setStyleSheet(css.placeholder)
-    BaseUI.mapPlaceholder:echo(mapPlaceholderText, theme.textDim)
+    BaseUI.mapPlaceholder:echo(mapPlaceholderText(), theme.textDim)
+    BaseUI.mapPlaceholder:setClickCallback(BaseUI.mapPlaceholderClicked)
   end
   BaseUI.createSection("chat")
   BaseUI.chats = {}
@@ -3381,6 +3407,7 @@ onEvent("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
 onEvent("sysWindowResizeEvent", "BaseUI.fitDock")
 onEvent("sysServerGuiInstalled", "BaseUI.standAside")
 onEvent("sysUninstallPackage", "BaseUI.packageRemoved")
+onEvent("sysInstallPackage", "BaseUI.mapperInstalled")
 for _, stat in ipairs(msdpStats) do
   onEvent("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
   onEvent("msdp." .. stat.max, "BaseUI.updateMsdpVitals")

@@ -217,6 +217,8 @@ public:
     // Lays the console out again for Host's current borders and raises sysWindowResizeEvent with the room they leave.
     virtual void applyBorders() = 0;
     virtual QFont displayFont() const = 0;
+    // The font of the main console's text, which a profile style sheet can make other than displayFont()
+    virtual QFont mainTextFont() const { return displayFont(); }
     virtual void setFont(const QFont& font) = 0;
     virtual void setFontSize(int size) = 0;
 
@@ -348,8 +350,8 @@ public:
     // off releases that and makes the command line its focus proxy again.
     virtual void setCaretMode(bool enabled) = 0;
     // The mouse pointer's position relative to the frame labels are placed in, below and right of any button
-    // bars; it can lie outside that frame.
-    virtual QPoint mousePosition() const = 0;
+    // bars; it can lie outside that frame. None from a frontend with no window until its app says where it is.
+    virtual std::optional<QPoint> mousePosition() const = 0;
     // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
     // while it is on the text, as in caret navigation, or in another window.
     virtual bool hasKeyboardFocus() const = 0;
