@@ -132,6 +132,24 @@ private:
         return made;
     }
 
+    // what each case that queues a copy leaves behind, should it fail before the copy is made
+    void releaseQueuedCopy() const
+    {
+        dialog()->mKeychainOperationProfile.clear();
+        dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
+        dialog()->clearKeychainWait();
+        mudlet::self()->setStorePasswordsSecurely(false);
+    }
+
+    bool waitForPasswordReadsToSettle() const
+    {
+        return QTest::qWaitFor(
+                [this]() {
+                    return dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled();
+                },
+                5s);
+    }
+
     bool waitForTheCopy() const
     {
         return QTest::qWaitFor(
@@ -151,10 +169,7 @@ private:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
         mudlet::self()->setStorePasswordsSecurely(true);
         const auto restore = qScopeGuard([this, profile, copiedProfile]() {
-            dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
-            dialog()->clearKeychainWait();
-            mudlet::self()->setStorePasswordsSecurely(false);
+            releaseQueuedCopy();
             CredentialManager::removeCredential(profile, qsl("character"));
             CredentialManager::removeCredential(copiedProfile, qsl("character"));
         });
@@ -163,7 +178,7 @@ private:
         QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("4000")).first);
         dialog()->fillout_form();
         selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        QVERIFY(waitForPasswordReadsToSettle());
         selectProfile(profile);
         // stands in for the read slot_loadPasswordAsync() starts, which then finds this one in flight and leaves it be
         dialog()->mKeychainOperationProfile = profile;
@@ -508,10 +523,7 @@ private slots:
         const int shownTab = dialog()->mpTabBar->currentIndex();
         const QStringList listedBefore = profileDirsOnDisk();
         const auto restore = qScopeGuard([this, game, shownTab, listedBefore]() {
-            dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
-            dialog()->clearKeychainWait();
-            mudlet::self()->setStorePasswordsSecurely(false);
+            releaseQueuedCopy();
             CredentialManager::removeCredential(game, qsl("character"));
             for (const QString& made : profileDirsMadeSince(listedBefore)) {
                 CredentialManager::removeCredential(made, qsl("character"));
@@ -521,7 +533,7 @@ private slots:
         });
         dialog()->mpTabBar->setCurrentIndex(dlgConnectionProfiles::scmAllGamesTab);
         selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        QVERIFY(waitForPasswordReadsToSettle());
         selectProfile(game);
         dialog()->mKeychainOperationProfile = game;
 
@@ -548,14 +560,11 @@ private slots:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
         mudlet::self()->setStorePasswordsSecurely(true);
         const auto restore = qScopeGuard([this]() {
-            dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
-            dialog()->clearKeychainWait();
-            mudlet::self()->setStorePasswordsSecurely(false);
+            releaseQueuedCopy();
         });
         dialog()->fillout_form();
         selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        QVERIFY(waitForPasswordReadsToSettle());
         selectProfile(profile);
         dialog()->mKeychainOperationProfile = profile;
 
@@ -577,18 +586,15 @@ private slots:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
         mudlet::self()->setStorePasswordsSecurely(true);
         const auto restore = qScopeGuard([this, profile, settingsCopy]() {
-            dialog()->mKeychainOperationProfile.clear();
             dialog()->mDeferredPasswordLoadProfile.clear();
-            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
-            dialog()->clearKeychainWait();
-            mudlet::self()->setStorePasswordsSecurely(false);
+            releaseQueuedCopy();
             CredentialManager::removeCredential(profile, qsl("character"));
             CredentialManager::removeCredential(settingsCopy, qsl("character"));
         });
         QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), password));
         dialog()->fillout_form();
         selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        QVERIFY(waitForPasswordReadsToSettle());
         dialog()->mKeychainOperationProfile = qsl("profile-being-read");
         selectProfile(profile);
         QTRY_COMPARE(dialog()->mDeferredPasswordLoadProfile, profile);
@@ -612,14 +618,11 @@ private slots:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
         mudlet::self()->setStorePasswordsSecurely(true);
         const auto restore = qScopeGuard([this]() {
-            dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
-            dialog()->clearKeychainWait();
-            mudlet::self()->setStorePasswordsSecurely(false);
+            releaseQueuedCopy();
         });
         dialog()->fillout_form();
         selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        QVERIFY(waitForPasswordReadsToSettle());
         selectProfile(profile);
         dialog()->mKeychainOperationProfile = profile;
 
@@ -644,16 +647,17 @@ private slots:
         const auto restore = qScopeGuard([this, testMode]() {
             CredentialManager::jobStartHookForTesting() = nullptr;
             CredentialManager::forgetStoreRefusal();
-            testMode.isNull() ? qunsetenv("MUDLET_TEST_MODE") : qputenv("MUDLET_TEST_MODE", testMode);
-            dialog()->mKeychainOperationProfile.clear();
-            dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
-            dialog()->clearKeychainWait();
-            mudlet::self()->setStorePasswordsSecurely(false);
+            if (testMode.isNull()) {
+                qunsetenv("MUDLET_TEST_MODE");
+            } else {
+                qputenv("MUDLET_TEST_MODE", testMode);
+            }
+            releaseQueuedCopy();
         });
         mudlet::self()->setStorePasswordsSecurely(true);
         dialog()->fillout_form();
         selectTestProfile();
-        QTRY_VERIFY(dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled());
+        QVERIFY(waitForPasswordReadsToSettle());
         // in test mode the credential store never asks the keychain
         qunsetenv("MUDLET_TEST_MODE");
         CredentialManager::jobStartHookForTesting() = [](QKeychain::Job* job) {
