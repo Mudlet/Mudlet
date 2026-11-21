@@ -57,7 +57,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <math.h>
 #include <utility>
 
@@ -2556,7 +2555,12 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
-    if (location > 0 && location < std::numeric_limits<int>::max()) {
+    // The toolbar is saved with the profile, so one made at a location no bar
+    // shows would keep its name taken where Lua cannot remove it
+    if (location < 0 || location > 3) {
+        return warnArgumentValue(L, __func__, qsl("location %1 invalid, it should be 0 (top), 1 (left), 2 (right) or 3 (floating)").arg(location));
+    }
+    if (location > 0) {
         location++;
     }
     Host& host = getHostFromLua(L);
@@ -3275,7 +3279,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     }
     bool offline = false;
 
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 

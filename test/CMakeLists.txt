@@ -266,6 +266,17 @@ add_executable(IrcMessageFormatterTest
 )
 target_include_directories(IrcMessageFormatterTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(IrcMessageFormatterTest PRIVATE Qt6::Test communi)
+# Compiled here at build time: translations/ only runs lrelease when CMake configures,
+# so its copy goes stale after an edit to the .ts
+find_package(Qt6LinguistTools 6.8.2 REQUIRED)
+set(IRC_TEST_EN_US_QM "${CMAKE_CURRENT_BINARY_DIR}/mudlet_en_US.qm")
+add_custom_command(
+    OUTPUT ${IRC_TEST_EN_US_QM}
+    COMMAND Qt6::lrelease -silent ${CMAKE_SOURCE_DIR}/translations/translated/mudlet_en_US.ts -qm ${IRC_TEST_EN_US_QM}
+    DEPENDS ${CMAKE_SOURCE_DIR}/translations/translated/mudlet_en_US.ts
+)
+target_sources(IrcMessageFormatterTest PRIVATE ${IRC_TEST_EN_US_QM})
+target_compile_definitions(IrcMessageFormatterTest PRIVATE MUDLET_EN_US_QM="${IRC_TEST_EN_US_QM}")
 add_test(NAME IrcMessageFormatterTest COMMAND $<TARGET_FILE:IrcMessageFormatterTest>)
 set_tests_properties(IrcMessageFormatterTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
