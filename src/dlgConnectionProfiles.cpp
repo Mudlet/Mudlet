@@ -210,6 +210,11 @@ QString dlgConnectionProfiles::profileFolderPath(const QString& profilesPath, co
     return candidate;
 }
 
+static QChar charAt(const QString& text, const qsizetype index)
+{
+    return index < text.size() ? text.at(index) : QChar();
+}
+
 // The zone takes up room in the list of a profile's saves and tells nothing there, and formatting
 // it sends every entry through the platform's time zone database. Since Qt 6.8 a locale writes it
 // as "tttt", or "t" through "ttt" for shorter forms, so the whole unquoted run has to go.
@@ -220,19 +225,19 @@ QString dlgConnectionProfiles::dateTimeFormatWithoutZone(const QString& format)
     bool quoted = false;
     for (qsizetype i = 0; i < format.size(); ++i) {
         const QChar c = format.at(i);
-        if (c == QLatin1Char('\'')) {
+        if (c == u'\'') {
             quoted = !quoted;
         }
-        if (quoted || c != QLatin1Char('t')) {
+        if (quoted || c != u't') {
             result.append(c);
             continue;
         }
 
-        while (i + 1 < format.size() && format.at(i + 1) == QLatin1Char('t')) {
+        while (charAt(format, i + 1) == u't') {
             ++i;
         }
-        const bool bracketed = !result.isEmpty() && (result.back() == QLatin1Char('(') || result.back() == QLatin1Char('[')) && i + 1 < format.size()
-                               && (format.at(i + 1) == QLatin1Char(')') || format.at(i + 1) == QLatin1Char(']'));
+        const QChar after = charAt(format, i + 1);
+        const bool bracketed = (result.endsWith(u'(') || result.endsWith(u'[')) && (after == u')' || after == u']');
         if (bracketed) {
             result.chop(1);
             ++i;
@@ -240,11 +245,11 @@ QString dlgConnectionProfiles::dateTimeFormatWithoutZone(const QString& format)
         while (!result.isEmpty() && result.back().isSpace()) {
             result.chop(1);
         }
-        if (result.endsWith(QLatin1Char(','))) {
+        if (result.endsWith(u',')) {
             result.chop(1);
         }
         if (result.isEmpty()) {
-            while (i + 1 < format.size() && format.at(i + 1).isSpace()) {
+            while (charAt(format, i + 1).isSpace()) {
                 ++i;
             }
         }

@@ -41,9 +41,9 @@ private:
     {
         bool quoted = false;
         for (const QChar c : format) {
-            if (c == QLatin1Char('\'')) {
+            if (c == u'\'') {
                 quoted = !quoted;
-            } else if (!quoted && c == QLatin1Char('t')) {
+            } else if (!quoted && c == u't') {
                 return true;
             }
         }
