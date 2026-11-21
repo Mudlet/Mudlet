@@ -180,13 +180,11 @@ private slots:
     void test_aRelistFromTheRepositoryListsTheMatchingInstalledPackages()
     {
         mpManager->pushButton_explore->click();
-        mpManager->lineEdit_searchBar->setText(qsl("a"));
+        mpManager->lineEdit_searchBar->setText(qsl("titled"));
         emit mpHost->signal_packageListChanged();
 
-        const QStringList listed = listedNames();
         QVERIFY(mpManager->pushButton_installed->isChecked());
-        QVERIFY(!listed.contains(qsl("alpha")));
-        QVERIFY(listed.contains(mNamedPackage));
+        QCOMPARE(listedNames(), QStringList{mNamedPackage});
     }
 
     void test_theRepositoryIsListedAlphabeticallyWhateverTheCase()
