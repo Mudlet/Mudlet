@@ -10764,6 +10764,18 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
     }
 
     int currentLinkAtStart = getLinkIndexAt(fromLine, fromColumn);
+    // A link's cells run on together, so a note's verdict is asked once for the run rather than for each cell
+    int lastNote = 0;
+    const auto stopsAt = [this, currentLinkAtStart, &lastNote](const int linkIdx) {
+        if (linkIdx <= 0 || linkIdx == currentLinkAtStart || linkIdx == lastNote) {
+            return false;
+        }
+        if (linkIsNote(linkIdx)) {
+            lastNote = linkIdx;
+            return false;
+        }
+        return true;
+    };
 
     for (int line = fromLine; line < lineCount; ++line) {
         const auto& bufferLine = buffer.at(line);
@@ -10771,7 +10783,7 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
 
         for (int col = startCol; col < static_cast<int>(bufferLine.size()); ++col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
+            if (stopsAt(linkIdx)) {
                 outLine = line;
                 outColumn = col;
                 return true;
@@ -10786,7 +10798,7 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
 
         for (int col = 0; col < endCol; ++col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
+            if (stopsAt(linkIdx)) {
                 outLine = line;
                 outColumn = col;
                 if (wrapped) {
@@ -10821,6 +10833,18 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
     }
 
     int currentLinkAtStart = getLinkIndexAt(fromLine, fromColumn);
+    // A link's cells run on together, so a note's verdict is asked once for the run rather than for each cell
+    int lastNote = 0;
+    const auto stopsAt = [this, currentLinkAtStart, &lastNote](const int linkIdx) {
+        if (linkIdx <= 0 || linkIdx == currentLinkAtStart || linkIdx == lastNote) {
+            return false;
+        }
+        if (linkIsNote(linkIdx)) {
+            lastNote = linkIdx;
+            return false;
+        }
+        return true;
+    };
 
     for (int line = fromLine; line >= 0; --line) {
         const auto& bufferLine = buffer.at(line);
@@ -10828,7 +10852,7 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
 
         for (int col = startCol; col >= 0; --col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
+            if (stopsAt(linkIdx)) {
                 // Found a different link — now find its start (first column with this linkIdx on this line)
                 int linkStart = col;
                 while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
@@ -10848,7 +10872,7 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
 
         for (int col = startCol; col >= 0; --col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
+            if (stopsAt(linkIdx)) {
                 int linkStart = col;
                 while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
                     --linkStart;
