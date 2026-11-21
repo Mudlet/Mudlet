@@ -26,7 +26,6 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -37,8 +36,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorPlacementPersistenceTest : public QObject
 {
@@ -96,7 +93,7 @@ private slots:
     void test_editorOpensAtTheStoredPosition()
     {
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
@@ -117,7 +114,7 @@ private slots:
         mpEditor->hide();
         QCoreApplication::processEvents();
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         report("after hide and show");
 
         QVERIFY2(mpEditor->pos() == mDraggedPos, qPrintable(qsl("The editor was left at %1 and came back at %2 - it is moved on every show").arg(describe(mDraggedPos), describe(mpEditor->pos()))));
@@ -133,7 +130,7 @@ private slots:
         mpEditor->hide();
         QCoreApplication::processEvents();
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         report("after hide and show via the trigger slot");
 
         QVERIFY2(mpEditor->pos() == mDraggedPos, qPrintable(qsl("The editor was left at %1 and the trigger slot brought it back at %2").arg(describe(mDraggedPos), describe(mpEditor->pos()))));
@@ -157,7 +154,7 @@ private slots:
         QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog.isNull(), "The editor should have been destroyed");
 
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "A fresh editor should have been created");
         report("after a fresh construction");

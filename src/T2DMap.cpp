@@ -650,6 +650,7 @@ void T2DMap::init()
     flushSymbolPixmapCache();
     flushTextLabelPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    mDirectionalExitLines = TMapPainter::directionalExitLinesEnabled();
 }
 
 void T2DMap::scheduleRender()
@@ -993,33 +994,40 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
         return {false, qsl("room %1 references non-existent area %2").arg(roomId).arg(areaId)};
     }
 
-    // For secondary views, don't raise sysMapAreaChanged event
-    if (!mIsSecondaryView) {
-        TEvent areaViewedChangedEvent{};
-        if (mAreaID != areaId) {
-            areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            areaViewedChangedEvent.mArgumentList.append(QString::number(areaId));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaID));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        }
-
-        if (!areaViewedChangedEvent.mArgumentList.isEmpty() && mpHost) {
-            mpHost->raiseEvent(areaViewedChangedEvent);
-        }
-    }
-
-    if (mAreaID != areaId) {
+    const int previousAreaId = mAreaID;
+    if (previousAreaId != areaId) {
         pruneRoomSelectionToArea(areaId);
     }
     mAreaID = areaId;
     mLastViewedAreaID = areaId;
     mRoomID = roomId;
+    if (!mIsSecondaryView) {
+        // The main view follows the player unless panned away from the room it last followed, so this pans: the
+        // view stays here until the player moves. The painter falls back to the map's first room as T2DMap does
+        int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+        if (!mpMap->mpRoomDB->getRoom(playerRoomId) && !mpMap->mpRoomDB->isEmpty()) {
+            playerRoomId = mpMap->mpRoomDB->getRoomMap().constBegin().key();
+        }
+        mRoomID = playerRoomId;
+        mShiftMode = true;
+    }
     mMapCenterX = pR->x();
     mMapCenterY = -pR->y(); // Map y coordinates are reversed
     mMapCenterZ = pR->z();
     xyzoom = mpMap->mpRoomDB->get2DMapZoom(areaId);
+
+    // Raised once the view shows the new area, so its handlers read that one; and as a handler may delete the room,
+    // nothing below reads pR. Secondary views raise none.
+    if (!mIsSecondaryView && previousAreaId != areaId && mpHost) {
+        TEvent areaViewedChangedEvent{};
+        areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        areaViewedChangedEvent.mArgumentList.append(QString::number(areaId));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        areaViewedChangedEvent.mArgumentList.append(QString::number(previousAreaId));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(areaViewedChangedEvent);
+    }
 
     isCenterViewCall = true;
     update();
@@ -1054,6 +1062,7 @@ TMapPainter::View T2DMap::painterView() const
     view.mBubbleMode = mBubbleMode;
     view.mMapperUseAntiAlias = mMapperUseAntiAlias;
     view.mLargeAreaExitArrows = mLargeAreaExitArrows;
+    view.mDirectionalExitLines = mDirectionalExitLines;
     view.mPHighlight = mPHighlight;
     view.mPick = mPick;
     view.mStartSpeedWalk = mStartSpeedWalk;
@@ -1301,16 +1310,25 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
+    // Worked out now, as the dialog stays open while the map is panned, zoomed or moved to another level
+    const QRectF box = labelRectangle.normalized();
+    const float mx = (box.left() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (box.top() / mRoomHeight) - mMapCenterY;
+    const float mx2 = (box.right() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my2 = (yspan / 2.0) - (box.bottom() / mRoomHeight) - mMapCenterY;
+    const QVector3D mapPosition(mx, my, mMapCenterZ);
+    const QSizeF mapSize = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
+
     // The map can be replaced while this non-modal dialog is open, so re-find the area by id rather than
     // keep the pointer, and check the map generation, since a new map reuses area and label ids.
     const int areaId = mAreaID;
     const unsigned int mapGeneration = mpMap->mpRoomDB->mapGeneration();
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId, mapGeneration]() {
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, mapPosition, mapSize, labelId, areaId, mapGeneration]() {
         if (mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
             return;
         }
         if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
-            updateMapLabel(labelRectangle, labelId, pLabelArea);
+            updateMapLabel(labelRectangle, mapPosition, mapSize, labelId, areaId, pLabelArea);
         }
     });
 
@@ -1328,7 +1346,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     mpDlgMapLabel->updated();
 }
 
-void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
+void T2DMap::updateMapLabel(QRectF labelRectangle, QVector3D mapPosition, QSizeF mapSize, int labelId, int areaId, TArea* pArea)
 {
     TMapLabel label;
     QFont font;
@@ -1385,17 +1403,12 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     }
 
     label.pix = pixmap.copy(drawRectangle);
-    const float mx = (box.left() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my = (yspan / 2.0) - (box.top() / mRoomHeight) - mMapCenterY;
-
-    const float mx2 = (box.right() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my2 = (yspan / 2.0) - (box.bottom() / mRoomHeight) - mMapCenterY;
-    label.pos = QVector3D(mx, my, mMapCenterZ);
-    label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
+    label.pos = mapPosition;
+    label.size = mapSize;
 
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
-        mpMap->updateArea(mAreaID);
+        mpMap->updateArea(areaId);
         if (!label.temporary) {
             mpMap->setUnsaved(__func__);
         }
