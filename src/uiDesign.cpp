@@ -689,6 +689,16 @@ QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& to
             .arg(selectorPrefix, groove.name(), blend(groove, tokens.text, 0.22).name(), blend(groove, tokens.text, 0.40).name(), QString::number(scmScrollBarThickness));
 }
 
+QString scrollBarGapStyleSheet(const QString& scrollAreaSelector, const Qt::LayoutDirection direction)
+{
+    // A child selector, as a descendant one also reaches the bars of what the area holds, which stand against their own text
+    return qsl("%1 > #qt_scrollarea_vcontainer > QScrollBar:vertical { width: %2px; %3: %4px; }")
+            .arg(scrollAreaSelector,
+                 QString::number(scmScrollBarThickness + scmScrollBarGap),
+                 direction == Qt::RightToLeft ? qsl("margin-right") : qsl("margin-left"),
+                 QString::number(scmScrollBarGap));
+}
+
 QString itemRowStyleSheet(const QString& viewSelector, const ThemeTokens& tokens, const QColor& surface, const int rowGutter)
 {
     const QColor selectedRow = blend(surface, tokens.accent, scmAccentWashStrength);

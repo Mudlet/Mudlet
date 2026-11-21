@@ -159,6 +159,7 @@ using uiDesign::scmProp_settingsCard;
 using uiDesign::scmProp_settingsCardPlain;
 using uiDesign::scmRadiusPanel;
 using uiDesign::scmRadiusProminentInput;
+using uiDesign::scrollBarGapStyleSheet;
 using uiDesign::scrollBarStyleSheet;
 using uiDesign::setSearchMatch;
 using uiDesign::SettingsSnapshot;
@@ -183,9 +184,8 @@ static constexpr char scmProp_settingsRichText[] = "settingsRichText";
 // A reading width: a wide window gains whitespace rather than stretching the controls
 static constexpr int scmContentColumnWidth = 640;
 static constexpr int scmContentMargin = 24;
-static constexpr int scmScrollBarGap = 8;
 // A page keeps this room whether or not its bar shows, and it is taken out of the content's margin on the bar's side
-static constexpr int scmScrollBarRoom = uiDesign::scmScrollBarThickness + scmScrollBarGap;
+static constexpr int scmScrollBarRoom = uiDesign::scmScrollBarThickness + uiDesign::scmScrollBarGap;
 // The narrowest the window goes, however little its pages need
 static constexpr int scmMinimumWindowWidth = 780;
 
@@ -3807,11 +3807,7 @@ void dlgProfilePreferences::applyShellStyle()
                            QString::number(uiDesign::scmNoticePaddingHorizontal - 1))
             + cardIndicatorRules
             // A scroll area's bars answer only to a descendant selector
-            + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens)
-            // The gap to the cards is part of the bar's width, and so of the room a page keeps for it. A child
-            // selector, as a descendant one also reaches the bars of what a page holds, the theme preview's among them
-            + qsl("QScrollArea[settingsSurface=\"true\"] > #qt_scrollarea_vcontainer > QScrollBar:vertical { width: %1px; %2: %3px; }")
-                      .arg(QString::number(scmScrollBarRoom), isRightToLeft() ? qsl("margin-right") : qsl("margin-left"), QString::number(scmScrollBarGap))
+            + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens) + scrollBarGapStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), layoutDirection())
             + scrollBarStyleSheet(qsl("#settingsCategoryList"), tokens)
             // Every control a setting is typed into or picked in is drawn the
             // one way the editor draws its own, and under the stack alone:
