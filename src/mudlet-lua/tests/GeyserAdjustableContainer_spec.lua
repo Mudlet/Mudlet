@@ -651,6 +651,60 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachCaseNew)
     end)
 
+    it("attaches a minimized container to its border again when it is restored", function()
+      local container = make("gasAttachMinRestore", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      assert.is_falsy(container.attached)
+      assert.is_true(getBorderLeft() < 200)
+
+      container:restore()
+      assert.are.equal("left", container.attached)
+      assert.is_true(getBorderLeft() >= 200)
+    end)
+
+    it("attaches a container hidden and then minimized to its border again when it is shown and restored", function()
+      local container = make("gasAttachHideMin", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      container:minimize()
+      container:show()
+      assert.is_falsy(container.attached)
+
+      container:restore()
+      assert.are.equal("left", container.attached)
+      assert.is_true(getBorderLeft() >= 200)
+    end)
+
+    it("stops answering window resizes once a container hidden while attached is minimized", function()
+      local container = make("gasAttachHideMinHandler", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      assert.is_number(container.resizeHandlerID)
+      container:minimize()
+      assert.is_nil(container.resizeHandlerID)
+    end)
+
+    it("leaves a container detached on restore once detach() was called while minimized", function()
+      local container = make("gasAttachMinDetach", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      container:detach()
+
+      container:restore()
+      assert.is_falsy(container.attached)
+    end)
+
+    it("leaves a container detached on restore once it was moved away from its border", function()
+      local container = make("gasAttachMinMoved", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      container:move("60%", nil)
+
+      container:restore()
+      assert.is_falsy(container.attached)
+    end)
+
     -- each fractional edge rounds the way the widget's does, so the border ends
     -- where the widget does and neither overlaps the other
     for _, case in ipairs({
@@ -2534,6 +2588,54 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(112 + container:get_x() + 5, getBorderLeft())
     end)
 
+    -- a script setting it from its own sysWindowResizeEvent handler would otherwise trade writes with the container forever
+    it("leaves a border a script sets alone while the container stays where it is", function()
+      local container = make("gapScriptBorder", {width = 112})
+      container:attachToBorder("left")
+      -- primes resizeBorder()'s recorded window size; until then any resize event re-reserves the border
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      setBorderLeft(300)
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(300, getBorderLeft())
+    end)
+
+    it("detaches a container a script lays out again out of reach of its border, though its request is unchanged", function()
+      local winw = getMainWindowSize()
+      local container = make("gapShrunkInPlace", {x = winw - 300, width = 300})
+      container:attachToBorder("right")
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      container:set_constraints({x = winw - 300, y = 0, width = 40, height = 100})
+      container:reposition()
+
+      assert.is_false(container.attached)
+    end)
+
+    it("re-reserves a container a resize handler lays out again while its own border is being written", function()
+      local winw = getMainWindowSize()
+      local near = make("gapMidWriteNear", {width = 112})
+      local far = make("gapMidWriteFar", {x = winw - 100, width = 100})
+      near:attachToBorder("left")
+      far:attachToBorder("right")
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+      local fired = false
+      local handler = registerAnonymousEventHandler("sysWindowResizeEvent", function()
+        if not fired then
+          fired = true
+          near:set_constraints({x = 0, y = 0, width = 200, height = 100})
+          near:reposition()
+        end
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      near:setBorderMargin(6)
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(200 + near:get_x() + 6, getBorderLeft())
+    end)
+
     it("detaches a container that has been moved out of reach of its border", function()
       local container = make("gapOutOfReach", {width = 100})
       container:attachToBorder("left")
@@ -3114,6 +3216,36 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(30, container:get_y())
     end)
 
+    it("creates every missing directory in the path it is given", function()
+      local container = make("gapSaveNested", {x = 20, y = 30})
+      local dir = scratchDir .. "nested/deeper/"
+      -- the after_each only empties the scratch directory itself
+      finally(function()
+        os.remove(dir .. "gapSaveNested.lua")
+        lfs.rmdir(scratchDir .. "nested/deeper")
+        lfs.rmdir(scratchDir .. "nested")
+      end)
+      assert.is_true(container:save(nil, dir))
+      assert.is_true(io.exists(dir .. "gapSaveNested.lua"))
+
+      container:move(300, 400)
+      container:load(nil, dir)
+      assert.are.equal(20, container:get_x())
+    end)
+
+    it("reports settings it could not write rather than claim to have saved them", function()
+      local container = make("gapSaveBlocked")
+      lfs.mkdir(scratchDir)
+      local blocker = scratchDir .. "notADirectory"
+      local file = io.open(blocker, "w")
+      file:write("")
+      file:close()
+
+      local ok, message = container:save(nil, blocker .. "/sub/")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("couldn't save settings", 1, true))
+    end)
+
     it("keeps a slot apart from the settings saved without one", function()
       local container = make("gapSlots", {x = 20, y = 30})
       container:save(nil, scratchDir)
@@ -3128,6 +3260,36 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:load(nil, scratchDir)
       assert.are.equal(20, container:get_x())
       assert.are.equal(30, container:get_y())
+    end)
+
+    it("attaches a container saved minimized to its border again when restored after loading", function()
+      local container = make("gapMinAttached", {width = 150})
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:restore()
+      container:detach()
+
+      container:load(nil, scratchDir)
+      assert.is_true(container.minimized)
+      container:restore()
+      assert.are.equal("left", container.attached)
+    end)
+
+    it("attaches a container saved hidden and minimized to its border again when shown and restored after loading", function()
+      local container = make("gapHideMinAttached", {width = 150})
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:show()
+      container:restore()
+      container:detach()
+
+      container:load(nil, scratchDir)
+      container:show()
+      container:restore()
+      assert.are.equal("left", container.attached)
     end)
 
     it("falls back to the default settings for a slot that was never saved", function()

@@ -649,7 +649,7 @@ void TTabBar::relayoutTab(const int index)
     // QTabBar caches each tab's size and only asks tabSizeHint() again from its
     // private refresh(), which setTabText() triggers - without it a tab whose
     // font just became wider would clip its text:
-    setTabText(index, tabText(index));
+    QTabBar::setTabText(index, tabText(index));
 }
 
 QStringList TTabBar::tabNames() const
@@ -666,14 +666,14 @@ void TTabBar::applyPrefixToDisplayedText(const QString& tabName, const QString& 
 {
     const int index = tabIndex(tabName);
     if (index > -1) {
-        QTabBar::setTabText(index, qsl("%1%2").arg(prefix, tabData(index).toString()));
+        setTabText(index, qsl("%1%2").arg(prefix, tabData(index).toString()));
     }
 }
 
 void TTabBar::applyPrefixToDisplayedText(int index, const QString& prefix)
 {
     if (index > -1) {
-        QTabBar::setTabText(index, qsl("%1%2").arg(prefix, tabData(index).toString()));
+        setTabText(index, qsl("%1%2").arg(prefix, tabData(index).toString()));
     }
 }
 

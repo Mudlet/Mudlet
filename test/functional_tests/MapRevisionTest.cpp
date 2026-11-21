@@ -163,6 +163,14 @@ private slots:
         QVERIFY2(map()->revision() > before, qPrintable(code));
     }
 
+    void test_removingACustomLineLeavesTheMapUnsaved()
+    {
+        QVERIFY(buildMap() > 0);
+        map()->resetUnsaved();
+        QVERIFY(runLua(qsl("assert(removeCustomLine(2, 'w'))")));
+        QVERIFY2(map()->isUnsaved(), "the change would not be saved");
+    }
+
     void test_movesOfThePlayerLeaveTheRevisionAsItWas_data()
     {
         QTest::addColumn<QString>("code");

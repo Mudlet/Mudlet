@@ -3672,6 +3672,17 @@ describe("Tests UI functions", function()
       assert.is_truthy(tostring(message):find(takenName, 1, true), "a plain button is no toolbar, got: " .. tostring(message))
     end)
 
+    it("tempButtonToolbar answers nil and a message for a location no bar shows", function()
+      for _, location in ipairs({-1, 4}) do
+        local name = ("bustedTempBadLocation%d%s"):format(location, suffix)
+        local count, id, message = pack(tempButtonToolbar(name, location, 0))
+        assert.are.equal(2, count)
+        assert.is_nil(id)
+        assert.is_truthy(tostring(message):find("location " .. location, 1, true), "the refusal should name the location, got: " .. tostring(message))
+        assert.are.equal(0, exists(name, "button"))
+      end
+    end)
+
     it("showing a button toolbar again does not stack another copy of its buttons", function()
       if not os.getenv("MUDLET_TEST_MODE") then
         pending("the layout only settles once pumpEvents() has run")
@@ -5153,6 +5164,48 @@ describe("Window state getters", function()
       assert.are.equal("from the style sheet", getLabelText(labelName))
     end)
 
+    for _, case in ipairs({
+      {'qproperty-text: "x\\41 y";', "xA y"},
+      {'qproperty-text: "a\\中b";', "a中b"},
+      {'qproperty-text: "x\\FFFFF y";', "xFFFFF y"},
+      {'qproperty-text: "a\\\r\nb";', "a\r\nb"},
+    }) do
+      it("reads the text " .. case[2]:gsub("%c", "<break>") .. " from a style sheet that escapes it", function()
+        finally(function() setLabelStyleSheet(labelName, "") end)
+        assert.is_true(setLabelStyleSheet(labelName, case[1]))
+        assert.are.equal(case[2], getLabelText(labelName))
+      end)
+    end
+
+    local unreadable = {
+      'qproperty-text: "from the style sheet"; qproperty-toolTip: "a\\a b";',
+      'qproperty-toolTip: "a\\1F600 b"; qproperty-text: "from the style sheet";',
+      'QPushButton { color: "\\a"; } QLabel { qproperty-text: "from the style sheet"; }',
+      'qproperty-text: "from the\nstyle sheet";',
+      'qproperty-toolTip: "a\rb"; qproperty-text: "from the style sheet";',
+      "qproperty-toolTip: 'a\fb'; qproperty-text: 'from the style sheet';",
+      'QPushButton { color: red; } QPushButton { qproperty-toolTip: "a\nb"; } QLabel { qproperty-text: "from the style sheet"; }',
+      '@media screen { QLabel { color: "\\a"; } } QLabel { qproperty-text: "from the style sheet"; }',
+      'qproperty-text: "never ends;',
+    }
+    for _, escape in ipairs({"x\\1F600 y", "\\10000", "x\\0 y", "x\\a y", "x\\d y"}) do
+      unreadable[#unreadable + 1] = ('qproperty-text: "%s";'):format(escape)
+    end
+    for _, sheet in ipairs(unreadable) do
+      it("keeps its text under a style sheet with a string Qt cannot read: " .. sheet:gsub("%c", "<break>"), function()
+        echo(labelName, "before the style sheet")
+        finally(function() setLabelStyleSheet(labelName, "") end)
+        assert.is_true(setLabelStyleSheet(labelName, sheet))
+        assert.are.equal("before the style sheet", getLabelText(labelName))
+      end)
+    end
+
+    it("takes its text from a rule ahead of one with an escape Qt cannot read", function()
+      finally(function() setLabelStyleSheet(labelName, "") end)
+      assert.is_true(setLabelStyleSheet(labelName, 'QLabel { qproperty-text: "from the first rule"; } QLabel:hover { qproperty-text: "x\\a"; }'))
+      assert.are.equal("from the first rule", getLabelText(labelName))
+    end)
+
     -- the label colours its links by rewriting the text it is given
     it("reports links in the colour setLinkStyle gave them", function()
       assert.is_true(setLinkStyle(labelName, "red", "blue", true))
@@ -6189,8 +6242,18 @@ describe("Window and label state", function()
     end)
 
     it("setBorderColor round-trips through getBorderColor", function()
-      setBorderColor(11, 22, 33)
+      assert.are.same({true}, {setBorderColor(11, 22, 33)})
       assert.are.same({11, 22, 33}, {getBorderColor()})
+    end)
+
+    it("setBorderColor refuses a component outside 0-255 and keeps the colour it had", function()
+      setBorderColor(11, 22, 33)
+      assert.are.same({nil, "red value 256 needs to be between 0-255"}, {setBorderColor(256, 22, 33)})
+      assert.are.same({nil, "green value -1 needs to be between 0-255"}, {setBorderColor(11, -1, 33)})
+      assert.are.same({nil, "blue value 300 needs to be between 0-255"}, {setBorderColor(11, 22, 300)})
+      assert.are.same({11, 22, 33}, {getBorderColor()})
+      assert.are.same({true}, {setBorderColor(255, 0, 255)})
+      assert.are.same({255, 0, 255}, {getBorderColor()})
     end)
   end)
 
@@ -6995,6 +7058,29 @@ describe("Widget state getters", function()
       finally(function() deleteMiniConsole(floating) end)
       assert.is_true(setUserWindowStyleSheet(floating, 'QDockWidget { qproperty-windowTitle: "from the style sheet"; }'))
       assert.are.equal("from the style sheet", getUserWindowTitle(floating))
+    end)
+
+    it("reports the title a profile style sheet gives user windows open before and after it", function()
+      local before, after = name("wdgProfileTitleA"), name("wdgProfileTitleB")
+      openUserWindow(before, false, false)
+      finally(function()
+        setProfileStyleSheet("")
+        deleteMiniConsole(before)
+        deleteMiniConsole(after)
+      end)
+      assert.is_true(setProfileStyleSheet('QDockWidget { qproperty-windowTitle: "from the profile"; }'))
+      openUserWindow(after, false, false)
+      assert.are.equal("from the profile", getUserWindowTitle(before))
+      assert.are.equal("from the profile", getUserWindowTitle(after))
+    end)
+
+    it("keeps a user window's title under a style sheet with a string Qt cannot read", function()
+      local floating = name("wdgCssBadTitle")
+      openUserWindow(floating, false, false)
+      finally(function() deleteMiniConsole(floating) end)
+      assert.is_true(setUserWindowTitle(floating, "before the style sheet"))
+      assert.is_true(setUserWindowStyleSheet(floating, 'QWidget { font-size: 14pt; qproperty-toolTip: "x\\a y"; qproperty-windowTitle: "from the style sheet"; }'))
+      assert.are.equal("before the style sheet", getUserWindowTitle(floating))
     end)
 
     it("does not give a user window the title of a deleted one it shares a name with", function()
