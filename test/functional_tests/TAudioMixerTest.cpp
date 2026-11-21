@@ -176,17 +176,27 @@ private slots:
         // Stopped before its silence could move it, and played again once the check has answered, the sound reuses
         // its player: mixed only if the check found audio coming through, as a new player would be
         media()->stopMedia(data);
+
+        // A main thread held up past the check's limit, as by a slow login, does not count against it
+        QElapsedTimer busy;
+        busy.start();
+        while (busy.elapsed() < 6000) {
+            // Blocking on purpose: no events are processed
+        }
+        QTest::qWait(300ms);
+        QVERIFY2(!TMediaVoice::probeFailed(), "The check failed the backend on time the main thread was held up.");
+
         QVERIFY2(QTest::qWaitFor(
                          []() {
                              return TMediaVoice::probePassed() || TMediaVoice::probeFailed();
                          },
-                         QDeadlineTimer(6s)),
+                         QDeadlineTimer(8s)),
                  "The check of the backend never answered.");
         media()->playMedia(data);
         QCOMPARE(media()->mediaPlayerCount(), 1);
         QCOMPARE(media()->playersMixed(), TMediaVoice::probePassed() ? 1 : 0);
         // The voice it left is deleted later, and has to go before cleanup() takes the player: Qt 6.12 leaves a
-        // detached QAudioBufferOutput pointing at its player, so one deleted after the player crashes
+        // detached QAudioBufferOutput pointing at its player, so one deleted after the player crashes (QTBUG-152293)
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 

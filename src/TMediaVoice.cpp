@@ -28,6 +28,7 @@
 #include <QDataStream>
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QMediaPlayer>
 #include <QTemporaryFile>
 #include <QTimer>
@@ -45,6 +46,7 @@ namespace {
 // with none is a stall, and the sound is better heard through an output of its own
 constexpr auto silentPlayLimit = 500ms;
 constexpr auto probeLimit = 5s;
+constexpr auto probeTick = 100ms;
 constexpr int minimumGlideMilliseconds = 20;
 
 bool otherBackendNamed()
@@ -181,11 +183,22 @@ void TMediaVoice::startProbe()
             player->deleteLater();
         }
     });
-    QTimer::singleShot(probeLimit, player, [player]() {
+    // Counts only time the main thread was free to take the audio: a stall, such as a slow login, would
+    // otherwise use the limit up and fail the check for the whole session
+    auto* clock = new QTimer(player);
+    clock->setInterval(probeTick);
+    QElapsedTimer sinceTick;
+    sinceTick.start();
+    connect(clock, &QTimer::timeout, player, [player, sinceTick, waited = 0ms]() mutable {
+        waited += std::min(std::chrono::milliseconds(sinceTick.restart()), 2 * probeTick);
+        if (waited < probeLimit) {
+            return;
+        }
         smProbeFailed = true;
         qWarning().noquote() << "TMediaVoice WARNING - this media backend hands over no audio to mix, so each sound plays through an output of its own.";
         player->deleteLater();
     });
+    clock->start();
     player->setSource(QUrl::fromLocalFile(source->fileName()));
     player->play();
 }
