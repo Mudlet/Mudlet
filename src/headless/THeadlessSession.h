@@ -744,6 +744,31 @@ public:
     };
     // None for a name that is not a label's
     std::optional<LabelContent> labelContent(const QString& name) const;
+    // What a text box from createTextEdit() holds, for the app to draw it as the GUI's QPlainTextEdit would. Its
+    // geometry and font are its ScriptWindow's.
+    struct TextBoxContent
+    {
+        // What getTextEditText() reads: as setTextEditText() or clearTextEdit() left it, or the player typed it
+        QString text;
+        // As setTextEditReadOnly() gave it: the player cannot type in it, though a script still sets its text
+        bool readOnly = false;
+        // As setTextEditPlaceholder() gave it, shown while the box is empty
+        QString placeholder;
+        // As setTextEditStyleSheet() gave it, which Mudlet does not interpret: drawing it is the app's to do or not
+        QString styleSheet;
+        // As setTextEditTabMovesFocus() gave it: Tab moves to the next control rather than typing a tab
+        bool tabMovesFocus = false;
+
+        bool operator==(const TextBoxContent&) const = default;
+    };
+    // None for a name that is not a text box's
+    std::optional<TextBoxContent> textBoxContent(const QString& name) const;
+    // What the player has typed in a text box so far, the whole of its text, which a script's getTextEditText()
+    // then reads, as the GUI's box sets it as its text changes; that raises no event there, so none here. No
+    // scriptWindowsChanged follows it. False for a name that is no text box, for a box that is read-only or not
+    // shown (hidden, or in a window that is hidden), which a player could not type in though a script still sets
+    // its text, and where runLua() is refused.
+    bool setTextBoxText(const QString& name, const QString& text);
     // A row of a console as the GUI draws it: one line of its buffer, after the console's wrap
     struct WindowLine
     {
@@ -1074,7 +1099,8 @@ signals:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
     // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
     // trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose labelContent() differs,
-    // and those whose place among their parent's windows moved with it.
+    // a text box whose textBoxContent() does, by a script, and those whose place among their parent's windows moved
+    // with it.
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);
@@ -1276,11 +1302,13 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
-    // What scriptWindows() and each label's labelContent() gave at profileLoaded, then as each scriptWindowsChanged was sent
+    // What scriptWindows(), each label's labelContent() and each text box's textBoxContent() gave at profileLoaded,
+    // then as each scriptWindowsChanged was sent, and a text box's text as setTextBoxText() set it
     struct WindowsTold
     {
         QList<ScriptWindow> windows;
         QHash<QString, LabelContent> labels;
+        QHash<QString, TextBoxContent> textBoxes;
     };
     std::optional<WindowsTold> mDeliveredWindows;
     // The label pointer() last had the pointer enter, until it left, and which label of that name it was
