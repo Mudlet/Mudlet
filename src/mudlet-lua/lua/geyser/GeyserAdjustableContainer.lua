@@ -121,8 +121,7 @@ local function keepRelativePosition(constraint, value, total, origin)
     return value
 end
 
--- Internal function: a pixel position constraint for an offset from the parent's origin.
--- Rounded, as the subtraction can land a hair under a whole pixel that "%dpx" would then truncate;
+-- Internal function: rounded, as the subtraction can land a hair under a whole pixel that "%dpx" would truncate;
 -- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin
 -- @param offset the offset from the parent's origin in pixels
 local function pixelPosition(offset)
