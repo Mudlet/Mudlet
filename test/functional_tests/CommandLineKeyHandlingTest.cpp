@@ -111,6 +111,13 @@ private:
 
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
 
+    static void addAutoClearRows()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
+
     // Real macOS arrow keys arrive with the keypad modifier set, and TCommandLine's
     // Up/Down handlers only recognise them there when it is present, so a synthesised
     // event has to carry it too or the key falls through to the editor.
@@ -459,16 +466,11 @@ private slots:
     // An alias that fills the line in for the player, like "t bob" writing
     // "tell bob ", must not have that cleared, or selected for the next key
     // to replace.
-    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data()
-    {
-        QTest::addColumn<bool>("autoClear");
-        QTest::newRow("auto-clear off") << false;
-        QTest::newRow("auto-clear on") << true;
-    }
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data() { addAutoClearRows(); }
 
     void test_textAnAliasWritesIsLeftForThePlayerToFinish()
     {
-        QFETCH(bool, autoClear);
+        QFETCH(const bool, autoClear);
         mpHost->mAutoClearCommandLineAfterSend = autoClear;
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
@@ -505,12 +507,7 @@ private slots:
 
     // A setCmdLineAction() field that writes to its line, as packages' settings
     // fields do, is still cleared or selected for the next value to replace
-    void test_anActionFieldThatWritesItsLineIsClearedOrSelected_data()
-    {
-        QTest::addColumn<bool>("autoClear");
-        QTest::newRow("auto-clear off") << false;
-        QTest::newRow("auto-clear on") << true;
-    }
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected_data() { addAutoClearRows(); }
 
     void test_anActionFieldThatWritesItsLineIsClearedOrSelected()
     {
@@ -530,9 +527,9 @@ private slots:
     // As does a one-shot field whose action resets itself before writing its value back
     void test_anActionFieldThatResetsItselfKeepsItsValueSelected()
     {
+        mpHost->mAutoClearCommandLineAfterSend = false;
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
-        mpHost->mAutoClearCommandLineAfterSend = false;
         QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) resetCmdLineAction('%1') printCmdLine('%1', text .. '0') end)").arg(mLineName)));
 
         type(pCommandLine, qsl("25"));
@@ -543,12 +540,7 @@ private slots:
     }
 
     // An alias that leaves the line alone has it cleared or selected as usual
-    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect_data()
-    {
-        QTest::addColumn<bool>("autoClear");
-        QTest::newRow("auto-clear off") << false;
-        QTest::newRow("auto-clear on") << true;
-    }
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect_data() { addAutoClearRows(); }
 
     void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect()
     {
