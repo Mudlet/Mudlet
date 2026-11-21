@@ -1074,7 +1074,9 @@ private slots:
 
     const auto ids = mpHost->getTriggerUnit()->findItems(qsl("qaHalfTyped"));
     QCOMPARE(ids.size(), 1);
-    QVERIFY(mpHost->getTriggerUnit()->getTrigger(ids.front())->shouldBeActive());
+    TTrigger *pTrigger = mpHost->getTriggerUnit()->getTrigger(ids.front());
+    QVERIFY(pTrigger);
+    QVERIFY(pTrigger->shouldBeActive());
     QVERIFY2(pEditor->systemMessage().contains(qsl("unsaved edit")), qPrintable(pEditor->systemMessage()));
 
     pItem = resetAndFindItem(pEditor, pTree, qsl("qaHalfTyped"));
@@ -1083,7 +1085,7 @@ private slots:
     pEditor->slot_triggerSelected(pItem);
     pEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- finished"));
     pEditor->slot_saveSelectedItem();
-    QVERIFY(mpHost->getTriggerUnit()->getTrigger(ids.front())->isActive());
+    QVERIFY(pTrigger->isActive());
   }
 
   // Saving a script runs its body, which an untouched script must not get from a reset

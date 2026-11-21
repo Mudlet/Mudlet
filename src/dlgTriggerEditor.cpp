@@ -100,6 +100,7 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QScreen>
+#include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -14140,9 +14141,10 @@ void dlgTriggerEditor::resetTrees()
     QString saveError;
     if (!openScriptUnchanged) {
         mEditorSaveErrorCaptured.clear();
-        mSavingForReset = true;
-        saveOpenChanges();
-        mSavingForReset = false;
+        {
+            const QScopedValueRollback savingForReset(mSavingForReset, true);
+            saveOpenChanges();
+        }
         saveError = mEditorSaveErrorCaptured;
     }
 
