@@ -576,8 +576,10 @@ private slots:
     void replayedPromptIsNotMarkedWithGaForcedOff()
     {
         const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
-        auto restoreFlag = qScopeGuard([this, savedForceGaOff]() {
+        const bool savedGaDriver = mpHost->mTelnet.mGA_Driver;
+        auto restoreFlags = qScopeGuard([this, savedForceGaOff, savedGaDriver]() {
             mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+            mpHost->mTelnet.mGA_Driver = savedGaDriver;
         });
         mpHost->mTelnet.mFORCE_GA_OFF = true;
         mpHost->mTelnet.mGA_Driver = false;
