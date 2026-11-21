@@ -2876,14 +2876,14 @@ describe("The IRC configuration functions round-trip through the profile", funct
     end)
 
     it("keep the nick they make up when no nick was ever set", function()
-      -- with neither the profile's nick nor the last-used one on disk a nick is
-      -- made up, and it must stay the same nick: restartIrc() reads it again
+      -- restartIrc() reads the nick again, so a made-up one must not change between reads
       local profileNickFile = getMudletHomeDir() .. "/irc_nick"
       local lastUsedNickFile = getMudletHomeDir() .. "/../../irc_nick"
       local nick = getIrcNick()
+      local lastUsedNick
       local file = io.open(lastUsedNickFile, "rb")
-      local lastUsedNick = file and file:read("*a")
       if file then
+        lastUsedNick = file:read("*a")
         file:close()
       end
       finally(function()
