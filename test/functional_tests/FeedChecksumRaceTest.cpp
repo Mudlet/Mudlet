@@ -56,7 +56,6 @@
 
 #include <functional>
 #include <memory>
-#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -1219,14 +1218,15 @@ void FeedChecksumRaceTest::aLoadStartedWhileAFailureIsReportedIsAnswered()
     QSignalSpy feedReady(&feed, &dblsqd::Feed::ready);
     QSignalSpy feedError(&feed, &dblsqd::Feed::loadError);
 
-    bool retried = false;
-    QObject::connect(&feed, &dblsqd::Feed::loadError, &feed, [&harness, &feed, &retried]() {
-        if (std::exchange(retried, true)) {
-            return;
-        }
-        harness.server().setFeedFails(false);
-        feed.load();
-    });
+    QObject::connect(
+            &feed,
+            &dblsqd::Feed::loadError,
+            &feed,
+            [&harness, &feed]() {
+                harness.server().setFeedFails(false);
+                feed.load();
+            },
+            Qt::SingleShotConnection);
 
     feed.load();
     QVERIFY2(feedError.wait(waitMs), "the stub's failing feed did not fail to load");
