@@ -304,8 +304,8 @@ private slots:
     QCOMPARE(pEditor->mVisiblePatternCount, 5);
   }
 
-  // An alias with no command sends nothing, so a pattern that matches an empty
-  // line, as one that acts on a bare Enter does, cannot call itself
+  // An alias's empty command sends nothing, so a pattern that matches an empty
+  // line, such as one acting on a line of only spaces, cannot call itself
   void test_aliasWithNoCommandMatchingAnEmptyLineSaves() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);

@@ -7478,8 +7478,8 @@ QString dlgTriggerEditor::aliasNameForPattern(const TAlias* pT, const QString& t
 }
 
 // Returns true when the substitution would match its own pattern, which makes
-// the alias call itself forever. An invalid pattern can't loop - the faulty-regex
-// check surfaces that instead - and nor can an empty substitution, which sends nothing.
+// the alias call itself forever. Neither an invalid pattern (the faulty-regex check
+// surfaces that instead) nor an empty substitution (it sends nothing) can loop.
 bool dlgTriggerEditor::aliasSubstitutionLoops(const QString& regex, const QString& substitution) const
 {
     if (regex.isEmpty() || substitution.isEmpty()) {
