@@ -3606,6 +3606,30 @@ describe("sending protocol data to a game server that has not negotiated", funct
     assert.is_nil(atcp)
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
   end)
+
+  it("still names a disconnect the user's when a sysDisconnectionEvent handler reconnects", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local reconnected = false
+    local handler
+    handler = registerAnonymousEventHandler("sysDisconnectionEvent", function()
+      killAnonymousEventHandler(handler)
+      reconnected = true
+      reconnect()
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local mark = getLastLineNumber("main")
+    disconnect()
+    assert.is_true(waitUntil(function() return reconnected end, 5000), "sysDisconnectionEvent never fired")
+    local function linesSince()
+      return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(), "User Disconnected") end, 2000),
+                   "the disconnect was not reported as the user's, saw: " .. linesSince())
+  end)
 end)
 
 -- A chat connection belongs to the profile whose server made it and must close
