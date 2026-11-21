@@ -113,9 +113,11 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("returns only the id for a string body that compiles", function()
-      local results = {tempKey(mudlet.key.F5, [[echo("hi")]])}
-      assert.are.equal(1, #results)
-      killKey(results[1])
+      -- select("#") rather than a table's length, which would not count a trailing nil
+      local function countAndFirst(...) return select("#", ...), ... end
+      local count, id = countAndFirst(tempKey(mudlet.key.F5, [[echo("hi")]]))
+      killKey(id)
+      assert.are.equal(1, count)
     end)
 
     it("creates a key from the two-argument (key code, body) form", function()
