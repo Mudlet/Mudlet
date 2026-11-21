@@ -38,6 +38,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <cmath>
 #include <numbers>
 
@@ -346,13 +347,9 @@ private slots:
             deleteArea(area)
         )")));
 
-        bool reported = false;
-        for (const auto& arguments : printed) {
-            if (arguments.at(0).toString().contains(qsl("Cannot set exit stub"))) {
-                reported = true;
-                break;
-            }
-        }
+        const bool reported = std::any_of(printed.cbegin(), printed.cend(), [](const QList<QVariant>& arguments) {
+            return arguments.at(0).toString().contains(qsl("Cannot set exit stub"));
+        });
         QVERIFY2(reported, "a stub refused because an exit is there printed nothing in the Errors console");
     }
 };
