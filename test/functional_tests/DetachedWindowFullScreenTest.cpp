@@ -183,7 +183,7 @@ private:
         QTest::newRow("toolbar") << qsl("fullscreen_action");
     }
 
-    static QAction* action(TDetachedWindow* pWindow, const QString& name) { return pWindow ? pWindow->findChild<QAction*>(name) : nullptr; }
+    static QAction* action(TDetachedWindow* pWindow, const QString& name) { return pWindow->findChild<QAction*>(name); }
 
     TDetachedWindow* detachProfile(const QString& profileName)
     {
