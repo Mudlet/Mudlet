@@ -8950,14 +8950,18 @@ describe("Toolbar buttons", function()
       assert.are.equal("no button item with ID 999999 found", setErr)
     end)
 
-    it("both refuse an item ID that is not a finite int", function()
+    it("both refuse an item ID that does not round to an int", function()
+      -- An unchecked cast saturates to INT_MAX on arm64, which would also start "no button item with ID "
+      local saturated = "no button item with ID 2147483647 found"
       for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649, 2147483647.5, -2147483648.5}) do
         local getOk, getErr = getButtonState(id)
         assert.is_nil(getOk, tostring(id))
-        assert.truthy(tostring(getErr):find("^no button item with ID "), tostring(getErr))
+        assert.matches("^no button item with ID ", getErr)
+        assert.are_not.equal(saturated, getErr)
         local setOk, setErr = setButtonState(id, true)
         assert.is_nil(setOk, tostring(id))
-        assert.truthy(tostring(setErr):find("^no button item with ID "), tostring(setErr))
+        assert.matches("^no button item with ID ", setErr)
+        assert.are_not.equal(saturated, setErr)
       end
     end)
 
