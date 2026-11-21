@@ -2248,6 +2248,7 @@ void TBuffer::parseChunk(
             flushPendingLead();
         }
 
+        bool mxpTakesDecodedCharacter = false;
         if (localBufferPosition >= endOfLiteralEntity && mxpProcessorEnabled()) {
             // MXP rewrites the unit in place, so the worker's offsets stop matching it
             if (Q_UNLIKELY(speculation)) {
@@ -2256,7 +2257,11 @@ void TBuffer::parseChunk(
                 mpVerifiedLine = nullptr;
             }
             if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
-                if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
+                if ((ch & 0x80) && encodingLookupTable.isEmpty() && mDecoder != Decoder::Latin1 && mDecoder != Decoder::Ascii && mpHost->mMxpProcessor.readingText()) {
+                    // The decoder takes the rest of a multi-byte character without coming back round the
+                    // loop, and holds an incomplete one for the next packet, which goes round again
+                    mxpTakesDecodedCharacter = true;
+                } else if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
                     TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
@@ -2399,6 +2404,7 @@ void TBuffer::parseChunk(
         bool heldIncompleteSequence = false;
         // The byte just decoded was the trail of a character whose lead byte is in mPendingLead:
         bool completesSplitCharacter = false;
+        const size_t charStart = localBufferPosition;
 
         if (!encodingLookupTable.isEmpty()) {
             auto index = static_cast<quint8>(ch);
@@ -2424,6 +2430,9 @@ void TBuffer::parseChunk(
                 // two bytes; hold the lead byte and let the SGR be parsed as usual:
                 mPendingLead = ch;
                 mPendingLeadFormat = TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+                if (mxpTakesDecodedCharacter) {
+                    mpHost->mMxpProcessor.processRawInput(QByteArrayView(&ch, 1));
+                }
                 ++localBufferPosition;
                 continue;
             } else {
@@ -2442,6 +2451,10 @@ void TBuffer::parseChunk(
             } else {
                 mMudLine.append(ch);
             }
+        }
+
+        if (mxpTakesDecodedCharacter && !heldIncompleteSequence) {
+            mpHost->mMxpProcessor.processRawInput(QByteArrayView(localBuffer.data() + charStart, static_cast<qsizetype>(localBufferPosition - charStart + 1)));
         }
 
         if (heldIncompleteSequence) {
@@ -4906,7 +4919,28 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 case 55:
                     mOverline = false;
                     break;
-                // 56 to 59 reserved for future standardization
+                // 56 and 57 reserved for future standardization
+                case 58: // Underline colour: not drawn, but its arguments must be stepped over or they read as codes of their own
+                    if (paraIndex + 1 < total) {
+                        switch (parameterStrings.at(paraIndex + 1).toInt()) {
+                        case 5:
+                            paraIndex += 2;
+                            break;
+                        case 2:
+                        case 3:
+                            paraIndex += (haveColorSpaceId ? 5 : 4);
+                            break;
+                        case 4:
+                            paraIndex += (haveColorSpaceId ? 6 : 5);
+                            break;
+                        default:
+                            ++paraIndex;
+                            break;
+                        }
+                    }
+                    break;
+                case 59: // Default underline colour
+                    break;
                 // case 60: // ideogram underline or right side line
                 //    break;
                 // case 61: // ideogram double underline or double right side line
@@ -7105,8 +7139,8 @@ void TBuffer::logRemainingOutput()
     lastloggedToLine = -1;
 
     // No mLogToLogFile test on purpose: every caller has already decided the
-    // pending line must be flushed - toggleLogging() once it has cleared the
-    // flag, clear() while it is still set, ~Host() either way. The file being open is tested
+    // pending line must be flushed - closeLogFile() once the flag is down or
+    // about to be, clear() while it is still set. The file being open is tested
     // instead, because a QTextStream written to after its device closed latches
     // WriteFailed and then silently keeps every later write in its own buffer,
     // to be replayed into the next log file the moment setDevice() rearms it.
@@ -8945,8 +8979,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             const bool userArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
             // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
             const bool userArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
-            // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
-            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            // User Defined (PU) Area 3: byte1 A1-A7, byte2 40-A0 (excluding 7F)
+            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
             // Looks like first pair of 4-byte GB18030 non-BMP sequence: byte1 90-E3, byte2 30-39
             const bool looksLikeGB18030NonBMP = (byte1 >= 0x90) && (byte1 <= 0xE3) && (byte2 >= 0x30) && (byte2 <= 0x39);
             // Looks like first pair of 4-byte GB18030 Private Use sequence: byte1 FD-FE, byte2 30-39
@@ -9137,8 +9171,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 const bool isUserArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
                 // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
                 const bool isUserArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
-                // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
-                const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+                // User Defined (PU) Area 3: byte1 A1-A7, byte2 40-A0 (excluding 7F)
+                const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
 
                 if (isGBKArea3) {
                     // GBK/3 sequence
