@@ -441,6 +441,7 @@ private slots:
 
         removeScripts({pScriptA, pScriptB});
     }
+
     // markForCompile() leaves the body waiting, as a reset does to a script switched off at the time
     void testSwitchingAWaitingScriptOnInTheEditorRunsItsBody()
     {
@@ -463,7 +464,7 @@ private slots:
         pScript->markForCompile();
         mpEditor->mpUndoStack->undo();
         QVERIFY2(pScript->isActive(), "undoing the switch off left the script switched off");
-        QVERIFY2(luaGlobalInt("editorSwitchedOnRuns") == 2, "switching the script back on by undo did not run its waiting body");
+        QCOMPARE(luaGlobalInt("editorSwitchedOnRuns"), 2);
 
         removeScripts({pTreeItem});
     }
