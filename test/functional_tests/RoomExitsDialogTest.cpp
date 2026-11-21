@@ -330,20 +330,19 @@ private slots:
         buildMap();
         auto* pDlg = openDialogOn(scmSubjectRoom);
 
-        const QList<QGroupBox*> groups{pDlg->groupBox_nw,
-                                       pDlg->groupBox_n,
-                                       pDlg->groupBox_ne,
-                                       pDlg->groupBox_up,
-                                       pDlg->groupBox_w,
-                                       pDlg->groupBox_e,
-                                       pDlg->groupBox_down,
-                                       pDlg->groupBox_sw,
-                                       pDlg->groupBox_s,
-                                       pDlg->groupBox_se,
-                                       pDlg->groupBox_in,
-                                       pDlg->groupBox_out};
         QSet<QString> namesSeen;
-        for (auto* pGroup : groups) {
+        for (auto* pGroup : {pDlg->groupBox_nw,
+                             pDlg->groupBox_n,
+                             pDlg->groupBox_ne,
+                             pDlg->groupBox_up,
+                             pDlg->groupBox_w,
+                             pDlg->groupBox_e,
+                             pDlg->groupBox_down,
+                             pDlg->groupBox_sw,
+                             pDlg->groupBox_s,
+                             pDlg->groupBox_se,
+                             pDlg->groupBox_in,
+                             pDlg->groupBox_out}) {
             const auto controls = pGroup->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
             QCOMPARE(controls.size(), 8);
             for (auto* pControl : controls) {
@@ -355,6 +354,17 @@ private slots:
                 namesSeen.insert(name);
             }
         }
+
+        // The checks above still pass if two controls of one exit swap names
+        const QString nw = pDlg->groupBox_nw->title();
+        QCOMPARE(pDlg->nw->accessibleName(), qsl("%1 exit room ID").arg(nw));
+        QCOMPARE(pDlg->noroute_nw->accessibleName(), qsl("%1 exit: no route").arg(nw));
+        QCOMPARE(pDlg->stub_nw->accessibleName(), qsl("%1 exit: stub exit").arg(nw));
+        QCOMPARE(pDlg->weight_nw->accessibleName(), qsl("%1 exit weight").arg(nw));
+        QCOMPARE(pDlg->doortype_none_nw->accessibleName(), qsl("%1 exit: no door").arg(nw));
+        QCOMPARE(pDlg->doortype_open_nw->accessibleName(), qsl("%1 exit: open door").arg(nw));
+        QCOMPARE(pDlg->doortype_closed_nw->accessibleName(), qsl("%1 exit: closed door").arg(nw));
+        QCOMPARE(pDlg->doortype_locked_nw->accessibleName(), qsl("%1 exit: locked door").arg(nw));
     }
 
     void theNoRouteBoxesCanBeReachedFromTheKeyboard()
