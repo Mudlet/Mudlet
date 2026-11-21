@@ -150,7 +150,7 @@ private slots:
         view.slot_setScale(500);
         view.slot_topView();
 
-        QVERIFY(QOpenGLContext::currentContext() == &other);
+        QCOMPARE(QOpenGLContext::currentContext(), &other);
         GLint viewport[4] = {};
         gl->glGetIntegerv(GL_VIEWPORT, viewport);
         other.doneCurrent();
