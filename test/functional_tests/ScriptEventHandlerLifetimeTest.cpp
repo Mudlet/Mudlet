@@ -41,6 +41,14 @@
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
+}
+
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
@@ -158,6 +166,15 @@ private:
             }
         }
         return nullptr;
+    }
+
+    int luaGlobalInt(const char* name) const
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        return value;
     }
 
     void removeScripts(const QList<QTreeWidgetItem*>& treeItems)
@@ -423,6 +440,32 @@ private slots:
         QCOMPARE(savedHandlersOf(pScriptA), QStringList{qsl("searchableEvent")});
 
         removeScripts({pScriptA, pScriptB});
+    }
+    // markForCompile() leaves the body waiting, as a reset does to a script switched off at the time
+    void testSwitchingAWaitingScriptOnInTheEditorRunsItsBody()
+    {
+        QTreeWidgetItem* pTreeItem = addSavedScript(qsl("editorSwitchedOnScript"), {});
+        QVERIFY(pTreeItem);
+        TScript* pScript = mpHost->getScriptUnit()->getScript(pTreeItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pScript);
+        pScript->setScript(qsl("editorSwitchedOnRuns = (editorSwitchedOnRuns or 0) + 1"));
+        mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("editorSwitchedOnRuns = 0"));
+        pScript->setIsActive(false);
+        pScript->markForCompile();
+
+        mpEditor->treeWidget_scripts->setCurrentItem(pTreeItem);
+        mpEditor->activeToggle_script();
+        QVERIFY(pScript->isActive());
+        QCOMPARE(luaGlobalInt("editorSwitchedOnRuns"), 1);
+
+        mpEditor->activeToggle_script();
+        QVERIFY(!pScript->isActive());
+        pScript->markForCompile();
+        mpEditor->mpUndoStack->undo();
+        QVERIFY2(pScript->isActive(), "undoing the switch off left the script switched off");
+        QVERIFY2(luaGlobalInt("editorSwitchedOnRuns") == 2, "switching the script back on by undo did not run its waiting body");
+
+        removeScripts({pTreeItem});
     }
 };
 
