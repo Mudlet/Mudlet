@@ -213,7 +213,7 @@ describe("a connection attempt after disconnect() found nothing to disconnect", 
   it("still reports the attempt failing", function()
     disconnect()
     assert.is_true(waitUntil(function() return not connected() end, 2000))
-    -- The one that matters: there is nothing left for this one to end
+    -- Finds no connection to end, so the flags it sets are never cleared by a disconnection
     disconnect()
 
     local failed = false
