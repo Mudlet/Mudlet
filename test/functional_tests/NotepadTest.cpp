@@ -77,6 +77,14 @@ private:
 
     static QToolButton* findBarButton(dlgNotepad* notepad, const QString& name) { return notepad->findChild<QToolButton*>(name); }
 
+    // A tab's accessible name strips "&" markers the same way its painted label does
+    static QString shownName(dlgNotepad* notepad, const int index)
+    {
+        QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(notepad->tabWidget->tabBar());
+        QAccessibleInterface* tab = tabBar ? tabBar->child(index) : nullptr;
+        return tab ? tab->text(QAccessible::Name) : QString();
+    }
+
     // Only the matches on screen get marked, so a search needs the notepad up at a size that shows a few lines
     static bool putOnScreen(dlgNotepad* notepad)
     {
@@ -294,29 +302,22 @@ private slots:
     }
 
     // A tab bar takes a lone "&" for a shortcut marker, drawing "Spells & Skills" without it.
-    // Its accessible name strips markers the same way the painted label does.
     void test_aNoteNamedWithAnAmpersandShowsAndKeepsIt()
     {
         startProfile(mHostname, mLocalhost, mPort);
         auto* profile = mudlet::self()->getActiveHost();
         const QString name = qsl("Spells & Skills");
 
-        const auto shownName = [](dlgNotepad* pad) {
-            QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(pad->tabWidget->tabBar());
-            QAccessibleInterface* tab = tabBar ? tabBar->child(1) : nullptr;
-            return tab ? tab->text(QAccessible::Name) : QString();
-        };
-
         QScopedPointer<dlgNotepad> notepad(new dlgNotepad(profile));
         notepad->addTab(name, qsl("fireball"));
         QVERIFY(putOnScreen(notepad.data()));
-        QCOMPARE(shownName(notepad.data()), name);
+        QCOMPARE(shownName(notepad.data(), 1), name);
 
         notepad->save();
         notepad.reset();
         QScopedPointer<dlgNotepad> reopened(new dlgNotepad(profile));
         QVERIFY(putOnScreen(reopened.data()));
-        QCOMPARE(shownName(reopened.data()), name);
+        QCOMPARE(shownName(reopened.data(), 1), name);
     }
 
     // The rename box and the close question name the note as it reads, not as the tab bar stores it
@@ -345,9 +346,7 @@ private slots:
         answerer.start();
         notepad->renameTab(1);
         QCOMPARE(offered, qsl("Spells & Skills"));
-        QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(notepad->tabWidget->tabBar());
-        QVERIFY(tabBar && tabBar->child(1));
-        QCOMPARE(tabBar->child(1)->text(QAccessible::Name), qsl("Rock && Roll"));
+        QCOMPARE(shownName(notepad.data(), 1), qsl("Rock && Roll"));
 
         QCOMPARE(closeTabAnsweringTheQuestion(notepad.data(), 1), qsl("Close the note \"Rock && Roll\"?"));
         QCOMPARE(notepad->tabWidget->count(), 1);
