@@ -7010,6 +7010,10 @@ bool Host::parentWindowMissing(const QString& windowname) const
 
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
+    // Nothing could delete it: deleteMiniConsole() refuses the empty name
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a miniconsole cannot have an empty string as its name")};
+    }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -7040,6 +7044,9 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a scrollbox cannot have an empty string as its name")};
+    }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -7065,6 +7072,10 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
+    // Nothing could delete it: deleteLabel() refuses the empty name
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
