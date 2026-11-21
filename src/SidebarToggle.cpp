@@ -105,8 +105,9 @@ void SidebarToggle::leaveEvent(QEvent* event)
     update();
 }
 
-void SidebarToggle::paintEvent(QPaintEvent*)
+void SidebarToggle::paintEvent(QPaintEvent* event)
 {
+    Q_UNUSED(event)
     const ThemeTokens tokens = themeTokens();
     const bool lit = isEnabled() && (underMouse() || isDown());
 
