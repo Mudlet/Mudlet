@@ -2640,15 +2640,24 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 /*static*/ QString dlgConnectionProfiles::nameForCopy(const QString& name, const QStringList& takenNames)
 {
     qsizetype digitsStart = name.size();
-    while (digitsStart > 0 && name.at(digitsStart - 1) >= QLatin1Char('0') && name.at(digitsStart - 1) <= QLatin1Char('9')) {
+    while (digitsStart > 0) {
+        const QChar previous = name.at(digitsStart - 1);
+        if (previous < u'0' || previous > u'9') {
+            break;
+        }
         --digitsStart;
     }
-    // Counting on past every taken name cannot overflow from 18 digits; a longer number stays in the stem
+
+    QString stem = name;
+    qulonglong number = 0;
+    qsizetype width = 0;
     const qsizetype digitCount = name.size() - digitsStart;
-    const bool numbered = digitCount > 0 && digitCount <= 18;
-    qulonglong number = numbered ? name.mid(digitsStart).toULongLong() : 0;
-    const qsizetype width = numbered ? digitCount : 0;
-    const QString stem = numbered ? name.left(digitsStart) : name;
+    // Counting on past every taken name cannot overflow from 18 digits; a longer number stays in the stem
+    if (digitCount > 0 && digitCount <= 18) {
+        stem = name.first(digitsStart);
+        number = name.sliced(digitsStart).toULongLong();
+        width = digitCount;
+    }
 
     QString candidate;
     do {
