@@ -76,6 +76,7 @@ public:
     QString getDownloadFilePath() const;
     Release getCurrentDownload() const { return mCurrentDownload; }
     bool isReady() const;
+    bool isLoading() const;
     bool isDownloading() const;
 
 signals:
