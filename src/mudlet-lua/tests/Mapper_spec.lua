@@ -1273,11 +1273,7 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(30, b)
     end)
 
-    it("setRoomCharColor hard-errors on an out-of-range component", function()
-      assert.has_error(function() setRoomCharColor(rSandA, 256, 0, 0) end)
-    end)
-
-    it("setRoomCharColor's range error names the offending component and its value", function()
+    it("setRoomCharColor hard-errors naming the out-of-range component and its value", function()
       assert.has_error(function() setRoomCharColor(rSandA, 256, 0, 0) end,
         "setRoomCharColor: bad argument #2 value (red component 256 is out of range 0 to 255)")
       assert.has_error(function() setRoomCharColor(rSandA, 10, 300, 0) end,
