@@ -441,6 +441,50 @@ private slots:
         QCOMPARE(pHost->getPass(), typedPassword);
     }
 
+    // The dialog hands an edit to the open profile once typing pauses, so the player need not connect from it
+    void test_aPasswordTypedForTheOpenProfileOutlivesItsLookupWhenTheDialogIsClosed_data()
+    {
+        QTest::addColumn<QString>("typedPassword");
+
+        QTest::newRow("changed") << qsl("typedsecret");
+        QTest::newRow("erased") << QString();
+    }
+
+    void test_aPasswordTypedForTheOpenProfileOutlivesItsLookupWhenTheDialogIsClosed()
+    {
+        QFETCH(QString, typedPassword);
+
+        auto* pHost = theOpenTestProfileHolding(mSavedName, mSavedPassword);
+        QVERIFY2(pHost, "The test profile could not be opened, so the dialog has no open profile to be asked about");
+        QVERIFY2(showTheTestProfileWithSavedLogin(mSavedName, mSavedPassword), "The dialog did not show the profile's saved login");
+        pHost->mSecuredPasswordPending = true;
+
+        typeOver(dialog()->character_password_entry, typedPassword);
+        QVERIFY2(QTest::qWaitFor(
+                         [pHost, &typedPassword]() {
+                             return pHost->getPass() == typedPassword;
+                         },
+                         5s),
+                 "The open profile was never given the typed password");
+        dialog()->reject();
+
+        pHost->securedPasswordAnswered(true, mSavedPassword, QString(), false);
+        QCOMPARE(pHost->getPass(), typedPassword);
+    }
+
+    void test_aPasswordTypedForTheOpenProfileKeepsItsSpacesAtConnect()
+    {
+        const QString typedPassword = qsl(" sesame ");
+
+        auto* pHost = theOpenTestProfileHolding(mSavedName, mSavedPassword);
+        QVERIFY2(pHost, "The test profile could not be opened, so the dialog has no open profile to be asked about");
+        QVERIFY2(showTheTestProfileWithSavedLogin(mSavedName, mSavedPassword), "The dialog did not show the profile's saved login");
+
+        typeOver(dialog()->character_password_entry, typedPassword);
+        QVERIFY2(connectFromTheDialog(), "The open profile was not connected, so the dialog was never asked");
+        QCOMPARE(pHost->getPass(), typedPassword);
+    }
+
     // A profile that could read no password of its own takes the one the dialog showed
     void test_aPasswordTheDialogFilledInGivesWayToTheOpenProfilesLookup()
     {
