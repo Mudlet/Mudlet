@@ -141,7 +141,7 @@ describe("Tests the generic mapper when a map loads", function()
   local function recordEchoes(body)
     local realEcho = map.echo
     local echoes = {}
-    map.echo = function(what, debug, err)
+    map.echo = function(what, _, err)
       echoes[#echoes + 1] = {what = what, err = err}
     end
     local ok, err = pcall(body)

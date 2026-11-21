@@ -3367,16 +3367,16 @@ end
 function map.load_map(address)
     local path = profilePath .. "/map downloads/map.dat"
     if not address then
-        local backup = profilePath .. "/map.dat"
-        if not io.exists(backup) and io.exists(path) then
+        local file = profilePath .. "/map.dat"
+        if not io.exists(file) and io.exists(path) then
             -- the map a download left behind still loads for those who never used map save
-            backup = path
+            file = path
         end
-        if loadMap(backup) then
+        if loadMap(file) then
             forget_position()
             map.echo("Map reloaded from local copy.")
         else
-            map.echo("Error. Map NOT loaded from " .. backup .. ".", false, true)
+            map.echo("Error. Map NOT loaded from " .. file .. ".", false, true)
         end
     else
         if not string.match(address,"/[%a_]+%.dat$") then
