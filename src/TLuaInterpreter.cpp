@@ -7122,16 +7122,17 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
 
+    const QByteArray& payload = fileToUpload.isEmpty() ? dataToPost : fileToUpload;
     QNetworkReply* reply;
     switch (operation) {
     case QNetworkAccessManager::PostOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, payload);
         break;
     case QNetworkAccessManager::PutOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, payload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, payload);
     }
 
     if (TDebug::wants(TDebug::Category::Network)) {
