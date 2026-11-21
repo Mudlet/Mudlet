@@ -69,6 +69,20 @@ THeadlessSession::ScriptWindow::Kind kindOf(const Record::Kind kind)
     Q_UNREACHABLE();
 }
 
+THeadlessSession::LabelContent::LiveRegion liveRegionOf(const TLabelLiveRegion liveRegion)
+{
+    using LiveRegion = THeadlessSession::LabelContent::LiveRegion;
+    switch (liveRegion) {
+    case TLabelLiveRegion::Off:
+        return LiveRegion::off;
+    case TLabelLiveRegion::Polite:
+        return LiveRegion::polite;
+    case TLabelLiveRegion::Assertive:
+        return LiveRegion::assertive;
+    }
+    Q_UNREACHABLE();
+}
+
 THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int stackOrder)
 {
     THeadlessSession::ScriptWindow window{record.name, kindOf(record.kind), record.parent, record.geometry, record.visible, record.shown, stackOrder, record.background, record.font, record.inDock};
@@ -463,17 +477,7 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.clickThrough = pModel->mClickThrough;
     content.accessibleName = pModel->effectiveAccessibleName();
     content.accessibleButton = pModel->actsAsButton();
-    switch (pModel->mLiveRegion) {
-    case TLabelLiveRegion::Off:
-        content.liveRegion = LabelContent::LiveRegion::off;
-        break;
-    case TLabelLiveRegion::Polite:
-        content.liveRegion = LabelContent::LiveRegion::polite;
-        break;
-    case TLabelLiveRegion::Assertive:
-        content.liveRegion = LabelContent::LiveRegion::assertive;
-        break;
-    }
+    content.liveRegion = liveRegionOf(pModel->mLiveRegion);
     content.styleSheet = pModel->mStyleSheet;
     return content;
 }
