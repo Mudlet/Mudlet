@@ -281,6 +281,7 @@ public:
     // scripts between them: the Lua function a line is handed to, 0 for none, a console's echo of a line it sent,
     // and the history and the emptying after the last line.
     void typeCommandLine(const QString& name, const QString& text);
+    void holdCommandLineForSend(const QString& name);
     std::optional<int> commandLineAction(const QString& name) const;
     // The line under the name, which one deleted and made again under it is not
     const QObject* commandLineInstance(const QString& name) const;
@@ -552,6 +553,10 @@ private:
         QSet<QString> suggestions;
         QSet<QString> blacklist;
         QPointer<HistoryWriter> writer;
+        // As TCommandLine::enterCommand(): whether the line went to a function when a send began, and whether
+        // anything wrote to it since, either of which decides whether the send empties it
+        bool sentToAction = false;
+        bool rewritten = false;
         // A console's own command line, still in TConsole::layerCommandLine, which TConsole::setCmdVisible() shows
         // and hides with it
         bool inConsole = false;

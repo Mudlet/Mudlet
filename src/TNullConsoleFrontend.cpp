@@ -3063,6 +3063,7 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         return false;
     }
     if (!mainCommandLine(name)) {
+        mCommandLines.at(name).rewritten = true;
         mpHost->windowRegistry().setCommandLineText(name, plainText(text));
         // Told even where Mudlet's copy is unchanged, as the app's line may hold what it has yet to pass on
         mWindowNotifier.noteCommandLine(name);
@@ -3082,7 +3083,18 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
 
 void TNullConsoleFrontend::typeCommandLine(const QString& name, const QString& text)
 {
+    if (const auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+        it->second.rewritten = true;
+    }
     mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+}
+
+void TNullConsoleFrontend::holdCommandLineForSend(const QString& name)
+{
+    if (const auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+        it->second.sentToAction = it->second.action != 0;
+        it->second.rewritten = false;
+    }
 }
 
 bool TNullConsoleFrontend::commandLineShown(const QString& name) const
@@ -3133,7 +3145,7 @@ void TNullConsoleFrontend::commandLineSent(const QString& name)
     if (!text.isEmpty() && it->second.writer && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         TCommandHistory::add(it->second.writer->history, text);
     }
-    if (mpHost->mAutoClearCommandLineAfterSend) {
+    if (mpHost->mAutoClearCommandLineAfterSend && (it->second.sentToAction || !it->second.rewritten)) {
         replaceCommandLineText(name, QString());
     }
 }

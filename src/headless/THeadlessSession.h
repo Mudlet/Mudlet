@@ -382,9 +382,10 @@ public:
     // Enter on that line, holding this text, each line of it a command: one goes to the function a script's
     // setCmdLineAction() gave the line, or else through the aliases to the game as submit() sends it, and then a
     // console's own line echoes it in its console unless the profile never echoes commands. The text joins the
-    // line's history, and the line is then emptied where the profile clears a sent command, which
-    // windowCommandLineTextChanged tells. Before it returns. False as setWindowCommandLineText() is, and when the
-    // profile begins to close part-way; a line a script deletes part-way takes no more commands.
+    // line's history, and the line is then emptied, which windowCommandLineTextChanged tells, where the profile
+    // clears a sent command, unless the line has no such function and something wrote to it meanwhile. Before it
+    // returns. False as setWindowCommandLineText() is, and when the profile begins to close part-way; a line a
+    // script deletes part-way takes no more commands.
     bool submitWindowCommandLine(const QString& commandLine, const QString& line);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it

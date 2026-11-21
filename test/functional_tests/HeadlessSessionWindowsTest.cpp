@@ -1676,6 +1676,27 @@ setCmdLineAction("own", function(text) headlessActed = {text} deleteCommandLine(
         QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_aWindowLineWrittenToWhileItIsSentIsLeftAsWritten()
+    {
+        const QString name = qsl("Headless Windows Command Line Prefill");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createCommandLine("own", 0, 300, 200, 30)
+tempAlias([[^t (\w+)$]], [[printCmdLine("own", "tell " .. matches[2] .. " ")]])
+)lua")));
+        for (const bool autoClear : {true, false}) {
+            session.host()->mAutoClearCommandLineAfterSend = autoClear;
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("t bob")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("look")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(autoClear ? QString() : qsl("look")));
+        }
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"
