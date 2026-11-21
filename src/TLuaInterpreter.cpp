@@ -66,7 +66,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QSettings>
 #include <QStandardPaths>
@@ -90,6 +89,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+
+#if defined(Q_OS_WASM)
+#include <emscripten/emscripten.h>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -666,6 +669,16 @@ bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
     return true;
 }
 
+#if defined(Q_OS_WASM)
+// Emscripten's clock() is wall time in a 32-bit clock_t, which wraps 2147 seconds after its first call; a browser has
+// no CPU time either, so this is the seconds since the page loaded
+int browserClock(lua_State* L)
+{
+    lua_pushnumber(L, emscripten_get_now() / 1000.0);
+    return 1;
+}
+#endif
+
 } // namespace
 
 
@@ -813,14 +826,10 @@ bool TLuaInterpreter::checkIntArg(lua_State* L, const char* functionName, const 
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         return false;
     }
-    // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
-    // signed 64 bit value, which is usually larger than an "int" a.k.a. an
-    // int32_t:
-    // We have to error out here otherwise we have to restructure every usage
-    // to handle such an over/under-flow - at least with a change to a
-    // std::optional<int>...
-    auto const result = lua_tointeger(L, pos);
-    if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
+    // Not lua_tointeger(): lua_Integer is ptrdiff_t, which on 32-bit targets such as wasm32 has
+    // already mangled an out-of-range value; the negated test also refuses NaN
+    const lua_Number number = lua_tonumber(L, pos);
+    if (!(number > std::numeric_limits<int>::min() - 1.0 && number < std::numeric_limits<int>::max() + 1.0)) {
         lua_pushfstring(L,
                         "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
                         functionName,
@@ -3909,6 +3918,10 @@ int TLuaInterpreter::getOS(lua_State* L)
 #elif defined(Q_PROCESSOR_POWER_32)
         lua_pushstring(L, "ppc (32-bit)");
         return 1;
+#elif defined(Q_PROCESSOR_ARM_64)
+        // Before the _V7 case: Qt also defines Q_PROCESSOR_ARM_V7, _V6 and _V5 for 64-bit ARM
+        lua_pushstring(L, "arm (64-bit)");
+        return 1;
 #elif defined(Q_PROCESSOR_ARM_V7)
         lua_pushstring(L, "arm7");
         return 1;
@@ -3917,6 +3930,9 @@ int TLuaInterpreter::getOS(lua_State* L)
         return 1;
 #elif defined(Q_PROCESSOR_ARM_V5)
         lua_pushstring(L, "arm5");
+        return 1;
+#elif defined(Q_PROCESSOR_WASM)
+        lua_pushstring(L, QT_POINTER_SIZE == 8 ? "wasm (64-bit)" : "wasm (32-bit)");
         return 1;
 #else
         return 0;
@@ -3936,6 +3952,11 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 2 + pushProcessor();
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2 + pushProcessor();
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines
+    lua_pushstring(L, "android");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     return 2 + pushProcessor();
 #elif defined(Q_OS_LINUX)
@@ -7108,7 +7129,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         break;
     default:
         reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
-    };
+    }
 
     if (TDebug::wants(TDebug::Category::Network)) {
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;
@@ -7146,14 +7167,13 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
     // Extraction can outlast the profile, or this lua_State across a resetProfile(), so the
     // watcher goes with the Host and reaches it directly rather than through L
     Host* pHost = &getHostFromLua(L);
-    auto future = TBackgroundTask::run([zipLocation, extractLocation, temporaryPath = temporaryDir.path()]() {
+    const TBackgroundResult result = TBackgroundTask::run([zipLocation, extractLocation, temporaryPath = temporaryDir.path()]() {
         return utils::unzip(zipLocation, extractLocation, temporaryPath);
     });
-    auto watcher = new QFutureWatcher<bool>(pHost);
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [pHost, watcher, future, zipLocation, extractLocation]() {
+    result.whenFinished(pHost, QString(), [pHost, result, zipLocation, extractLocation]() {
         TEvent event{};
 
-        if (future.result()) {
+        if (result.succeeded()) {
             event.mArgumentList.append(qsl("sysUnzipDone"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         } else {
@@ -7166,9 +7186,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         pHost->raiseEvent(event);
-        watcher->deleteLater();
     });
-    watcher->setFuture(future);
 
     lua_pushboolean(L, true);
     return 1;
@@ -7479,6 +7497,12 @@ void TLuaInterpreter::initLuaGlobals()
     storeHostInLua(pGlobalLua, mpHost);
 
     luaL_openlibs(pGlobalLua);
+#if defined(Q_OS_WASM)
+    lua_getglobal(pGlobalLua, "os");
+    lua_pushcfunction(pGlobalLua, browserClock);
+    lua_setfield(pGlobalLua, -2, "clock");
+    lua_pop(pGlobalLua, 1);
+#endif
 
     lua_getglobal(pGlobalLua, "package");
     lua_getfield(pGlobalLua, -1, "preload");
@@ -8250,7 +8274,17 @@ void TLuaInterpreter::initLuaGlobals()
     additionalCPaths << qsl("%1/?.so").arg(profilePath);
 #endif
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_ANDROID)
+    // appPath holds only the APK's lib*.so files, flat. Unless they are extracted it is <apk>!/lib/<abi>,
+    // where Lua's fopen() check of each candidate can never find a module.
+    if (appPath.contains(QLatin1String("!/"))) {
+        qInfo().noquote().nospace()
+                << "TLuaInterpreter::initLuaGlobals() INFO - package.cpath has no entry for " << appPath
+                << ", as require() cannot load a module from inside the APK: extract the app's libraries (QT_ANDROID_LEGACY_PACKAGING) or give Lua C modules to THeadlessSession::preloadLuaModule()";
+    } else {
+        additionalCPaths << qsl("%1/lib?.so").arg(appPath);
+    }
+#elif defined(Q_OS_LINUX)
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);

@@ -23,6 +23,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TDebug.h"
 
 #include <QCoreApplication>
@@ -1139,8 +1140,20 @@ void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, co
         }
     }
 
+    // The pointer, a pressed button and focus outrank being selected, so a link in one of those states keeps it
+    const auto stateFor = [this](int link, bool linkSelected) {
+        const auto current = buffer.getLinkState(link);
+        if (current == Mudlet::HyperlinkStyling::StateDisabled || current == Mudlet::HyperlinkStyling::StateActive || current == Mudlet::HyperlinkStyling::StateHover) {
+            return current;
+        }
+        if (buffer.showsFocus(link)) {
+            return Mudlet::HyperlinkStyling::StateFocusVisible;
+        }
+        return linkSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault;
+    };
+
     buffer.setLinkSelected(linkIndex, selected);
-    buffer.setLinkState(linkIndex, selected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+    buffer.setLinkState(linkIndex, stateFor(linkIndex, selected));
     buffer.updateLinkCharacters(linkIndex);
 
     if (!mHyperlinkSelectionManager.isGroupExclusive(group)) {
@@ -1156,7 +1169,7 @@ void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, co
         const QList<int> memberLinks = buffer.mLinkStore.getLinkIdsByGroupValue(group, member);
         for (const int memberLink : memberLinks) {
             buffer.setLinkSelected(memberLink, memberSelected);
-            buffer.setLinkState(memberLink, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+            buffer.setLinkState(memberLink, stateFor(memberLink, memberSelected));
             buffer.updateLinkCharacters(memberLink);
         }
     }
@@ -1358,11 +1371,10 @@ void removeAutologSentinel(const QString& path)
     if (!sentinel.exists()) {
         return;
     }
-    if (sentinel.isDir()) {
-        QDir().rmdir(path);
-        return;
+    const bool removed = sentinel.isDir() ? QDir().rmdir(path) : QFile::remove(path);
+    if (removed) {
+        TAppFrontend::instance()->configWritten();
     }
-    QFile::remove(path);
 }
 } // namespace
 
@@ -1415,6 +1427,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         }
         QTextStream out(&file);
         file.close();
+        TAppFrontend::instance()->configWritten();
 
         QString directoryLogFile;
         QString logFileName;

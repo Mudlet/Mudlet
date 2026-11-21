@@ -195,6 +195,8 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
+    // As the view goes: the profile's sheet went to it, and the console it replaced took its sheet's font with it
+    void resumeMainText();
     // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
     // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
     void addMainCommandLineHistory(const QString& sent);
@@ -363,6 +365,7 @@ public:
     void setProfileStyleSheet(const QString& styleSheet) override;
     void applyBorders() override;
     QFont displayFont() const override;
+    QFont mainTextFont() const override;
     void setFont(const QFont&) override {}
     void setFontSize(int) override {}
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
@@ -476,6 +479,18 @@ public:
     bool placeUserWindow(const QString& name, const QRect& geometry, bool floating);
     bool userWindow(const QString& name) const;
 
+    // A widget as a style sheet's selectors see it: its classes, most derived first, its object name, and the properties
+    // a selector can name that are modelled here
+    struct SheetNode
+    {
+        QStringList classNames;
+        QString objectName;
+        QList<std::pair<QString, QString>> properties;
+        bool operator==(const SheetNode&) const = default;
+    };
+    // A widget, then each widget it is in out to the main window
+    using SheetChain = QList<SheetNode>;
+
 private:
     friend class TNullMxpFrameFrontend;
 
@@ -579,8 +594,12 @@ private:
         Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
         bool floating = false;
         qint64 deactivated = 0;
+        // TConsole::mDisplayFontDetails, the font scripts gave it, which a sheet that styles the console lies over
+        QFont scriptFont;
         // A user window's font from before its sheet gave its text one, which clearing the sheet hands back
         std::optional<QFont> fontBeforeSheet;
+        // Where the text was last styled; a move that puts it somewhere else restyles it
+        SheetChain paneChain;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -596,8 +615,9 @@ private:
         std::optional<QFont> savedFont;
         // The font properties the label's own sheet and its window's declare, if they declare any
         std::optional<QFont> sheetFont;
-        // The sheet of the window it is in, as it was last restyled
+        // The sheet of the window it is in, and where the label was, as it was last restyled
         QString windowSheet;
+        SheetChain sheetChain;
         // The widths SE_ShapedFrameContents takes off each side under its sheet, as top, right, bottom and left
         std::array<int, 4> frame{};
         SizeLimits limits;
@@ -650,6 +670,7 @@ private:
     // As QWidget::raise() and lower() among the windows of its parent, in TMainConsole::raiseWindow()'s order of kinds
     bool restack(const QString& name, bool raise);
     QString parentName(const QString& userWindow, const ScrollBox* box) const;
+    bool inRetiredWindow(const QString& userWindow, const ScrollBox* box) const;
     void showEmbeddedMapper();
     void reportEmbeddedMapperVisibility();
     QMovie* shownMovie(const QString& name) const;
@@ -661,6 +682,8 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     // keepWidget for a console whose widget outlives its place in the registry, with its own command line
     void removeSubConsole(const QString& name, bool keepWidget = false);
+    void removeWindowContents(const QString& userWindow);
+    QString retireWindowContents(const QString& name, const SubConsole& window);
     void addFrameConsole(const QString& name, const QSize& size, bool external, const QString& hostFrame, bool scrolling);
     void sizeFrameConsole(const QString& name, const QSize& size);
     // False for a frame's console a script has moved out of the frame
@@ -689,7 +712,9 @@ private:
     void republishPlainWindow(const QString& name);
     static bool within(const ScrollBox* container, const ScrollBox* box);
     void removeScrollBoxContents(const ScrollBox* box);
-    void moveScrollBoxContents(const ScrollBox* box);
+    void moveScrollBoxContents(const ScrollBox* box, const QString& fromWindow);
+    bool labelSheetsMoved(const Label& label) const;
+    bool paneSheetsMoved(const QString& name, const SubConsole& console) const;
     void inheritLabelFont(Label& label, bool restyle);
     void showLabelText(Label& label, const QString& shown);
     static void updateShownContent(Label& label);
@@ -706,13 +731,23 @@ private:
     void reportVisibility(const QString& changedWindow, const ScrollBox* changedBox);
     void reportWindowVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;
+    std::optional<QFont> consoleTextFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
     void applyUserWindowSheet(const QString& name, const QString& sheet);
     void applyUserWindowSheetFont(const QString& name, const QString& sheet);
     QString windowSheet(const QString& userWindow) const;
+    SheetChain containerSheetChain(const QString& userWindow, const ScrollBox* box) const;
+    SheetChain consoleSheetChain(const QString& name) const;
+    SheetChain paneSheetChain(const QString& name) const;
+    SheetChain labelSheetChain(const Label& label) const;
+    SheetChain plainWindowSheetChain(const QString& name, const PlainWindow& window, bool commandLine) const;
     void restyleWindowContents(const QString& userWindow);
-    QFont subConsoleOwnFont(const QString& name, const TConsoleModel& model) const;
+    QString consoleWindowSheet(const QString& name) const;
+    QFont underConsoleSheet(const QString& name, const QFont& font) const;
     void reportDisplayFontChange(const QFont& before);
+    void restyleMainText();
+    std::optional<QFont> profileMainTextSheetFont() const;
+    void changeDisplayFont(const std::function<void()>& change);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
     static bool listsConsole(std::optional<TWindowRegistry::SubConsoleKind> kind);
@@ -736,8 +771,22 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // What a deleted user window gave the windows it held, which live on until deferred deletes run
+    struct RetiredWindow
+    {
+        QString name;
+        QString sheet;
+        QFont font;
+        bool floating = false;
+    };
+    std::map<QString, RetiredWindow> mRetiredWindows;
+    int mRetiredWindowCount = 0;
     // QStyleSheetStyle leaves the main console's widgets on the application's font once it has had a sheet
     bool mProfileSheetSeen = false;
+    // What a profile sheet that styles the main console gave its text when the display font last changed, and the font
+    // one gives the text itself
+    std::optional<QFont> mMainConsoleSheetFont;
+    std::optional<QFont> mMainTextSheetFont;
     // As TCommandLine::playerTypedLine()
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it

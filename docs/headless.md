@@ -188,6 +188,23 @@ path that leads to one, even before it is made. Not caught: a portable install w
 beside another executable, and a GUI run under another HOME. Naming one of their folders shares its
 profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns when a folder it accepts already holds profiles.
 
+In an Android app the profiles' passwords are kept by QtKeychain instead, as they are without a
+`configDir`: encrypted with a key in the app's own KeyStore, unless its `Mudlet.ini` sets
+`storePasswordsSecurely` to false, which keeps them in the folder. The KeyStore is the app's own, so there
+is no GUI to share it with, and each folder's entries are named for that folder, with symbolic links
+resolved, so a profile of the same name in another one keeps its own; name it by the same path on every
+run. Moving the folder leaves those passwords behind, as only the files under `credentials/` go with it,
+and restoring the app's data without its KeyStore keys leaves them unreadable: Mudlet says so in the
+profile's console when it would have sent one, and the player types it again. A proxy password stays under
+`credentials/`, as the GUI keeps its own in a file. While a password is under `credentials/`, that copy is
+the one read and the KeyStore is not: a save the KeyStore takes and gives back on a read removes it, and
+one it refuses or does not give back is kept there instead, with a warning in the log. A save it does not
+answer in time is reported as failed, and leaves any copy already there as the one read. A save or a forget
+that cannot remove that copy, or cannot look for it, is reported as failed.
+With no Java VM registered with Qt - `mudlet-headless` run as a bare executable, or an app that does not
+load Qt Core through `System.loadLibrary` - the KeyStore cannot be reached, so the folder keeps them all
+under `credentials/`, and the log says so.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
@@ -597,6 +614,196 @@ does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it le
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
 
+## Embedding it: the game connection
+
+Where there are no sockets, as in a browser, the app makes the connection to the game and Mudlet does
+the rest over it, as over a socket: telnet negotiation, MCCP, GMCP, MSDP, MXP, character sets,
+triggers, logging, reconnecting and the connection events. The app opts in with
+`options.supplyTransport = true` before `start()`; without it the profile uses its own sockets, as
+the GUI always does.
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::transportDialRequested,
+                 [](const QString& profile, quint64 connection, const QString& host, int port, bool tlsRequested) {
+    // Dial, then report how it went, naming connection
+});
+QObject::connect(session.get(), &THeadlessSession::transportWriteRequested, [](const QString& profile, const QByteArray& data) {
+    // Bytes for the game, telnet negotiation included, to send in order on the connection last dialled
+});
+QObject::connect(session.get(), &THeadlessSession::transportCloseRequested, [](const QString& profile) {
+    // The profile ended the connection last dialled, or its dial; no report is due
+});
+
+// What the app's connection reports, from anywhere, each naming the connection its dial was given
+session->transportConnected(connection);
+session->transportReceived(connection, bytes); // each chunk as it came, which may end anywhere, even mid-negotiation
+session->transportClosed(connection, reason);  // the game hung up, it was lost, or the dial failed; reason may be empty
+```
+
+`start()`, a reconnect or a script's `connectToServer()` sends `transportDialRequested`, with an id
+for the connection. Once the app answers `transportConnected()`, the profile announces the connection
+(`connected`, `sysConnectionEvent`, the login) and writes to the game through
+`transportWriteRequested`, and the app hands each chunk the game sends to `transportReceived()`. The
+game ending it is the app's `transportClosed()`; the profile ending it (`disconnect()`, a reconnect,
+closing the profile) is `transportCloseRequested`, after which no report about it is due. A dial
+answered with `transportClosed()` fails as an unreachable game does, with the reason in Mudlet's
+message, and a connection that ends with a reason gives it in the disconnection message.
+
+A report is dropped unless it names the profile's current connection: the one last dialled, and not
+closed since. A reconnect closes one connection and dials the next in the same breath, so an app whose
+old socket reports its end late, after `transportCloseRequested`, cannot have that taken for news of
+the new one. Ids are unique within the process, so a late report about a closed profile's connection
+cannot be taken for the next profile's either.
+
+The reports are taken up from the event loop, so they may be made from a handler of the three
+signals, which are sent mid-write and may call nothing else of the session. Only the profile
+`start()` opens uses the app's connection; one a script opens uses its own sockets. The profile's
+proxy is not used, and a session deleted while connected sends no `transportCloseRequested`.
+
+A secure connection is the app's to make, not Mudlet's, and Mudlet cannot tell whether the app's
+connection is encrypted, so it never calls it secure: `currentlySecure()` is false, GMCP sign-in keeps
+back what it sends only over an encrypted connection, and a game's offer of a secure port is not
+passed on. A profile set to connect securely still connects: `tlsRequested` tells the app, which may
+honour it, such as through a `wss://` proxy that dials the game with TLS, and Mudlet says in the
+console that it treats the connection as not secure.
+
+In a browser, `mudlet-headless` makes the page's connection the profile's when the object given to
+`qtLoad()` has a `mudletTransport`:
+
+```js
+mudletTransport: {
+  // connection: { connected(), received(bytes), closed(reason) }, to call as the connection goes
+  dial(host, port, tlsRequested, connection) {},
+  write(bytes) {},   // a Uint8Array
+  close() {},        // after which connection's calls do nothing
+}
+```
+
+Each dial gets a connection of its own, so a late event of an old socket cannot reach a new one, and
+the page's `close()` is called at most once for it, never after its `closed()`. `received()` takes an
+`ArrayBuffer` or any view of one, such as a `Uint8Array` or a `DataView`. It refuses anything else,
+strings included: telnet is a byte stream, and a string has no one way back to bytes (as UTF-8, the
+byte 255 that starts every telnet command would become two), so the page converts as it knows its
+source sends. A `Blob`, which a WebSocket delivers unless its `binaryType` is `"arraybuffer"`, is
+refused too. When `received()` refuses, or `dial()` or `write()` throws, Mudlet logs the error to the
+console, calls the page's `close()`, since the profile asks for none of a connection it is told has
+ended, and ends the connection with the error as the reason. A `dial()` or `write()` that returns a
+promise which rejects is treated as one that throws. `CI/wasm-headless-smoke.js --game-connection`
+connects through a WebSocket relay this way.
+
+## Embedding it: keeping the profiles
+
+An app that keeps `options.configDir` somewhere Mudlet does not write to itself, such as a browser
+page whose files are in memory until it copies them into IndexedDB, copies the folder each time
+`configSaved` comes:
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::configSaved, []() {
+    // What Mudlet wrote into configDir since the last one is complete on disk
+});
+```
+
+It comes once the files are written:
+
+- a profile save: a script's `saveProfile()`, `save()`, the save that follows installing or removing a
+  package or module, or a profile's close, with the profile, its synced modules, its packages' files,
+  `profile.ini` and the command line histories;
+- a map save, by `saveMap()` or a profile save, and the map's autosave, which is written on Qt's
+  thread pool; in a single-threaded browser build that write runs in the call, and its end, and so the
+  signal, still comes from the event loop;
+- a `Mudlet.ini` save, a script's `saveWindowLayout()`, the connection details a profile stores or
+  forgets (its game, port, login and the like) and a password stored or removed under `credentials/`;
+- a package's details set by `setPackageInfo()`, the profile's icon, and whether its next load shows
+  the main console's timestamps or logs it.
+
+Not followed by it: files a script writes itself (`io`, `lfs`, `table.save()`), logs, replays, the
+media cache, map exports to JSON or an image, downloads, maps included, the spell-check dictionary, a
+profile deleted, and anything written by a session deleted with its profiles open instead of shut down.
+
+Writes in one turn of the event loop send one, and so do writes while a profile save or `save()` is
+still running: the signal comes from the event loop once none is, so a save that writes the profile, its
+modules, `Mudlet.ini` and the map over several turns sends one, after the last. Writes in separate turns
+with no save running send one each. A shutdown that wrote sends just one, once its profiles have closed
+and their saves are written, before `shutdown()` returns or `shutdownFinished` comes, so an app that
+copies the folder then has all the run wrote.
+
+In a browser, `mudlet-headless` calls `mudletConfigSaved()` on the object given to `qtLoad()` for each
+`configSaved`, and a page keeps the folder in IndexedDB with Emscripten's IDBFS, which the build links:
+
+```js
+const dir = "/mudlet";
+let program;
+let syncing = false;
+let syncAgain = false;
+let retry;
+let settle;
+let synced = Promise.resolve();  // settles once all Mudlet wrote is in IndexedDB
+function sync() {
+  clearTimeout(retry);
+  if (syncing) {
+    syncAgain = true;
+    return;
+  }
+  syncing = true;
+  syncAgain = false;
+  if (!settle) {
+    synced = new Promise((resolve) => (settle = resolve));
+  }
+  program.FS.syncfs(false, (error) => {
+    syncing = false;
+    if (error) {
+      console.error("Could not keep the profiles, trying again:", error);
+      retry = setTimeout(sync, 2000);
+    } else if (syncAgain) {
+      sync();
+    } else {
+      settle();
+      settle = undefined;
+    }
+  });
+}
+addEventListener("beforeunload", (event) => {
+  if (settle) {
+    event.preventDefault();  // the browser asks the player to stay
+  }
+});
+await qtLoad({
+  arguments: ["-p", "My MUD", "--config-dir", dir],
+  mudletConfigSaved: sync,
+  preRun: [(m) => {
+    program = m;
+    m.FS.mkdirTree(dir);
+    m.FS.mount(m.FS.filesystems.IDBFS, {}, dir);
+    m.addRunDependency("config folder");  // main() waits for this
+    m.FS.syncfs(true, (error) => {
+      if (error) {
+        document.body.textContent = `The saved profiles could not be read: ${error}`;
+        return;
+      }
+      m.removeRunDependency("config folder");
+    });
+  }],
+  qt: { /* entryFunction, containerElements and the rest, as for any Qt program */ },
+});
+```
+
+1. Mount IDBFS on the folder in `preRun` and fill it from IndexedDB with `FS.syncfs(true)`. That
+   answers later, so a run dependency holds `main()` back until it has; one that fails here leaves
+   Mudlet unstarted, and says so, rather than starting it on an empty folder whose first save writes
+   over the player's.
+2. Name the folder with `--config-dir`. The GUI's own config folder is refused, as everywhere.
+3. On each `mudletConfigSaved()`, copy the folder back with `FS.syncfs(false)`, one at a time: IDBFS
+   runs overlapping syncs side by side, so one asked for while another runs waits for it. One that
+   fails is tried again after a while, as the run's last write may have no signal after it.
+4. When the run ends, as by `closeMudlet()`, the last `mudletConfigSaved()` comes before Qt's
+   `onExit`, and its sync ends after it: wait for `synced` before closing or leaving the page. Until
+   it settles, `beforeunload` has the browser ask the player to stay.
+
+A reload or a closed tab loses what was written since the last sync ended, as a page cannot wait for
+IndexedDB as it unloads. WasmFS's OPFS backend is not an option: it needs threads or JSPI, which this
+build has neither of, and cannot be linked beside IDBFS. `CI/wasm-headless-smoke.js --persistence`
+keeps profiles across reloads this way, and checks a reload without the sync loses them.
+
 ## Embedding it: when the signals come and what a handler may do
 
 Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
@@ -605,23 +812,26 @@ decides what its handler may do.
 
 **Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `localText`, `localTextStyled`,
 `errorConsoleText`, `debugText`, `hiddenInputWanted`, `typedLineMoveRequested`,
-`commandLineTextRequested`, `notificationRequested`, `attentionRequested` and `announcementRequested`
-are sent from inside whatever wrote the text or asked: the read of the game's data, a script, or the
-session call that ran it. That is what keeps them in order with one another. One of them is queued
-all the same: the `attentionRequested` for game text that arrives while the app is minimized is sent
-once the event loop runs, yet its handler is held to these same rules. Their handlers must not
-run the event loop, as a modal dialog does, and must not call the session back: every call that is
-refused where `submit()` is fails there with its documented refusal result, with `errorString()` saying to
-queue the call instead.
-The calls described as getters still answer. A handler may delete the session.
+`commandLineTextRequested`, `notificationRequested`, `attentionRequested`, `announcementRequested` and
+the three `transport…Requested` are sent from inside whatever wrote the text or asked: the read of the
+game's data, a script, or the session call that ran it. That is what keeps them in order with one
+another. One of them is queued all the same: the `attentionRequested` for game text that arrives while
+the app is minimized is sent once the event loop runs, yet its handler is held to these same rules.
+Their handlers must not run the event loop, as a modal dialog does, and must not call the session
+back: every call that is refused where `submit()` is fails there with its documented refusal result,
+with `errorString()` saying to queue the call instead.
+The calls described as getters still answer, and the `transport…()` reports may be made. A handler may
+delete the session.
 
 **Sent from the event loop.** Every other signal but the two below is queued, and sent once the event
 loop runs, after the script or call that caused it has returned: `connecting`, `connected`,
 `disconnected`, `quitRequested`, `loggingChanged`, `latencyChanged`, `secureConnectionOffered`,
-`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, the package download's,
-map progress's and replay's signals, and the ones that follow a state. Their handlers may call the
-session. Of those that follow a state, some are sent once a turn however many changes it held, naming
-what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
+`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, `configSaved`, the package
+download's, map progress's and replay's signals, and the ones that follow a state. Their handlers may
+call the session, except while `shutdown()` sends them from inside itself, as the order below has it:
+the session refuses their calls then as it does any made during the shutdown, a `start()` with
+`poolClosing`. Of those that follow a state, some are sent once a turn however many changes it held,
+naming what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
 `windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
 `mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
 from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
@@ -653,7 +863,8 @@ The order that holds between signals:
   `mappingScriptMissing` and a replay's: those still waiting, `replayStarted` among them, are sent from
   inside `shutdown()` ahead of its `replayFinished`. What was open (hidden input, logging, a download, a map
   operation, a replay) has its end from inside `shutdown()`. A session that is deleted instead sends none
-  of those ends.
+  of those ends. A `configSaved` still waiting, or due for what the shutdown wrote, comes once from
+  inside `shutdown()`, at its end, before it returns or `shutdownFinished` comes.
 
 ## Embedding it: drawing the main console as the GUI does
 
@@ -940,6 +1151,12 @@ the first of that name, and `scriptWindow(name, kind)` the one of that kind, as 
 line has its console's name. Neither lists buffers, which are never shown. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
 signals included.
 
+When a script deletes a user window, the windows it held go on as in the GUI, where the dock is only
+destroyed once control is back in the event loop: until then they keep their names, scripts can still use
+them, and the sheet and font the window gave them, but they are not shown and the list leaves them out, as
+they are in no window an app can show. One a script moves out with `setWindow()` before then stays, and
+is listed again where it went; the rest go when the session's event loop next runs.
+
 The frames a game opens with MXP's `<FRAME>` are in the list too, as kind `mxpFrame`. A frame is a mini
 console in all but who made it: `windowLines()` reads the text a `<DEST>` sent it, `windowTextChanged`
 names it, its links are read and followed and the wheel scrolls it, the same way. Its `geometry` is its
@@ -990,8 +1207,20 @@ trimmed under the row it is scrolled back to.
 A sheet a script sets on the whole profile (`setProfileStyleSheet()`) or on a user window
 (`setUserWindowStyleSheet()`) reaches the labels and mini consoles inside it as it does on the desktop, for
 what scripts read back: a label's text and `getLabelSizeHint()`, a mini console's font, columns and rows.
-The label's own sheet wins where both speak. Rules are matched on the widget's class, name and state; one
-that names a widget inside another (`QDockWidget QLabel { … }`) is not followed.
+The label's own sheet wins where both speak. Rules are matched as Qt matches them: on the widget's class, name
+and state, on what it is inside (`QDockWidget QLabel { … }`, `#MainFrame > QLabel { … }`), and on its properties
+(`QLabel[text="…"] { … }`). The properties known are `objectName`, `class`, a label's `text`, the main console's
+`HostName` and a user window's `floating`; a rule that names any other reaches nothing. The same matching gives a
+command line or text box its size limits from its own sheet, and a user window's title from a
+`qproperty-windowTitle`.
+
+The profile's sheet gives the main console's text a font as it gives a mini console's: `getFontSize("main")`,
+and the columns and rows the main area holds when the app has given its size in pixels, follow it. The
+profile's display font (`getFont("main")`, the main console's `sysFontChangeEvent`) stays the one scripts set,
+where on the desktop a rule that styles the main console itself changes it too. A rule that reaches a console
+itself (`TConsole { … }`, and `QWidget { … }` or bare declarations, which reach its text too) lies over each
+font a script then sets on that console, and its text keeps that font once the sheet is cleared, until a
+script sets another, as on the desktop.
 
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
@@ -1200,6 +1429,12 @@ the desktop GUI pumps the event loop from it, for its progress dialog and its Ab
 `cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
 close, runs once the operation has returned.
 
+## Embedding it: Mudlet's own resources
+
+`mudlet_core` is a static library, and the linker keeps a Qt resource from one only if something
+names it. `THeadlessSession` names Mudlet's own (its `:/` images, translations and fonts), so a
+program that uses it has them, registered before `main()` runs, and has nothing to call for them.
+
 ## Embedding it: Mudlet's own Lua files
 
 Much of the scripting API is itself Lua (Geyser, `db:`, the string and table functions and more), in
@@ -1225,10 +1460,12 @@ which is why a desktop build leaves it off.
 ### The Lua C modules
 
 Mudlet's Lua is built on seven C modules, which a desktop Mudlet loads from files as `require()` asks
-for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Android
-and a browser let no program load code that way. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`, which is
-the default for both, `mudlet_core` carries the seven itself and every profile finds them there with
-nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core` links anyway.
+for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Under
+Qt 6's default packaging Android keeps an app's libraries inside the APK, where `require()` cannot read
+them, and a browser lets no program load code from files. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`,
+which is the default for both, `mudlet_core` carries the seven itself and every profile finds them
+there with nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core`
+links anyway.
 
 Configure fetches their sources with git, each pinned to the commit of the release Mudlet's own builds
 install, as `cmake/BundledLuaModules.cmake` lists them; all are under the MIT licence. To build one from
@@ -1248,7 +1485,27 @@ THeadlessSession::preloadLuaModule("lfs", luaopen_lfs);
 `require()` then finds the module under that name ahead of any on disk, in every profile opened or
 reset afterwards. A module that is missing takes with it what is built on it: without `yajl` none of
 Mudlet's own Lua loads, and without `luasql.sqlite3` `db:create()` raises an error. A C module of the
-app's own, for its scripts to require, is given the same way.
+app's own, for its scripts to require, is given the same way. An app built with
+`QT_ANDROID_LEGACY_PACKAGING`, whose libraries Android unpacks to a folder, can instead ship one as
+`libfoo.so` for `require("foo")`, as `package.cpath` then names that folder. It is built with plain
+`add_library()`, since `qt_add_library()` adds the ABI to the file name. This has not yet been tried
+on a device.
+
+## Embedding it: spell-check dictionaries
+
+A profile spell-checks against a Hunspell dictionary, a `<name>.aff` and a `<name>.dic`, which a
+desktop Mudlet finds among the system's or beside the program. A phone has neither, so an app that
+carries dictionaries names their folder before it starts a session:
+
+```cpp
+THeadlessSession::setDictionaryFolder(appDataFolder + qsl("/dictionaries"));
+```
+
+Every dictionary a profile opens afterwards is looked for there first, where both its files must be,
+then among the system's, and never beside the program: one in neither folder is not available.
+Hunspell reads the files with plain file calls, so the folder must be a real one, such as one the
+app copies its dictionaries into from its package; a `:/` or `assets:/` path is refused, and
+`setDictionaryFolder()` returns `false`.
 
 ## What still needs a window
 

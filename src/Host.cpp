@@ -76,7 +76,6 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
-#include <QFutureWatcher>
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QJsonDocument>
@@ -283,6 +282,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
+, mMMCPChatName(csDefaultMMCPChatName)
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
@@ -468,6 +468,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 }
             },
             Qt::QueuedConnection);
+    // After the queued one above, so the configSaved this asks for queues behind the continuations writing profile.ini
+    connect(this, &Host::profileSaveFinished, this, []() {
+        TAppFrontend::instance()->configWritten();
+    });
     connect(this, &Host::signal_forceMXPProcessorOnChanged, this, [this](bool enabled) {
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
@@ -550,7 +554,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 Host::~Host()
 {
     // So that the profile opened again next loads the newest map
-    mMapAutosaveFuture.waitForFinished();
+    mMapAutosave.waitForFinished();
     Q_ASSERT_X(mpConsole.isNull(), "Host::~Host()", "the main console view would outlive the model it refers to");
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
@@ -592,8 +596,6 @@ void Host::forceClose()
     }
 
     markClosingForced();
-    // Ensure the above is displayed before proceeding...
-    QCoreApplication::processEvents();
 
     // Because we have set the mForcedClose flag above a requestClose()
     // afterwards WILL succeed
@@ -679,7 +681,7 @@ bool Host::closeWithNoView(std::function<void()> closed)
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
     mLuaInterpreter.leaveNestedEventLoop();
-    // Until the save is written, as deletionWouldWait() answers by it
+    // Until the save is written and the connection has ended, as deletionWouldWait() answers by it
     mCloseSaveInFlight = true;
     auto finish = [this, closed = std::move(closed)]() {
         mCloseSaveInFlight = false;
@@ -694,15 +696,21 @@ bool Host::closeWithNoView(std::function<void()> closed)
     // Not one whose save did not load, nor one still loading, which only a close that does not wait for the load
     // reaches: either would write what it holds over its last good save and map, and keeping those is no failure
     if (!mLoadedOk || mIsProfileLoadingSequence) {
-        closeChildren();
-        finish();
+        closeChildren(finish);
         return true;
     }
     // A save still running is waited out first, so the close's own save is taken before the profile is taken apart;
-    // with none, all but the writes happen in this call
+    // with none, all but the writes and the game's own close happen in this call
     whenProfileSaveEnds([this, finish = std::move(finish)]() {
+        // Ends once both the save and the connection have, in whichever order they do
+        auto stillToEnd = std::make_shared<int>(2);
+        auto oneEnded = [stillToEnd, finish]() {
+            if (--*stillToEnd == 0) {
+                finish();
+            }
+        };
         // Saved even with "Auto save on exit" off: nobody can answer the GUI's "Save profile?" here, and the maintainer chose Yes
-        saveForClose([this, finish](const bool saved) {
+        saveForClose([this, oneEnded](const bool saved) {
             // profile.ini even when that failed, as the Host's deletion would otherwise write it with no one to tell
             const bool iniSynced = syncProfileIni();
             if (!iniSynced) {
@@ -712,9 +720,9 @@ bool Host::closeWithNoView(std::function<void()> closed)
                 qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
                 emit closeSaveFailed();
             }
-            finish();
+            oneEnded();
         });
-        closeChildren();
+        closeChildren(oneEnded);
     });
     return true;
 }
@@ -768,9 +776,9 @@ void Host::saveForClose(std::function<void(bool)> done)
     whenProfileSaveEnds([this, done = std::move(done)]() mutable {
         // Refused when the wait gave up on a save, which may predate the session's last changes, so the close fails
         const bool xmlStarted = saveProfileReportingFailure();
-        // Taken now, as a writer leaves pendingXmlSaveFutures() once it has written
-        const QList<QFuture<bool>> xmlWrites = pendingXmlSaveFutures();
-        const QFuture<bool> moduleWrite = mModuleFuture;
+        // Taken now, as a writer leaves pendingXmlSaves() once it has written
+        const QList<TBackgroundResult> xmlWrites = pendingXmlSaves();
+        const TBackgroundResult moduleWrite = mModuleWrite;
         // Other profiles can keep Mudlet running long after this one closes
         if (auto* frontend = TAppFrontend::instance()) {
             frontend->writeSettings();
@@ -778,12 +786,9 @@ void Host::saveForClose(std::function<void(bool)> done)
         // A loaded map is saved even with no rooms in it
         const bool mapSaved = !mpMap || !mpMap->mpRoomDB || saveMapFile(QString());
         whenProfileSaveEnds([this, xmlStarted, xmlWrites, moduleWrite, mapSaved, done = std::move(done)]() {
-            bool xmlWritten = xmlStarted;
-            for (const auto& write : xmlWrites) {
-                xmlWritten = xmlWritten && write.isFinished() && write.result();
-            }
+            const bool xmlWritten = xmlStarted && std::ranges::all_of(xmlWrites, &TBackgroundResult::succeeded);
             // Only reached when this save started, so the module write is its own
-            const bool profileWritten = xmlWritten && moduleWrite.isFinished() && moduleWrite.result();
+            const bool profileWritten = xmlWritten && moduleWrite.succeeded();
             if (!profileWritten) {
                 qWarning().nospace().noquote() << "Host::saveForClose() WARNING - the profile \"" << getName() << "\" or its modules could not be written.";
             }
@@ -1017,7 +1022,7 @@ void Host::finishProfileLoad()
     mIsProfileLoadingSequence = false;
 }
 
-void Host::closeChildren()
+void Host::closeChildren(std::function<void()> connectionEnded)
 {
     mIsClosingDown = true;
     // Drop the profile save a package install/uninstall put off: the close path
@@ -1032,7 +1037,16 @@ void Host::closeChildren()
     // does not commit it while closing either:
     mServerWrapFlushTimer.stop();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    mTelnet.terminateConnection(mClosingWithNoView);
+    mTelnet.terminateConnection(std::move(connectionEnded));
+
+    if (mMMCPServer) {
+        // The peers have to go while the Host is still whole, as their slots
+        // report through it. The server itself is left alone: it dies with the
+        // Host through the QObject parent chain, whereas deleting it here would
+        // let a Lua handler further down this function lazily make another one
+        // on a profile that is on its way out.
+        mMMCPServer->disconnectAll();
+    }
 
     stopAllTriggers();
 
@@ -1167,6 +1181,7 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
     if (saved) {
         mpMap->resetUnsaved();
         mpMap->setSaveError(false);
+        TAppFrontend::instance()->configWritten();
     } else {
         mpMap->setSaveError(true);
     }
@@ -1341,7 +1356,7 @@ void Host::autoSaveMap()
 void Host::autoSaveMapInBackground(const QString& path)
 {
     // Not queued behind it: the map stays unsaved, so the next autosave writes it
-    if (!mMapAutosaveFuture.isFinished()) {
+    if (!mMapAutosave.isFinished()) {
         return;
     }
     waitForMapAutosave();
@@ -1366,18 +1381,15 @@ void Host::autoSaveMapInBackground(const QString& path)
     mpMap->resetUnsaved();
 
     mMapAutosaveResultPending = true;
-    mMapAutosaveFuture = TBackgroundTask::runForReason([path, bytes = std::move(bytes)]() {
+    mMapAutosave = TBackgroundTask::runForReason([path, bytes = std::move(bytes)]() {
         return writeFileAtomically(path, bytes);
     });
-    auto watcher = new QFutureWatcher<QString>(this);
-    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
-        watcher->deleteLater();
+    mMapAutosave.whenFinished(this, QString(), [this]() {
         // Otherwise a later autosave's write is still running, and its own watcher reports it
-        if (mMapAutosaveFuture.isFinished()) {
+        if (mMapAutosave.isFinished()) {
             waitForMapAutosave();
         }
     });
-    watcher->setFuture(mMapAutosaveFuture);
 }
 
 void Host::waitForMapAutosave()
@@ -1385,10 +1397,12 @@ void Host::waitForMapAutosave()
     if (!mMapAutosaveResultPending) {
         return;
     }
-    mMapAutosaveFuture.waitForFinished();
+    mMapAutosave.waitForFinished();
     mMapAutosaveResultPending = false;
-    const QString failure = mMapAutosaveFuture.result();
-    if (!failure.isEmpty()) {
+    const QString failure = mMapAutosave.reason();
+    if (failure.isEmpty()) {
+        TAppFrontend::instance()->configWritten();
+    } else {
         qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
         mpMap->setUnsavedKeepingRevisions(__func__);
     }
@@ -1411,21 +1425,20 @@ void Host::createModuleBackup(const QString& filename, const QString& saveName)
     QFile::copy(filename, saveName + time);
 }
 
-QList<QFuture<bool>> Host::pendingXmlSaveFutures() const
+QList<TBackgroundResult> Host::pendingXmlSaves() const
 {
-    QList<QFuture<bool>> futures;
+    QList<TBackgroundResult> saves;
     for (const auto& writer : writers) {
-        futures += writer->saveFutures;
+        saves += writer->saveResults;
     }
-    return futures;
+    return saves;
 }
 
 void Host::waitForAsyncXmlSave()
 {
-    // Snapshot on the main thread - see pendingXmlSaveFutures()
-    const auto futures = pendingXmlSaveFutures();
-    for (auto future : futures) {
-        future.waitForFinished();
+    // Snapshot on the main thread - see pendingXmlSaves()
+    for (const auto& save : pendingXmlSaves()) {
+        save.waitForFinished();
     }
 }
 
@@ -1939,7 +1952,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     const bool backupModules = saveName != qsl("autosave");
     const QList<ModuleWriteJob> moduleJobs = prepareModuleSaves(backupModules);
 
-    // Nothing between here and watcher->setFuture() below may pump the event loop: the
+    // Nothing between here and whenFinished() below may pump the event loop: the
     // save is marked as started, but the watcher that retires that mark does not exist
     // yet, so a waitForProfileSave() reached from a pump waits for an end it can never
     // be told about, then lets its caller carry on - into a teardown that destroys the
@@ -1951,22 +1964,16 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // so that the currentlySavingProfile() check can run properly
     emit profileSaveStarted();
 
-    // Snapshot the pending profile-save futures on the main thread - see
-    // pendingXmlSaveFutures(): the background task must not read `writers`/`saveFutures`
+    // Snapshot the pending profile saves on the main thread - see
+    // pendingXmlSaves(): the background task must not read `writers`/`saveResults`
     // itself, as the main thread mutates them whenever a save starts or finishes.
-    const QList<QFuture<bool>> xmlSaveFutures = pendingXmlSaveFutures();
-    // Parented so the profile owns the watcher outright. The deleteLater() below only
-    // arrives if the event loop lives long enough to deliver `finished` and then the
-    // deferred delete, which on the way out it does not - and a Host destroyed while
-    // the write is still queued would leave the watcher with no owner at all.
-    auto watcher = new QFutureWatcher<void>(this);
-    watcher->setObjectName(scmProfileSaveWatcherName);
+    const QList<TBackgroundResult> xmlSaves = pendingXmlSaves();
     // Filled by the task before its future finishes, read only after it has
     auto moduleFailures = std::make_shared<QStringList>();
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
     // After the host xml is written
-    mModuleFuture = TBackgroundTask::runAfter(xmlSaveFutures, [moduleJobs, moduleFailures]() {
+    mModuleWrite = TBackgroundTask::runAfter(xmlSaves, [moduleJobs, moduleFailures]() {
         return Host::writeModuleFiles(moduleJobs, *moduleFailures);
     });
     // Only the names: holding the whole jobs would keep every module's document in
@@ -1976,7 +1983,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     for (const auto& job : moduleJobs) {
         savedModuleXmlNames << job.xmlFilename;
     }
-    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules, moduleFailures]() {
+    mModuleWrite.whenFinished(this, scmProfileSaveWatcherName, [this, savedModuleXmlNames, syncModules, moduleFailures]() {
         for (const auto& failure : std::as_const(*moduleFailures)) {
             postMessage(failure);
         }
@@ -2003,8 +2010,6 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             emit profileSaveFinished();
         }
     });
-    connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
-    watcher->setFuture(QFuture<void>(mModuleFuture));
     return {true, filename_xml, QString()};
 }
 
@@ -2096,8 +2101,8 @@ void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
         // waiting brings background work of its own that nothing has waited for yet.
         // Unbounded, deliberately - how long a write takes is the disk's business.
         waitForAsyncXmlSave();
-        if (mModuleFuture.isRunning()) {
-            mModuleFuture.waitForFinished();
+        if (mModuleWrite.isRunning()) {
+            mModuleWrite.waitForFinished();
         }
         if (!currentlySavingProfile()) {
             break;
@@ -2106,10 +2111,10 @@ void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
             waitedForNotification.start();
         }
         if (onlyTheSavesOwnEvents) {
-            // Every write's end reaches the main thread as a QFutureWatcher's posted FutureCallOut. Only this
+            // Every write's end reaches the main thread as a posted FutureCallOut to its watcher. Only this
             // save's: an unzipAsync() or another profile's save has a watcher too, and theirs run Lua.
-            const auto watchers = findChildren<QFutureWatcherBase*>(scmProfileSaveWatcherName, Qt::FindDirectChildrenOnly);
-            for (const QPointer<QFutureWatcherBase> watcher : watchers) {
+            const auto watchers = findChildren<QObject*>(scmProfileSaveWatcherName, Qt::FindDirectChildrenOnly);
+            for (const QPointer<QObject> watcher : watchers) {
                 if (watcher) {
                     QCoreApplication::sendPostedEvents(watcher, QEvent::FutureCallOut);
                 }
@@ -2131,7 +2136,7 @@ void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
         if (currentlySavingProfile() && waitedForNotification.durationElapsed() > notificationTimeout) {
             qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
                                  << " ms of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
-                                 << ", module write still running=" << mModuleFuture.isRunning() << ".";
+                                 << ", module write still running=" << mModuleWrite.isRunning() << ".";
             break;
         }
     }
@@ -2169,10 +2174,7 @@ void Host::checkSaveEndWatchdog()
         runSaveEndContinuations();
         return;
     }
-    bool writing = mModuleFuture.isRunning();
-    for (const auto& future : pendingXmlSaveFutures()) {
-        writing = writing || !future.isFinished();
-    }
+    const bool writing = mModuleWrite.isRunning() || !std::ranges::all_of(pendingXmlSaves(), &TBackgroundResult::isFinished);
     // How long a write takes is the disk's business, and a save started meanwhile brings writes of its own
     if (writing) {
         mSaveWritesEndedAt.reset();
@@ -3218,7 +3220,9 @@ static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
 {
     const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("autotimestamp"));
     if (!shown) {
-        QFile::remove(filePath);
+        if (QFile::remove(filePath)) {
+            TAppFrontend::instance()->configWritten();
+        }
         return;
     }
     QSaveFile file(filePath);
@@ -3228,7 +3232,9 @@ static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
     }
     if (!file.commit()) {
         qWarning() << "Host: error saving timestamp state:" << file.errorString();
+        return;
     }
+    TAppFrontend::instance()->configWritten();
 }
 
 std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
@@ -4010,6 +4016,7 @@ QString Host::setPackageInfo(const QString& packageName, const QString& info, co
     if (const QString error = writePackageConfig(MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName), details); !error.isEmpty()) {
         return qsl("could not save the details of package '%1', so nothing was changed: %2").arg(packageName, error);
     }
+    TAppFrontend::instance()->configWritten();
     mPackageInfo[packageName] = details;
     return {};
 }
@@ -6320,10 +6327,10 @@ void Host::initMMCPServer()
 }
 
 
-// Return the MMCP chat name for this host
+// Return the MMCP chat name for this host, fall back to the default name if empty.
 const QString& Host::getMMCPChatName() const
 {
-    return mMMCPChatName;
+    return mMMCPChatName.isEmpty() ? csDefaultMMCPChatName : mMMCPChatName;
 }
 
 // Validate and set the MMCP chat name, notify connected peers, and update GUI.
@@ -6335,18 +6342,21 @@ bool Host::setMMCPChatName(const QString& name)
         return false;
     }
 
+    // Clearing the name in the preferences set value back to default
+    const QString newName = name.isEmpty() ? csDefaultMMCPChatName : name;
+
     // If the name is unchanged, no need to update or emit signals
-    if (mMMCPChatName == name) {
+    if (mMMCPChatName == newName) {
         return true;
     }
 
-    mMMCPChatName = name;
+    mMMCPChatName = newName;
 
     if (mMMCPServer) {
-        mMMCPServer->chatName(name);
+        mMMCPServer->chatName(newName);
     }
 
-    emit mmcpChatNameChanged(name);
+    emit mmcpChatNameChanged(newName);
     return true;
 }
 
@@ -6606,9 +6616,16 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
+#if defined(Q_OS_ANDROID)
+                // Not a timeout, as a timed-out read can still be answered late. Unavailable too: on Android that is
+                // not the desktop's missing service but a KeyStore error, such as an entry whose key is gone or that
+                // would not decrypt.
+                mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable || outcome == CredentialManager::ReadOutcome::Unavailable;
+#else
                 // Only a refusal: a timed-out read can still be answered late. Not for Unavailable: a desktop
                 // with no keychain service says so on every load, password or not.
                 mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable;
+#endif
 
                 // Clean up the credential manager
                 credManager->deleteLater();
@@ -6627,9 +6644,15 @@ void Host::reportUnreadableSavedPassword()
     }
     mSecuredPasswordUnreadable = false;
     // A refusal does not say a password is there, so the message doesn't either
+#if defined(Q_OS_ANDROID)
+    // The KeyStore has nothing to unlock, so there is no unlock advice
+    //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, in Android's KeyStore or its encrypted file, so none is sent
+    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. Type your password when the game asks for it."));
+#else
     //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so none is sent
     postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
                    "If your computer's password manager is locked, unlock it and reopen the profile; otherwise type your password when the game asks for it."));
+#endif
 }
 
 void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)
@@ -7986,7 +8009,7 @@ std::optional<QSize> Host::mainWindowSize() const
         if (mMainAreaPixels) {
             return mMainAreaPixels;
         }
-        const QFontMetrics metrics(consoleFrontend()->displayFont());
+        const QFontMetrics metrics(consoleFrontend()->mainTextFont());
         const QSize cells = mainAreaCells();
         return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
     }
@@ -8056,7 +8079,7 @@ std::optional<int> Host::windowFontSize(const QString& name) const
         return {};
     }
     if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
-        return {consoleFrontend()->displayFont().pointSize()};
+        return {consoleFrontend()->mainTextFont().pointSize()};
     }
     return {pModel->mUpperPaneFont.pointSize()};
 }
@@ -8186,13 +8209,19 @@ void Host::setCaretEnabled(bool enabled)
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+#if defined(Q_OS_MACOS)
+    // The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+    constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+    constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
     switch (mCaretShortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+        return ke->key() == Qt::Key_Tab && (ke->modifiers() & controlKey);
     case CaretShortcut::F6:
         return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
     }
@@ -8267,7 +8296,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
         mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
     }
     const QSize textArea = mainTextRectWithNoView().size();
-    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const QFontMetrics metrics(consoleFrontend()->mainTextFont());
     // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
     const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
     const int rows = std::clamp(textArea.height() / std::max(1, metrics.height()), 1, 65535);
@@ -8303,7 +8332,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
 
 std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)
 {
-    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const QFontMetrics metrics(consoleFrontend()->mainTextFont());
     const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
     const qint64 rows = pixels.height() / std::max(1, metrics.height());
     if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
