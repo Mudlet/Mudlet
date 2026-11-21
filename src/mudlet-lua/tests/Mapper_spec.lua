@@ -6242,9 +6242,7 @@ describe("Tests saveMap and loadMap", function()
       local jsonPath = getMudletHomeDir() .. "/mapper_spec_xml_environments.json"
       finally(function() os.remove(jsonPath) end)
       assert.is_true(saveJsonMap(jsonPath))
-      local file = assert(io.open(jsonPath, "r"))
-      local document = yajl.to_value(file:read("*a"))
-      file:close()
+      local document = yajl.to_value(readFile(jsonPath))
       assert.are.same({["169"] = 8}, document.envToColorMapping)
     end)
 
@@ -6275,8 +6273,7 @@ describe("Tests saveMap and loadMap", function()
     it("reads the rooms and areas that come after the environments", function()
       local reorderedPath = getMudletHomeDir() .. "/mapper_spec_environments_first.xml"
       finally(function() os.remove(reorderedPath) end)
-      local file = assert(io.open(reorderedPath, "w"))
-      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+      writeFile(reorderedPath, [[<?xml version="1.0" encoding="UTF-8"?>
 <map>
   <environments>
     <environment id="169" color="8"/>
@@ -6287,10 +6284,8 @@ describe("Tests saveMap and loadMap", function()
   </rooms>
 </map>
 ]])
-      file:close()
 
       assert.is_true(loadMap(reorderedPath))
-      assert.is_true(roomExists(importedRoomA))
       assert.are.equal("After The Environments", getRoomName(importedRoomA))
       assert.are.equal(4001, getAreaTable()["Mapper Spec Environments First Area"])
     end)
