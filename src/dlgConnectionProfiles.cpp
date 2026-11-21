@@ -752,6 +752,8 @@ void dlgConnectionProfiles::showKeychainWait()
     // behind.
     // A disabled list gets no key events either, so the type-to-search stops with it.
     listWidget_profiles->setEnabled(false);
+    // so is switching the games tab, which picks a profile of its own when the new tab lacks this one
+    mpTabBar->setEnabled(false);
     // An edit would run validateProfile(), which hands Connect and Offline back and clears the
     // notice below, and what the queued load reads from these fields is what they held at Connect
     tabWidget_connectionInfo->setEnabled(false);
@@ -773,6 +775,7 @@ void dlgConnectionProfiles::clearKeychainWait()
     connect_button->setEnabled(profileIsUsable);
     offline_button->setEnabled(profileIsUsable);
     listWidget_profiles->setEnabled(true);
+    mpTabBar->setEnabled(true);
     tabWidget_connectionInfo->setEnabled(true);
     profileAdminArea->setEnabled(true);
 }
@@ -805,13 +808,13 @@ bool dlgConnectionProfiles::completePendingProfileLoad(const QString& profileNam
 }
 
 // Nothing is queued for the profile whose read answered: drop whatever is, rather than let a
-// later read connect out of nowhere, and hand the dialog its buttons back so Connect can be
-// pressed again
+// later read connect out of nowhere, and, unless a copy is still queued, hand the dialog its
+// buttons back so Connect can be pressed again
 void dlgConnectionProfiles::abandonPendingProfileLoad()
 {
     mPendingProfileLoad.clear();
     mPendingConnect = false;
-    // a copy queued behind a deferred read still needs the form locked until that read answers
+    // a queued copy keeps the form locked until runPendingCopy() or dropPendingCopy() lets it go
     if (!mPendingCopy) {
         clearKeychainWait();
     }
@@ -1814,9 +1817,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    // if we're currently copying a profile, don't blank and re-load the password,
-    // because there isn't one in storage yet. It'll be copied over into the widget
-    // by the copy method
+    // While a copy fills in the new profile its password is not in storage yet, so the field keeps
+    // the one being copied
     if (!mCopyingProfile) {
         // Cancel any pending password save from the previous profile to prevent
         // cross-profile password corruption when rapidly switching profiles
@@ -3499,8 +3501,8 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         credManager->retrievePassword(
                 profile_name,
                 "character",
-                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome) {
-                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
+                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
 
                     credManager->deleteLater();
                 },
@@ -3520,7 +3522,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     }
 }
 
-void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
+void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool timedOut)
 {
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
     bool passwordUnreadable = false;
@@ -3571,9 +3573,15 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // A Connect waiting on this read stops here, so the warning stays up and the password can be typed.
     // Offline sends no password, so its load goes ahead.
     const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
+    // A copy waits only to take the password, so one whose read gave none it should have is not made
+    if ((passwordUnreadable || (timedOut && character_password_entry->text().isEmpty())) && dropPendingCopy(profileName)) {
+        abandonPendingProfileLoad();
+        //: Shown in the connection dialog when a profile was to be copied but its saved password could not be read from the keychain or its file
+        showNotification(tr("The saved password for this profile could not be read, so the profile was not copied. Enter the password, then copy the profile again."),
+                         notificationAreaIconLabelWarning);
+        return;
+    }
     if (passwordUnreadable && !offlineLoadQueued) {
-        // as with Connect, the warning stays up for the password to be typed before copying again
-        dropPendingCopy(profileName);
         abandonPendingProfileLoad();
         //: Shown in the connection dialog when a password was saved for the profile but its file could not be opened or decrypted, for example because it is damaged
         showNotification(tr("The saved password for this profile could not be read. Please enter it again."), notificationAreaIconLabelWarning);
