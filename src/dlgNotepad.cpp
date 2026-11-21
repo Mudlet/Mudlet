@@ -106,9 +106,9 @@ static int sendableLineCount(const QStringList& lines)
 }
 
 // A tab bar reads a "&" as a mnemonic marker, so "Spells & Skills" would lose its ampersand
-static QString tabLabelFor(QString noteName)
+static QString tabLabelFor(QString name)
 {
-    return noteName.replace(QLatin1Char('&'), QLatin1String("&&"));
+    return name.replace(QLatin1Char('&'), QLatin1String("&&"));
 }
 
 QString dlgNotepad::noteName(const int index) const

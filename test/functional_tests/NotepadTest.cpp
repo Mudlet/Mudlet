@@ -325,7 +325,8 @@ private slots:
     {
         startProfile(mHostname, mLocalhost, mPort);
         QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
-        notepad->addTab(qsl("Spells & Skills"), qsl("fireball"));
+        const QString name = qsl("Spells & Skills");
+        notepad->addTab(name, qsl("fireball"));
         QVERIFY(putOnScreen(notepad.data()));
 
         QString offered;
@@ -345,7 +346,7 @@ private slots:
         });
         answerer.start();
         notepad->renameTab(1);
-        QCOMPARE(offered, qsl("Spells & Skills"));
+        QCOMPARE(offered, name);
         QCOMPARE(shownName(notepad.data(), 1), qsl("Rock && Roll"));
 
         QCOMPARE(closeTabAnsweringTheQuestion(notepad.data(), 1), qsl("Close the note \"Rock && Roll\"?"));
