@@ -513,6 +513,21 @@ private slots:
         QVERIFY2(subject()->hasExitLock(DIR_EAST), "the lock ticked on a stub was not saved");
     }
 
+    void aDoorSetOnAStubIsSaved()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->stub_e->isChecked());
+        QVERIFY(pDlg->doortype_locked_e->isEnabled());
+
+        pDlg->doortype_locked_e->click();
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QVERIFY(subject()->hasExitStub(DIR_EAST));
+        QCOMPARE(subject()->getDoor(qsl("e")), 3);
+    }
+
     void aStoredStubLockSurvivesAnUnrelatedSave()
     {
         buildMap();

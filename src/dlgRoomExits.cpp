@@ -987,10 +987,12 @@ void dlgRoomExits::save()
     // checkedId() is -1 for no button checked, then -2, -3... in creation order (none, open, closed, locked).
     // The buttons grey out, still checked, when the roomID is cleared, so a door only counts where an exit or stub was saved
     const auto saveDoor = [this](const QString& doorKey, const int dirCode, const QButtonGroup* pDoorType) {
-        if (pDoorType->checkedId() >= -1) {
+        const int checkedId = pDoorType->checkedId();
+        if (checkedId >= -1) {
             return;
         }
-        pR->setDoor(doorKey, (pR->getExit(dirCode) > 0 || pR->hasExitStub(dirCode)) ? -2 - pDoorType->checkedId() : 0);
+        const bool exitOrStubSaved = pR->getExit(dirCode) > 0 || pR->hasExitStub(dirCode);
+        pR->setDoor(doorKey, exitOrStubSaved ? -2 - checkedId : 0);
     };
     saveDoor(qsl("nw"), DIR_NORTHWEST, doortype_nw);
     saveDoor(qsl("n"), DIR_NORTH, doortype_n);
