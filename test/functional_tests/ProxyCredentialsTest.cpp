@@ -65,6 +65,17 @@ private:
 
     QString storedProxyPasswordPath() const { return qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname)); }
 
+    bool warnedOfAnUndeletablePassword() const
+    {
+        TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+        for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+            if (buffer.line(i).contains(qsl("proxy password could not be deleted"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void save()
     {
         pugi::xml_document doc;
@@ -136,6 +147,7 @@ private slots:
         QCOMPARE(CredentialManager::retrieveCredential(mHostname, qsl("proxy")), qsl("secret"));
 
         mpHost->setProxyPassword(QString());
+        QVERIFY2(!warnedOfAnUndeletablePassword(), "the player was warned although the stored password was deleted");
         save();
         QVERIFY2(CredentialManager::retrieveCredential(mHostname, qsl("proxy")).isEmpty(), "the cleared password would be loaded again");
     }
@@ -170,11 +182,7 @@ private slots:
         mpHost->setProxyPassword(qsl("secret"));
         mpHost->setProxyPassword(QString());
 
-        TBuffer& buffer = mpHost->mainConsoleModel().buffer;
-        bool warned = false;
-        for (int i = 0; i <= buffer.getLastLineNumber() && !warned; ++i) {
-            warned = buffer.line(i).contains(qsl("proxy password could not be deleted"));
-        }
+        const bool warned = warnedOfAnUndeletablePassword();
         QDir(path).removeRecursively();
         QVERIFY2(warned, "the player was not told the cleared password will be loaded again");
     }
