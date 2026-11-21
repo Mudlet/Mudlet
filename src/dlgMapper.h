@@ -89,6 +89,7 @@ public:
     void clearRoomSelection() override { mp2dMap->clearSelection(); }
     int shownAreaId() const override;
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
+    std::pair<bool, QString> centerViewOn(int roomId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {
         return mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);

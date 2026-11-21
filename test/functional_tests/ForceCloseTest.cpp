@@ -207,7 +207,8 @@ private slots:
     }
 
     // As GMCPAuthenticator reconnects after a rejected sign-in: from a timer, with no Lua running. The socket is
-    // still connected, so connectIt() aborts it and runs the event loop, where the close closeMudlet() posted runs.
+    // still connected, so connectIt() aborts it, and a handler of that disconnection asks to quit and runs the event
+    // loop, where the close closeMudlet() posted runs.
     void test_aCloseDuringAReconnectWaitsForIt()
     {
         const QString name = mProfileNames.first();
@@ -224,12 +225,20 @@ private slots:
 
         std::optional<bool> outlivedReconnect;
         bool closedInReconnect = false;
+        connect(
+                &host->mTelnet,
+                &cTelnet::signal_disconnected,
+                this,
+                [&host]() {
+                    host->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet()"));
+                    QCoreApplication::processEvents();
+                },
+                Qt::SingleShotConnection);
         QTimer::singleShot(0, host, [&host, &outlivedReconnect, &closedInReconnect]() {
             host->mTelnet.reconnect();
             outlivedReconnect = !host.isNull();
             closedInReconnect = host && host->closeStarted();
         });
-        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet()")));
 
         QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 30s);
         QVERIFY2(*outlivedReconnect, "the profile was deleted in the middle of its reconnect");
@@ -264,11 +273,16 @@ private slots:
                 connectingOnceClosed = host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState;
             }
         });
-        QTimer::singleShot(0, mWindow, [this, &name]() {
-            mWindow->slot_closeProfileByName(name);
-            // Delivers the close it posted while the reconnect's event loop, which ran this, still runs
-            QCoreApplication::processEvents();
-        });
+        // Delivers the close it posted while the reconnect, whose abort reported the disconnection, still runs
+        connect(
+                &host->mTelnet,
+                &cTelnet::signal_disconnected,
+                this,
+                [this, &name]() {
+                    mWindow->slot_closeProfileByName(name);
+                    QCoreApplication::processEvents();
+                },
+                Qt::SingleShotConnection);
 
         QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 30s);
         QVERIFY2(*outlivedReconnect, "the profile was deleted in the middle of its reconnect");
@@ -318,9 +332,15 @@ private slots:
             outlivedReconnect = !host.isNull();
             closedInReconnect = host && host->closeStarted();
         });
-        QTimer::singleShot(0, mWindow, [this]() {
-            mWindow->close();
-        });
+        // From a handler of the disconnection the reconnect's abort reports, with the reconnect still on the stack
+        connect(
+                &host->mTelnet,
+                &cTelnet::signal_disconnected,
+                this,
+                [this]() {
+                    mWindow->close();
+                },
+                Qt::SingleShotConnection);
 
         QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 30s);
         QVERIFY2(*outlivedReconnect, "the profile was deleted in the middle of its reconnect");

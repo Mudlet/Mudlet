@@ -30,7 +30,6 @@
 #include <QStyleOptionViewItem>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "EditorTreeDelegate.h"
 #include "Host.h"
@@ -49,8 +48,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorTreeRowHeightTest : public QObject
 {
@@ -291,7 +288,7 @@ private slots:
         buildTheProfilesItems();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1000, 800);
@@ -308,14 +305,14 @@ private slots:
         }
         mpEditor->fillout_form();
         mpEditor->slot_showTriggers();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         // A collapsed row has no rectangle to measure, and the trees open only
         // their heading row by themselves
         for (const auto& tree : trees()) {
             tree.second.first->expandAll();
         }
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         // Checked first: a tree missing a row would leave a case comparing
         // nothing at all and passing
@@ -440,7 +437,7 @@ private slots:
         pTree->scrollToItem(pHovered, QAbstractItemView::PositionAtTop);
         mpEditor->activateWindow();
         pTree->setFocus();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         QVERIFY2(pTree->viewport()->rect().contains(pTree->visualItemRect(pHovered)) && pTree->viewport()->rect().contains(pTree->visualItemRect(pChosen)),
                  "Both rows have to be on screen to be read off a shot of the window");
@@ -490,7 +487,6 @@ private slots:
             QMouseEvent move(QEvent::MouseMove, QPointF(hoveredAt), QPointF(hoveredAt), pTree->viewport()->mapToGlobal(hoveredAt), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
             QCoreApplication::sendEvent(pTree->viewport(), &move);
             QCoreApplication::sendPostedEvents();
-            QTest::qWait(50ms);
 
             const QImage shot = mpEditor->grab().toImage();
             hoveredHeight = paintedHeightAt(shot, hoveredBand);
