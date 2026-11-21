@@ -7223,7 +7223,9 @@ void dlgTriggerEditor::saveTrigger()
         } else {
             pItem->setText(0, name);
             itemDescription = descError;
-            pT->setIsActive(false);
+            if (!mSavingForReset) {
+                pT->setIsActive(false);
+            }
             reportCompileError(pT->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
@@ -14135,17 +14137,13 @@ void dlgTriggerEditor::resetTrees()
         openScriptUnchanged = pOpenScript->getScript() == mpSourceEditorEdbeeDocument->text() && pOpenScript->getName() == mpScriptsMainArea->lineEdit_script_name->text()
                               && storedHandlers == mpChipRow_scriptEvents->items();
     }
-    // Saving code that does not compile switches a trigger off, which nobody asked for here
-    TTrigger* pOpenTrigger = mCurrentView == EditorViewType::cmTriggerView ? getTriggerFromTreeItem(mpCurrentTriggerItem) : nullptr;
-    const bool openTriggerWasOn = pOpenTrigger && pOpenTrigger->shouldBeActive();
     QString saveError;
     if (!openScriptUnchanged) {
         mEditorSaveErrorCaptured.clear();
+        mSavingForReset = true;
         saveOpenChanges();
+        mSavingForReset = false;
         saveError = mEditorSaveErrorCaptured;
-    }
-    if (openTriggerWasOn) {
-        pOpenTrigger->setShouldBeActive(true);
     }
 
     // Clear all current item pointers before clearing the tree widgets

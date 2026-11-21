@@ -1065,6 +1065,8 @@ private slots:
     pEditor->slot_showTriggers();
     pTree->setCurrentItem(pItem);
     pEditor->slot_triggerSelected(pItem);
+    // A save marks it no longer new, and only a new trigger gets switched on by the save that follows
+    pEditor->slot_saveSelectedItem();
     pEditor->mpSourceEditorEdbeeDocument->setText(qsl("if ("));
 
     emit mpHost->signal_editorCleanResetRequested();
@@ -1074,6 +1076,14 @@ private slots:
     QCOMPARE(ids.size(), 1);
     QVERIFY(mpHost->getTriggerUnit()->getTrigger(ids.front())->shouldBeActive());
     QVERIFY2(pEditor->systemMessage().contains(qsl("unsaved edit")), qPrintable(pEditor->systemMessage()));
+
+    pItem = resetAndFindItem(pEditor, pTree, qsl("qaHalfTyped"));
+    QVERIFY(pItem);
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- finished"));
+    pEditor->slot_saveSelectedItem();
+    QVERIFY(mpHost->getTriggerUnit()->getTrigger(ids.front())->isActive());
   }
 
   // Saving a script runs its body, which an untouched script must not get from a reset
