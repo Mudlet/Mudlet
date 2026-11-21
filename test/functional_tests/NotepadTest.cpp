@@ -544,6 +544,8 @@ private slots:
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 2);
 
         notepad->tabWidget->setCurrentIndex(1);
+        letQueuedMarkingLand();
+        QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 2);
         auto* closeButton = findBarButton(notepad.data(), qsl("notepadFindClose"));
         QVERIFY(closeButton);
         closeButton->click();
