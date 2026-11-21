@@ -276,12 +276,8 @@ private slots:
 
         wheelOver(box, 120);
         QTRY_VERIFY2(!mini->mUpperPane->mIsTailMode, "the mini console did not scroll back");
-        // This one meets the split already open
-        wheelOver(box, 120);
-        QTest::qWait(50ms);
-        QCOMPARE(bar->value(), boxAt);
-        // A touchpad sends turns too small to make a whole line on their own
-        for (const int angle : {8, -8}) {
+        // A whole turn that meets the split already open, then touchpad turns too small to make a whole line on their own
+        for (const int angle : {120, 8, -8}) {
             wheelOver(box, angle);
             QTest::qWait(50ms);
             QCOMPARE(bar->value(), boxAt);
