@@ -20,9 +20,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
- #include "utils.h"
+#include "utils.h"
 
 inline const uint16_t csDefaultMMCPHostPort{4050};
+inline constexpr int csMMCPGroupFieldWidth{15};
+inline constexpr int csMMCPPortFieldWidth{5};
+inline constexpr int csMMCPMaxPeerNameLength{64};
+inline constexpr int csMMCPMaxHandshakeReplyLength{128};
 inline const auto csDefaultMMCPChatName{qsl("MudletUser")};
 inline const auto csDefaultMMCPGroupName{qsl("<none>")};
 inline const auto csDefaultChatPrefix{qsl("<CHAT>")};

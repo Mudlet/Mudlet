@@ -27,6 +27,9 @@
  * Lua entry point: the Lua IRC surface never reads the window's text or clicks
  * in it.
  *
+ * The window's Up-arrow recall of typed lines is checked here too, for the same
+ * lack of a Lua entry point.
+ *
  * Run with: ctest -R IrcWindowMarkupTest -V
  */
 
@@ -286,6 +289,26 @@ private slots:
         // emitting the signal skips the browser's own handling of a click,
         // which with openLinks set would load the link into the window
         QVERIFY2(!client->ircBrowser->openLinks(), "the browser would load any link into the window itself");
+    }
+
+    // Each Up goes one line further back, as in a shell, and past the oldest wraps to the newest
+    void test_upRecallsTypedLinesNewestFirst()
+    {
+        dlgIRC* client = openClient(qsl("irc.invalid"), qsl("nick"), qsl("#chan"));
+        QVERIFY2(client, "the IRC client could not be opened");
+        client->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(client));
+        // /help runs locally, so nothing needs a server
+        enterText(client, qsl("/help a"));
+        enterText(client, qsl("/help b"));
+        enterText(client, qsl("/help c"));
+
+        QStringList recalled;
+        for (int press = 0; press < 4; ++press) {
+            QTest::keyClick(client->lineEdit, Qt::Key_Up);
+            recalled << client->lineEdit->text();
+        }
+        QCOMPARE(recalled, (QStringList{qsl("/help c"), qsl("/help b"), qsl("/help a"), qsl("/help c")}));
     }
 };
 

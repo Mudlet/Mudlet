@@ -81,11 +81,11 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 void initializeQRCResourcesForConsoleModelExtraction();
 
 using namespace std::chrono_literals;
@@ -5731,7 +5731,7 @@ void initializeQRCResourcesForConsoleModelExtraction()
 #endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif

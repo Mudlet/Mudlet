@@ -17,6 +17,10 @@ src/packages/** -text
 # newlines into CRLF.
 src/mudlet-lua/tests/fixtures/packages/sources/** -text
 
+# Mapper_spec.lua and CI/wasm-headless-smoke.js compare a map's JSON export with
+# these byte for byte, so a Windows checkout must not turn their newlines into CRLF.
+src/mudlet-lua/tests/fixtures/maps/cross-platform-map*.json -text
+
 # docker/Dockerfile runs this from the build context, where a CRLF checkout breaks
 # the shebang and every line of it.
 CI/install-lua-rocks.sh text eol=lf
