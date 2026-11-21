@@ -1,0 +1,393 @@
+{
+    "anonymousAreaName": "Unnamed Area",
+    "areaCount": 3,
+    "areas": [
+        {
+            "id": -1,
+            "name": "Default Area",
+            "roomCount": 0,
+            "rooms": [
+            ]
+        },
+        {
+            "id": 1,
+            "labels": [
+                {
+                    "colors": [
+                        {
+                            "color24RGB": [
+                                240,
+                                230,
+                                140
+                            ]
+                        },
+                        {
+                            "color32RGBA": [
+                                20,
+                                40,
+                                60,
+                                128
+                            ]
+                        }
+                    ],
+                    "coordinates": [
+                        0.5,
+                        1.5,
+                        0
+                    ],
+                    "font": {
+                        "family": "Bitstream Vera Sans Mono",
+                        "italic": false,
+                        "pointSize": 10,
+                        "weight": 400
+                    },
+                    "id": 0,
+                    "image": ["<png>"],
+                    "outlineColor": {
+                        "color24RGB": [
+                            200,
+                            10,
+                            10
+                        ]
+                    },
+                    "scaledels": true,
+                    "showOnTop": false,
+                    "size": [
+                        1.0416666666666667,
+                        0.5041666666666667
+                    ],
+                    "text": "Well"
+                }
+            ],
+            "name": "GoldenNorth",
+            "roomCount": 3,
+            "rooms": [
+                {
+                    "border": {
+                        "color32RGBA": [
+                            1,
+                            2,
+                            3,
+                            200
+                        ],
+                        "thickness": 4
+                    },
+                    "coordinates": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "environment": 300,
+                    "exits": [
+                        {
+                            "customLine": {
+                                "color24RGB": [
+                                    200,
+                                    100,
+                                    50
+                                ],
+                                "coordinates": [
+                                    [
+                                        0.5,
+                                        0.25
+                                    ],
+                                    [
+                                        0.75,
+                                        -1.5
+                                    ]
+                                ],
+                                "endsInArrow": true,
+                                "style": "dash line"
+                            },
+                            "exitId": 2,
+                            "name": "east",
+                            "weight": 3
+                        }
+                    ],
+                    "id": 1,
+                    "name": "Room 1",
+                    "userData": {
+                        "note": "a fountain"
+                    }
+                },
+                {
+                    "coordinates": [
+                        1,
+                        0,
+                        0
+                    ],
+                    "environment": -1,
+                    "exits": [
+                        {
+                            "door": "closed",
+                            "exitId": 3,
+                            "name": "north"
+                        },
+                        {
+                            "exitId": 1,
+                            "name": "west"
+                        }
+                    ],
+                    "id": 2,
+                    "name": "Room 2"
+                },
+                {
+                    "coordinates": [
+                        1,
+                        1,
+                        0
+                    ],
+                    "environment": -1,
+                    "exits": [
+                        {
+                            "exitId": 2,
+                            "name": "south"
+                        },
+                        {
+                            "exitId": 4,
+                            "locked": true,
+                            "name": "down"
+                        }
+                    ],
+                    "id": 3,
+                    "name": "Room 3",
+                    "symbol": {
+                        "color24RGB": [
+                            250,
+                            128,
+                            64
+                        ],
+                        "text": "⌂"
+                    }
+                }
+            ],
+            "userData": {
+                "climate": "temperate"
+            },
+            "zoom2D": 7.5
+        },
+        {
+            "gridMode": true,
+            "id": 2,
+            "name": "GoldenSouth",
+            "roomCount": 2,
+            "rooms": [
+                {
+                    "coordinates": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "environment": -1,
+                    "exits": [
+                        {
+                            "exitId": 3,
+                            "name": "up"
+                        },
+                        {
+                            "exitId": 5,
+                            "name": "climb down the well"
+                        }
+                    ],
+                    "id": 4,
+                    "name": "Room 4",
+                    "weight": 7
+                },
+                {
+                    "coordinates": [
+                        0,
+                        -1,
+                        -1
+                    ],
+                    "environment": -1,
+                    "exits": [
+                        {
+                            "exitId": 4,
+                            "locked": true,
+                            "name": "climb up"
+                        }
+                    ],
+                    "hash": "south-hash",
+                    "hidden": true,
+                    "id": 5,
+                    "locked": true,
+                    "name": "Room 5",
+                    "stubExits": [
+                        {
+                            "name": "south"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "customEnvColors": [
+        {
+            "color24RGB": [
+                128,
+                0,
+                0
+            ],
+            "id": 257
+        },
+        {
+            "color24RGB": [
+                0,
+                128,
+                0
+            ],
+            "id": 258
+        },
+        {
+            "color24RGB": [
+                128,
+                128,
+                0
+            ],
+            "id": 259
+        },
+        {
+            "color24RGB": [
+                0,
+                0,
+                128
+            ],
+            "id": 260
+        },
+        {
+            "color24RGB": [
+                128,
+                0,
+                128
+            ],
+            "id": 261
+        },
+        {
+            "color24RGB": [
+                0,
+                128,
+                128
+            ],
+            "id": 262
+        },
+        {
+            "color24RGB": [
+                192,
+                192,
+                192
+            ],
+            "id": 263
+        },
+        {
+            "color24RGB": [
+                0,
+                0,
+                0
+            ],
+            "id": 264
+        },
+        {
+            "color24RGB": [
+                255,
+                0,
+                0
+            ],
+            "id": 265
+        },
+        {
+            "color24RGB": [
+                0,
+                255,
+                0
+            ],
+            "id": 266
+        },
+        {
+            "color24RGB": [
+                255,
+                255,
+                0
+            ],
+            "id": 267
+        },
+        {
+            "color24RGB": [
+                0,
+                0,
+                255
+            ],
+            "id": 268
+        },
+        {
+            "color24RGB": [
+                255,
+                0,
+                255
+            ],
+            "id": 269
+        },
+        {
+            "color24RGB": [
+                0,
+                255,
+                255
+            ],
+            "id": 270
+        },
+        {
+            "color24RGB": [
+                255,
+                255,
+                255
+            ],
+            "id": 271
+        },
+        {
+            "color24RGB": [
+                128,
+                128,
+                128
+            ],
+            "id": 272
+        },
+        {
+            "color24RGB": [
+                10,
+                20,
+                30
+            ],
+            "id": 300
+        }
+    ],
+    "defaultAreaName": "Default Area",
+    "formatVersion": 1,
+    "labelCount": 1,
+    "mapSymbolFontDetails": "Bitstream Vera Sans Mono,12,-1,5,900,0,0,0,0,0,0,0,0,0,0,200",
+    "mapSymbolFontFudgeFactor": 1,
+    "onlyMapSymbolFontToBeUsed": false,
+    "playerRoomColors": [
+        {
+            "color24RGB": [
+                255,
+                0,
+                0
+            ]
+        },
+        {
+            "color24RGB": [
+                255,
+                255,
+                255
+            ]
+        }
+    ],
+    "playerRoomInnerDiameterPercentage": 70,
+    "playerRoomOuterDiameterPercentage": 120,
+    "playerRoomStyle": 0,
+    "playersRoomId": {
+    },
+    "roomCount": 5,
+    "userData": {
+        "golden": "yes"
+    }
+}

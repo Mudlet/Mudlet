@@ -46,12 +46,21 @@ public:
     // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
     // to T2DMap, menus and dragging aside
     bool rendered() const { return !mView.mSize.isEmpty(); }
+    QSize renderedSize() const { return mView.mSize; }
     // Whether the last render() laid out an area's rooms, which a press and a wheel turn act on
     bool showsArea() const;
     void press(const QPoint&, Qt::MouseButton, Qt::KeyboardModifiers);
     void doubleClick(const QPoint&);
     // False for less than half a notch, which T2DMap ignores
     bool wheel(const QPointF&, const QPoint& angleDelta, Qt::KeyboardModifiers);
+    // As T2DMap::slot_toggleMapViewOnly(), which raises mapModeChangeEvent
+    void setViewOnly(bool viewOnly);
+    // As T2DMap::init() switches a new map to editing where the profile was saved so, which raises the event too:
+    // called before the map is made, as a GUI handler of it finds no mapper yet
+    static void announceEditing(Host*);
+    // Sets the profile's mode and raises mapModeChangeEvent, with no map view needed
+    static void switchMode(Host*, bool viewOnly);
+    bool shown() const { return mShown; }
 
     bool onScreen() const override { return false; }
     void showMapProgress(const QString&, bool) override {}
@@ -70,6 +79,7 @@ public:
     // The area the view follows, which the next render() draws
     int shownAreaId() const override { return mRecentre ? mFollowedAreaId : mView.mAreaID; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
+    std::pair<bool, QString> centerViewOn(int roomId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;
     // As dlgMapper answers while it shows its 2D map, the only one this keeps
