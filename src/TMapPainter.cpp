@@ -631,15 +631,15 @@ void TMapPainter::drawRoom(QPainter& painter,
                 *                         |  +---+  |
                 *                         |Rectangle|
                 *                         +---------+
-                *                            |<->|<--symbolRect.width()
-                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                *                            |<->|<--symbolSize.width()
+                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolSize.width())/2.0
                 * similarly for the y-offset
                 */
 
             const QSizeF symbolSize = pix->deviceIndependentSize();
-            painter.drawPixmap(
-                    QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - symbolSize.width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - symbolSize.height()) / 2.0))),
-                    *pix);
+            const int symbolLeft = qRound(roomRectangle.left() + ((roomRectangle.width() - symbolSize.width()) / 2.0));
+            const int symbolTop = qRound(roomRectangle.top() + ((roomRectangle.height() - symbolSize.height()) / 2.0));
+            painter.drawPixmap(QPoint(symbolLeft, symbolTop), *pix);
         }
 
         painter.restore();
