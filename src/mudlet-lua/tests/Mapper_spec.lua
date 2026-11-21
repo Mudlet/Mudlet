@@ -3823,6 +3823,26 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(info["MapperSpecChurn"])
       assert.is_not_nil(info["MapperSpecChurn32"])
     end)
+
+    it("runs a map info callback registered from a coroutine on the main Lua state", function()
+      local ranInCoroutine
+      local co = coroutine.create(function()
+        registerMapInfo("MapperSpecCoroutine", function()
+          ranInCoroutine = coroutine.running() ~= nil
+          return "coroutine"
+        end)
+        coroutine.yield()
+      end)
+      assert.is_true(coroutine.resume(co))
+      finally(function()
+        killMapInfo("MapperSpecCoroutine")
+        coroutine.resume(co)
+      end)
+      assert.is_true(enableMapInfo("MapperSpecCoroutine"))
+
+      assert.is_true(paintUntil(function() return ranInCoroutine ~= nil end), "the map info callback never ran")
+      assert.is_false(ranInCoroutine)
+    end)
   end)
 
   describe("Tests area image export", function()
