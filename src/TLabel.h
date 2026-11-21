@@ -37,12 +37,14 @@
 #include <QString>
 #include <QVideoWidget>
 
+#include <chrono>
 #include <memory>
 
 class Host;
 class QContextMenuEvent;
 class QMouseEvent;
 class QSvgRenderer;
+class QTimer;
 class TMainConsole;
 class TTextEdit;
 
@@ -156,6 +158,15 @@ private:
     void updateKeyboardAccess();
     bool announcesTextChanges() const;
     void announceTextChange(const QString& spokenBefore);
+    void announce(const QString& spoken);
+    void announcePendingText();
+    bool readAsName() const;
+    // A screen reader queues a polite announcement and cuts an assertive one short, so a gauge redrawn faster than it is
+    // read falls behind or is never heard out
+    static constexpr std::chrono::milliseconds scmAnnouncementInterval{1000};
+    QTimer* mpAnnouncementTimer = nullptr;
+    bool mAnnouncementPending = false;
+    QString mLastAnnounced;
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;

@@ -244,6 +244,47 @@ void TLabel::announceTextChange(const QString& spokenBefore)
     if (spoken.isEmpty() || spoken == spokenBefore) {
         return;
     }
+    if (mpAnnouncementTimer && mpAnnouncementTimer->isActive()) {
+        mAnnouncementPending = true;
+        // Already heard as its name, so not repeated when the interval ends
+        if (readAsName()) {
+            mLastAnnounced = spoken;
+        }
+        return;
+    }
+    announce(spoken);
+}
+
+bool TLabel::readAsName() const
+{
+    // QLabel tells a screen reader of a focused label's new name, which for an unnamed label is its text
+    return hasFocus() && mpModel->mAccessibleName.isEmpty();
+}
+
+void TLabel::announcePendingText()
+{
+    if (!std::exchange(mAnnouncementPending, false) || !announcesTextChanges()) {
+        return;
+    }
+    const QString spoken = mpModel->spokenText();
+    if (!spoken.isEmpty() && spoken != mLastAnnounced) {
+        announce(spoken);
+    }
+}
+
+void TLabel::announce(const QString& spoken)
+{
+    mLastAnnounced = spoken;
+    if (!mpAnnouncementTimer) {
+        mpAnnouncementTimer = new QTimer(this);
+        mpAnnouncementTimer->setSingleShot(true);
+        mpAnnouncementTimer->setInterval(scmAnnouncementInterval);
+        connect(mpAnnouncementTimer, &QTimer::timeout, this, &TLabel::announcePendingText);
+    }
+    mpAnnouncementTimer->start();
+    if (readAsName()) {
+        return;
+    }
     QAccessibleAnnouncementEvent event(this, spoken);
     event.setPoliteness(mpModel->mLiveRegion == TLabelLiveRegion::Assertive ? QAccessible::AnnouncementPoliteness::Assertive : QAccessible::AnnouncementPoliteness::Polite);
     QAccessible::updateAccessibility(&event);
@@ -348,6 +389,15 @@ void TLabel::syncTextAnnouncedByQt()
 
 void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
 {
+    if (change == TLabelModel::AccessibilityChange::LiveRegion) {
+        // Text waiting out the interval is spoken now at the new politeness, or dropped with the region switched off;
+        // with none waiting, the next change is spoken at once
+        if (mpAnnouncementTimer && mpAnnouncementTimer->isActive()) {
+            mpAnnouncementTimer->stop();
+            announcePendingText();
+        }
+        return;
+    }
     if (change == TLabelModel::AccessibilityChange::Name) {
         // QLabel::setText() announces the text as the new name whenever the widget's own name is empty,
         // so the widget carries a script's name too, and an unnamed label's text is announced once
@@ -383,8 +433,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         takenByQt = event->isAccepted();
     }
 
-    if (mClickFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
+    if (model().runCallback(TLabelModel::Callback::click, *event)) {
         // The use of accept() here prevents the propagation of the event to
         // any parent, e.g. the containing TConsole
         event->accept();
@@ -396,8 +445,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mDoubleClickFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mDoubleClickFunction, event);
+    if (model().runCallback(TLabelModel::Callback::doubleClick, *event)) {
         event->accept();
     } else {
         QWidget::mouseDoubleClickEvent(event);
@@ -418,8 +466,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
         mudlet::self()->activateProfile(mpHost);
     }
 
-    if (mReleaseFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
+    if (model().runCallback(TLabelModel::Callback::release, *event)) {
         event->accept();
     } else if (!takenByQt && !mClickFunction && event->button() == Qt::RightButton && forwardRightClickToConsole(event)) {
         event->accept();
@@ -499,8 +546,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
         QLabel::mouseMoveEvent(event);
     }
 
-    if (mMoveFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
+    if (model().runCallback(TLabelModel::Callback::move, *event)) {
         event->accept();
     } else {
         QWidget::mouseMoveEvent(event);
@@ -509,8 +555,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (mWheelFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mWheelFunction, event);
+    if (model().runCallback(TLabelModel::Callback::wheel, *event)) {
         event->accept();
     } else if (forwardWheelToConsole(event)) {
         event->accept();
@@ -534,8 +579,7 @@ void TLabel::endLinkHover()
 void TLabel::leaveEvent(QEvent* event)
 {
     endLinkHover();
-    if (mLeaveFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
+    if (model().runCallback(TLabelModel::Callback::leave, *event)) {
         event->accept();
     } else {
         QWidget::leaveEvent(event);
@@ -544,8 +588,7 @@ void TLabel::leaveEvent(QEvent* event)
 
 void TLabel::enterEvent(TEnterEvent* event)
 {
-    if (mEnterFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mEnterFunction, event);
+    if (model().runCallback(TLabelModel::Callback::enter, *event)) {
         event->accept();
     } else {
         QWidget::enterEvent(event);
@@ -846,18 +889,35 @@ void TLabel::changeEvent(QEvent* event)
 // QWidget::event() doesn't pass ToolTipChange on to changeEvent()
 bool TLabel::event(QEvent* event)
 {
+    // Qt sends it for a hidden parent too, and text waiting when a label goes from view is stale once it is back
+    if (event->type() == QEvent::Hide) {
+        mAnnouncementPending = false;
+    }
     // The caret shortcut has to beat an application-wide QShortcut on the same key, as in TTextEdit::event()
     if (event->type() == QEvent::ShortcutOverride && mainWindowConsole() && hasFocus() && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
         event->accept();
+        TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
         return true;
     }
+#if defined(Q_OS_MACOS)
+    // QWidget::event() steps the focus on a Tab unless Command or Option is held, so a Ctrl+Tab would not reach keyPressEvent()
+    if (event->type() == QEvent::KeyPress && (static_cast<QKeyEvent*>(event)->modifiers() & Qt::MetaModifier) && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
+        keyPressEvent(static_cast<QKeyEvent*>(event));
+        return true;
+    }
+#endif
     if (event->type() == QEvent::ToolTipChange) {
         mpModel->setToolTip(toolTip());
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
+        const bool announcing = announcesTextChanges();
+        const QString spokenBefore = announcing ? mpModel->spokenText() : QString();
         syncTextAnnouncedByQt();
+        if (announcing) {
+            announceTextChange(spokenBefore);
+        }
     }
     return handled;
 }
