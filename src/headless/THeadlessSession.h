@@ -796,13 +796,13 @@ public:
     bool setUserWindowGeometry(const QString& name, const QRect& geometry, bool floating);
     // The dock's close button: hides the user window, as hideWindow() does. Refused as setUserWindowGeometry() is.
     bool closeUserWindow(const QString& name);
-    // Brings the MXP frame page forward in the tab header it is a page of, as the player's click on its tab in the
-    // GUI does: it comes to the front, and the page that was in front, with the frames opened in it, no longer
-    // shows, unless a script moved its console out. scriptWindowsChanged names the header's frame and the pages, and frames in them, whose shown changes;
-    // that raises no event in the GUI, so none here. False for a name that is no page of a header, for a header
-    // whose frameTabs is not shown, whichever page is asked for, for a header that has no frameTabs, its frame's own
-    // console being moved out or deleted, and where runLua() is refused; else true, changing nothing for the page
-    // already in front.
+    // Brings the MXP frame page forward in the tab header it is a page of, as the player's click on its tab in the GUI
+    // does: it comes to the front, and the page that was in front no longer shows (its console stays shown if a script
+    // moved it out), nor do the frames opened in it. scriptWindowsChanged names the header's frame and the pages, and
+    // frames in them, whose shown changes; that raises no event in the GUI, so none here. False for a name that is no page
+    // of a header, for a header whose frameTabs is not shown, whichever page is asked for, for a header that has no
+    // frameTabs, its frame's own console being moved out or deleted, and where runLua() is refused; else true, changing
+    // nothing for the page already in front.
     bool selectFrameTab(const QString& page);
     // What the app's mouse did over one of the windows, for pointer(); mapPointer() takes a MapPointerEvent
     struct WindowPointerEvent
