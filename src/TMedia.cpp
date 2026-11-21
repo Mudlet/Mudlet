@@ -39,8 +39,8 @@
 #include <QMetaMethod>
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
-#include <QScopeGuard>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QStandardPaths>
 #include <QTimer>
 

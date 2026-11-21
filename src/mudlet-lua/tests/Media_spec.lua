@@ -1359,6 +1359,15 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(20, playing[1].volume)
   end)
 
+  local function waitForPlaying(key)
+    for _ = 1, 20 do
+      if #getPlayingSounds({key = key}) > 0 then
+        return
+      end
+      waitForEvent("sysMediaStarted", 500)
+    end
+  end
+
   it("a stop sent while the file is still downloading keeps the sound from starting once it lands", function()
     if noFixtureServer() then
       return
@@ -1386,6 +1395,34 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
     -- still saved, so the next play of it needs no download
     assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the stopped download did not keep its file")
+  end)
+
+  it("an update sent after a stop does not start the download it stopped", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-update-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-update-download"}))
+    assert.is_true(stopSounds({key = "busted-media-stop-update-download"}))
+    assert.is_true(updateSounds({key = "busted-media-stop-update-download", pan = 20, volume = 40}))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started)
+    assert.equals(0, #getPlayingSounds())
   end)
 
   it("a stop from a sysDownloadDone handler keeps the downloaded sound from starting", function()
@@ -1527,12 +1564,7 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(stopSounds({key = "busted-media-priority-local"}))
     waitForCount("sysDownloadDone", done, 2)
     for _, download in ipairs(downloads) do
-      for _ = 1, 20 do
-        if #getPlayingSounds({key = download.key}) > 0 then
-          break
-        end
-        waitForEvent("sysMediaStarted", 500)
-      end
+      waitForPlaying(download.key)
       assert.equals(1, #getPlayingSounds({key = download.key}), "a play with a priority kept " .. download.name .. " from starting")
     end
   end)
@@ -1556,12 +1588,7 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, priority = 80, key = "busted-media-priority-higher"}))
     assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-lower-local"}))
-    for _ = 1, 20 do
-      if #getPlayingSounds({key = "busted-media-priority-higher"}) > 0 then
-        break
-      end
-      waitForEvent("sysMediaStarted", 500)
-    end
+    waitForPlaying("busted-media-priority-higher")
     assert.equals(1, #getPlayingSounds({key = "busted-media-priority-higher"}))
   end)
 
@@ -3456,12 +3483,7 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-gmcp-stop-api-download"}))
     feedGmcp('Client.Media.Stop {}')
-    for _ = 1, 20 do
-      if #getPlayingSounds({key = "busted-gmcp-stop-api-download"}) > 0 then
-        break
-      end
-      waitForEvent("sysMediaStarted", 500)
-    end
+    waitForPlaying("busted-gmcp-stop-api-download")
     assert.equals(1, #getPlayingSounds({key = "busted-gmcp-stop-api-download"}))
   end)
 
