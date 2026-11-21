@@ -26,7 +26,7 @@ describe("Tests the generic mapper's map help command", function()
 
   it("still shows the help for a topic it knows", function()
     local shown = spy.on(_G, "cecho")
-    finally(function() cecho:revert() end)
+    finally(function() shown:revert() end)
     assert.has_no.errors(function() map.show_help("map path") end)
     assert.are.same({}, echoes)
     assert.spy(shown).was_called()
