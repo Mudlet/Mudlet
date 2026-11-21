@@ -155,7 +155,7 @@ private slots:
 
         mpDialog->installModules({dir.filePath(qsl("missing<v2>.xml"))});
         QVERIFY2(pNotice->isVisible(), "a module that could not be imported is not reported");
-        QCOMPARE(pNotice->notificationAreaMessageBox->text(), qsl("Failed to import: missing<v2>.xml"));
+        QVERIFY2(pNotice->notificationAreaMessageBox->text().startsWith(qsl("Failed to import missing<v2>.xml: ")), qPrintable(pNotice->notificationAreaMessageBox->text()));
 
         const QString moduleName = qsl("module-manager-shell-install");
         QFile module(dir.filePath(moduleName + qsl(".xml")));

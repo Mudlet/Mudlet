@@ -133,12 +133,16 @@ public:
     // installs the validated root); an empty path forgets it instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
-    // Whether the main dictionary files are the ones bundled with Mudlet (true) or
-    // ones provided by the system (false). Settled as a side effect of resolving
+    // Whether the main dictionary files are bundled with Mudlet or named by the app (true),
+    // or provided by the system (false). Settled as a side effect of resolving
     // enums::hunspellDictionaryPath, so it only answers once that has been asked for.
     static bool usingMudletDictionaries();
     // Looked in, in this order, ahead of the dictionaries bundled with Mudlet
     static QStringList systemHunspellDictionaryFolders();
+    // Where an app that embeds Mudlet keeps the Hunspell dictionaries it carries: looked in first, and in place of
+    // those bundled with Mudlet. Refused (false) for a path only Qt's file engines can read (:/, assets:/), which
+    // Hunspell cannot open; empty forgets it.
+    static bool setAppDictionaryFolder(const QString& folder);
 
     // Replaces filesystem-unsafe characters with underscores and bounds the length. A shortened name carries
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
@@ -197,8 +201,9 @@ public:
     // names one; before the first media object is made
     static void setDefaultMediaBackend();
 
-    // Whether the config root in force actually came from a portable.txt. False
-    // when a marker was present but named a root that had to be refused, which is
+    // Whether the config root in force keeps its passwords out of the keychain, in the credential
+    // store's encrypted files: one an honoured portable.txt named, or one a frontend chose that keeps them.
+    // False when a marker was present but named a root that had to be refused, which is
     // the distinction a marker stat cannot make - and getting it wrong sends
     // credentials to portable-mode files on an install running non-portably.
     static bool portableRootInUse();
@@ -291,11 +296,13 @@ private:
     friend class HeadlessSessionTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
-    // store to the Updater. portable says whether the root came from a
-    // portable.txt that was honoured.
+    // store to the Updater. portable says whether the root keeps its passwords out
+    // of the keychain, as portableRootInUse() reports it.
     static void setConfigPath(const QString& path, bool portable = false);
-    // A root a frontend chose: portable, as its passwords are kept in it
-    static void chooseConfigRoot(const QString& path);
+    // A root a frontend chose, portable when it keeps its passwords in its own files rather than the keychain
+    static void chooseConfigRoot(const QString& path, bool keepsPasswords = chosenRootKeepsPasswords());
+    // False only in an Android app with a Java VM registered with Qt, whose chosen root may then use the KeyStore
+    static bool chosenRootKeepsPasswords();
     // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
     // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
     static ConfigDirResolution settleConfigRoot();

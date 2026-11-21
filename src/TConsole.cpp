@@ -85,24 +85,6 @@ constexpr int footSeamHeight = 1;
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
 // setProfileStyleSheet() rules. Other styles draw the handle against their own groove, so it is visible
 // already, and keep hover/pressed feedback this painting lacks.
-bool consoleScrollBarStyleWanted()
-{
-    const QStyle* pStyle = QApplication::style();
-    if (!pStyle) {
-        return false;
-    }
-
-    // Mudlet's style is a proxy (MudletProxyStyle or DarkTheme) with no object name; use the base's.
-    QString styleName = pStyle->objectName();
-    if (styleName.isEmpty()) {
-        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
-            styleName = pProxy->baseStyle()->objectName();
-        }
-    }
-    // Not windows10: its opaque handle on a light track has the same contrast on any console.
-    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
-}
-
 class ConsoleScrollBarStyle : public QProxyStyle
 {
 public:
@@ -112,9 +94,7 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        // Checked here, not at install, so a style switch (the appearance setting) needs no console
-        // told, and a test can stand in a Windows 11 style on any platform.
-        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !baseIsWindows11()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
@@ -147,6 +127,16 @@ public:
         pPainter->setBrush(handleColor);
         pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
         pPainter->restore();
+    }
+
+private:
+    // The base, not the application style, draws the bar: QProxyStyle makes it from the -style override or
+    // the desktop's style, never the application's. Not windows10: its opaque handle on a light track has
+    // the same contrast on any console.
+    bool baseIsWindows11() const
+    {
+        const QStyle* pBase = baseStyle();
+        return pBase && !pBase->objectName().compare(qsl("windows11"), Qt::CaseInsensitive);
     }
 };
 
@@ -747,7 +737,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+    }
 
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
         // No command line here to take the key and copy for the panes, as the main console's does
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         mLowerPane->setFocusPolicy(Qt::ClickFocus);
@@ -766,6 +758,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
+        // Ctrl+F leads here from a command line, so Escape leads back to it without reaching for the mouse
+        auto* pShortcut_leaveSearch = new QShortcut(QKeySequence(Qt::Key_Escape), mpBufferSearchBox);
+        pShortcut_leaveSearch->setContext(Qt::WidgetShortcut);
+        connect(pShortcut_leaveSearch, &QShortcut::activated, this, [this]() {
+            static_cast<TMainConsole*>(this)->focusActiveCommandLine();
+        });
         layoutButtonLayer->addWidget(mpBufferSearchUp);
         layoutButtonLayer->addWidget(mpBufferSearchDown);
         layoutButtonLayer->addWidget(timeStampButton);
@@ -903,6 +901,14 @@ TConsole::~TConsole()
         // handler looks consoles up by name, which would reach this one half destroyed.
         if (auto pMainConsole = mpHost->mainConsoleView()) {
             pMainConsole->forgetSubConsole(this);
+        }
+    }
+
+    // Only the main console's layout (and the debug console's find bar) adopts these, and a
+    // parentless widget stays reachable through QApplication, so nothing would ever free them
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop}) {
+        if (pWidget && !pWidget->parent()) {
+            delete pWidget;
         }
     }
 
@@ -1511,7 +1517,8 @@ bool TConsole::showLowerPane()
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+    // Ctrl+Enter only clears the main console's split, so elsewhere the hint misleads and uses up a showing
+    if (lowerAppears && mType == MainConsole && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
         const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
@@ -2441,105 +2448,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
         return;
     }
 
-    // Else if NOT the CentralDebugConsole or the ErrorConsole then bring the
-    // focus to the current profile in the main application window:
-    TEvent mudletEvent{};
-    mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
-    switch (event->button()) {
-    case Qt::LeftButton:
-        mudletEvent.mArgumentList.append(QString::number(1));
-        break;
-    case Qt::RightButton:
-        mudletEvent.mArgumentList.append(QString::number(2));
-        break;
-    case Qt::MiddleButton:
-        mudletEvent.mArgumentList.append(QString::number(3));
-        break;
-    case Qt::BackButton:
-        mudletEvent.mArgumentList.append(QString::number(4));
-        break;
-    case Qt::ForwardButton:
-        mudletEvent.mArgumentList.append(QString::number(5));
-        break;
-    case Qt::TaskButton:
-        mudletEvent.mArgumentList.append(QString::number(6));
-        break;
-    case Qt::ExtraButton4:
-        mudletEvent.mArgumentList.append(QString::number(7));
-        break;
-    case Qt::ExtraButton5:
-        mudletEvent.mArgumentList.append(QString::number(8));
-        break;
-    case Qt::ExtraButton6:
-        mudletEvent.mArgumentList.append(QString::number(9));
-        break;
-    case Qt::ExtraButton7:
-        mudletEvent.mArgumentList.append(QString::number(10));
-        break;
-    case Qt::ExtraButton8:
-        mudletEvent.mArgumentList.append(QString::number(11));
-        break;
-    case Qt::ExtraButton9:
-        mudletEvent.mArgumentList.append(QString::number(12));
-        break;
-    case Qt::ExtraButton10:
-        mudletEvent.mArgumentList.append(QString::number(13));
-        break;
-    case Qt::ExtraButton11:
-        mudletEvent.mArgumentList.append(QString::number(14));
-        break;
-    case Qt::ExtraButton12:
-        mudletEvent.mArgumentList.append(QString::number(15));
-        break;
-    case Qt::ExtraButton13:
-        mudletEvent.mArgumentList.append(QString::number(16));
-        break;
-    case Qt::ExtraButton14:
-        mudletEvent.mArgumentList.append(QString::number(17));
-        break;
-    case Qt::ExtraButton15:
-        mudletEvent.mArgumentList.append(QString::number(18));
-        break;
-    case Qt::ExtraButton16:
-        mudletEvent.mArgumentList.append(QString::number(19));
-        break;
-    case Qt::ExtraButton17:
-        mudletEvent.mArgumentList.append(QString::number(20));
-        break;
-    case Qt::ExtraButton18:
-        mudletEvent.mArgumentList.append(QString::number(21));
-        break;
-    case Qt::ExtraButton19:
-        mudletEvent.mArgumentList.append(QString::number(22));
-        break;
-    case Qt::ExtraButton20:
-        mudletEvent.mArgumentList.append(QString::number(23));
-        break;
-    case Qt::ExtraButton21:
-        mudletEvent.mArgumentList.append(QString::number(24));
-        break;
-    case Qt::ExtraButton22:
-        mudletEvent.mArgumentList.append(QString::number(25));
-        break;
-    case Qt::ExtraButton23:
-        mudletEvent.mArgumentList.append(QString::number(26));
-        break;
-    case Qt::ExtraButton24:
-        mudletEvent.mArgumentList.append(QString::number(27));
-        break;
-    default:
-        mudletEvent.mArgumentList.append(QString::number(0));
-    }
-    QPoint pos = event->position().toPoint();
-    mudletEvent.mArgumentList.append(QString::number(pos.x()));
-    mudletEvent.mArgumentList.append(QString::number(pos.y()));
-    mudletEvent.mArgumentList.append(mConsoleName);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(mudletEvent);
+    mpHost->raiseWindowMouseEvent(mConsoleName, *event, isPressEvent);
 
     // Focus this console's command line, not the "active" one
     // This ensures clicking on a console focuses its own command line
@@ -2818,6 +2727,8 @@ void TConsole::setCaretMode(bool enabled)
         Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         setProxyForFocus(mpCommandLine);
+        // Only the caret gives a link focus, so the link it was on stops showing it
+        buffer.setFocusedLink(0);
         // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
 }

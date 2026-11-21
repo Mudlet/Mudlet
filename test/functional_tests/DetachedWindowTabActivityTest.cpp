@@ -266,6 +266,36 @@ private slots:
         QVERIFY2(marked, "with multiview on, text for a profile hidden in a detached window went unmarked");
     }
 
+    // A detached window holding one profile names its connection state in its
+    // title, which is what the taskbar shows; it has to follow a disconnect, not
+    // keep claiming the game is connected until the player next switches tabs.
+    void test_aDetachedWindowsTitleFollowsItsConnection()
+    {
+        deleteProfileDirectory(mClosingHostname);
+        Host* pHost = startProfile(mClosingHostname);
+        QVERIFY(pHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(300, 300));
+        TDetachedWindow* pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pWindow);
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Connected to %1").arg(pHost->getUrl())), qPrintable(pWindow->windowTitle()));
+
+        QSignalSpy disconnectionSpy(&pHost->mTelnet, &cTelnet::signal_disconnected);
+        pHost->mTelnet.disconnectIt();
+        QVERIFY(!disconnectionSpy.isEmpty() || disconnectionSpy.wait(2000));
+
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Disconnected")), qPrintable(pWindow->windowTitle()));
+
+        QSignalSpy connectingSpy(&pHost->mTelnet, &cTelnet::signal_connecting);
+        pHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY(!connectingSpy.isEmpty() || connectingSpy.wait(2000));
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Connecting...")), qPrintable(pWindow->windowTitle()));
+
+        QSignalSpy calledOffSpy(&pHost->mTelnet, &cTelnet::signal_connectingCalledOff);
+        pHost->mTelnet.disconnectIt();
+        QVERIFY2(!calledOffSpy.isEmpty(), "disconnecting during the host lookup did not call the connection off");
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Disconnected")), qPrintable(pWindow->windowTitle()));
+    }
+
     // The main window's marks now come from the same two functions as a detached
     // window's, so this is here to see that sharing them cost it nothing
     void test_theMainWindowStillMarksAndClearsItsOwnTabs()
