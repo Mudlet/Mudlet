@@ -460,8 +460,7 @@ private slots:
         QCOMPARE(console->buffer.mCursorY, movedTo);
     }
 
-    // Ctrl+Enter in the main command line would not clear a mini console's split, so the hint is
-    // kept for the main console rather than printed there about another one
+    // The hint names a key that only clears the main console's split
     void test_aMiniConsoleSplittingDoesNotUseUpTheSplitScreenTutorial()
     {
         auto* console = startSearchableProfile();
