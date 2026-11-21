@@ -3638,6 +3638,17 @@ describe("Tests UI functions", function()
       assert.is_truthy(tostring(message):find(takenName, 1, true), "a plain button is no toolbar, got: " .. tostring(message))
     end)
 
+    it("tempButtonToolbar answers nil and a message for a location no bar shows", function()
+      for _, location in ipairs({-1, 4}) do
+        local name = ("bustedTempBadLocation%d%s"):format(location, suffix)
+        local count, id, message = pack(tempButtonToolbar(name, location, 0))
+        assert.are.equal(2, count)
+        assert.is_nil(id)
+        assert.is_truthy(tostring(message):find("location " .. location, 1, true), "the refusal should name the location, got: " .. tostring(message))
+        assert.are.equal(0, exists(name, "button"))
+      end
+    end)
+
     it("showing a button toolbar again does not stack another copy of its buttons", function()
       if not os.getenv("MUDLET_TEST_MODE") then
         pending("the layout only settles once pumpEvents() has run")
