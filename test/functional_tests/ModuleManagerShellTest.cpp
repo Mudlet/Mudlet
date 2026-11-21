@@ -25,7 +25,6 @@
  * Run with: ctest -R ModuleManagerShellTest -V
  */
 
-#include <QAbstractButton>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTemporaryDir>
