@@ -348,7 +348,10 @@ private slots:
 
         bool reported = false;
         for (const auto& arguments : printed) {
-            reported = reported || arguments.at(0).toString().contains(qsl("Cannot set exit stub"));
+            if (arguments.at(0).toString().contains(qsl("Cannot set exit stub"))) {
+                reported = true;
+                break;
+            }
         }
         QVERIFY2(reported, "a stub refused because an exit is there printed nothing in the Errors console");
     }
