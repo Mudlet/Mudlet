@@ -3641,7 +3641,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // no-op that also prints a warning); duplicate wiring is instead prevented by
     // the `if (pH->mainConsoleView()) return;` early-return at the top of this function.
     connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this, pH]() {
-        QApplication::alert(profileWindow(pH), 3000);
+        alertUser(*pH, 3000);
         if (!mHostManager.media().gameMuted()) {
             QApplication::beep();
         }

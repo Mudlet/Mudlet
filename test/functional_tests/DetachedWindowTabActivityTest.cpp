@@ -266,10 +266,8 @@ private slots:
         QVERIFY2(marked, "with multiview on, text for a profile hidden in a detached window went unmarked");
     }
 
-    // alert(), the game's bell and the "new data" alert all ask the window manager
-    // to flag a window; for a profile in a detached window it has to be that one,
-    // as flagging the main window points the player at the wrong game - and does
-    // nothing at all while the main window is the active one.
+    // Flagging the main window for a detached profile points the player at the wrong
+    // game, and does nothing at all while the main window is the active one
     void test_aDetachedProfileAsksForAttentionFromItsOwnWindow()
     {
         TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
