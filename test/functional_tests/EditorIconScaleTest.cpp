@@ -27,7 +27,6 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -36,8 +35,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorIconScaleTest : public QObject
 {
@@ -80,7 +77,7 @@ private:
         for (int width = mpEditor->minimumWidth(); width <= scmSweepCeiling; width += scmSweepStep) {
             mpEditor->resize(width, 700);
             QCoreApplication::sendPostedEvents();
-            QTest::qWait(20ms);
+            QCoreApplication::processEvents();
             if (profileGroupIsNamed()) {
                 return width;
             }
@@ -95,7 +92,6 @@ private:
         mudlet::self()->setToolBarIconSize(value == 1 ? 2 : 1);
         mudlet::self()->setToolBarIconSize(value);
         QCoreApplication::sendPostedEvents();
-        QTest::qWait(50ms);
     }
 
 private slots:
@@ -109,11 +105,11 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1200, 700);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanupTestCase()
@@ -153,7 +149,7 @@ private slots:
     {
         setPreference(scmDefaultPreference);
         mpEditor->toolBar->setIconSize(QSize(scmOldDefaultGlyphSize, scmOldDefaultGlyphSize));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         const int before = narrowestWidthWithEveryNameWritten();
 
         setPreference(scmDefaultPreference);
