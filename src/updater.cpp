@@ -252,7 +252,11 @@ void Updater::onNextFeedAnswer(const std::function<void()>& onReady, const std::
         stopListening();
         onReady();
     });
-    connections->second = connect(feed.get(), &dblsqd::Feed::loadError, this, [stopListening, onError](const QString& error) {
+    connections->second = connect(feed.get(), &dblsqd::Feed::loadError, this, [this, stopListening, onError](const QString& error) {
+        // Feed::load() refusing to start a second load: the one running still answers
+        if (feed->isLoading()) {
+            return;
+        }
         stopListening();
         onError(error);
     });
