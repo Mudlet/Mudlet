@@ -126,19 +126,37 @@
       }
     },
     {
-      "name": "linux-core-minimal",
-      "displayName": "Linux mudlet_core and mudlet-headless only, without what an Android or iOS build must leave out",
-      "inherits": ["variant", "linux-debug"],
+      "name": "core-minimal",
+      "hidden": true,
       "cacheVariables": {
         "USE_SANITIZER": "",
         "BUILD_TESTING": "OFF",
+        "USE_GUI": "OFF",
         "USE_SPAWN": "OFF",
         "USE_DISCORD_RPC": "OFF",
         "USE_SPEECH_ENGINES": "OFF",
         "USE_MCPSERVER": "OFF",
         "USE_UPDATER": "OFF",
         "USE_3DMAPPER": "OFF",
-        "WITH_SENTRY": "OFF"
+        "WITH_SENTRY": "OFF",
+        "USE_BUILTIN_MUDLET_LUA": "ON",
+        "USE_BUNDLED_LUA_MODULES": "ON"
+      }
+    },
+    {
+      "name": "linux-core-minimal",
+      "displayName": "Linux mudlet_core and mudlet-headless only, without what an Android or iOS build must leave out",
+      "inherits": ["variant", "linux-debug", "core-minimal"]
+    },
+    {
+      "name": "wasm-headless",
+      "displayName": "WebAssembly mudlet-headless, from the Qt kits in QT_ROOT_DIR and QT_HOST_PATH and the libraries in MUDLET_WASM_DEPS",
+      "inherits": ["variant", "core-minimal"],
+      "toolchainFile": "$env{QT_ROOT_DIR}/lib/cmake/Qt6/qt.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "QT_HOST_PATH": "$env{QT_HOST_PATH}",
+        "CMAKE_PREFIX_PATH": "$env{MUDLET_WASM_DEPS}"
       }
     },
     {
@@ -303,6 +321,12 @@
       "targets": ["mudlet_headless_executable"]
     },
     { "name": "linux-release", "inherits": "on-linux", "configurePreset": "linux-release" },
+    {
+      "name": "wasm-headless",
+      "configurePreset": "wasm-headless",
+      "targets": ["mudlet_headless_executable"],
+      "jobs": 4
+    },
     {
       "name": "windows-debug",
       "configurePreset": "windows-debug",

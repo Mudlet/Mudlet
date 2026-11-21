@@ -64,11 +64,14 @@ ctest --preset macos-debug            # run the test suite
 | `<platform>-debug-ubsan` | macOS / Linux | UndefinedBehaviorSanitizer |
 | `<platform>-static-analysis` | macOS / Linux | Runs clang-tidy and cppcheck during compilation |
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
+| `wasm-headless` | Browser, cross-built | Release `mudlet-headless` only, 4 jobs - see "WebAssembly" in `docs/platform-builds.md` |
 | `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
 Every developer preset has a matching build and test preset of the same name, and all three are
 conditioned on the host system — so `cmake --list-presets` on macOS will not offer `linux-debug`,
-and `ctest --preset X` always runs against the tree that `cmake --build --preset X` produced.
+and `ctest --preset X` always runs against the tree that `cmake --build --preset X` produced. Two
+are exceptions: `linux-core-minimal` builds no tests and so has no test preset, and
+`wasm-headless`, a cross-build, has neither a test preset nor a host condition.
 
 The plain `<platform>-debug` presets build into `build/`. Every variant builds into
 `build-<preset-name>/` instead, so an AddressSanitizer tree and a sanitizer-free tree can coexist
@@ -170,12 +173,17 @@ binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full b
 ## Claude Code on the web (remote sessions)
 
 The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
-apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
+apt dependencies, Qt via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
 than the 6.8.2 minimum), the Lua rocks, submodules, and a CMake configure of the
 `linux-debug-nosan` preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the
 documented preset commands work unchanged. It takes ~3 minutes on a cold container and seconds
 on a warm one. ccache starts cold, so budget ~18 minutes for the first full build of a session
 on the 4 cores these containers get.
+
+The hook installs the Qt version that `.github/workflows/build-mudlet.yml` builds with, read
+from its first `qt:` matrix entry, so tests behave as they do on CI. Behaviour does differ across
+the supported range: before Qt 6.10, `QAccessible::setActive(true)` leaves `isActive()` false
+without a screen reader, so `LabelAccessibleInterfaceTest` skips its live-region cases there.
 
 The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold` - keep
 that flag if you reconfigure the tree from scratch.
@@ -228,9 +236,9 @@ successes):
   All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only; from a
   Wayland desktop it needs `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
 
-The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
-Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
-modernised — do not reach for it in remote sessions.
+`docker/` (Mudlet or Qt Creator in a container) and `.devcontainer/` are separate developer
+conveniences, both built from `docker/Dockerfile` on Ubuntu 26.04 with Ubuntu's own Qt. They need
+a container runtime; in remote sessions use the hook-provisioned toolchain above instead.
 
 ## Pitfalls
 
@@ -256,7 +264,7 @@ miss in every other checkout: put such defines on the source files that read the
 share nothing between checkouts: the header records its build tree's path and fails to load from
 another, so `cmake/PrecompiledHeaders.cmake` turns `base_dir` off for those targets.
 
-**Sanitizers are on by default** on every non-Windows build, regardless of build type
+**Sanitizers are on by default** on every non-Windows build but Android, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
 time and runtime speed. Use a `-nosan` or `-release` preset when not chasing a memory bug; both
 clear `USE_SANITIZER` explicitly, because a Release build type alone does not.

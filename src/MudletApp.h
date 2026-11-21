@@ -111,6 +111,17 @@ public:
     // legacyDefault so that a fresh install lands there
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault);
 
+    // Every root resolveConfigRoot() can pick for execDir as what the folders hold changes, not only today's:
+    // the one each portable.txt names, usable now or not, $XDG_CONFIG_HOME/mudlet and configDir
+    static QStringList configRootCandidates(const QString& execDir, const QString& configDir = legacyConfigDir());
+
+    // NTFS and APFS fold case by default; a case-sensitive volume there is then over-matched, which is the safe side
+    static Qt::CaseSensitivity fileNameCaseSensitivity();
+    // A folder by what it is rather than how it is spelled, made or not: the canonical path of its deepest
+    // existing ancestor and the rest, a link to nowhere on the way followed to where it will lead once that is made
+    static QString folderIdentity(const QString& path);
+    static bool sameFolder(const QString& first, const QString& second, Qt::CaseSensitivity caseSensitivity = fileNameCaseSensitivity());
+
     // A directory that cannot be listed must never read as "nothing here": that
     // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir);
@@ -122,12 +133,16 @@ public:
     // installs the validated root); an empty path forgets it instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
-    // Whether the main dictionary files are the ones bundled with Mudlet (true) or
-    // ones provided by the system (false). Settled as a side effect of resolving
+    // Whether the main dictionary files are bundled with Mudlet or named by the app (true),
+    // or provided by the system (false). Settled as a side effect of resolving
     // enums::hunspellDictionaryPath, so it only answers once that has been asked for.
     static bool usingMudletDictionaries();
     // Looked in, in this order, ahead of the dictionaries bundled with Mudlet
     static QStringList systemHunspellDictionaryFolders();
+    // Where an app that embeds Mudlet keeps the Hunspell dictionaries it carries: looked in first, and in place of
+    // those bundled with Mudlet. Refused (false) for a path only Qt's file engines can read (:/, assets:/), which
+    // Hunspell cannot open; empty forgets it.
+    static bool setAppDictionaryFolder(const QString& folder);
 
     // Replaces filesystem-unsafe characters with underscores and bounds the length. A shortened name carries
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
@@ -177,19 +192,26 @@ public:
     static QSettings::Status earlySettingsStatus(const QString& fileName);
     // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
     // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
-    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun);
+    // configRoot, a root a frontend will choose, is read in place of the one resolved, and not settled.
+    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun, const QString& configRoot = QString());
     // For the whole of a run with no main window, in the interface language its pool reports, as the main window
-    // loads its own. Installed on the application; null when there is none.
-    static QTranslator* loadTranslationsForRun();
+    // loads its own. Installed on the application; null when there is none. configRoot as above.
+    static QTranslator* loadTranslationsForRun(const QString& configRoot = QString());
     // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
     // names one; before the first media object is made
     static void setDefaultMediaBackend();
 
-    // Whether the config root in force actually came from a portable.txt. False
-    // when a marker was present but named a root that had to be refused, which is
+    // Whether the config root in force keeps its passwords out of the keychain, in the credential
+    // store's encrypted files: one an honoured portable.txt named, or one a frontend chose that keeps them.
+    // False when a marker was present but named a root that had to be refused, which is
     // the distinction a marker stat cannot make - and getting it wrong sends
     // credentials to portable-mode files on an install running non-portably.
     static bool portableRootInUse();
+    // Whether the root in force is one a frontend with no window chose for itself, through HostManager
+    static bool configRootChosen();
+    // Where the credential store keeps its files: under a root a frontend chose, so that nothing is shared
+    // with the GUI's, or else AppConfigLocation, which every other root shares
+    static QString credentialFilesRoot();
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr"
     // for french, without a country designation. Replaces xx in "mudlet_xx.qm" to
@@ -242,6 +264,18 @@ public:
     static bool development();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
+    // Named as a light/dark pair so the preferences' counterpart lookup switches between
+    // them when the appearance changes
+    static constexpr QLatin1String scmEditorThemeNameLight{"Mudlet Light"};
+    static constexpr QLatin1String scmEditorThemeFileLight{"Mudlet Light.tmTheme"};
+    static constexpr QLatin1String scmEditorThemeNameDark{"Mudlet Dark"};
+    static constexpr QLatin1String scmEditorThemeFileDark{"Mudlet Dark.tmTheme"};
+    // The light theme's names before the pair existed; profiles saved then still carry them
+    static constexpr QLatin1String scmEditorThemeNameLegacy{"Mudlet"};
+    static constexpr QLatin1String scmEditorThemeFileLegacy{"Mudlet.tmTheme"};
+    static void migrateBundledEditorTheme(QString& themeName, QString& themeFile);
+    static bool editorThemeResolves(const QString& themeFile);
+
 private:
     // Only the main window moves the language or the preferences below in a
     // running Mudlet: the language follows the preferences dialog through
@@ -262,9 +296,13 @@ private:
     friend class HeadlessSessionTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
-    // store to the Updater. portable says whether the root came from a
-    // portable.txt that was honoured.
+    // store to the Updater. portable says whether the root keeps its passwords out
+    // of the keychain, as portableRootInUse() reports it.
     static void setConfigPath(const QString& path, bool portable = false);
+    // A root a frontend chose, portable when it keeps its passwords in its own files rather than the keychain
+    static void chooseConfigRoot(const QString& path, bool keepsPasswords = chosenRootKeepsPasswords());
+    // False only in an Android app with a Java VM registered with Qt, whose chosen root may then use the KeyStore
+    static bool chosenRootKeepsPasswords();
     // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
     // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
     static ConfigDirResolution settleConfigRoot();

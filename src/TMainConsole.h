@@ -53,6 +53,7 @@ class QDialog;
 class QDockWidget;
 class QProgressDialog;
 class QTimer;
+class QWindow;
 
 class TMainConsole : public TConsole, public TConsoleFrontend
 {
@@ -188,6 +189,8 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
+    // For ~TConsole, which deregisters itself from the registry. By value: a replacement may hold the name.
+    void forgetSubConsole(TConsole* pConsole);
     bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
@@ -257,7 +260,7 @@ public:
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
-    QPoint mousePosition() const override;
+    std::optional<QPoint> mousePosition() const override;
     bool hasKeyboardFocus() const override;
     bool showPlainWindow(const QString& name) override;
     bool hidePlainWindow(const QString& name) override;
@@ -276,6 +279,7 @@ public:
     void setMapProgressDialogValue(int value);
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
+    void repaintMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName) override;
     void showNewMapperDock() override;
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) override;
@@ -362,10 +366,8 @@ public:
 
 
 public slots:
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
+    // From "Copy Map" in another profile; mapFileName is a bare name in this profile's map folder
+    void slot_reloadMap(QList<QString>, const QString& mapFileName);
 
 
 private slots:
@@ -387,6 +389,9 @@ signals:
 private:
     QString assembleTriggerMatchPoolReport() const;
     bool eventFilter(QObject* watched, QEvent* event) override;
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    void slot_focusWindowChanged(QWindow* pFocusWindow);
+#endif
     void openPasswordEntry();
     void closePasswordEntry();
     TPasswordEntry* passwordEntry() const;

@@ -437,10 +437,7 @@
   </action>
   <action name="dactionDiscord">
    <property name="text">
-    <string>Discord</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</string>
+    <string notr="true">Discord</string>
    </property>
    <property name="visible">
     <bool>false</bool>

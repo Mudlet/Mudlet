@@ -29,7 +29,6 @@ dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pParentWidget)
     setupUi(this);
 
     connect(lineEdit_script_name, &QLineEdit::editingFinished, this, &dlgScriptsMainArea::slot_editingNameFinished);
-    connect(lineEdit_script_event_handler_entry, &QLineEdit::editingFinished, this, &dlgScriptsMainArea::slot_editingEventNameFinished);
 }
 
 void dlgScriptsMainArea::trimName()
@@ -37,17 +36,7 @@ void dlgScriptsMainArea::trimName()
     lineEdit_script_name->setText(lineEdit_script_name->text().trimmed());
 }
 
-void dlgScriptsMainArea::trimEventHandlerName()
-{
-    lineEdit_script_event_handler_entry->setText(lineEdit_script_event_handler_entry->text().trimmed());
-}
-
 void dlgScriptsMainArea::slot_editingNameFinished()
 {
     trimName();
-}
-
-void dlgScriptsMainArea::slot_editingEventNameFinished()
-{
-    trimEventHandlerName();
 }

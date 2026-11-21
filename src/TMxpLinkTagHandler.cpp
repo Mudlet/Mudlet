@@ -20,13 +20,14 @@
 
 #include "TMxpLinkTagHandler.h"
 #include "LuaLiteral.h"
+#include "MailtoUri.h"
 #include "TMxpClient.h"
+#include "TelnetUri.h"
 #include "UntrustedText.h"
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QUrl>
-#include <QUrlQuery>
 
 namespace {
 // Shown in place of the address, so the tooltip and a screen reader say the click will do nothing
@@ -34,6 +35,19 @@ QString refusedHint(const QString& href)
 {
     //: Tooltip on a link from the game whose address Mudlet will not open, such as a file or a program's own scheme; %1 is that address
     return QCoreApplication::translate("TMxpLinkTagHandler", "Mudlet does not open this kind of address: %1").arg(UntrustedText::forTarget(href));
+}
+
+// Mudlet connects to these itself, after asking, rather than handing them to the system
+bool connectsToGame(const QString& href)
+{
+    const QString scheme = QUrl(href).scheme().toLower();
+    return scheme == qsl("telnet") || scheme == qsl("telnets");
+}
+
+QString connectHint(const QString& href)
+{
+    //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
+    return qsl("%1: %2").arg(QCoreApplication::translate("TMxpLinkTagHandler", "Connect to"), UntrustedText::forTarget(href));
 }
 } // namespace
 
@@ -66,6 +80,8 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     QString hint = mHintIsHref ? UntrustedText::forTarget(address.isEmpty() ? mHref : address) : UntrustedText::forAuthoredText(tag->getAttributeValue(qsl("hint")));
     if (!mIsHrefInContent && address.isEmpty()) {
         hint = refusedHint(mHref);
+    } else if (!mIsHrefInContent && mHintIsHref && connectsToGame(address)) {
+        hint = connectHint(address);
     }
     const QString action = actionFor(address);
 
@@ -99,7 +115,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
             if (address.isEmpty()) {
                 hints->first() = refusedHint(href);
             } else if (mHintIsHref) {
-                hints->first() = UntrustedText::forTarget(address);
+                hints->first() = connectsToGame(address) ? connectHint(address) : UntrustedText::forTarget(address);
             }
         }
     }
@@ -112,6 +128,9 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 
 QString TMxpLinkTagHandler::openableAddress(const QString& href)
 {
+    if (connectsToGame(href)) {
+        return parseTelnetUri(href) ? href : QString();
+    }
     // Game servers choose MXP link addresses, so only these schemes may reach the system's URL handler
     const QUrl url(href);
     const QString scheme = url.scheme().toLower();
@@ -119,20 +138,7 @@ QString TMxpLinkTagHandler::openableAddress(const QString& href)
         qWarning().noquote().nospace() << "TMxpLinkTagHandler::openableAddress(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\" in link to: \"" << href.left(80) << "\"";
         return QString();
     }
-    if (scheme != qsl("mailto")) {
-        return href;
-    }
-
-    // Mail clients and the desktop portal attach local files named by "attach" or "attachment"
-    QUrlQuery kept;
-    for (const auto& [name, value] : QUrlQuery(url).queryItems(QUrl::FullyEncoded)) {
-        const QString field = QUrl::fromPercentEncoding(name.toUtf8()).toLower();
-        if (field == qsl("subject") || field == qsl("body")) {
-            kept.addQueryItem(name, value);
-        }
-    }
-    const QString recipients = qsl("mailto:%1").arg(url.path(QUrl::FullyEncoded));
-    return kept.isEmpty() ? recipients : qsl("%1?%2").arg(recipients, kept.query(QUrl::FullyEncoded));
+    return MailtoUri::withOnlyMessageFields(href);
 }
 
 QString TMxpLinkTagHandler::actionFor(const QString& address)
@@ -140,7 +146,7 @@ QString TMxpLinkTagHandler::actionFor(const QString& address)
     if (address.isEmpty()) {
         return QString();
     }
-    return qsl("openUrl(%1)").arg(LuaLiteral::quote(address));
+    return qsl("%1(%2)").arg(connectsToGame(address) ? qsl("connectFromGameLink") : qsl("openUrl"), LuaLiteral::quote(address));
 }
 
 QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)

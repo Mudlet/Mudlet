@@ -170,8 +170,8 @@ describe("Alias processing", function()
             end
             local path = getMudletHomeDir() .. "/alias-runaway-command.xml"
             finally(function()
-                -- uninstallPackage() refuses while the profile save the install
-                -- started is still running
+                -- uninstallPackage() can still refuse a profile save that outlasts
+                -- its wait
                 local removed = false
                 for _ = 1, 100 do
                     if uninstallPackage("alias-runaway-command") == true then
@@ -658,8 +658,8 @@ describe("Alias processing", function()
                     killAlias(id)
                 end
                 _G.AliasCommandNestsSpec = nil
-                -- uninstallPackage() refuses while the profile save the install
-                -- started is still running
+                -- uninstallPackage() can still refuse a profile save that outlasts
+                -- its wait
                 local removed = false
                 for _ = 1, 100 do
                     if uninstallPackage("alias-command-nests") == true then
@@ -1036,8 +1036,8 @@ AliasCommandNestsSpec.match = matches[2]</script>
             -- busted keeps only the last finally() a spec registers, so the spec's own
             -- calls this
             local function uninstallSpecPackage(name)
-                -- uninstallPackage() refuses while the profile save the install
-                -- started is still running
+                -- uninstallPackage() can still refuse a profile save that outlasts
+                -- its wait
                 local removed = false
                 for _ = 1, 100 do
                     if uninstallPackage(name) == true then
@@ -1781,8 +1781,8 @@ AliasCommandNestsSpec.match = matches[2]</script>
             local path = getMudletHomeDir() .. "/alias-bad-pattern.xml"
             finally(function()
                 killAlias(goodId)
-                -- uninstallPackage() refuses while the profile save the install
-                -- started is still running
+                -- uninstallPackage() can still refuse a profile save that outlasts
+                -- its wait
                 local removed = false
                 for _ = 1, 100 do
                     if uninstallPackage("alias-bad-pattern") == true then

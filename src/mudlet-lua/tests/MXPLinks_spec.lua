@@ -163,6 +163,11 @@ describe("Tests the Lua an MXP link runs", function()
         local href = "https://example/" .. payload
         assertRunsOnly(actionsAfter(("<A>%s</A>"):format(href)), "openUrl", href)
       end)
+
+      it("connects to an A telnet href as it was given", function()
+        local href = "telnet://games.example:4000/" .. payload
+        assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", href))), "connectFromGameLink", href)
+      end)
     end)
   end
 
@@ -201,7 +206,18 @@ describe("Tests the Lua an MXP link runs", function()
       end)
     end
 
-    for _, href in ipairs({"file:///etc/hosts", "steam://run/1", "javascript:alert(1)", "www.example.com"}) do
+    it("opens a mailto with only its message fields", function()
+      assertRunsOnly(actionsAfter('<A href="mailto:admin@example.com?subject=Hi&attach=/etc/hostname&body=Text">go</A>'), "openUrl", "mailto:admin@example.com?subject=Hi&body=Text")
+    end)
+
+    -- Mudlet connects to these itself, asking the player first
+    for _, href in ipairs({"telnet://games.example:4000", "TELNETS://games.example:4000"}) do
+      it(("connects to %s"):format(href), function()
+        assertRunsOnly(actionsAfter(("<A href=\"%s\">go</A>"):format(href)), "connectFromGameLink", href)
+      end)
+    end
+
+    for _, href in ipairs({"file:///etc/hosts", "steam://run/1", "javascript:alert(1)", "www.example.com", "telnet://:4000"}) do
       it(("does not open %s"):format(href), function()
         local actions = actionsAfter(("<A href=\"%s\">go</A>"):format(href))
         assert.is_table(actions)
@@ -256,6 +272,62 @@ describe("Tests the Lua an MXP link runs", function()
 
     it("keeps its text when an A with no address is nested in it", function()
       assertRunsOnly(actionsAfter([[<A>https://outer.example/<A hint="tip"></A></A>]]), "openUrl", "https://outer.example/")
+    end)
+  end)
+
+  -- text MXP writes out itself - an entity, or a tag it turned down - inside a
+  -- link is as much the link's as the text around it
+  describe("Tests the text MXP writes out inside a link", function()
+    -- a spoiler blanks out only the characters that carry its link
+    local spoiler = "\027]8;;send:look?config={\"spoiler\":true}\027\\"
+    local closeLink = "\027]8;;\027\\"
+
+    local function lineHolding(marker)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(marker, 1, true) then
+          return line, lineNumber
+        end
+      end
+    end
+
+    -- whether each character between the brackets after the marker is underlined
+    local function underlinedBetweenBrackets(marker)
+      local line, lineNumber = lineHolding(marker)
+      assert.is_string(line, marker)
+      local open, close = line:find("(", 1, true), line:find(")", 1, true)
+      local underlined = {}
+      moveCursor("main", 0, lineNumber)
+      for column = open, close - 2 do
+        selectSection("main", column, 1)
+        underlined[#underlined + 1] = getTextFormat("main").underline
+      end
+      deselect("main")
+      moveCursorEnd("main")
+      return underlined
+    end
+
+    it("hides an entity inside an OSC 8 spoiler with the rest of it", function()
+      feed("MXPENTLINK1(" .. spoiler .. "aa&lt;bb" .. closeLink .. ")MXPENTLINK1")
+      assert.are.equal("MXPENTLINK1(     )MXPENTLINK1", (lineHolding("MXPENTLINK1")))
+    end)
+
+    it("hides a tag MXP turned down inside an OSC 8 spoiler with the rest of it", function()
+      feed("MXPENTLINK2(" .. spoiler .. "aa<3bb" .. closeLink .. ")MXPENTLINK2")
+      assert.are.equal("MXPENTLINK2(      )MXPENTLINK2", (lineHolding("MXPENTLINK2")))
+    end)
+
+    it("underlines an entity inside a SEND with the rest of its text", function()
+      feed([[MXPENTLINK3(<SEND href="look">a&amp;b</SEND>)MXPENTLINK3]])
+      assert.are.equal("MXPENTLINK3(a&b)MXPENTLINK3", (lineHolding("MXPENTLINK3")))
+      assert.are.same({true, true, true}, underlinedBetweenBrackets("MXPENTLINK3"))
+    end)
+
+    it("underlines a tag MXP turned down inside a SEND with the rest of its text", function()
+      feed([[MXPENTLINK4(<SEND href="look">a<3b</SEND>)MXPENTLINK4]])
+      assert.are.equal("MXPENTLINK4(a<3b)MXPENTLINK4", (lineHolding("MXPENTLINK4")))
+      assert.are.same({true, true, true, true}, underlinedBetweenBrackets("MXPENTLINK4"))
     end)
   end)
 end)

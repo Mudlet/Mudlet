@@ -20,9 +20,34 @@
 #include "glwidget_integration.h"
 #include "Host.h"
 
+#if defined(Q_OS_MACOS)
+#include <QSurfaceFormat>
+#include <QWindow>
+#endif
+
+void GLWidgetFactory::matchWindowTo3DView([[maybe_unused]] QWidget* parent, [[maybe_unused]] const bool modern)
+{
+#if defined(Q_OS_MACOS)
+    // macOS shares nothing between a core profile context and a legacy one, and a window composes its 3D view through a context made to its own
+    // format when its first 3D view arrives; unshared, the window shows a shrunken picture of itself where the map should be
+    const auto profiled = [modern](QSurfaceFormat format) {
+        format.setVersion(modern ? 3 : 2, modern ? 3 : 0);
+        format.setProfile(modern ? QSurfaceFormat::CoreProfile : QSurfaceFormat::NoProfile);
+        return format;
+    };
+    // Windows made later, such as a floated map, take the profile of the last 3D view made, as does a classic view's own context
+    QSurfaceFormat::setDefaultFormat(profiled(QSurfaceFormat::defaultFormat()));
+    if (QWindow* pWindow = parent ? parent->window()->windowHandle() : nullptr; pWindow && pWindow->surfaceType() != QSurface::OpenGLSurface) {
+        pWindow->setFormat(profiled(pWindow->requestedFormat()));
+    }
+#endif
+}
+
 QOpenGLWidget* GLWidgetFactory::createGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 {
-    if (pHost && pHost->getUseModern3DMapper()) {
+    const bool modern = pHost && pHost->getUseModern3DMapper();
+    matchWindowTo3DView(parent, modern);
+    if (modern) {
         return new ModernGLWidget(pMap, pHost, parent);
     }
     return new GLWidget(pMap, pHost, parent);

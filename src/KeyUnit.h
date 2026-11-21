@@ -54,6 +54,7 @@ public:
     ~KeyUnit();
 
     std::list<TKey*> getKeyRootNodeList() { return mKeyRootNodeList; }
+    QMap<int, TKey*> getKeyList() { return mKeyMap; }
 
     TKey* getKey(int id);
     void removeAllTempKeys();

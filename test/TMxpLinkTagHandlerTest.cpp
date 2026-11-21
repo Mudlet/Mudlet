@@ -46,6 +46,10 @@ class TMxpLinkTagHandlerTest : public QObject {
     return qsl("openUrl(%1)").arg(LuaLiteral::quote(href));
   }
 
+  static QString connects(const QString &href) {
+    return qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(href));
+  }
+
 private slots:
   // The tooltip, which a screen reader also reads, has to say a refused link
   // will not open, rather than show its address as if it would
@@ -92,6 +96,41 @@ private slots:
     QCOMPARE(stub.mHints, QStringList(refusal(qsl("file:///etc/hosts"))));
   }
 
+  // The tooltip is what the player trusts, so it shows what opens rather than what the game wrote
+  void testMailtoTooltipShowsWhatOpens() {
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"mailto:a@example.com?subject=Hi&attach=/etc/hostname\">mail</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:a@example.com?subject=Hi"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("mailto:a@example.com?subject=Hi")));
+  }
+
+  void testBareAMailtoTooltipShowsWhatOpens() {
+    TMxpStubClient stub;
+    feed(stub, "<A>mailto:a@example.com?cc=b@example.com</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:a@example.com?cc=b@example.com"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("mailto:a@example.com?cc=b@example.com")));
+  }
+
+  void testMailtoWithAFieldHiddenInTheAddressIsRefused() {
+    const QString href = qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com");
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"mailto:x%3Fattachment=/etc/hostname%26@b.com\">mail</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(QString()));
+    QCOMPARE(stub.mHints, QStringList(refusal(href)));
+  }
+
+  void testMailtoWithAFieldHiddenInARecipientIsRefused() {
+    const QString href = qsl("mailto:a@example.com?cc=x%3Fattachment=/etc/hostname%26@b.com");
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"mailto:a@example.com?cc=x%3Fattachment=/etc/hostname%26@b.com\">mail</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(QString()));
+    QCOMPARE(stub.mHints, QStringList(refusal(href)));
+  }
+
   void testFilledAddressKeepsTheGamesHint() {
     TMxpStubClient stub;
     feed(stub, "<A href=\"https://wiki.example/&text;\" hint=\"Wiki page\">Page</A>");
@@ -115,6 +154,69 @@ private slots:
 
     QCOMPARE(stub.mHrefs, QStringList(opens(qsl("mailto:x@example.invalid"))));
     QCOMPARE(stub.mHints, QStringList(UntrustedText::forTarget(qsl("mailto:x@example.invalid"))));
+  }
+
+  void testTelnetHrefConnectsAfterAsking() {
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"telnet://games.example:4000\">Visit</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(connects(qsl("telnet://games.example:4000"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("Connect to: telnet://games.example:4000")));
+  }
+
+  void testTelnetsTextOfABareAConnectsAfterAsking() {
+    TMxpStubClient stub;
+    feed(stub, "<A>telnets://games.example:4000</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(connects(qsl("telnets://games.example:4000"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("Connect to: telnets://games.example:4000")));
+  }
+
+  void testTelnetsLinkToARawAddressIsRefused_data() {
+    QTest::addColumn<QString>("href");
+    QTest::newRow("IPv4") << qsl("telnets://127.0.0.1:4000");
+    QTest::newRow("IPv6") << qsl("telnets://[::1]:4000");
+  }
+
+  void testTelnetsLinkToARawAddressIsRefused() {
+    QFETCH(QString, href);
+    TMxpStubClient stub;
+    feed(stub, qsl("<A href=\"%1\">Visit</A>").arg(href).toUtf8().constData());
+
+    QCOMPARE(stub.mHrefs, QStringList(QString()));
+    QCOMPARE(stub.mHints, QStringList(refusal(href)));
+  }
+
+  void testRawAddressesOnlyFailWithTls_data() {
+    QTest::addColumn<QString>("href");
+    QTest::newRow("plain telnet to IPv4") << qsl("telnet://127.0.0.1:4000");
+    QTest::newRow("plain telnet to IPv6") << qsl("telnet://[::1]:4000");
+    QTest::newRow("TLS to a name made of hex digits") << qsl("telnets://cafe:4000");
+  }
+
+  void testRawAddressesOnlyFailWithTls() {
+    QFETCH(QString, href);
+    TMxpStubClient stub;
+    feed(stub, qsl("<A href=\"%1\">Visit</A>").arg(href).toUtf8().constData());
+
+    QCOMPARE(stub.mHrefs, QStringList(connects(href)));
+  }
+
+  void testTelnetLinkKeepsTheGamesHint() {
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"telnet://games.example:4000\" hint=\"Our sister game\">Visit</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(connects(qsl("telnet://games.example:4000"))));
+    QCOMPARE(stub.mHints, QStringList(qsl("Our sister game")));
+  }
+
+  // A link that could never connect says so, rather than asking nothing when clicked
+  void testTelnetLinkWithoutAHostIsRefused() {
+    TMxpStubClient stub;
+    feed(stub, "<A href=\"telnet://:4000\">Visit</A>");
+
+    QCOMPARE(stub.mHrefs, QStringList(QString()));
+    QCOMPARE(stub.mHints, QStringList(qsl("Mudlet does not open this kind of address: telnet://:4000")));
   }
 };
 

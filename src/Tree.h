@@ -43,6 +43,7 @@ public:
     T* getParent() const { return mpParent; }
     std::list<Tree<T>*>* getChildrenList() const;
     std::list<T*> getAncestorList() const;
+    const T* getRoot() const;
     bool hasChildren() const { return (!mpMyChildrenList->empty()); }
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
@@ -65,6 +66,9 @@ public:
     void setTemporary(bool state);
     // Returns true if all the ancestors of this node are active. If there are no ancestors it also returns true.
     bool ancestorsActive() const;
+    // For the editor to show: an emergency stop switches items off without changing what the user switched on
+    bool shownActive(bool emergencyStop) const;
+    bool ancestorsShownActive(bool emergencyStop) const;
     QString& getError();
     void setError(QString);
     inline bool state() const;
@@ -196,6 +200,19 @@ bool Tree<T>::ancestorsActive() const
 }
 
 template <class T>
+bool Tree<T>::ancestorsShownActive(bool emergencyStop) const
+{
+    Tree<T>* node(mpParent);
+    while (node) {
+        if (!node->shownActive(emergencyStop)) {
+            return false;
+        }
+        node = node->mpParent;
+    }
+    return true;
+}
+
+template <class T>
 bool Tree<T>::shouldBeActive() const
 {
     return mUserActiveState;
@@ -255,6 +272,15 @@ bool Tree<T>::isActive() const
         return false;
     }
     return (mActive && canBeActivated());
+}
+
+template <class T>
+bool Tree<T>::shownActive(bool emergencyStop) const
+{
+    if (!emergencyStop) {
+        return isActive();
+    }
+    return mpMyChildrenList && canBeActivated();
 }
 
 template <class T>
@@ -338,6 +364,16 @@ std::list<T*> Tree<T>::getAncestorList() const
         node = node->mpParent;
     }
     return ancestorList;
+}
+
+template <class T>
+const T* Tree<T>::getRoot() const
+{
+    const T* pRoot = static_cast<const T*>(this);
+    while (pRoot->mpParent) {
+        pRoot = pRoot->mpParent;
+    }
+    return pRoot;
 }
 
 template <class T>

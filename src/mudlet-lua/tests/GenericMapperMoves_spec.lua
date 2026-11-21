@@ -316,3 +316,157 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     assert.is_nil(map.save.prompt_pattern[character])
   end)
 end)
+
+describe("Tests that the generic mapper reports its move queue in debug mode", function()
+  if type(map) ~= "table" or type(map.eventHandler) ~= "function" then
+    it("needs the generic mapper installed", function()
+      pending("the generic mapper is not installed in this profile")
+    end)
+    return
+  end
+
+  local captureMoveCmd = upvalue(map.eventHandler, "capture_move_cmd")
+  local moveMap = upvalue(upvalue(upvalue(map.eventHandler, "handle_exits"), "capture_room_info"), "move_map")
+  local _, queueIndex = upvalue(moveMap, "move_queue")
+  local _, randomMoveIndex = upvalue(moveMap, "random_move")
+  local _, waitEchoIndex = upvalue(map.echo, "wait_echo")
+  local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
+  local areaId, fromRoom, toRoom, saved, echoed
+
+  local function queue()
+    return select(2, debug.getupvalue(moveMap, queueIndex))
+  end
+
+  local function echoedMentioning(text)
+    local found = {}
+    for _, line in ipairs(echoed) do
+      if line:find(text, 1, true) then
+        found[#found + 1] = line
+      end
+    end
+    return found
+  end
+
+  local function makeRoom(name, y)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, areaId)
+    setRoomCoordinates(id, 0, y, 0)
+    setRoomName(id, name)
+    return id
+  end
+
+  before_each(function()
+    saved = {
+      debug = map.configs.debug,
+      queue = queue(),
+      randomMove = select(2, debug.getupvalue(moveMap, randomMoveIndex)),
+      waitEcho = select(2, debug.getupvalue(map.echo, waitEchoIndex)),
+      descriptionMatching = map.configs.use_description_matching,
+      hash = map.prompt.hash,
+      playerRoom = getPlayerRoom(),
+      state = {},
+    }
+    for _, key in ipairs(mapperState) do
+      saved.state[key] = map[key]
+    end
+    debug.setupvalue(moveMap, queueIndex, {})
+    debug.setupvalue(moveMap, randomMoveIndex, false)
+    debug.setupvalue(map.echo, waitEchoIndex, {})
+    map.configs.use_description_matching = false
+    areaId = addAreaName("genericMapperMoveQueueSpec")
+    fromRoom = makeRoom("Where the queue starts", 0)
+    toRoom = makeRoom("Where the queue leads", 1)
+    setExit(fromRoom, toRoom, "n")
+    setExit(toRoom, fromRoom, "s")
+    map.set("mapping", false)
+    map.set("currentRoom", fromRoom)
+    map.set("currentArea", areaId)
+    map.prompt.hash = nil
+    echoed = {}
+    stub(_G, "cecho", function(text) echoed[#echoed + 1] = text end)
+    stub(_G, "decho")
+    stub(_G, "echo")
+  end)
+
+  after_each(function()
+    cecho:revert()
+    decho:revert()
+    echo:revert()
+    map.configs.debug = saved.debug
+    debug.setupvalue(moveMap, queueIndex, saved.queue)
+    debug.setupvalue(moveMap, randomMoveIndex, saved.randomMove)
+    debug.setupvalue(map.echo, waitEchoIndex, saved.waitEcho)
+    map.configs.use_description_matching = saved.descriptionMatching
+    map.prompt.hash = saved.hash
+    for _, key in ipairs(mapperState) do
+      map.set(key, saved.state[key])
+    end
+    if saved.playerRoom and roomExists(saved.playerRoom) then
+      centerview(saved.playerRoom)
+    end
+    deleteArea(areaId)
+  end)
+
+  it("can reach the mapper's move queue", function()
+    assert.is_function(captureMoveCmd)
+    assert.is_function(moveMap)
+    assert.is_number(queueIndex)
+    assert.is_number(randomMoveIndex)
+    assert.is_number(waitEchoIndex)
+  end)
+
+  it("reports a move as it is queued and as the map follows it", function()
+    map.configs.debug = true
+    captureMoveCmd("north")
+    assert.same({"north"}, queue())
+    -- held back until the mapper next prints, so it does not split the line being sent
+    assert.same({}, echoedMentioning("move queue"))
+
+    map.set("currentName", "Where the queue leads")
+    map.set("currentExits", {"south"})
+    moveMap()
+    assert.same({}, queue())
+    assert.equals(toRoom, map.currentRoom)
+    local queueLines = echoedMentioning("move queue")
+    assert.equals(2, #queueLines)
+    assert.truthy(queueLines[1]:find("Queued move north - move queue: north", 1, true))
+    assert.truthy(queueLines[2]:find("Following move north - move queue: empty", 1, true))
+  end)
+
+  it("reports what a failed or random move drops from the queue", function()
+    map.configs.debug = true
+    captureMoveCmd("north")
+    captureMoveCmd("east")
+    echoed = {}
+    map.eventHandler("onMoveFail")
+    assert.same({"east"}, queue())
+    assert.equals(1, #echoedMentioning("dropped move north"))
+
+    map.eventHandler("onRandomMove")
+    assert.same({}, queue())
+    assert.equals(1, #echoedMentioning("Random move, dropping the queue - move queue: east"))
+  end)
+
+  it("reports the moves dropped while it looks for the player", function()
+    map.configs.debug = true
+    captureMoveCmd("north")
+    echoed = {}
+    map.find_me("Where the queue leads", {"south"})
+    assert.same({}, queue())
+    assert.equals(toRoom, map.currentRoom)
+    assert.equals(1, #echoedMentioning("Locating you, dropping the queue - move queue: north"))
+  end)
+
+  it("echoes nothing about the queue with debug off", function()
+    map.configs.debug = false
+    captureMoveCmd("north")
+    map.set("currentName", "Where the queue leads")
+    map.set("currentExits", {"south"})
+    moveMap()
+    map.eventHandler("onMoveFail")
+    map.find_me("Where the queue leads", {"south"})
+    assert.equals(toRoom, map.currentRoom)
+    assert.same({}, echoedMentioning("move queue"))
+  end)
+end)

@@ -40,7 +40,7 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="QSplitter" name="splitter_main">
+     <widget class="uiDesign::GripSplitter" name="splitter_main">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -63,7 +63,7 @@
        <bool>true</bool>
       </property>
       <property name="handleWidth">
-       <number>5</number>
+       <number>9</number>
       </property>
       <widget class="QFrame" name="frame_left">
        <property name="sizePolicy">
@@ -433,7 +433,7 @@
         <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
          <widget class="QCheckBox" name="checkBox_displayAllVariables">
           <property name="text">
-           <string>Show normally hidden variables</string>
+           <string>Show hidden variables</string>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -623,7 +623,7 @@
          <number>0</number>
         </property>
         <item>
-         <widget class="QSplitter" name="splitter_right">
+         <widget class="uiDesign::GripSplitter" name="splitter_right">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -657,7 +657,7 @@
            <enum>Qt::Vertical</enum>
           </property>
           <property name="handleWidth">
-           <number>5</number>
+           <number>9</number>
           </property>
           <property name="childrenCollapsible">
            <bool>true</bool>
@@ -693,6 +693,11 @@
    <class>TTreeWidget</class>
    <extends>QTreeWidget</extends>
    <header>TTreeWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>uiDesign::GripSplitter</class>
+   <extends>QSplitter</extends>
+   <header>GripSplitter.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

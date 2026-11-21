@@ -121,10 +121,13 @@ private:
     }
 
     // TTextEdit counts a click within 300ms of the last one as the next of a
-    // double- or triple-click, so the wait keeps an earlier case's clicks out of it
+    // double- or triple-click, so the wait keeps an earlier case's clicks out of it.
+    // It runs events, and text arriving in it scrolls the pane, so take the point
+    // to click only after it.
+    static void waitOutMultiClick() { QTest::qWait(350ms); }
+
     void clickRepeatedly(const QPoint& where, const int clicks) const
     {
-        QTest::qWait(350ms);
         for (int click = 0; click < clicks; ++click) {
             QTest::mouseClick(pane(), Qt::LeftButton, Qt::NoModifier, where);
         }
@@ -132,6 +135,7 @@ private:
 
     void tripleClickLine(const int line) const
     {
+        waitOutMultiClick();
         const int fontHeight = pane()->fontMetrics().height();
         clickRepeatedly(QPoint(pane()->fontMetrics().averageCharWidth() * 2, (line - pane()->imageTopLine()) * fontHeight + fontHeight / 2), 3);
     }
@@ -278,6 +282,9 @@ private slots:
         QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
         mpServer = new TelnetServerStub(qApp);
+        // The welcome comes on a timer, and a slow machine can take it after the
+        // marker lines, where it scrolls them up a line under a case's clicks
+        mpServer->setSendsWelcome(false);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
 
         mudlet::start();
@@ -709,11 +716,11 @@ private slots:
         const int line = lineOf(mSecondMarker);
         QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
         const int lineStart = offsetOfLine(line);
+        waitOutMultiClick();
         // "line two" runs from column 11 to 18
         const QPoint dragFrom = pointOfOffset(lineStart + 11);
         const QPoint dragTo = pointOfOffset(lineStart + 18);
 
-        QTest::qWait(350ms);
         QTest::mousePress(pane(), Qt::LeftButton, Qt::NoModifier, dragFrom);
         QMouseEvent move(QEvent::MouseMove, QPointF(dragTo), pane()->mapToGlobal(QPointF(dragTo)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
         QApplication::sendEvent(pane(), &move);
@@ -721,6 +728,7 @@ private slots:
         QCOMPARE(selectedText(), qsl("line two"));
 
         ti->removeSelection(0);
+        waitOutMultiClick();
         clickRepeatedly(pointOfOffset(lineStart + 3), 2);
         QCOMPARE(selectedText(), qsl("accessible"));
     }
@@ -743,6 +751,7 @@ private slots:
         int reportedStart = -1;
         int reportedEnd = -1;
 
+        waitOutMultiClick();
         clickRepeatedly(pointOfOffset(spaceOffset), 2);
         QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the two clicks were not taken as a double-click, so no word highlight was built");
         ti->selection(0, &reportedStart, &reportedEnd);

@@ -9,7 +9,7 @@ Needs Docker and a checkout with its submodules. Nothing is installed on the hos
 
 ```sh
 CI/linux-packages/build deb --base debian:13 -j 8
-CI/linux-packages/build rpm --base fedora:44 --version 5.0.1 -o out
+CI/linux-packages/build rpm --base fedora:45 --version 5.0.1 -o out
 ```
 
 Without `--version` the package is a snapshot of the checkout, versioned to sort

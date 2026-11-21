@@ -15,14 +15,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "Host.h"
 #include "SingleLineTextEdit.h"
 #include "TrailingWhitespaceMarker.h"
-#include "edbee/edbee.h"
+#include "utils.h"
 
 #include <QColor>
 #include <QKeyEvent>
 #include <QPalette>
+
+namespace {
+constexpr qreal scmPlaceholderStrength = 0.6;
+} // namespace
 
 SingleLineTextEdit::SingleLineTextEdit(QWidget* parent)
 : QPlainTextEdit(parent)
@@ -33,6 +36,7 @@ SingleLineTextEdit::SingleLineTextEdit(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setTabChangesFocus(true);
+    document()->setDocumentMargin(scmDocumentMargin);
 }
 
 // strip whitespace formatting marks (middle dots) when copying,
@@ -61,13 +65,16 @@ void SingleLineTextEdit::resizeEvent(QResizeEvent* event)
     QPlainTextEdit::resizeEvent(event);
 }
 
-// ensure we can't paste multiple lines
+// Only the first line fits here; the rest are handed on for the patterns that follow
 void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
 {
     if (source->hasText()) {
-        const QStringList lines = source->text().split(QRegularExpression(qsl("[\r\n]")), Qt::SkipEmptyParts);
+        QStringList lines = source->text().split(QRegularExpression(qsl("[\r\n]")), Qt::SkipEmptyParts);
         if (!lines.isEmpty()) {
-            QPlainTextEdit::insertPlainText(lines.first());
+            QPlainTextEdit::insertPlainText(lines.takeFirst());
+            if (!lines.isEmpty()) {
+                emit signal_pastedExtraLines(lines);
+            }
         }
     }
 }
@@ -94,27 +101,27 @@ void SingleLineTextEdit::setHighlightingEnabled(bool enabled)
 
 void SingleLineTextEdit::setTheme(const QString& themeName)
 {
-    auto themeManager = edbee::Edbee::instance()->themeManager();
-    edbee::TextTheme* theme = themeManager->theme(themeName);
-    if (!theme) {
-        // Theme file not downloaded on this machine; use edbee's own fallback so the two editors agree.
-        theme = themeManager->fallbackTheme();
+    highlighter->setTheme(themeName);
+}
+
+void SingleLineTextEdit::setFieldColors(const QColor& background, const QColor& text)
+{
+    if (!background.isValid() || !text.isValid()) {
+        return;
     }
 
-    // set the textedit background and text the same as edbee base settings
-    QPalette p = palette();
-    p.setColor(QPalette::Base, theme->backgroundColor()); // background
-    p.setColor(QPalette::Text, theme->foregroundColor());
-
-    QColor placeholderColor = theme->foregroundColor();
-    placeholderColor.setAlphaF(0.6);
-    p.setColor(QPalette::PlaceholderText, placeholderColor);
-    setPalette(p);
-    viewport()->setPalette(p);
+    QPalette fieldPalette = palette();
+    fieldPalette.setColor(QPalette::Base, background);
+    fieldPalette.setColor(QPalette::Text, text);
+    // Read against the inside of the field, not against the form
+    QColor placeholderColor = text;
+    placeholderColor.setAlphaF(scmPlaceholderStrength);
+    fieldPalette.setColor(QPalette::PlaceholderText, placeholderColor);
+    setPalette(fieldPalette);
+    viewport()->setPalette(fieldPalette);
     viewport()->setAutoFillBackground(true);
 
-    // the highlighter will perform the syntax colouring using scopes if possible
-    highlighter->setTheme(themeName);
+    highlighter->setFieldColors(background, text);
 }
 
 void SingleLineTextEdit::rehighlight()

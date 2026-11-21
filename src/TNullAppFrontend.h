@@ -21,16 +21,16 @@
  ***************************************************************************/
 
 #include "TAppFrontend.h"
+#include "TNullAppFrontendNotifier.h"
 #include "TNullConsoleFrontend.h"
 #include "utils.h"
 
+#include <QKeySequence>
 #include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QSet>
 #include <QSize>
-
-class QKeySequence;
 
 // The application shell core code sees while there is no main window: before it is made, after it
 // has gone, and in a run with no GUI. Most queries have no value and most actions fail or do nothing,
@@ -54,10 +54,12 @@ public:
     void showOptionsDialog(const QString&, Host*) override {}
     void showConnectionDialog() override {}
     void handleTelnetUri(const QString&) override {}
+    void connectFromGameLink(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override;
     void writeSettings() override;
-    bool openWebPage(const QString&) override { return false; }
+    // As the main window: hands the page to the platform, which an app can take with QDesktopServices::setUrlHandler()
+    bool openWebPage(const QString& path) override;
     bool showNotification(const QString&, const QString&, std::optional<int>) override { return false; }
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
@@ -67,15 +69,16 @@ public:
     void alertUser(int) override {}
     std::optional<QSize> getImageSize(const QString& imageLocation) override;
     int profileTabIndex(const QString&) const override { return -1; }
-    void setActiveProfileTab(const QString& profileName) override;
+    bool setActiveProfileTab(const QString& profileName) override;
     void setAppStyleSheet(const QString&) override {}
-    bool resizeMainWindow(int, int) override { return false; }
+    std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) override;
     bool loadWindowLayout() override;
     bool layoutLoading() const override { return mpLayoutLoad != nullptr; }
     bool saveWindowLayoutForScript() override;
     void userWindowRemoved(Host*, const QString& name) override;
     void mapWidgetRemoved(Host*) override;
     void profileClosing(Host*) override;
+    void configWritten() override { emit mNotifier.configWritten(); }
     void profilesClosed() override;
     bool quitting() const override { return false; }
     bool openProfile(const QString& profileName, bool connect) override;
@@ -85,6 +88,12 @@ public:
     void closeComposer(QObject*) override {}
     QString getOpenFileName(const QString&, const QString&) override { return QString(); }
     QString getExistingDirectory(const QString&, const QString&) override { return QString(); }
+    // None, there being nobody to choose
+    void getOpenFileNameAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void getExistingDirectoryAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    // The system's clipboard while there is a QGuiApplication, else text kept here
+    void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void setClipboardText(const QString& text) override;
     // Refuses what the main window refuses whatever its bars show, bar clashes with the main window's own shortcuts, and
     // keeps each command for a frontend to show and activate
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
@@ -114,8 +123,17 @@ public:
         int pulseInterval = 0;
     };
     const QMap<int, AddonCommand>& addonCommands() const { return mAddonCommands; }
+    // The embedding app's own shortcuts with what holds each, refused as the main window refuses its menu keys
+    struct ReservedShortcut
+    {
+        QKeySequence sequence;
+        QString holder;
+    };
+    void setReservedShortcuts(const QList<ReservedShortcut>& shortcuts) { mReservedShortcuts = shortcuts; }
+    const QList<ReservedShortcut>& reservedShortcuts() const { return mReservedShortcuts; }
     // As a click on the main window's button or menu item: false for a disabled or unknown command
     bool activateAddonCommand(int commandId);
+    TNullAppFrontendNotifier mNotifier;
 
     // Why the main window refuses a request whatever it shows, or an empty string: a menu path or shortcut on a
     // command kept off the menu, a shortcut Qt cannot hold, or a pulse it cannot paint
@@ -134,14 +152,18 @@ private:
     QString addonPlacementRefusal(const CommandRequest& request, const Host* pHost) const;
     // As the main window's, a command goes with its package, a profile reset and its profile
     void watchAddonCommandsOf(Host* pHost);
-    void removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
+    // False if it had none to remove
+    bool removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
 
     // Held, unlike the rest, as getConfig() reads these back. Each starts at the main window's default
     // with no saved settings, until a pool with no main window reads Mudlet.ini's.
     bool mDrawUpperLowerLevels = true;
+    QString mClipboardText;
     bool mShowTabConnectionIndicators = false;
     // A pointer, as the main window keeps it, so a profile opened again under the name is not in front
     QPointer<Host> mpActiveHost;
+    // Named before anyone hears of the switch, as the tab bar's current index is
+    QPointer<Host> mpActivatingHost;
     struct LayoutLoad
     {
         const QMap<QString, Placement>& placements;
@@ -159,6 +181,7 @@ private:
     // over it once the profile is open again
     Layout mClosedProfiles;
     QMap<int, AddonCommand> mAddonCommands;
+    QList<ReservedShortcut> mReservedShortcuts;
     // One sequence for every profile's commands, as the main window's, so an id names one command or nothing
     int mNextAddonCommandId = 1;
     QSet<const Host*> mAddonCommandHosts;

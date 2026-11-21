@@ -25,6 +25,8 @@
  */
 
 #include <QComboBox>
+#include <QHeaderView>
+#include <QLineEdit>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QScopeGuard>
@@ -41,6 +43,7 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "SearchResultDelegate.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -77,6 +80,7 @@ private:
     const QString mLocalhost = qsl("localhost");
     // Deliberately a nonsense word, so every hit found is one this test planted
     const QString mNeedle = qsl("qaHaystack");
+    const QString mLoneNeedle = qsl("qaSolitary");
 
     void deleteProfileDirectory(const QString& profileName)
     {
@@ -94,20 +98,24 @@ private:
         mpEditor->slot_searchMudletItems(0);
     }
 
-    // The result tree is two deep: the first field matched in an item becomes
-    // that item's top-level row, the rest hang off it
+    // Each matched item is a heading row with every match, the first included, as a
+    // child; SearchResultDelegate paints the rows from the roles below, not from columns
+    static QString typeOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::TypeLabelRole).toString(); }
+    static QString titleOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::TitleRole).toString(); }
+    static QString whereOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::WhereRole).toString(); }
+    static bool isNotice(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::NoticeRow; }
+
     QStringList resultsFor(const QString& itemType) const
     {
         QStringList found;
         auto* results = mpEditor->treeWidget_searchResults;
         for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
             QTreeWidgetItem* top = results->topLevelItem(i);
-            if (top->text(0) != itemType) {
+            if (isNotice(top) || typeOf(top) != itemType) {
                 continue;
             }
-            found << top->text(2);
             for (int j = 0, children = top->childCount(); j < children; ++j) {
-                found << top->child(j)->text(2);
+                found << whereOf(top->child(j));
             }
         }
         return found;
@@ -128,19 +136,95 @@ private:
     {
         auto* results = mpEditor->treeWidget_searchResults;
         for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
-            if (results->topLevelItem(i)->text(0) == itemType) {
-                return results->topLevelItem(i);
+            QTreeWidgetItem* top = results->topLevelItem(i);
+            if (!isNotice(top) && typeOf(top) == itemType) {
+                return top;
             }
         }
         return nullptr;
     }
 
+    // One line per row, children indented: the columns, the jump data bar the id (see verifyResultIds()), " +" if expanded
+    QStringList describeResults() const
+    {
+        const auto describe = [](const QTreeWidgetItem* item, const QString& indent) {
+            return qsl("%1%2|%3|%4|%5").arg(indent, item->text(0), item->text(1), item->text(2), item->text(3))
+                   + qsl(" name=%1 view=%2 type=%3 line=%4 pos=%5 index=%6%7")
+                             .arg(item->data(0, dlgTriggerEditor::NameRole).toString())
+                             .arg(item->data(0, dlgTriggerEditor::ItemRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::TypeRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::PatternOrLineRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::PositionRole).toInt())
+                             .arg(item->data(0, dlgTriggerEditor::IndexRole).toInt())
+                             .arg(item->isExpanded() ? qsl(" +") : QString());
+        };
+        QStringList rows;
+        auto* results = mpEditor->treeWidget_searchResults;
+        for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
+            QTreeWidgetItem* top = results->topLevelItem(i);
+            rows << describe(top, QString());
+            for (int j = 0, children = top->childCount(); j < children; ++j) {
+                rows << describe(top->child(j), qsl("  "));
+            }
+        }
+        return rows;
+    }
+
+    void verifyResultIds() const
+    {
+        auto* results = mpEditor->treeWidget_searchResults;
+        QList<QTreeWidgetItem*> rows;
+        for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
+            rows << results->topLevelItem(i);
+            for (int j = 0, children = results->topLevelItem(i)->childCount(); j < children; ++j) {
+                rows << results->topLevelItem(i)->child(j);
+            }
+        }
+        for (const auto* row : std::as_const(rows)) {
+            const QString name = row->data(0, dlgTriggerEditor::NameRole).toString();
+            const QVariant id = row->data(0, dlgTriggerEditor::IdRole);
+            std::vector<int> ids;
+            switch (static_cast<EditorViewType>(row->data(0, dlgTriggerEditor::ItemRole).toInt())) {
+            case EditorViewType::cmTriggerView:
+                ids = mpHost->getTriggerUnit()->findItems(name);
+                break;
+            case EditorViewType::cmAliasView:
+                ids = mpHost->getAliasUnit()->findItems(name, true, true);
+                break;
+            case EditorViewType::cmScriptView:
+                ids = mpHost->getScriptUnit()->findItems(name);
+                break;
+            case EditorViewType::cmActionView:
+                ids = mpHost->getActionUnit()->findItems(name);
+                break;
+            case EditorViewType::cmTimerView:
+                ids = mpHost->getTimerUnit()->findItems(name);
+                break;
+            case EditorViewType::cmKeysView:
+                ids = mpHost->getKeyUnit()->findItems(name, true, true);
+                break;
+            case EditorViewType::cmVarsView:
+                QCOMPARE(id.toStringList(), QStringList({name}));
+                continue;
+            default:
+                QFAIL(qPrintable(qsl("the row for %1 names no item type").arg(name)));
+            }
+            QCOMPARE(ids.size(), size_t{1});
+            QCOMPARE(id.toInt(), ids.front());
+        }
+    }
+
+    // A search that finds nothing still leaves one notice row saying so, which is not a result
     int totalResultRows() const
     {
         auto* results = mpEditor->treeWidget_searchResults;
         int total = 0;
         for (int i = 0, tops = results->topLevelItemCount(); i < tops; ++i) {
-            total += 1 + results->topLevelItem(i)->childCount();
+            QTreeWidgetItem* top = results->topLevelItem(i);
+            if (isNotice(top)) {
+                continue;
+            }
+            total += 1 + top->childCount();
         }
         return total;
     }
@@ -192,7 +276,22 @@ private:
         pAction->css = qsl("QPushButton {\n  border: 1px solid %1;\n}").arg(mNeedle);
         mpHost->getActionUnit()->registerAction(pAction);
 
+        // Each matches mLoneNeedle in one field only, one that is not searched first
+        auto* pUpButton = new TAction(qsl("qaUpOnlyButton"), mpHost);
+        pUpButton->setIsPushDownButton(true);
+        pUpButton->setCommandButtonUp(qsl("%1 up").arg(mLoneNeedle));
+        mpHost->getActionUnit()->registerAction(pUpButton);
+
+        auto* pCssButton = new TAction(qsl("qaCssOnlyButton"), mpHost);
+        pCssButton->css = qsl("color: %1;").arg(mLoneNeedle);
+        mpHost->getActionUnit()->registerAction(pCssButton);
+
+        auto* pPatternAlias = new TAlias(qsl("qaPatternOnlyAlias"), mpHost);
+        pPatternAlias->setRegexCode(qsl("^%1$").arg(mLoneNeedle));
+        mpHost->getAliasUnit()->registerAlias(pPatternAlias);
+
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaSearchVariable = \"%1 value\"").arg(mNeedle)));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("%1Variable = \"%1 too\"").arg(mNeedle)));
     }
 
 private slots:
@@ -228,7 +327,7 @@ private slots:
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
-        // The editor filled its trees when the profile loaded, so items added
+        // The editor filled its trees as it opened, so items added
         // behind its back are only in them after the same rebuild that Host
         // does when a package is installed
         mpEditor->doCleanReset();
@@ -268,12 +367,12 @@ private slots:
     {
         search(mNeedle);
 
-        QCOMPARE(resultsFor(qsl("Trigger")), QStringList({qsl("Command"), qsl("Pattern {1}"), qsl("Lua code (1:4)"), qsl("Pattern {1}")}));
+        QCOMPARE(resultsFor(qsl("Trigger")), QStringList({qsl("Command"), qsl("Pattern 1"), qsl("Lua 1:4"), qsl("Pattern 1")}));
         QCOMPARE(resultsFor(qsl("Alias")), QStringList({qsl("Command"), qsl("Pattern")}));
-        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Event Handler"), qsl("Lua code (1:4)")}));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Event"), qsl("Lua 1:4")}));
         QCOMPARE(resultsFor(qsl("Timer")), QStringList({qsl("Command")}));
         QCOMPARE(resultsFor(qsl("Key")), QStringList({qsl("Command")}));
-        QCOMPARE(resultsFor(qsl("Button")), QStringList({qsl("Command {Down}"), qsl("Command {Up}"), qsl("Stylesheet {L: 2 C: 21}")}));
+        QCOMPARE(resultsFor(qsl("Button")), QStringList({qsl("Command (down)"), qsl("Command (up)"), qsl("Style 2:21")}));
     }
 
     // A match inside a folder is only found by the recursive walk, not by the
@@ -284,8 +383,9 @@ private slots:
 
         auto* result = topLevelResultFor(qsl("Trigger"));
         QVERIFY2(result, "the nested trigger was not found at all");
-        QCOMPARE(result->text(1), qsl("qaNestedTrigger"));
-        QCOMPARE(result->text(2), qsl("Pattern {1}"));
+        QCOMPARE(titleOf(result), qsl("qaNestedTrigger"));
+        QCOMPARE(result->childCount(), 1);
+        QCOMPARE(whereOf(result->child(0)), qsl("Pattern 1"));
     }
 
     // Every row carries the item type, its id and which field matched, so that
@@ -296,7 +396,9 @@ private slots:
 
         auto* result = topLevelResultFor(qsl("Button"));
         QVERIFY(result);
-        QCOMPARE(result->text(2), qsl("Name"));
+        // Clicking the heading has to go where the first match under it goes
+        QVERIFY(result->childCount() > 0);
+        QCOMPARE(whereOf(result->child(0)), qsl("Name"));
         QCOMPARE(static_cast<EditorViewType>(result->data(0, dlgTriggerEditor::ItemRole).toInt()), EditorViewType::cmActionView);
         QCOMPARE(result->data(0, dlgTriggerEditor::TypeRole).toInt(), static_cast<int>(dlgTriggerEditor::SearchResultIsName));
         QCOMPARE(result->data(0, dlgTriggerEditor::NameRole).toString(), qsl("qaSearchButton"));
@@ -304,6 +406,116 @@ private slots:
         TAction* pAction = mpHost->getActionUnit()->findAction(qsl("qaSearchButton"));
         QVERIFY(pAction);
         QCOMPARE(result->data(0, dlgTriggerEditor::IdRole).toInt(), pAction->getID());
+    }
+
+    // Sorted by type, descending, ties in the order the units are walked; only rows with children expanded
+    // One heading per item, its matches under it, in the order the search finds them; the heading carries its first
+    // match's jump data
+    void test_resultsKeepTheOrderTheyWereFoundInAndParentsExpanded()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        search(mNeedle);
+
+        QVERIFY(!mpEditor->treeWidget_searchResults->isSortingEnabled());
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("qaSearchTrigger||| name=qaSearchTrigger view=1 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  Command qaHaystack command||| name=qaSearchTrigger view=1 type=4 line=0 pos=0 index=0"),
+                         qsl("  Pattern 1 ^qaHaystack pattern$||| name=qaSearchTrigger view=1 type=3 line=0 pos=1 index=0"),
+                         qsl("  Lua 1:4 -- qaHaystack in lua||| name=qaSearchTrigger view=1 type=1 line=0 pos=3 index=0"),
+                         qsl("qaNestedTrigger||| name=qaNestedTrigger view=1 type=3 line=0 pos=0 index=0 +"),
+                         qsl("  Pattern 1 qaHaystack nested||| name=qaNestedTrigger view=1 type=3 line=0 pos=0 index=0"),
+                         qsl("qaSearchAlias||| name=qaSearchAlias view=3 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  Command qaHaystack command||| name=qaSearchAlias view=3 type=4 line=0 pos=0 index=0"),
+                         qsl("  Pattern ^qaHaystack alias$||| name=qaSearchAlias view=3 type=3 line=0 pos=1 index=0"),
+                         qsl("qaSearchScript||| name=qaSearchScript view=4 type=7 line=0 pos=0 index=0 +"),
+                         qsl("  Event qaHaystackEvent||| name=qaSearchScript view=4 type=7 line=0 pos=0 index=0"),
+                         qsl("  Lua 1:4 -- qaHaystack lives here too||| name=qaSearchScript view=4 type=1 line=0 pos=3 index=0"),
+                         qsl("qaSearchButton||| name=qaSearchButton view=5 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  Command (down) qaHaystack down||| name=qaSearchButton view=5 type=4 line=0 pos=0 index=0"),
+                         qsl("  Command (up) qaHaystack up||| name=qaSearchButton view=5 type=5 line=0 pos=0 index=0"),
+                         qsl("  Style 2:21   border: 1px solid qaHaystack;||| name=qaSearchButton view=5 type=6 line=1 pos=20 index=0"),
+                         qsl("qaSearchTimer||| name=qaSearchTimer view=2 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  Command qaHaystack command||| name=qaSearchTimer view=2 type=4 line=0 pos=0 index=0"),
+                         qsl("qaSearchKey||| name=qaSearchKey view=6 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  Command qaHaystack command||| name=qaSearchKey view=6 type=4 line=0 pos=0 index=0"),
+                         qsl("qaHaystackVariable||| name=qaHaystackVariable view=7 type=2 line=0 pos=0 index=0 +"),
+                         qsl("  Name qaHaystackVariable||| name=qaHaystackVariable view=7 type=2 line=0 pos=0 index=0"),
+                         qsl("  Value qaHaystack too||| name=qaHaystackVariable view=7 type=8 line=0 pos=0 index=0"),
+                         qsl("qaSearchVariable||| name=qaSearchVariable view=7 type=8 line=0 pos=0 index=0 +"),
+                         qsl("  Value qaHaystack value||| name=qaSearchVariable view=7 type=8 line=0 pos=0 index=0"),
+                 }));
+        verifyResultIds();
+    }
+
+    // Whichever field of an item matches first starts its row
+    void test_aRowCanStartFromALaterField()
+    {
+        search(mLoneNeedle);
+
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("qaPatternOnlyAlias||| name=qaPatternOnlyAlias view=3 type=3 line=0 pos=1 index=0 +"),
+                         qsl("  Pattern ^qaSolitary$||| name=qaPatternOnlyAlias view=3 type=3 line=0 pos=1 index=0"),
+                         qsl("qaUpOnlyButton||| name=qaUpOnlyButton view=5 type=5 line=0 pos=0 index=0 +"),
+                         qsl("  Command (up) qaSolitary up||| name=qaUpOnlyButton view=5 type=5 line=0 pos=0 index=0"),
+                         qsl("qaCssOnlyButton||| name=qaCssOnlyButton view=5 type=6 line=0 pos=7 index=0 +"),
+                         qsl("  Style 1:8 color: qaSolitary;||| name=qaCssOnlyButton view=5 type=6 line=0 pos=7 index=0"),
+                 }));
+        verifyResultIds();
+    }
+
+    // Added one at a time, each row costs a model signal and each role set on a child already
+    // in the tree another, millions of them over a broad search
+    void test_resultsJoinTheTreeInOneInsert()
+    {
+        auto* model = mpEditor->treeWidget_searchResults->model();
+        QSignalSpy inserts(model, &QAbstractItemModel::rowsInserted);
+        QSignalSpy changes(model, &QAbstractItemModel::dataChanged);
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        search(mNeedle);
+
+        QCOMPARE(inserts.count(), 1);
+        QCOMPARE(changes.count(), 0);
+    }
+
+    // Clicking a column header re-sorts the results by it, and the next search keeps to that
+    void test_resultsFollowTheColumnTheyWereSortedBy()
+    {
+        QSKIP("The results are one column without a header, in the order they were found, so there is no column to sort by");
+        auto* results = mpEditor->treeWidget_searchResults;
+        const int section = results->header()->sortIndicatorSection();
+        const Qt::SortOrder order = results->header()->sortIndicatorOrder();
+        auto restore = qScopeGuard([results, section, order]() {
+            results->sortByColumn(section, order);
+        });
+        results->sortByColumn(1, Qt::AscendingOrder);
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        search(mNeedle);
+
+        QCOMPARE(results->header()->sortIndicatorSection(), 1);
+        QCOMPARE(results->header()->sortIndicatorOrder(), Qt::AscendingOrder);
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("Variable|qaHaystackVariable|Name| name=qaHaystackVariable view=7 type=2 line=0 pos=0 index=0 +"),
+                         qsl("  ||Value|qaHaystack too name=qaHaystackVariable view=7 type=8 line=0 pos=0 index=0"),
+                         qsl("Trigger|qaNestedTrigger|Pattern {1}|qaHaystack nested name=qaNestedTrigger view=1 type=3 line=0 pos=0 index=0"),
+                         qsl("Alias|qaSearchAlias|Command| name=qaSearchAlias view=3 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Pattern|^qaHaystack alias$ name=qaSearchAlias view=3 type=3 line=0 pos=1 index=0"),
+                         qsl("Button|qaSearchButton|Command {Down}| name=qaSearchButton view=5 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Command {Up}| name=qaSearchButton view=5 type=5 line=0 pos=0 index=0"),
+                         qsl("  ||Stylesheet {L: 2 C: 21}|  border: 1px solid qaHaystack; name=qaSearchButton view=5 type=6 line=1 pos=20 index=0"),
+                         qsl("Key|qaSearchKey|Command| name=qaSearchKey view=6 type=4 line=0 pos=0 index=0"),
+                         qsl("Script|qaSearchScript|Event Handler|qaHaystackEvent name=qaSearchScript view=4 type=7 line=0 pos=0 index=0 +"),
+                         qsl("  ||Lua code (1:4)|-- qaHaystack lives here too name=qaSearchScript view=4 type=1 line=0 pos=3 index=0"),
+                         qsl("Timer|qaSearchTimer|Command| name=qaSearchTimer view=2 type=4 line=0 pos=0 index=0"),
+                         qsl("Trigger|qaSearchTrigger|Command| name=qaSearchTrigger view=1 type=4 line=0 pos=0 index=0 +"),
+                         qsl("  ||Pattern {1}|^qaHaystack pattern$ name=qaSearchTrigger view=1 type=3 line=0 pos=1 index=0"),
+                         qsl("  ||Lua code (1:4)|-- qaHaystack in lua name=qaSearchTrigger view=1 type=1 line=0 pos=3 index=0"),
+                         qsl("Variable|qaSearchVariable|Value|qaHaystack value name=qaSearchVariable view=7 type=8 line=0 pos=0 index=0"),
+                 }));
     }
 
     void test_caseSensitivityIsOptional()
@@ -339,21 +551,21 @@ private slots:
     {
         mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
         search(qsl("qalater"));
-        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:4"), qsl("Lua 3:11")}));
 
         search(qsl("QALATERWORD"));
-        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:12)")}));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:12")}));
 
         mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord | enums::EditorSearchOptionCaseSensitive);
         search(qsl("QALATERWORD"));
         QCOMPARE(resultsFor(qsl("Script")), QStringList());
 
         search(qsl("qaLater"));
-        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:4"), qsl("Lua 3:11")}));
 
         mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
         search(qsl("QALATER"));
-        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:4"), qsl("Lua 3:11")}));
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only
@@ -367,7 +579,7 @@ private slots:
         search(qsl("qaSearchVariable"));
         auto* result = topLevelResultFor(qsl("Variable"));
         QVERIFY2(result, "the variable was not found with the option set");
-        QCOMPARE(result->text(1), qsl("qaSearchVariable"));
+        QCOMPARE(titleOf(result), qsl("qaSearchVariable"));
         QCOMPARE(result->data(0, dlgTriggerEditor::TypeRole).toInt(), static_cast<int>(dlgTriggerEditor::SearchResultIsName));
     }
 
@@ -488,6 +700,146 @@ private slots:
         QCOMPARE(marked->rangeCount(), size_t{2});
     }
 
+    void test_shorteningTheScriptFindTermDropsItsMarks()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("aaa bbb aaa\n"));
+        edbee::TextRangeSet* marked = mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges();
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aaa"));
+        QCOMPARE(marked->rangeCount(), size_t{2});
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aa"));
+        QCOMPARE(marked->rangeCount(), size_t{0});
+    }
+
+    void test_scriptReplace_data()
+    {
+        QTest::addColumn<int>("anchor");
+        QTest::addColumn<int>("caret");
+        QTest::addColumn<QString>("expected");
+
+        // "alpha beta gamma beta": the first "beta" spans 6..10, "alpha" 0..5
+        QTest::newRow("selected left to right") << 6 << 10 << "alpha BETA gamma beta\n";
+        QTest::newRow("selected right to left") << 10 << 6 << "alpha BETA gamma beta\n";
+        QTest::newRow("selection differs in case") << 17 << 21 << "alpha beta gamma BETA\n";
+        QTest::newRow("selection is not the term") << 0 << 5 << "alpha beta gamma beta\n";
+        QTest::newRow("nothing selected") << 22 << 22 << "alpha beta gamma beta\n";
+    }
+
+    void test_scriptReplace()
+    {
+        QFETCH(int, anchor);
+        QFETCH(int, caret);
+        QFETCH(QString, expected);
+
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("alpha beta gamma beta\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("Beta"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("BETA"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(anchor, caret);
+
+        mpEditor->slot_sourceReplace();
+
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), expected);
+    }
+
+    // The find matches case-insensitively with full Unicode case folding, so
+    // a match it selects must count as one when Replace is pressed
+    void test_scriptReplaceReplacesAMatchThatOnlyFoldsToTheTerm()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- Strasse\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("straße"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("road"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(0, 0);
+
+        mpEditor->slot_sourceFindNext();
+        QCOMPARE(selection->range(0).min(), size_t{3});
+        QCOMPARE(selection->range(0).max(), size_t{10});
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- road\n"));
+    }
+
+    // With nothing to put in its place, a match is deleted and the caret is
+    // left with no selection - the next press has to carry on forwards
+    void test_scriptReplaceWithNothingDeletesMatchesInOrder()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("x foo y foo z foo\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("foo"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(0, 0);
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(selection->range(0).min(), size_t{2});
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("x  y foo z foo\n"));
+        mpEditor->slot_sourceReplace();
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("x  y  z foo\n"));
+    }
+
+    // Replace only steps over what is selected, so a selection that is not the
+    // term is passed by to the next match, which the following Replace changes
+    void test_scriptReplaceMovesPastANonMatchThenReplacesTheMatch()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("alpha beta gamma beta\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("beta"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("delta"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(5, 0);
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha beta gamma beta\n"));
+        QCOMPARE(selection->range(0).min(), size_t{6});
+        QCOMPARE(selection->range(0).max(), size_t{10});
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma beta\n"));
+
+        // the replacement is still selected, so the next press moves on to the second match
+        mpEditor->slot_sourceReplace();
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma delta\n"));
+    }
+
     void test_anEmptyOrUnknownTermProducesNoResults()
     {
         search(qsl("qaNothingMatchesThis"));
@@ -496,15 +848,22 @@ private slots:
         search(mNeedle);
         QVERIFY(totalResultRows() > 0);
 
-        // An empty combo entry leaves the previous results alone rather than
-        // clearing them, which is what makes the guard worth having
-        mpEditor->comboBox_searchTerms->clear();
-        mpEditor->comboBox_searchTerms->addItem(QString());
-        mpEditor->slot_searchMudletItems(0);
-        QVERIFY(totalResultRows() > 0);
+        // Emptying the field puts the panel back to the profile's own items, so the results go with it
+        mpEditor->comboBox_searchTerms->lineEdit()->clear();
+        QCOMPARE(totalResultRows(), 0);
+
+        // Unlike clearing the field, the slot itself ignores an empty or missing entry
+        search(mNeedle);
+        const int found = totalResultRows();
+        QVERIFY(found > 0);
+
+        auto* box = mpEditor->comboBox_searchTerms;
+        box->addItem(QString());
+        mpEditor->slot_searchMudletItems(box->count() - 1);
+        QCOMPARE(totalResultRows(), found);
 
         mpEditor->slot_searchMudletItems(-1);
-        QVERIFY(totalResultRows() > 0);
+        QCOMPARE(totalResultRows(), found);
     }
 };
 

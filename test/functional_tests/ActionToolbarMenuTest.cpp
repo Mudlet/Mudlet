@@ -538,6 +538,122 @@ private slots:
         QVERIFY2(mainConsoleShows(host, qsl("QA_CLICK_DOWN_COMMAND")), "clicking the button did not echo its command");
     }
 
+    // A floating toolbar ticks a push-down menu entry from its state as it
+    // builds the menu, as the button bar does, not only once setButtonState()
+    // is called
+    void test_aFloatingToolbarTicksAPushDownMenuEntryThatIsDown()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* group = buildNestedGroup(host, 4);
+        group->setIsPushDownButton(true);
+        group->mButtonState = true;
+        auto* entryAction = actionNamed(host, qsl("menuTestEntry"));
+        QVERIFY(entryAction);
+        entryAction->setIsPushDownButton(true);
+        host->getActionUnit()->updateAllToolbars();
+
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        QVERIFY(button->menu());
+        auto* entry = entryNamed(button->menu(), qsl("menuTestGroup"));
+        QVERIFY(entry);
+        QVERIFY(entry->isChecked());
+        QVERIFY(entry->menu());
+        auto* innerEntry = entryNamed(entry->menu(), qsl("menuTestEntry"));
+        QVERIFY(innerEntry);
+        QVERIFY2(innerEntry->isCheckable() && !innerEntry->isChecked(), "an entry that is up is not ticked");
+    }
+
+    // A click on a floating toolbar's push-down button sends its down command,
+    // then its up command, with getButtonState() reading the state each went to
+    void test_clickingAFloatingToolbarsPushDownButtonTogglesIt()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* master = makeAction(host, nullptr, qsl("floatClickTestPackage"), true);
+        master->mPackageName = qsl("floatClickTestPackage");
+        master->mModuleMasterFolder = true;
+        master->mLocation = 4;
+        auto* toolbar = makeAction(host, master, qsl("floatClickTestToolbar"), true);
+        toolbar->mLocation = 4;
+        auto* button = makeAction(host, toolbar, qsl("floatClickTestButton"), false);
+        button->setIsPushDownButton(true);
+        button->setCommandButtonDown(qsl("QA_FLOAT_DOWN_COMMAND"));
+        button->setCommandButtonUp(qsl("QA_FLOAT_UP_COMMAND"));
+        QVERIFY(button->setScript(qsl("qaFloatSeen = qaFloatSeen .. 'script' .. getButtonState() .. ' '")));
+        host->mInstalledPackages << qsl("floatClickTestPackage");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaFloatSeen = ''; "
+                                                                  "tempAlias([[^QA_FLOAT_(\\w+)_COMMAND$]], [[qaFloatSeen = qaFloatSeen .. matches[2] .. getButtonState() .. ' ']])")));
+
+        host->getActionUnit()->updateAllToolbars();
+        auto* pB = findButtonWidget(button);
+        QVERIFY2(pB, "the floating toolbar did not build the button");
+        QWidget* pBar = pB;
+        while (pBar && !qobject_cast<TToolBar*>(pBar)) {
+            pBar = pBar->parentWidget();
+        }
+        QVERIFY2(pBar, "the button is not on a floating toolbar");
+
+        pB->click();
+        QVERIFY(button->mButtonState);
+        QVERIFY(pB->isChecked());
+        pB->click();
+        QVERIFY(!button->mButtonState);
+        QVERIFY(!pB->isChecked());
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaFloatSeen == 'DOWN2 script2 UP1 script1 ', qaFloatSeen)")),
+                 "the clicks did not send the down then the up command, each before the script, at the state it went to");
+    }
+
+    // A plain button is left up whatever its stored state, and getButtonState()
+    // reads it up, on either bar
+    void test_clickingAPlainButtonLeavesItUp_data()
+    {
+        QTest::addColumn<int>("location");
+        QTest::newRow("button bar") << 0;
+        QTest::newRow("floating toolbar") << 4;
+    }
+
+    void test_clickingAPlainButtonLeavesItUp()
+    {
+        QFETCH(int, location);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* master = makeAction(host, nullptr, qsl("plainClickTestPackage"), true);
+        master->mPackageName = qsl("plainClickTestPackage");
+        master->mModuleMasterFolder = true;
+        master->mLocation = location;
+        auto* toolbar = makeAction(host, master, qsl("plainClickTestToolbar"), true);
+        toolbar->mLocation = location;
+        auto* button = makeAction(host, toolbar, qsl("plainClickTestButton"), false);
+        button->setCommandButtonDown(qsl("QA_PLAIN_COMMAND"));
+        QVERIFY(button->setScript(qsl("qaPlainSeen = qaPlainSeen .. 'script' .. getButtonState() .. ' '")));
+        host->mInstalledPackages << qsl("plainClickTestPackage");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaPlainSeen = ''; "
+                                                                  "tempAlias([[^QA_PLAIN_COMMAND$]], [[qaPlainSeen = qaPlainSeen .. 'command' .. getButtonState() .. ' ']])")));
+
+        host->getActionUnit()->updateAllToolbars();
+        auto* pB = findButtonWidget(button);
+        QVERIFY2(pB, "the bar did not build the button");
+        // Only the click can put these right
+        button->mButtonState = true;
+        host->mainConsoleModel().mButtonState = 2;
+
+        pB->click();
+        QVERIFY(!button->mButtonState);
+        QVERIFY(!pB->isChecked());
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaPlainSeen == 'command1 script1 ', qaPlainSeen)")),
+                 "the click did not send the command, then run the script, with the button up");
+    }
+
     // The same for a push-down entry in a button's menu, which the button bar
     // restores separately while it fills the menu
     void test_aPushDownMenuEntryRestoredDownOnLoadRunsItsScriptWithoutSendingItsCommand()

@@ -55,12 +55,16 @@
 
 #include <QDataStream>
 #include <QSaveFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
 #include <QHash>
 #include <QHostAddress>
+#include <QLineEdit>
+#include <QPointer>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTcpServer>
@@ -85,6 +89,12 @@
 #include "GroupedTest.h"
 
 #include <chrono>
+
+#if defined(Q_OS_UNIX)
+#include <algorithm>
+#include <csignal>
+#include <sys/resource.h>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -977,6 +987,58 @@ private slots:
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after an unwritable destination was refused, so the import flag was left set");
     }
 
+    // A full disk cuts the write short without an error on the file, so a commit would put the part that landed
+    // in place of the map file already there, and the reader would swap the loaded map for the rooms in it
+    void test_aDownloadThatCannotBeWrittenWholeKeepsTheMapAndItsFile()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("needs RLIMIT_FSIZE to cut a write short");
+#else
+        TMap* pMap = mpHost->mpMap.data();
+        const QString stored = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download that gives this test a map to keep never finished");
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QByteArray manyRooms = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n  <area id=\"1\" name=\"Many Rooms\"/>\n </areas>\n <rooms>\n";
+        for (int id = 1; id <= 3000; ++id) {
+            manyRooms += "  <room id=\"" + QByteArray::number(id) + "\" area=\"1\" title=\"Room\" environment=\"2\">\n   <coord x=\"" + QByteArray::number(id) + "\" y=\"0\" z=\"0\"/>\n  </room>\n";
+        }
+        manyRooms += " </rooms>\n</map>\n";
+        mpMapServer->serve(qsl("/many-rooms.xml"), manyRooms);
+        forgetMapDownloadEvents();
+        mConsoleMark = mpHost->mainConsoleView()->buffer.getLastLineNumber();
+
+        rlimit saved{};
+        QCOMPARE(::getrlimit(RLIMIT_FSIZE, &saved), 0);
+        rlimit limited = saved;
+        limited.rlim_cur = std::min<rlim_t>(64 * 1024, saved.rlim_max);
+        QVERIFY(manyRooms.size() > static_cast<qsizetype>(limited.rlim_cur));
+        // Past the limit the kernel also raises SIGXFSZ, whose default action ends the process
+        const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
+        const bool applied = ::setrlimit(RLIMIT_FSIZE, &limited) == 0;
+        bool finished = false;
+        if (applied) {
+            finished = runDownload(mpMapServer->url(qsl("/many-rooms.xml")));
+        }
+        const bool restored = ::setrlimit(RLIMIT_FSIZE, &saved) == 0;
+        std::signal(SIGXFSZ, previousHandler);
+        QVERIFY2(applied, "the file size limit could not be set");
+        QVERIFY2(restored, "the file size limit could not be put back");
+        QVERIFY2(finished, "the map download never finished");
+
+        QVERIFY2(consoleShows(qsl("unable to write destination file")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(!consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
+        QFile file(stored);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), scmMapXml);
+        const QFileInfo storedInfo(stored);
+        QCOMPARE(QDir(storedInfo.absolutePath()).entryList({qsl("%1*").arg(storedInfo.fileName())}, QDir::Files | QDir::Hidden), QStringList{storedInfo.fileName()});
+        QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
+        QCOMPARE(pMap->mpRoomDB->getAreaNamesMap().value(1), qsl("Downloaded Area"));
+        QVERIFY2(mapDownloadEventCountIs(0), "a download that could not be written raised sysMapDownloadEvent");
+        QVERIFY(!pMap->hasActiveTransferProgress());
+#endif
+    }
+
     // What the mapper's "Download from game" does: no URL, so the location the
     // game advertised over MMP is used.
     void test_mmpMapLocationIsUsedWhenNoUrlIsGiven()
@@ -1420,6 +1482,76 @@ private slots:
                          15s),
                  "the download after an aborted one never finished");
         QVERIFY2(consoleShows(qsl("map downloaded and stored")), "the download after an aborted one was refused, so the import flag was left set");
+    }
+
+    // The empty map's "Load map..." loads from its file dialog's finished(), while QFileDialog::done() is still running.
+    // A JSON load pumps events to repaint its progress, and on macOS the native dialog's result arrives outside any Qt
+    // event, where that pump runs whatever delete the dialog has waiting and frees it under done().
+    void test_theEmptyMapsLoadButtonKeepsItsDialogUntilTheMapIsLoaded()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper, "the profile has no mapper widget to show the empty state on");
+        TMap* pMap = mpHost->mpMap.data();
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("load.json"));
+        pMap->mapClear();
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Loaded Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(pMap->addRoom(1));
+        QVERIFY(pMap->setRoomArea(1, areaId));
+        QVERIFY2(pMap->writeJsonMapFile(path).first, "the map to load could not be written");
+        // As Delete map leaves it
+        pMap->mapClear();
+        pMap->updateArea(-1);
+
+        // Qt's own dialog, as a native one cannot be answered from here
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+        const auto nativeDialogsBack = qScopeGuard([]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, false);
+        });
+        auto* overlay = pMapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
+        QVERIFY2(overlay, "the mapper has no empty-state overlay");
+        // updateArea()'s signal goes out on the next event loop pass
+        QTRY_VERIFY2(overlay->isVisible(), "the emptied map shows no empty state to load a map from");
+        QPushButton* loadButton = nullptr;
+        const auto buttons = overlay->findChildren<QPushButton*>();
+        for (QPushButton* button : buttons) {
+            if (button->text() == QCoreApplication::translate("dlgMapper", "Load map...")) {
+                loadButton = button;
+                break;
+            }
+        }
+        QVERIFY2(loadButton, "the empty state has no \"Load map...\" button");
+        loadButton->click();
+        const QPointer<QFileDialog> dialog = pMapper->findChild<QFileDialog*>();
+        QVERIFY2(dialog, "\"Load map...\" opened no file dialog");
+        dialog->setDirectory(dir.path());
+        auto* fileNameEdit = dialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+        QVERIFY2(fileNameEdit, "the file dialog has no file name field to type into");
+        fileNameEdit->setText(qsl("load.json"));
+        QCOMPARE(dialog->selectedFiles(), QStringList{path});
+
+        // Stands in for that pump: each repaint runs whatever delete the dialog has waiting
+        int repaints = 0;
+        bool dialogLivedThroughTheLoad = true;
+        const QMetaObject::Connection pump = connect(pMap, &TMap::signal_mapProgressRepaintWanted, this, [&repaints, &dialogLivedThroughTheLoad, &dialog]() {
+            ++repaints;
+            if (dialog) {
+                QCoreApplication::sendPostedEvents(dialog, QEvent::DeferredDelete);
+            }
+            dialogLivedThroughTheLoad = dialogLivedThroughTheLoad && !dialog.isNull();
+        });
+        // As QDialog::done() emits it, but with none of the dialog's own code running, so a dialog deleted part way
+        // through fails the check below rather than crashing the test
+        emit dialog->finished(QDialog::Accepted);
+        disconnect(pump);
+
+        QVERIFY2(repaints > 0, "the JSON load never repainted its progress, so nothing here stood in for the pump");
+        QVERIFY2(pMap->mpRoomDB->getRoom(1), "the map in the chosen file was not loaded");
+        QVERIFY2(dialogLivedThroughTheLoad, "the file dialog was deleted while its finished() was still loading the map");
+        settleDeferredDeletes();
+        QVERIFY2(!dialog, "the file dialog was never deleted");
     }
 };
 

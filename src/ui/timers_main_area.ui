@@ -16,17 +16,11 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>0</width>
-    <height>170</height>
-   </size>
-  </property>
   <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,1" columnstretch="0,1,0,1,0,1,0,1,10,0,0">
    <item row="0" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_timer_name">
      <property name="text">
-      <string>Name:</string>
+      <string>Name</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -94,26 +88,8 @@
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label_timer_command">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>16777215</height>
-      </size>
-     </property>
      <property name="text">
-      <string>Command:</string>
+      <string>Command</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -130,94 +106,10 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="label_timer_hours">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>&lt;p&gt;hours&lt;/p&gt;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="3">
-    <widget class="QLabel" name="label_timer_mins">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>&lt;p&gt;minutes&lt;/p&gt;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="5">
-    <widget class="QLabel" name="label_timer_secs">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>&lt;p&gt;seconds&lt;/p&gt;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="7" alignment="Qt::AlignBottom">
-    <widget class="QLabel" name="label_timer_millis">
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>&lt;p&gt;milliseconds&lt;/p&gt;</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_timer_time">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>80</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-       <bold>false</bold>
-      </font>
-     </property>
      <property name="text">
-      <string>Time:</string>
+      <string>Interval</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -226,11 +118,6 @@
    </item>
    <item row="3" column="1">
     <widget class="QTimeEdit" name="timeEdit_timer_hours">
-     <property name="font">
-      <font>
-       <pointsize>30</pointsize>
-      </font>
-     </property>
      <property name="toolTip">
       <string>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</string>
      </property>
@@ -241,10 +128,10 @@
       <bool>true</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>false</bool>
@@ -267,45 +154,8 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="2">
-    <widget class="QLabel" name="label_timer_hour_min_separator">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>80</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>40</pointsize>
-       <bold>true</bold>
-       <stylestrategy>PreferAntialias</stylestrategy>
-      </font>
-     </property>
-     <property name="text">
-      <string notr="true">:</string>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="3">
     <widget class="QTimeEdit" name="timeEdit_timer_minutes">
-     <property name="font">
-      <font>
-       <pointsize>30</pointsize>
-      </font>
-     </property>
      <property name="toolTip">
       <string>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</string>
      </property>
@@ -316,10 +166,10 @@
       <bool>true</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -332,45 +182,8 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="4">
-    <widget class="QLabel" name="label_timer_min_sec_separator">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>80</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>40</pointsize>
-       <bold>true</bold>
-       <stylestrategy>PreferAntialias</stylestrategy>
-      </font>
-     </property>
-     <property name="text">
-      <string notr="true">:</string>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="5">
     <widget class="QTimeEdit" name="timeEdit_timer_seconds">
-     <property name="font">
-      <font>
-       <pointsize>30</pointsize>
-      </font>
-     </property>
      <property name="toolTip">
       <string>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</string>
      </property>
@@ -381,10 +194,10 @@
       <bool>true</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -397,45 +210,8 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="6">
-    <widget class="QLabel" name="label_timer_sec_decimal_separator">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>80</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>40</pointsize>
-       <bold>true</bold>
-       <stylestrategy>PreferAntialias</stylestrategy>
-      </font>
-     </property>
-     <property name="text">
-      <string notr="true">.</string>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="7">
     <widget class="QTimeEdit" name="timeEdit_timer_msecs">
-     <property name="font">
-      <font>
-       <pointsize>30</pointsize>
-      </font>
-     </property>
      <property name="toolTip">
       <string>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</string>
      </property>
@@ -446,10 +222,10 @@
       <bool>true</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
+      <enum>QAbstractSpinBox::UpDownArrows</enum>
      </property>
      <property name="accelerated">
       <bool>true</bool>
@@ -461,32 +237,6 @@
       <string notr="true">zzz</string>
      </property>
     </widget>
-   </item>
-   <item row="3" column="8">
-    <spacer name="horizontalSpacer_timeWidgets">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>0</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="4" column="5">
-    <spacer name="verticalSpacer_bottom">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>1</width>
-       <height>1</height>
-      </size>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>

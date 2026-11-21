@@ -348,6 +348,7 @@ private slots:
         QVERIFY2(box(), "WILL ECHO opened no box");
         QVERIFY(box()->isVisible());
         QCOMPARE(box()->geometry(), commandLine()->geometry());
+        QVERIFY2(!box()->hasFrame(), "the box draws a frame over a command line that has none");
         QCOMPARE(box()->echoMode(), QLineEdit::Password);
         QCOMPARE(box()->text(), QString());
         QCOMPARE(box()->palette().color(QPalette::PlaceholderText).rgb(), commandLine()->mRegularPalette.color(QPalette::Text).rgb());
@@ -1123,6 +1124,31 @@ private slots:
         drainFocusRetries();
     }
 
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the box's claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutLeavesTheBoxForThePane()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+        });
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::MetaModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(box(), &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode on from the box");
+        QTRY_COMPARE(focusWidget(), mpHost->mpConsole->mUpperPane);
+        drainFocusRetries();
+#endif
+    }
+
     void test_aSyntheticKeySentToTheCommandLineLandsInTheBox()
     {
         serverSaysEcho(TN_WILL);
@@ -1206,6 +1232,40 @@ private slots:
         QTRY_COMPARE(box()->geometry(), commandLine()->geometry());
         mudlet::self()->resize(before);
         QTRY_COMPARE(box()->geometry(), commandLine()->geometry());
+    }
+
+    // The box comes and goes over the command line, so a row placed anywhere else would jump
+    void test_theBoxPutsItsTextWhereTheCommandLinePutsItsRow()
+    {
+        const int fontSizeBefore = commandLine()->font().pointSize();
+        const auto restore = qScopeGuard([this, fontSizeBefore]() {
+            mpHost->mpConsole->setFontSize(fontSizeBefore);
+        });
+
+        // From well under the minimum height to over it: which sizes land a pixel off depends on the font's metrics
+        for (int fontSize = 8; fontSize <= 24; ++fontSize) {
+            mpHost->mpConsole->setFontSize(fontSize);
+            commandLine()->setPlainText(qsl("look"));
+            commandLine()->adjustHeight();
+            serverSaysEcho(TN_WILL);
+            QVERIFY2(box(), "WILL ECHO opened no box");
+            QTRY_COMPARE(box()->geometry(), commandLine()->geometry());
+            box()->setText(qsl("hunter2"));
+            // QLineEdit only works out where its text goes when it paints
+            box()->grab();
+
+            const QRectF row = QRectF(commandLine()->cursorRect()).translated(commandLine()->viewport()->pos());
+            const QRectF boxCaret = box()->inputMethodQuery(Qt::ImCursorRectangle).toRectF();
+            const qreal rowCenter = commandLine()->mapToGlobal(row.center()).y();
+            const qreal boxCenter = box()->mapToGlobal(boxCaret.center()).y();
+            QVERIFY2(qAbs(rowCenter - boxCenter) <= 1.0,
+                     qPrintable(qsl("at %1pt in a %2px box the command line's caret is centered at %3px and the box's at %4px")
+                                        .arg(QString::number(fontSize), QString::number(commandLine()->height()), QString::number(row.center().y()), QString::number(boxCaret.center().y()))));
+
+            // Clears the echo toggles too, or the third WILL would be taken for an anomaly
+            resetState();
+            QTRY_VERIFY(!box());
+        }
     }
 
     void test_aSubCommandLineActionRunsDuringAPrompt()
