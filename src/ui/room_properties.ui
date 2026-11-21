@@ -46,6 +46,9 @@
         <property name="text">
          <string>Name:</string>
         </property>
+        <property name="buddy">
+         <cstring>lineEdit_name</cstring>
+        </property>
        </widget>
       </item>
       <item>
@@ -163,6 +166,9 @@
          </property>
          <item>
           <widget class="QLineEdit" name="lineEdit_roomSymbol">
+           <property name="accessibleName">
+            <string extracomment="Name a screen reader announces for the room symbol field in the Room Properties dialog">Room symbol</string>
+           </property>
            <property name="placeholderText">
             <string>Room symbol...</string>
            </property>
@@ -170,6 +176,9 @@
          </item>
          <item>
           <widget class="QComboBox" name="comboBox_roomSymbol">
+           <property name="accessibleName">
+            <string extracomment="Name a screen reader announces for the room symbol field in the Room Properties dialog">Room symbol</string>
+           </property>
            <property name="editable">
             <bool>true</bool>
            </property>
@@ -331,6 +340,9 @@
            <property name="text">
             <string>Thickness:</string>
            </property>
+           <property name="buddy">
+            <cstring>spinBox_borderThickness</cstring>
+           </property>
           </widget>
          </item>
          <item>
@@ -400,6 +412,9 @@
          </property>
          <item>
           <widget class="QSpinBox" name="spinBox_weight">
+           <property name="accessibleName">
+            <string extracomment="Name a screen reader announces for the room weight field in the Room Properties dialog">Room weight</string>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -419,6 +434,9 @@
          </item>
          <item>
           <widget class="QComboBox" name="comboBox_weight">
+           <property name="accessibleName">
+            <string extracomment="Name a screen reader announces for the room weight field in the Room Properties dialog">Room weight</string>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
              <horstretch>0</horstretch>
