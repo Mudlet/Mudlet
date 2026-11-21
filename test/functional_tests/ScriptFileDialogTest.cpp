@@ -27,9 +27,9 @@
 #include <QLineEdit>
 #include <QPointer>
 #include <QPushButton>
-#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <memory>
 
 #include "Host.h"
 #include "MudletApp.h"
@@ -143,6 +143,17 @@ private:
         return value;
     }
 
+    // Made, as a dialog given a missing folder opens somewhere else and would hide a read of the setting
+    QString seedLastFileDialogLocation()
+    {
+        const QString lastDir = qsl("%1/lastDir").arg(QDir(mPickDir.path()).absolutePath());
+        QDir().mkpath(lastDir);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
+        return lastDir;
+    }
+
+    static QString lastFileDialogLocation() { return MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(); }
+
 private slots:
     void initTestCase()
     {
@@ -222,54 +233,44 @@ private slots:
     {
         const QString elsewhere = QDir(mPickDir.path()).absolutePath();
         // Neither picked from nor started in, so a write from either dialog shows
-        const QString lastDir = qsl("%1/lastDir").arg(elsewhere);
-        // Made, as a dialog given a missing folder opens somewhere else and would hide a read of the setting
-        QVERIFY(QDir().mkpath(lastDir));
-        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
+        const QString lastDir = seedLastFileDialogLocation();
         const QString replay = qsl("%1/picked.dat").arg(elsewhere);
-        QFile touch(replay);
-        QVERIFY(touch.open(QIODevice::WriteOnly));
-        touch.close();
+        QVERIFY(QFile(replay).open(QIODevice::WriteOnly));
 
         answerNextFileDialog(replay);
         mudlet::self()->slot_replay();
 
         QCOMPARE(mDialogStartDir, QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname)).absolutePath());
-        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
+        QCOMPARE(lastFileDialogLocation(), lastDir);
     }
 
     void test_theLogFolderPickerOpensInTheFolderLogsGoTo()
     {
         const QString elsewhere = QDir(mPickDir.path()).absolutePath();
-        const QString lastDir = qsl("%1/lastDir").arg(elsewhere);
-        // Made, as a dialog given a missing folder opens somewhere else and would hide a read of the setting
-        QVERIFY(QDir().mkpath(lastDir));
-        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
+        const QString lastDir = seedLastFileDialogLocation();
         const QString custom = qsl("%1/logs").arg(elsewhere);
         QVERIFY(QDir().mkpath(custom));
+        const QString defaultLogDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname);
 
-        auto* preferences = new dlgProfilePreferences(mudlet::self(), mpHost);
-        const auto closePreferences = qScopeGuard([preferences]() {
-            delete preferences;
-        });
+        const auto preferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), mpHost);
         preferences->show();
-        QVERIFY(QTest::qWaitForWindowExposed(preferences));
+        QVERIFY(QTest::qWaitForWindowExposed(preferences.get()));
 
         answerNextFileDialog(custom);
         preferences->pushButton_whereToLog->click();
-        QCOMPARE(mDialogStartDir, QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname)).absolutePath());
+        QCOMPARE(mDialogStartDir, QDir(defaultLogDir).absolutePath());
         QCOMPARE(preferences->lineEdit_logFileFolder->text(), custom);
-        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
+        QCOMPARE(lastFileDialogLocation(), lastDir);
 
         answerNextFileDialog(elsewhere);
         preferences->pushButton_whereToLog->click();
         QCOMPARE(mDialogStartDir, custom);
         QCOMPARE(preferences->lineEdit_logFileFolder->text(), elsewhere);
-        answerNextFileDialog(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname));
+        answerNextFileDialog(defaultLogDir);
         preferences->pushButton_whereToLog->click();
         QCOMPARE(preferences->lineEdit_logFileFolder->text(), QString());
         QVERIFY(!preferences->pushButton_resetLogDir->isEnabled());
-        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
+        QCOMPARE(lastFileDialogLocation(), lastDir);
     }
 };
 
