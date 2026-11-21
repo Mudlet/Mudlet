@@ -308,6 +308,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setObjectName(qsl("connectButton"));
+    connect_button->setProperty(uiDesign::scmProp_primaryButton, true);
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
     offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
     offline_button->setObjectName(qsl("offlineButton"));
@@ -574,12 +575,7 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
 
     informationArea->setStyleSheet(uiDesign::inputStyleSheet(tokens, qsl("#informationArea")) + uiDesign::scrollBarStyleSheet(qsl("#informationArea QPlainTextEdit"), tokens, tokens.field));
 
-    const QString buttonSheet = uiDesign::buttonStyleSheet(tokens)
-                                // :enabled, or a Connect the validator switched off would stay lit
-                                + qsl("QPushButton:default:enabled { background-color: %1; color: %2; border: %3px solid transparent; }"
-                                      "QPushButton:default:enabled:hover { background-color: %4; }"
-                                      "QPushButton:default:enabled:focus { border: %3px solid %5; }")
-                                          .arg(tokens.accentSoft, tokens.accentText.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.hoverSoft, tokens.accent.name());
+    const QString buttonSheet = uiDesign::buttonStyleSheet(tokens);
     // The Copy menu is parented under this row, so the row's sheet reaches it
     profileAdminArea->setStyleSheet(buttonSheet + uiDesign::menuStyleSheet(tokens));
     widget_bottom->setStyleSheet(buttonSheet);
