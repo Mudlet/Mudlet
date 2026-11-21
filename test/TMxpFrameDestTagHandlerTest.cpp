@@ -40,11 +40,11 @@ private slots:
     {
         auto node = parseNode(R"(<FRAME name="Status" align="left" width="25%" height="100%">)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getName(), "FRAME");
         QVERIFY(tag->hasAttribute("name"));
         QCOMPARE(tag->getAttributeValue("name"), "Status");
@@ -58,18 +58,18 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
         TMxpFrameTagHandler handler;
-        
+
         auto tag = parseNode(R"(<FRAME name="TestFrame" width="300px" height="200px">)");
         QVERIFY(tag != nullptr);
         QVERIFY(tag->asTag() != nullptr);
-        
+
         TMxpTagHandlerResult result = handler.handleTag(ctx, stub, tag->asTag());
-        
+
         QVERIFY(stub.createMxpFrameCalled);
         QCOMPARE(stub.lastCreatedFrameName, qsl("TestFrame"));
         QCOMPARE(stub.lastFrameAttributes.value(qsl("WIDTH")), qsl("300px"));
         QCOMPARE(stub.lastFrameAttributes.value(qsl("HEIGHT")), qsl("200px"));
-        
+
         // Stub returns false, so handler returns NOT_HANDLED
         QCOMPARE(result, MXP_TAG_NOT_HANDLED);
     }
@@ -78,13 +78,13 @@ private slots:
     {
         TMxpStubContext ctx;
         TMxpStubClient stub;
-        
+
         MxpEndTag endTag("FRAME");
         QCOMPARE(endTag.getName(), "FRAME");
-        
+
         TMxpFrameTagHandler handler;
         TMxpTagHandlerResult result = handler.handleTag(ctx, stub, &endTag);
-        
+
         // FRAME has no handleEndTag override
         QCOMPARE(result, MXP_TAG_NOT_HANDLED);
     }
@@ -93,11 +93,11 @@ private slots:
     {
         auto node = parseNode(R"(<DEST name="Status">)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getName(), "DEST");
         QVERIFY(tag->hasAttribute("name"));
         QCOMPARE(tag->getAttributeValue("name"), "Status");
@@ -110,11 +110,11 @@ private slots:
         // Test DEST tag with EOL flag
         auto node = parseNode(R"(<DEST name="Combat" eol>)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getName(), "DEST");
         QCOMPARE(tag->getAttributeValue("name"), "Combat");
         QVERIFY(tag->hasAttribute("eol"));
@@ -124,11 +124,11 @@ private slots:
     {
         auto node = parseNode(R"(<DEST name="Log" eof>)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getName(), "DEST");
         QCOMPARE(tag->getAttributeValue("name"), "Log");
         QVERIFY(tag->hasAttribute("eof"));
@@ -139,18 +139,18 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
         TMxpDestTagHandler handler;
-        
+
         auto tag = parseNode(R"(<DEST name="TestDest" eol>)");
         QVERIFY(tag != nullptr);
         QVERIFY(tag->asTag() != nullptr);
-        
+
         TMxpTagHandlerResult result = handler.handleTag(ctx, stub, tag->asTag());
-        
+
         QVERIFY(stub.setMxpDestinationCalled);
         QCOMPARE(stub.lastDestinationName, qsl("TestDest"));
         QVERIFY(stub.lastDestinationEol);
         QVERIFY(!stub.lastDestinationEof);
-        
+
         // Stub returns false, so handler returns NOT_HANDLED
         QCOMPARE(result, MXP_TAG_NOT_HANDLED);
     }
@@ -160,18 +160,18 @@ private slots:
         TMxpStubContext ctx;
         TMxpStubClient stub;
         TMxpDestTagHandler handler;
-        
+
         auto node = parseNode("</DEST>");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isEndTag());
         MxpEndTag* tag = node->asEndTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getName(), "DEST");
-        
+
         TMxpTagHandlerResult result = handler.handleTag(ctx, stub, tag);
-        
+
         QVERIFY(stub.clearMxpDestinationCalled);
         QCOMPARE(result, MXP_TAG_HANDLED);
     }
@@ -180,11 +180,11 @@ private slots:
     {
         auto node = parseNode(R"(<FRAME name="Complete" parent="main" title="Complete Test" align="top" width="50%" height="300px" scrolling="no" external="yes">)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getName(), "FRAME");
         QCOMPARE(tag->getAttributeValue("name"), "Complete");
         QCOMPARE(tag->getAttributeValue("parent"), "main");
@@ -200,11 +200,11 @@ private slots:
     {
         auto node = parseNode(R"(<FRAME name="Chars" width="40c" height="20c">)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getAttributeValue("width"), "40c");
         QCOMPARE(tag->getAttributeValue("height"), "20c");
     }
@@ -213,11 +213,11 @@ private slots:
     {
         auto node = parseNode(R"(<FRAME name="Pixels" width="640px" height="480px">)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getAttributeValue("width"), "640px");
         QCOMPARE(tag->getAttributeValue("height"), "480px");
     }
@@ -226,11 +226,11 @@ private slots:
     {
         auto node = parseNode(R"(<FRAME name="Percent" width="75%" height="50%">)");
         QVERIFY(node != nullptr);
-        
+
         QVERIFY(node->isStartTag());
         MxpStartTag* tag = node->asStartTag();
         QVERIFY(tag != nullptr);
-        
+
         QCOMPARE(tag->getAttributeValue("width"), "75%");
         QCOMPARE(tag->getAttributeValue("height"), "50%");
     }
