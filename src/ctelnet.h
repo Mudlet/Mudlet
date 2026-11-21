@@ -606,6 +606,8 @@ private:
     // on with every connectIt(), so a callback from a lookup a later call
     // superseded would pair its own host name with the newer port.
     int mHostLookupId = -1;
+    // Counted so that a failure can tell when a sysDisconnectionEvent handler has already dialled again
+    quint64 mConnectAttempts = 0;
     int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 

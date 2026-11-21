@@ -846,6 +846,7 @@ void cTelnet::connectIt(const QString& address, int port)
     // never cleared by a disconnection, and would pass this attempt's failure off as the user's doing
     mDontReconnect = false;
     mDisconnectRequested = false;
+    ++mConnectAttempts;
 
     // mpHost is a QPointer and can in principle be cleared if the Host is
     // destroyed mid-connect; slot authors must null-check before dereferencing.
@@ -1103,12 +1104,14 @@ void cTelnet::handleFailedConnection()
 
     // Taken first, as a handler that reconnects clears it for its own attempt
     const bool calledOff = mDontReconnect;
+    const quint64 attemptsBefore = mConnectAttempts;
     TEvent event{};
     event.mArgumentList.append(qsl("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    const bool retry = mAutoReconnect && !calledOff && !mDontReconnect;
+    const bool redialled = mConnectAttempts != attemptsBefore;
+    const bool retry = mAutoReconnect && !calledOff && !mDontReconnect && !redialled;
     mDontReconnect = false;
     if (!retry) {
         return;
