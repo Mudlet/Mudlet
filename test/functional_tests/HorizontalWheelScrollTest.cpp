@@ -151,8 +151,8 @@ private slots:
         // A touchpad sends many small deltas, which must add up to whole columns
         bar->setValue(0);
         qApp->processEvents();
-        for (int i = 0; i < 120 / 8; ++i) {
-            wheelSideways(upper, -8);
+        for (int i = 0; i < 120 / 2; ++i) {
+            wheelSideways(upper, -2);
         }
         QCOMPARE(bar->value(), 3);
     }

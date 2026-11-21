@@ -407,7 +407,7 @@ private:
     // provide a more native feel, you should prefer pixelDelta() on platforms
     // where it's available."
     // We use the following to store the remainder (modulus 120):
-    QPoint mMouseWheelRemainder;
+    QPointF mMouseWheelRemainder;
 
     // skip over the following characters when searching for a word
     const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};

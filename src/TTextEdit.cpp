@@ -3251,13 +3251,13 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // per click:
     delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
     delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
-    // Add on any previously stored (integer) remainder:
+    // Add on any previously stored remainder:
     delta += mMouseWheelRemainder;
     // Convert to 15 degree steps and record them:
     int xDelta = qRound(delta.x() / 15.0);
     int yDelta = qRound(delta.y() / 15.0);
-    // Store the (rounded) remainder
-    mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
+    // Kept fractional: a high-resolution wheel or touchpad sends steps of under a degree
+    mMouseWheelRemainder = delta - QPointF(15 * xDelta, 15 * yDelta);
 
     bool used = false;
     if (yDelta > 0) {
