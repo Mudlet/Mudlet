@@ -251,7 +251,7 @@ QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
                 frameTabs.pages.append({page, title});
             }
             frameTabs.current = static_cast<int>(tabs->current);
-            frameTabs.shown = pView->nullMxpFrames().pageShown(tabs->pages.at(tabs->current).first);
+            frameTabs.shown = tabs->shown;
             window.frameTabs = std::move(frameTabs);
         }
     }
@@ -543,8 +543,7 @@ bool THeadlessSession::selectFrameTab(const QString& page)
         mErrorString = tr("A script moved the console of the MXP frame \"%1\" out of it or deleted it, so its tabs cannot be brought forward here.").arg(*header);
         return false;
     }
-    // The header shows where the page in front of it does
-    if (!frames.pageShown(tabs->pages.at(tabs->current).first)) {
+    if (!tabs->shown) {
         //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) whose tab header is hidden, as inside a hidden window, so a player could not click it; %1 is the name of the frame the header is on
         mErrorString = tr("The tabs of the MXP frame \"%1\" are not shown, so none of them can be brought forward.").arg(*header);
         return false;

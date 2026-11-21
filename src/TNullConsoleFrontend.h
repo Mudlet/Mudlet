@@ -102,12 +102,13 @@ public:
     // Where a frame's console is in that widget: under the header of the frame it is a page of, else at its frame's corner
     QPoint consolePlace(const QString& name) const;
     // A frame's tab header, as TMxpFrameWidgets' QTabWidget shows it: each page's frame name and the title on its tab,
-    // the first being the frame's own console, and the index of the page in front; none for a frame without a header,
-    // or whose own console a script moved out of it or deleted
+    // the first being the frame's own console, the index of the page in front, and whether the header shows; none for
+    // a frame without a header, or whose own console a script moved out of it or deleted
     struct Tabs
     {
         std::vector<std::pair<QString, QString>> pages;
         size_t current = 0;
+        bool shown = false;
     };
     std::optional<Tabs> tabs(const QString& name) const;
     // The frame whose header has name among its pages, its own included; none for a frame that is no page

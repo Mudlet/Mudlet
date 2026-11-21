@@ -1168,7 +1168,7 @@ frame as sitting at the main area's top left corner. An internal frame given a `
 characters) has a tab header, which the GUI draws along the frame's top, in the 30 pixels above its
 console: its `frameTabs` lists the pages, the frame's own console first, each by the name of the frame it
 shows and the `title` on its tab (a `DOCK` frame's `TITLE`, or its name), with `current` the index of the
-one in front. Each page is an `mxpFrame` of its own, and only the one in front is `shown`, at the place
+one in front. Each page is an `mxpFrame` of its own, and of those still under the header only the one in front is `shown`, at the place
 and size of the console under the header; a page behind keeps the size it last had until it comes forward.
 The header is drawn whatever its own frame's `shown` says, as a script hiding the page in front with
 `hideWindow()` leaves it: `frameTabs.shown` says whether a player can see and click it, which they cannot

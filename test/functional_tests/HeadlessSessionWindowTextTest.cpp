@@ -643,6 +643,7 @@ end)
         QCOMPARE(told(), qsl("chat,deep,log,tabs"));
         QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,chat=Chat,log=log @2"));
         QCOMPARE(shown(pages + QStringList{qsl("deep")}), qsl("0 0 1 0"));
+        QVERIFY2(session.runLua(qsl("assert(windowVisible('log') and not windowVisible('chat') and not windowVisible('deep'))")), qPrintable(session.errorString()));
         QCOMPARE(session.scriptWindow(qsl("log"))->geometry, front);
         // The tab in front again changes nothing
         QVERIFY(session.selectFrameTab(qsl("log")));
