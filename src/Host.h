@@ -238,6 +238,7 @@ public:
         }
         mPass = QString(password.constData(), password.size());
         mPassGiven = true;
+        mPassFilledInByDialog.clear();
     }
     // One the player typed for this profile while it is open, which the stored one does not replace either; an
     // empty one is the player's choice of none
@@ -245,16 +246,23 @@ public:
     {
         mPass = password;
         mPassGiven = true;
+        mPassFilledInByDialog.clear();
     }
     // One the connection dialog read from the store while this profile is open, which can be an older copy than the
-    // profile holds or is still looking up, so it only stands in for none, and a later lookup answer replaces it
+    // profile holds or is still looking up, so it only stands in for none: held back while a lookup is pending, for
+    // when that brings none
     void setPassFilledInByDialog(const QString& password)
     {
-        if (mPass.isEmpty() && !mSecuredPasswordPending) {
-            mPass = password;
+        if (!mPass.isEmpty()) {
+            return;
         }
+        if (mSecuredPasswordPending) {
+            mPassFilledInByDialog = password;
+            return;
+        }
+        mPass = password;
     }
-    // A password still being fetched from the keychain counts, unless one given or typed stands in for it: the
+    // A password still being fetched from the keychain counts, unless the player erased it in the connection dialog: the
     // auto-login is timer based, so the password step has to be armed before the read that answers it comes back,
     // or there is no prompt left for a late answer to be typed at.
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || (mSecuredPasswordPending && !mPassGiven)); }
@@ -1707,6 +1715,7 @@ private:
     QString mPass;
     bool mPassGiven = false;
     bool mSecuredPasswordPending = false;
+    QString mPassFilledInByDialog;
     // The store refused the saved password, as against having none or not being there at all
     bool mSecuredPasswordUnreadable = false;
 

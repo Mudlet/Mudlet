@@ -6662,6 +6662,7 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     mSecuredPasswordPending = !success && timedOut;
 
     if (success && !password.isEmpty()) {
+        mPassFilledInByDialog.clear();
         // A later answer replaces an earlier one, as the keychain's does the encrypted file's at a deadline,
         // but not one given for the run
         if (!mPassGiven) {
@@ -6673,8 +6674,16 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
         mTelnet.sendOutstandingAutoLoginPassword();
         QString passwordCopy = password; // Make a copy for secure clearing
         SecureStringUtils::secureStringClear(passwordCopy);
-    } else if (!success && !errorMessage.isEmpty()) {
-        qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+    } else {
+        if (!success && !errorMessage.isEmpty()) {
+            qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+        }
+        if (!mSecuredPasswordPending && !mPassFilledInByDialog.isEmpty()) {
+            const QString filledIn = mPassFilledInByDialog;
+            mPassFilledInByDialog.clear();
+            setPassFilledInByDialog(filledIn);
+            mTelnet.sendOutstandingAutoLoginPassword();
+        }
     }
     // A refused or empty keychain must not go on holding the hidden-input box back
     mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
