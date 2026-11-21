@@ -237,11 +237,12 @@ void TCommandLine::pressClaimedControlTab([[maybe_unused]] QObject* receiver, [[
 #endif
 }
 
-void TCommandLine::processNormalKey(QEvent* event)
+void TCommandLine::processNormalKey(QKeyEvent* keyEvent)
 {
-    const auto* keyEvent = static_cast<QKeyEvent*>(event);
-    const bool typing = !keyEvent->text().isEmpty() && keyEvent->text().at(0).isPrint() && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
-    editAndSpellCheck(event, typing ? KeyEdit::Typing : KeyEdit::Other);
+    const QString text = keyEvent->text();
+    const bool printable = !text.isEmpty() && text.at(0).isPrint();
+    const bool typing = printable && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
+    editAndSpellCheck(keyEvent, typing ? KeyEdit::Typing : KeyEdit::Other);
     adjustHeight();
 
     mHistoryBuffer = 0;
@@ -250,9 +251,8 @@ void TCommandLine::processNormalKey(QEvent* event)
     }
 }
 
-void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
+void TCommandLine::editAndSpellCheck(QKeyEvent* keyEvent, const KeyEdit kind)
 {
-    const auto* keyEvent = static_cast<QKeyEvent*>(event);
     const int key = keyEvent->key();
     const bool modifierAlone = key == Qt::Key_Shift || key == Qt::Key_Control || key == Qt::Key_Alt || key == Qt::Key_AltGr || key == Qt::Key_Meta;
     // Marking after these would put back a mark that Undo just took away, even after
@@ -267,19 +267,17 @@ void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
     QTextCursor editBlock = textCursor();
     if (grouped) {
         // A run of typing stays one step, as Qt makes it with spell check off
-        const QTextCursor caret = textCursor();
-        const bool continuesRun = kind != KeyEdit::Other && kind == mLastKeyEdit && document()->revision() == mLastKeyEditRevision && caret.position() == mLastKeyEditPosition && !caret.hasSelection();
+        const bool continuesRun =
+                kind != KeyEdit::Other && kind == mLastKeyEdit && document()->revision() == mLastKeyEditRevision && editBlock.position() == mLastKeyEditPosition && !editBlock.hasSelection();
         if (continuesRun) {
             editBlock.joinPreviousEditBlock();
         } else {
             editBlock.beginEditBlock();
         }
-    }
-    if (grouped) {
         // However the caret got here, a mouse click or the menu's Undo included
         keepMarkOffNextCharacter();
     }
-    QPlainTextEdit::event(event);
+    QPlainTextEdit::event(keyEvent);
     if (!leavesMarksAlone) {
         spellCheck();
     }
@@ -435,7 +433,7 @@ bool TCommandLine::event(QEvent* event)
                 mCompletion.resetHistoryWalk();
                 mHistoryBuffer = 0;
                 // Part of the run of typing, so one Undo takes back several words
-                editAndSpellCheck(event, KeyEdit::Typing);
+                editAndSpellCheck(ke, KeyEdit::Typing);
                 adjustHeight();
                 return true;
             }
@@ -508,7 +506,7 @@ bool TCommandLine::event(QEvent* event)
                 mHistoryBuffer = 0;
                 mCompletion.reset();
                 mCompletion.resetHistoryWalk();
-                editAndSpellCheck(event, KeyEdit::Backspace);
+                editAndSpellCheck(ke, KeyEdit::Backspace);
                 adjustHeight();
                 return true;
             }
@@ -525,7 +523,7 @@ bool TCommandLine::event(QEvent* event)
                 mHistoryBuffer = 0;
                 mCompletion.reset();
                 mCompletion.resetHistoryWalk();
-                editAndSpellCheck(event, KeyEdit::Delete);
+                editAndSpellCheck(ke, KeyEdit::Delete);
                 adjustHeight();
                 return true;
             }
@@ -763,13 +761,13 @@ bool TCommandLine::event(QEvent* event)
                 return true;
             }
 
-            processNormalKey(event);
+            processNormalKey(ke);
             return false;
         }
     }
 
     if (event->type() == QEvent::KeyPress || event->type() == QEvent::InputMethod) {
-        // Keys that fell through the switch, Space among them, and dead-key and IME composition
+        // Keys that fell through the switch, a modified Space among them, and dead-key and IME composition
         const UserEditScope userEdit(*this);
         return QPlainTextEdit::event(event);
     }
@@ -941,17 +939,15 @@ void TCommandLine::spellCheck()
 
 void TCommandLine::keepMarkOffNextCharacter()
 {
-    QTextCursor caret = textCursor();
     // With a selection this would strip the marks from the selected words instead,
     // which Undo and Redo leave selected
-    if (caret.hasSelection()) {
+    if (textCursor().hasSelection()) {
         return;
     }
     // Sets only what the next character typed gets, which is not an undo record
     QTextCharFormat f;
     f.setFontUnderline(false);
-    caret.setCharFormat(f);
-    setTextCursor(caret);
+    setCurrentCharFormat(f);
 }
 
 void TCommandLine::slot_popupMenu()

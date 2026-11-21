@@ -31,6 +31,7 @@
 // common English words, or near misses of one, rely on the profile's English
 // dictionary, which init() requires to be there, knowing "look".
 
+#include <QClipboard>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPointer>
@@ -280,6 +281,18 @@ private slots:
         QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "a word no dictionary knows was not marked as misspelt");
     }
 
+    // The control for the test above
+    void test_nothingIsUnderlinedWithSpellCheckOff()
+    {
+        mpHost->setEnableSpellCheck(false);
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+
+        QVERIFY2(unmarked(pCommandLine, qsl("qzxfrob")), "a word was marked with spell check off");
+    }
+
     // Marking a word is not an edit, so Undo takes back the typing itself rather
     // than a mark the key press then puts straight back, and Redo brings it back
     void test_undoAndRedoTakeBackTypingWithSpellCheckOn()
@@ -416,6 +429,65 @@ private slots:
         QVERIFY(pCommandLine->playerTypedLine());
     }
 
+    // A paste is an edit of its own inside the key's, and must not end the key's
+    void test_pastingWithSpellCheckOnIsStillThePlayersOwn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QGuiApplication::clipboard()->setText(qsl("pasted"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Paste);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("pasted"));
+        QVERIFY(pCommandLine->playerTypedLine());
+    }
+
+    // Shift pressed alone for a capital is part of the run, not an edit
+    void test_undoTakesBackTypingWithACapitalInIt()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go "));
+        QTest::keyClick(pCommandLine, Qt::Key_Shift);
+        QTest::keyClicks(pCommandLine, qsl("North"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // Moving the caret without a key, as a click does, ends the run of typing
+    void test_typingAfterTheCaretMovedIsUndoneOnItsOwn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go north"));
+        QTextCursor caret = pCommandLine->textCursor();
+        caret.setPosition(2);
+        pCommandLine->setTextCursor(caret);
+        QTest::keyClicks(pCommandLine, qsl("x"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("gox north"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go north"));
+    }
+
+    void test_undoTakesBackARunOfDeleteWithSpellCheckOn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Home);
+        QTest::keyClick(pCommandLine, Qt::Key_Delete);
+        QTest::keyClick(pCommandLine, Qt::Key_Delete);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("xfrob"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+    }
+
     // Rechecking a word that keeps its mark changes nothing, so moving the caret about
     // must not pile up records on an undo stack that only clearing the line empties
     void test_movingTheCaretAddsNothingToUndo()
@@ -449,18 +521,6 @@ private slots:
         QTest::keySequence(pCommandLine, QKeySequence::Undo);
 
         QCOMPARE(pCommandLine->toPlainText(), QString());
-    }
-
-    // The control for the test above
-    void test_nothingIsUnderlinedWithSpellCheckOff()
-    {
-        mpHost->setEnableSpellCheck(false);
-        TCommandLine* pCommandLine = freshCommandLine();
-        QVERIFY(pCommandLine);
-
-        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
-
-        QVERIFY2(unmarked(pCommandLine, qsl("qzxfrob")), "a word was marked with spell check off");
     }
 
     // A word the player added themselves is still not in the system dictionary,

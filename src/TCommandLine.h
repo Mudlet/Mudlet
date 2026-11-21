@@ -121,9 +121,9 @@ private:
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
-    void processNormalKey(QEvent*);
+    void processNormalKey(QKeyEvent*);
     enum class KeyEdit { Other, Typing, Backspace, Delete };
-    void editAndSpellCheck(QEvent*, KeyEdit);
+    void editAndSpellCheck(QKeyEvent*, KeyEdit);
     bool keybindingMatched(QKeyEvent*);
     bool keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent*) const;
     void spellCheckWord(QTextCursor& c);
