@@ -435,15 +435,24 @@ private slots:
         QVERIFY(host);
         QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil and BaseUI.mapPlaceholder ~= nil")), "this profile was expected to start with no map data");
 
-        QByteArray offer;
-        offer.append(static_cast<char>(TN_IAC));
-        offer.append(static_cast<char>(TN_SB));
-        offer.append(static_cast<char>(OPT_GMCP));
-        offer.append("Client.Map {\"url\": \"https://example.invalid/game.dat\"}");
-        offer.append(static_cast<char>(TN_IAC));
-        offer.append(static_cast<char>(TN_SE));
-        host->mTelnet.loopbackTest(offer);
+        auto sendClientMap = [host](const QByteArray& payload) {
+            QByteArray offer;
+            offer.append(static_cast<char>(TN_IAC));
+            offer.append(static_cast<char>(TN_SB));
+            offer.append(static_cast<char>(OPT_GMCP));
+            offer.append("Client.Map ");
+            offer.append(payload);
+            offer.append(static_cast<char>(TN_IAC));
+            offer.append(static_cast<char>(TN_SE));
+            host->mTelnet.loopbackTest(offer);
+        };
 
+        // without a url there is nothing to download, and the bare mapper would show a clipped widget
+        sendClientMap("{\"url\": \"\"}");
+        QTest::qWait(200);
+        QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil and not BaseUI.mapPlaceholder.hidden")), "a map offer without a url replaced the placeholder");
+
+        sendClientMap("{\"url\": \"https://example.invalid/game.dat\"}");
         QTRY_VERIFY2_WITH_TIMEOUT(luaQuiet(host, qsl("BaseUI.map ~= nil")), "the game offered a map and the dock kept its placeholder over the mapper", 3000);
         QVERIFY2(luaTrue(host, qsl("BaseUI.mapPlaceholder.hidden")), "the placeholder is still showing over the mapper");
         dlgMapper* mapper = host->mainConsoleView() ? host->mainConsoleView()->mpMapper.data() : nullptr;
@@ -842,7 +851,8 @@ private slots:
         feedLine(host, qsl("Health:   3600/3600     Mana:     3400/3400"));
         // an interface that has not introduced itself is one that took the tour
         // branch, which is the only thing that registers that handler
-        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.settings.announced")), "the dock was not built with its introduction held back for the tour, so there is no handler to leak");
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.settings.announced")),
+                 "the dock was not built with its introduction held back for the tour, so there is no handler to leak");
 
         QVERIFY2(host->uninstallPackage(qsl("mudlet-base-ui"), enums::PackageModuleType::Package), "the starter UI package would not uninstall");
         QVERIFY2(luaTrue(host, qsl("BaseUI == nil")), "the uninstall left the interface's state behind");
@@ -950,10 +960,7 @@ private:
         return result;
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 #include "StarterUiSectionsTest.moc"
