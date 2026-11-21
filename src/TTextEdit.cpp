@@ -448,11 +448,8 @@ void TTextEdit::updateScreenView()
         // Note the values in the "parent" Host instance so that they are
         // available for NAWS. The lower pane is laid out after the upper one,
         // so it is the one that knows the split's height once both have moved.
-        if (!mIsLowerPane) {
-            mpHost->setScreenDimensions(mScreenWidth, mainWindowRows());
-        } else {
-            mpHost->setScreenDimensions(mpHost->mScreenWidth, mpConsole->mUpperPane->mainWindowRows());
-        }
+        const int columns = mIsLowerPane ? mpHost->mScreenWidth : mScreenWidth;
+        mpHost->setScreenDimensions(columns, mpConsole->mUpperPane->mainWindowRows());
     } else {
         mScreenWidth = currentScreenWidth;
     }

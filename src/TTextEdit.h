@@ -106,7 +106,6 @@ public:
     }
     int getScreenHeight() const { return mScreenHeight; }
     QSize drawableSize() const;
-    int mainWindowRows() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
@@ -203,6 +202,7 @@ private slots:
     void slot_showSelectionAnalysis();
 
 private:
+    int mainWindowRows() const;
     void applyPendingScrollBarUpdate();
     void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);

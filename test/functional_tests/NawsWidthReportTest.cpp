@@ -115,6 +115,8 @@ private:
 
     void runLua(Host* pHost, const QString& code) const { QVERIFY2(pHost->getLuaInterpreter()->compileAndExecuteScript(code), qPrintable(code)); }
 
+    void fillScrollback() const { runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end")); }
+
     // 0 for a global that is not a number
     static int luaGlobalNumber(Host* pHost, const char* name)
     {
@@ -367,7 +369,7 @@ private slots:
     // to the rows it was given would stop every screenful short.
     void scrollingBackLeavesTheReportedSizeAlone()
     {
-        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        fillScrollback();
         settle();
         const int rowsBefore = mpHost->mScreenHeight;
 
@@ -389,7 +391,7 @@ private slots:
     // still resize while reading back.
     void resizingWhileScrolledBackReportsTheNewSize()
     {
-        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        fillScrollback();
         runLua(mpHost, qsl("scrollUp(50)"));
         settle();
         QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
@@ -413,7 +415,7 @@ private slots:
     // depends on the platform's fonts and toolbars.
     void aSmallShrinkWhileScrolledBackReportsTheUnsplitRows()
     {
-        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        fillScrollback();
         runLua(mpHost, qsl("scrollUp(50)"));
         settle();
         TTextEdit* upper = mpHost->mainConsoleView()->mUpperPane;
@@ -447,7 +449,7 @@ private slots:
                    "assert(createCommandLine('nawsProbeTallBelow', 0, %1, width + 50, %2))")
                        .arg(paneHeight - paneHeight / 3)
                        .arg(paneHeight));
-        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        fillScrollback();
         // an overlay is measured at the next layout, not when it appears
         mudlet::self()->resize(1100, 800);
         settle();
@@ -610,7 +612,7 @@ private slots:
     {
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
         runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
-        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        fillScrollback();
         runLua(mpHost, qsl("scrollUp(50)"));
         settle();
         showTab(mSecondHostname);
