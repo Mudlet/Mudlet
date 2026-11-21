@@ -939,8 +939,7 @@ void TCommandLine::spellCheck()
 
 void TCommandLine::keepMarkOffNextCharacter()
 {
-    // With a selection this would strip the marks from the selected words instead,
-    // which Undo and Redo leave selected
+    // With a selection this would strip the marks from the selected words instead
     if (textCursor().hasSelection()) {
         return;
     }

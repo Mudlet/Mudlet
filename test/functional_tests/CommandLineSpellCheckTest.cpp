@@ -113,32 +113,30 @@ private:
         mAddedWords << word;
     }
 
-    // The format of the character just inside the start of the word, which is
-    // what the underline was put on
-    static QTextCharFormat formatOf(const TCommandLine* pCommandLine, const QString& word)
+    // A mark covering only part of the word fails too
+    static bool everyCharacterHas(const TCommandLine* pCommandLine, const QString& word, const QTextCharFormat::UnderlineStyle style, const QColor& colour = QColor())
     {
         const int start = pCommandLine->toPlainText().indexOf(word);
         if (start < 0) {
-            return {};
+            return false;
         }
         QTextCursor cursor(pCommandLine->document());
-        cursor.setPosition(start + 1);
-        return cursor.charFormat();
+        for (int i = 1; i <= word.length(); ++i) {
+            // A cursor reports the format of the character before it
+            cursor.setPosition(start + i);
+            const QTextCharFormat format = cursor.charFormat();
+            if (format.underlineStyle() != style || (colour.isValid() && format.underlineColor() != colour)) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    static bool markedMisspelt(const TCommandLine* pCommandLine, const QString& word)
-    {
-        const QTextCharFormat format = formatOf(pCommandLine, word);
-        return format.underlineStyle() == QTextCharFormat::SpellCheckUnderline && format.underlineColor() == QColor(Qt::red);
-    }
+    static bool markedMisspelt(const TCommandLine* pCommandLine, const QString& word) { return everyCharacterHas(pCommandLine, word, QTextCharFormat::SpellCheckUnderline, QColor(Qt::red)); }
 
-    static bool markedAsTheUsersOwn(const TCommandLine* pCommandLine, const QString& word)
-    {
-        const QTextCharFormat format = formatOf(pCommandLine, word);
-        return format.underlineStyle() == QTextCharFormat::DashUnderline && format.underlineColor() == QColor(Qt::cyan);
-    }
+    static bool markedAsTheUsersOwn(const TCommandLine* pCommandLine, const QString& word) { return everyCharacterHas(pCommandLine, word, QTextCharFormat::DashUnderline, QColor(Qt::cyan)); }
 
-    static bool unmarked(const TCommandLine* pCommandLine, const QString& word) { return formatOf(pCommandLine, word).underlineStyle() == QTextCharFormat::NoUnderline; }
+    static bool unmarked(const TCommandLine* pCommandLine, const QString& word) { return everyCharacterHas(pCommandLine, word, QTextCharFormat::NoUnderline); }
 
     // Right-clicks the middle of the word and returns the menu that opened.
     // The menu is parented on the command line, so any left over from an
@@ -293,8 +291,8 @@ private slots:
         QVERIFY2(unmarked(pCommandLine, qsl("qzxfrob")), "a word was marked with spell check off");
     }
 
-    // Marking a word is not an edit, so Undo takes back the typing itself rather
-    // than a mark the key press then puts straight back, and Redo brings it back
+    // Undo takes back the typing, not just the mark the key added after it, and
+    // Redo brings both back
     void test_undoAndRedoTakeBackTypingWithSpellCheckOn()
     {
         TCommandLine* pCommandLine = freshCommandLine();
@@ -471,6 +469,56 @@ private slots:
         QTest::keySequence(pCommandLine, QKeySequence::Undo);
 
         QCOMPARE(pCommandLine->toPlainText(), qsl("go north"));
+    }
+
+    void test_typingIntoAMisspeltWordMarksTheLetterTyped()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        for (int i = 0; i < 3; ++i) {
+            QTest::keyClick(pCommandLine, Qt::Key_Left);
+        }
+
+        QTest::keyClicks(pCommandLine, qsl("z"));
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfzrob"));
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfzrob")), "the letter typed into a misspelt word was left out of its mark");
+    }
+
+    // Typing over a selection replaces it, so it is a step of its own even where
+    // the selection ends at the caret the last typing left
+    void test_typingOverASelectionIsUndoneOnItsOwn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go qzxfrob"));
+        QTextCursor selection = pCommandLine->textCursor();
+        selection.setPosition(3);
+        selection.setPosition(10, QTextCursor::KeepAnchor);
+        pCommandLine->setTextCursor(selection);
+        QTest::keyClicks(pCommandLine, qsl("x"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go x"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go qzxfrob"));
+    }
+
+    void test_selectingTheLineKeepsItsMarks()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob qzxgrok"));
+        const int undoRecords = pCommandLine->document()->availableUndoSteps();
+
+        QTest::keySequence(pCommandLine, QKeySequence::SelectAll);
+        QTest::keyClick(pCommandLine, Qt::Key_Left, Qt::ShiftModifier);
+
+        QVERIFY(pCommandLine->textCursor().hasSelection());
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "selecting the line took the mark off the first word");
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxgrok")), "selecting the line took the mark off the last word");
+        QCOMPARE(pCommandLine->document()->availableUndoSteps(), undoRecords);
     }
 
     void test_undoTakesBackARunOfDeleteWithSpellCheckOn()
