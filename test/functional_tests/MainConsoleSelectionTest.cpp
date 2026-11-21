@@ -473,6 +473,24 @@ private slots:
         QCOMPARE(pane->imageTopLine(), topAfterRelease);
     }
 
+    // The repeat must replay the pointer's own spot: from (0, 0) a hold at the bottom would scroll up
+    void test_dragHeldAtTheBottomEdgeKeepsScrollingDown()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        TConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
+        console->scrollUp(30);
+        QTRY_VERIFY2_WITH_TIMEOUT(console->mLowerPane->isVisible(), "Scrolling back did not open the split", 2000);
+        const int topBefore = pane->imageTopLine();
+
+        const QPoint startPos = pane->rect().center();
+        const QPoint edgePos(startPos.x(), pane->height() - 2);
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, startPos);
+        QTest::mouseMove(pane, edgePos);
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() > topBefore + 6 || !console->mLowerPane->isVisible(), "Holding the pointer at the bottom edge did not keep scrolling down", 2000);
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, edgePos);
+    }
+
     void test_pressStraightAfterAnEdgeDragDoesNotScroll()
     {
         TTextEdit* pane = paneShowingProse();
