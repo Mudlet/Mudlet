@@ -1996,7 +1996,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    // The lower pane never scrolls, so a repeat there would only move the upper pane away from the selection
+    // The lower pane never scrolls: a repeat there would only scroll the upper pane, and at the bottom edge close the split mid-drag
     if (!mIsLowerPane && (eventPos.y() < 10 || eventPos.y() >= height() - 10)) {
         mDragScrollPos = event->position();
         if (!mpDragScrollTimer->isActive()) {

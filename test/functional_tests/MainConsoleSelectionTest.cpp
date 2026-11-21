@@ -531,7 +531,7 @@ private slots:
             return;
         }
 
-        // The upper pane's timer sees this press as its own button still held
+        // Unless the press stops it, the upper pane's timer would take this press for its own button still held
         const QPoint lowerMiddle = lowerPane->rect().center();
         QTest::mousePress(lowerPane, Qt::LeftButton, Qt::NoModifier, lowerMiddle);
         const int topAfterPress = pane->imageTopLine();
