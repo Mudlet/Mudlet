@@ -73,11 +73,11 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
-#include "T2DMap.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
+#include "T2DMap.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoom.h"
