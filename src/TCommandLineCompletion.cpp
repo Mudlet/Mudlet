@@ -132,7 +132,7 @@ TCommandLineCompletion::HistoryCompletion TCommandLineCompletion::historyComplet
     HistoryCompletion result;
     result.typed = line;
     // Only the tail the previous completion filled in may be cut; any other selection is the player's own text
-    result.tailCut = line == mLastCompletion && tailSelected;
+    result.tailCut = showingHistoryCompletion(line, tailSelected);
     if (result.tailCut) {
         result.typed.truncate(mShownLine.size());
     }
