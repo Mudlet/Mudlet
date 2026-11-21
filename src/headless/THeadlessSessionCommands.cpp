@@ -246,6 +246,32 @@ bool THeadlessSession::activateAddonCommand(const int id)
     return pView->activateAddonCommand(id);
 }
 
+void THeadlessSession::setReservedShortcuts(const QList<ReservedShortcut>& shortcuts)
+{
+    auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance());
+    if (!pView) {
+        return;
+    }
+    QList<TNullAppFrontend::ReservedShortcut> reserved;
+    for (const ReservedShortcut& shortcut : shortcuts) {
+        if (!shortcut.sequence.isEmpty()) {
+            reserved.append({shortcut.sequence, shortcut.holder});
+        }
+    }
+    pView->setReservedShortcuts(reserved);
+}
+
+QList<THeadlessSession::ReservedShortcut> THeadlessSession::reservedShortcuts()
+{
+    QList<ReservedShortcut> result;
+    if (const auto* pView = dynamic_cast<const TNullAppFrontend*>(TAppFrontend::instance())) {
+        for (const TNullAppFrontend::ReservedShortcut& reserved : pView->reservedShortcuts()) {
+            result.append({reserved.sequence, reserved.holder});
+        }
+    }
+    return result;
+}
+
 int THeadlessSession::addonCommandOnKey(const QKeyEvent& event) const
 {
     const auto* pView = dynamic_cast<const TNullAppFrontend*>(TAppFrontend::instance());
@@ -324,6 +350,7 @@ void THeadlessSession::connectCommandRelays(const unsigned int run)
 void THeadlessSession::disconnectCommandRelays()
 {
     if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
-        disconnect(&pView->mNotifier, nullptr, this, nullptr);
+        // Only this one: configWritten is connected once, by the constructor, for every run of the session
+        disconnect(&pView->mNotifier, &TNullAppFrontendNotifier::addonCommandsChanged, this, nullptr);
     }
 }
