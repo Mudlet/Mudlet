@@ -160,7 +160,6 @@ private slots:
         QCOMPARE(listedNames(), QStringList{mNamedPackage});
     }
 
-    // Installing or removing a package relists the dialog while the box still shows the search
     void test_aRelistedPackageListKeepsTheSearch()
     {
         mpManager->lineEdit_searchBar->setText(qsl("titled"));
@@ -184,9 +183,10 @@ private slots:
         mpManager->lineEdit_searchBar->setText(qsl("a"));
         emit mpHost->signal_packageListChanged();
 
+        const QStringList listed = listedNames();
         QVERIFY(mpManager->pushButton_installed->isChecked());
-        QVERIFY(!listedNames().contains(qsl("alpha")));
-        QVERIFY(listedNames().contains(mNamedPackage));
+        QVERIFY(!listed.contains(qsl("alpha")));
+        QVERIFY(listed.contains(mNamedPackage));
     }
 
     void test_theRepositoryIsListedAlphabeticallyWhateverTheCase()
