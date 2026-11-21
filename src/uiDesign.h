@@ -104,7 +104,8 @@ ThemeTokens themeTokens();
 // with, read off a fresh one, since a stylesheet freezes the palette of the widget it is set on
 ThemeTokens themeTokens(const QPalette& themePalette);
 
-// The deepest accent wash anything is drawn on: accentText is walked to read on it, so it holds on every lighter one
+// The deepest accent wash anything is drawn on: accentText is walked to read on it, so it holds on every lighter one.
+// A pressed primary button lays the hover wash over it and inks itself with primaryPressedInk()
 inline constexpr qreal scmAccentWashStrength = 0.24;
 
 // Blue rather than green: "running" sits beside "broken" all over the editor, and a red-green colour-blind
@@ -122,6 +123,9 @@ QColor stateColor(const qreal hue, const bool darkPage);
 // Walked off the separator, the darkest surface any error ink sits on; a caller on a lighter surface walks it on
 // with readableOn() against that surface.
 QColor errorInk(const ThemeTokens& tokens);
+
+// The ink on a pressed primary button, walked on from accentText until it reads on the pressed wash over page, pane and card
+QColor primaryPressedInk(const ThemeTokens& tokens);
 
 // Light enough that the words on the wash still read against the surface underneath
 inline constexpr qreal scmSoftWashStrength = 0.14;
