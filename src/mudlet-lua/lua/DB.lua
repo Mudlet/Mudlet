@@ -1938,7 +1938,9 @@ end
 --- db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous.
 --- If you don't know SQL well, its best to build the expression.<br/><br/>
 ---
---- Query may also be a table array of such expressions, if so they will be AND'd together implicitly.<br/><br/>
+--- Query may also be a table array of such expressions, if so they will be AND'd together implicitly.
+--- An empty table returns every row, the same as a nil query. A table keyed by field name, such as
+--- {name = "Bob"}, is not a query: it makes db:fetch return nil.<br/><br/>
 ---
 --- The results that are returned are not in any guaranteed order, though they are usually the same order
 --- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the
@@ -1982,7 +1984,10 @@ function db:fetch(sheet, query, order_by, descending)
 
   if query then
     if type(query) == "table" and not query._isExp then
-      sql = sql .. " WHERE " .. db:AND(unpack(query))
+      -- next(), not #: a hash-style table such as {name = x} must not mean "no filter" and match every row
+      if next(query) ~= nil then
+        sql = sql .. " WHERE " .. db:AND(unpack(query))
+      end
     else
       sql = sql .. " WHERE " .. tostring(query)
     end
@@ -2030,7 +2035,8 @@ end
 ---   TOTAL - Returns the value of adding all the contents of the specified field.
 ---   </pre>
 ---
---- @param query optional
+--- @param query optional, as for db:fetch; an empty table aggregates over every row, and a table keyed
+--- by field name, such as {name = "Bob"}, raises an error rather than returning nil
 ---
 --- @usage Example:
 ---   <pre>
@@ -2057,10 +2063,13 @@ function db:aggregate(field, fn, query, distinct)
   local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", column, ")", "AS", fn, "FROM", s_name }
 
   if query then
-    sql_chunks[#sql_chunks + 1] = "WHERE"
     if type(query) == "table" and not query._isExp then
-      sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
+      if next(query) ~= nil then
+        sql_chunks[#sql_chunks + 1] = "WHERE"
+        sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
+      end
     else
+      sql_chunks[#sql_chunks + 1] = "WHERE"
       sql_chunks[#sql_chunks + 1] = tostring(query)
     end
   end
@@ -2739,26 +2748,27 @@ end
 
 
 
---- Returns a compound database expression that combines both of the simple expressions passed into it.
+--- Returns a compound database expression that combines all of the simple expressions passed into it.
 --- These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>
 ---
---- This compound expression will find any item that matches either the first or the second sub-expression.
+--- This compound expression will find any item that matches at least one of the sub-expressions.
 ---
 --- @see db:fetch
-function db:OR(left, right)
-  -- coerce to strings so db:exp sentinels work here as well as plain expressions
-  left = tostring(left)
-  right = tostring(right)
+function db:OR(...)
+  local parts = {}
 
-  if not string.starts(left, "(") then
-    left = "(" .. left .. ")"
+  -- counted rather than ipairs, which would drop a nil and every condition after it; the "(nil)"
+  -- kept here makes sqlite reject the query, so db:fetch returns nil rather than missing rows
+  for i = 1, select("#", ...) do
+    -- coerce to strings so db:exp sentinels work here as well as plain expressions
+    local expression = tostring((select(i, ...)))
+    if not string.starts(expression, "(") then
+      expression = "(" .. expression .. ")"
+    end
+    parts[#parts + 1] = expression
   end
 
-  if not string.starts(right, "(") then
-    right = "(" .. right .. ")"
-  end
-
-  return left .. " OR " .. right
+  return table.concat(parts, " OR ")
 end
 
 
