@@ -70,6 +70,7 @@
 #include <QTimeZone>
 #include <array>
 #include <chrono>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -811,7 +812,35 @@ void dlgConnectionProfiles::abandonPendingProfileLoad()
 {
     mPendingProfileLoad.clear();
     mPendingConnect = false;
+    // a copy queued behind a deferred read still needs the form locked until that read answers
+    if (!mPendingCopy) {
+        clearKeychainWait();
+    }
+}
+
+bool dlgConnectionProfiles::queueCopyBehindPasswordRead(void (dlgConnectionProfiles::*copy)())
+{
+    const QString source = profile_name_entry->text().trimmed();
+    if (!hasPendingKeychainOperation(source)) {
+        return false;
+    }
+
+    mPendingCopy = copy;
+    mPendingCopyProfile = source;
+    showKeychainWait();
+    return true;
+}
+
+void dlgConnectionProfiles::runPendingCopy(const QString& profileName)
+{
+    if (!mPendingCopy || mPendingCopyProfile != profileName) {
+        return;
+    }
+
+    const auto copy = std::exchange(mPendingCopy, nullptr);
+    mPendingCopyProfile.clear();
     clearKeychainWait();
+    (this->*copy)();
 }
 
 bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
@@ -2403,6 +2432,10 @@ static void narrowCopiedSecrets(const QString& profile)
 
 void dlgConnectionProfiles::slot_copyProfile()
 {
+    if (queueCopyBehindPasswordRead(&dlgConnectionProfiles::slot_copyProfile)) {
+        return;
+    }
+
     mCopyingProfile = true;
 
     QString profile_name;
@@ -2598,6 +2631,10 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 {
+    if (queueCopyBehindPasswordRead(&dlgConnectionProfiles::slot_copyOnlySettingsOfProfile)) {
+        return;
+    }
+
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
@@ -3439,8 +3476,13 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     const QString currentProfileName = listWidget_profiles->currentItem() ? listWidget_profiles->currentItem()->data(csmNameRole).toString() : QString();
     if (currentProfileName != profile_name) {
         qDebug() << "dlgConnectionProfiles: Dropping the password load for" << profile_name << "as the selection has changed";
-        // A Connect waiting on this load would otherwise wait for good
-        if (mPendingProfileLoad == profile_name) {
+        // A Connect or a copy waiting on this load would otherwise wait for good
+        const bool copyWaiting = mPendingCopyProfile == profile_name;
+        if (copyWaiting) {
+            mPendingCopy = nullptr;
+            mPendingCopyProfile.clear();
+        }
+        if (mPendingProfileLoad == profile_name || copyWaiting) {
             abandonPendingProfileLoad();
         }
         return;
@@ -3470,6 +3512,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         if (!completePendingProfileLoad(profile_name)) {
             abandonPendingProfileLoad();
         }
+        runPendingCopy(profile_name);
     }
 }
 
@@ -3525,6 +3568,11 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // Offline sends no password, so its load goes ahead.
     const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
     if (passwordUnreadable && !offlineLoadQueued) {
+        // as with Connect, the warning stays up for the password to be typed before copying again
+        if (mPendingCopyProfile == profileName) {
+            mPendingCopy = nullptr;
+            mPendingCopyProfile.clear();
+        }
         abandonPendingProfileLoad();
         //: Shown in the connection dialog when a password was saved for the profile but its file could not be opened or decrypted, for example because it is damaged
         showNotification(tr("The saved password for this profile could not be read. Please enter it again."), notificationAreaIconLabelWarning);
@@ -3537,6 +3585,7 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     if (!completePendingProfileLoad(profileName) && (deferred.isEmpty() || mPendingProfileLoad != deferred)) {
         abandonPendingProfileLoad();
     }
+    runPendingCopy(profileName);
 }
 
 void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage)

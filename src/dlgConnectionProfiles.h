@@ -226,6 +226,10 @@ private:
     bool completePendingProfileLoad(const QString& profileName);
     // Drops a queued load that nothing is going to complete, and gives the dialog its buttons back
     void abandonPendingProfileLoad();
+    // A copy takes the password from the field, so one chosen while the source's password is still
+    // being read is held back until that read answers
+    bool queueCopyBehindPasswordRead(void (dlgConnectionProfiles::*copy)());
+    void runPendingCopy(const QString& profileName);
     // What a keychain read answers with
     void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
     void schedulePasswordLoad(const QString& profile_name);
@@ -282,6 +286,9 @@ private:
     bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
     // Whose password load arrived while that read was in flight, to run once it answers
     QString mDeferredPasswordLoadProfile;
+    // The copy action waiting for the read of mPendingCopyProfile's password, if any
+    void (dlgConnectionProfiles::*mPendingCopy)() = nullptr;
+    QString mPendingCopyProfile;
     // The profile and item a shown notice says could not be saved, so saving that one later clears it
     QPair<QString, QString> mUnsavedChange;
 
