@@ -475,7 +475,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-// The console's text pane is the label's sibling, not its ancestor, so an event the label passes on never reaches it;
+// The console's text pane sits under one of the label's siblings, not under the label, so an event the label passes on never reaches it;
 // the labels that would pass it on are made click-through just for the hit test, to find what they cover
 TTextEdit* TLabel::consolePaneUnder(const QPoint& globalPosition, bool (*passesOn)(const TLabel&))
 {
@@ -553,9 +553,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (model().runCallback(TLabelModel::Callback::wheel, *event)) {
-        event->accept();
-    } else if (forwardWheelToConsole(event)) {
+    if (model().runCallback(TLabelModel::Callback::wheel, *event) || forwardWheelToConsole(event)) {
         event->accept();
     } else {
         QWidget::wheelEvent(event);

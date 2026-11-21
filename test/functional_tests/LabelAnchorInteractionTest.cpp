@@ -959,7 +959,7 @@ private slots:
         QVERIFY2(pMain->mLowerPane->isHidden(), "a turn of the wheel on a label over a miniconsole scrolled the main console instead");
     }
 
-    void test_aWheelOnALabelOverNothingToScrollScrollsTheBoxHoldingIt_data()
+    void test_aWheelOnALabelInAScrollBoxGoesToTheBoxOnlyWhenTheConsoleCannotUseIt_data()
     {
         QTest::addColumn<int>("lines");
         QTest::addColumn<bool>("scrollingEnabled");
@@ -977,7 +977,7 @@ private slots:
 
     // A turn the console under the label cannot use goes on to the scroll box holding it; one too small for a line
     // over a console that can scroll stays with that console
-    void test_aWheelOnALabelOverNothingToScrollScrollsTheBoxHoldingIt()
+    void test_aWheelOnALabelInAScrollBoxGoesToTheBoxOnlyWhenTheConsoleCannotUseIt()
     {
         QFETCH(int, lines);
         QFETCH(bool, scrollingEnabled);
@@ -1035,7 +1035,7 @@ private slots:
         qApp->processEvents();
 
         QCOMPARE(pBar->value() != 200, boxScrolls);
-        QVERIFY2(pMini->mLowerPane->isHidden(), "the console under the label split although it could not scroll");
+        QVERIFY2(pMini->mLowerPane->isHidden(), "the console under the label is left split after the turn");
     }
 };
 

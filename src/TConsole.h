@@ -131,8 +131,7 @@ public:
     void setCmdVisible(bool);
     int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
-    // Whether a wheel turn that way is the console's: never with scrolling disabled; always while scrolled back, so it
-    // keeps the wheel until back at its bottom; otherwise only up, with lines above the screen. False lets it go on to the parent
+    // Whether a wheel turn that way is the console's; false lets it go on to the parent
     bool usesWheel(bool up);
     // Return whether usesWheel() held before the scroll; scrollUp() does nothing when it did not
     bool scrollDown(int lines);
