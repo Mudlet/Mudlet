@@ -8566,7 +8566,7 @@ describe("Tests setMapMenuPriority and getMapMenuPriority", function()
     assert.error_matches(function() setMapMenuPriority("specPriorityEvent", 2^40) end, "setMapMenuPriority: integer over/under-flow in argument #2", nil, true)
   end)
 
-  it("should refuse NaN and infinite priorities, as integer arguments everywhere do", function()
+  it("should refuse NaN, infinite and out-of-int-range priorities, and truncate fractions at the boundaries", function()
     addMapEvent("specPriorityEvent", "specPriorityEvent", "", "Spec priority event")
     for _, value in ipairs({0/0, math.huge, -math.huge, 2^31, -2^31 - 1}) do
       assert.error_matches(function() setMapMenuPriority("specPriorityEvent", value) end, "setMapMenuPriority: integer over/under-flow in argument #2", nil, true)
