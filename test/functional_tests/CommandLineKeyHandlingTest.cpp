@@ -974,7 +974,8 @@ private slots:
         qApp->processEvents();
 
         QVERIFY(pMain->toPlainText().size() > 600);
-        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+        const int completedHeight = pLayer->maximumHeight();
+        QVERIFY2(completedHeight > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(completedHeight).arg(oneRow)));
     }
 
     // Escape leaves completion mode, and selects the line so the next thing
