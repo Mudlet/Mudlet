@@ -176,7 +176,7 @@
 					<colorTriggerFgColor>#000000</colorTriggerFgColor>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
-						<string>^(?:You gossip|\w[\w'-]* gossips)[^,:]{0,20}(?::|,?\s+['"]|,['"])</string>
+						<string>^(?:You gossip|\w[\w'-]* gossips)[^,:]{0,20}(?::|,\s*['"]|\s+['"])</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
@@ -884,7 +884,7 @@ local chatPatterns = {
   { regex = [=[^You tell the (?:group|formation)\b]=] },
   { regex = [=[^\w[\w'-]* whispers to you\b[^,:]{0,30}(?::|,?\s*['"])]=] },
   { regex = [=[^\w[\w'-]* tells the (?:group|formation)\b]=] },
-  { regex = [=[^(?:You gossip|\w[\w'-]* gossips)[^,:]{0,20}(?::|,?\s+['"]|,['"])]=] },
+  { regex = [=[^(?:You gossip|\w[\w'-]* gossips)[^,:]{0,20}(?::|,\s*['"]|\s+['"])]=] },
   { regex = [=[^\w[\w'-]* (?:says|asks|exclaims)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^You (?:say|ask|exclaim)[^,:]{0,20},?\s*['"]]=] },
   { regex = [=[^\w[\w'-]* (?:yells|shouts)[^,:]{0,20},?\s*['"]]=] },
