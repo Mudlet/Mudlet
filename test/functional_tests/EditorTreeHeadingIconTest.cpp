@@ -31,7 +31,6 @@
 #include <QTreeWidget>
 #include <QScopeGuard>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "EditorCommand.h"
 #include "Host.h"
@@ -43,8 +42,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorTreeHeadingIconTest : public QObject
 {
@@ -97,15 +94,15 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1000, 800);
         // The variables tree and its heading row are built only when first shown
         mpEditor->slot_showVariables();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor->slot_showTriggers();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         for (const auto& heading : headings()) {
             QVERIFY2(heading.second.first != nullptr, qPrintable(qsl("The %1 tree has no heading row to read").arg(heading.first)));
@@ -152,7 +149,7 @@ private slots:
         movedPalette.setColor(QPalette::Window, savedPalette.color(QPalette::Window).lightness() < 128 ? QColor(0xec, 0xec, 0xec) : QColor(0x2c, 0x2c, 0x2e));
         movedPalette.setColor(QPalette::WindowText, savedPalette.color(QPalette::Window).lightness() < 128 ? QColor(Qt::black) : QColor(Qt::white));
         QApplication::setPalette(movedPalette);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         const QImage after = TestPixels::drawnAt(mpEditor->mpTriggerBaseItem->icon(0), scmComparisonSize);
         qInfo().noquote() << qsl("  the Triggers heading was inked %1 and is now %2").arg(TestPixels::inkOf(before), TestPixels::inkOf(after));
@@ -167,7 +164,7 @@ private slots:
         }
 
         QApplication::setPalette(savedPalette);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         // Checked before the pair: a restyle that did nothing would leave the
         // two agreeing

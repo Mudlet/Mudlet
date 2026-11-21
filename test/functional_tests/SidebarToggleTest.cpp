@@ -39,7 +39,6 @@
 #include <QStyleFactory>
 #include <QStyleOptionViewItem>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -53,8 +52,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 // On a desktop the appearances' styles leave different text margins (2px a side
 // under the dark Fusion proxy, 4px under macOS's own), which decides elision;
@@ -131,7 +128,6 @@ private:
         // The breakpoint moves with the style, and a window left too narrow would
         // answer with a rail
         virtual void resizeWideUnderThisStyle() { resizeWide(); }
-        virtual void takeTo(enums::Appearance appearance) = 0;
 
         // The property the delegate and the sidebar's rules read, so it is what is
         // drawn rather than a copy of the intent
@@ -153,7 +149,6 @@ private:
         {
             pWindow->resize(size);
             QCoreApplication::sendPostedEvents();
-            QTest::qWait(50ms);
         }
     };
 
@@ -179,7 +174,6 @@ private:
         void resizeWide() override { resizeTo(mWideEnough); }
         void resizeNarrow() override { resizeTo(mTooNarrow); }
         void resizeWideUnderThisStyle() override { resizeTo(widthWithRoomForTheNames()); }
-        void takeTo(const enums::Appearance appearance) override { mudlet::self()->setAppearance(appearance); }
 
         int widthWithRoomForTheNames() const { return mpEditor->editorSidebarWidths().collapseBelow + 120; }
 
@@ -188,7 +182,7 @@ private:
         void open(Host* pHost)
         {
             mudlet::self()->slot_showEditorDialog();
-            QTest::qWait(100ms);
+            QCoreApplication::processEvents();
             mpEditor = HostDialogs::of(pHost).mpEditorDialog;
         }
     };
@@ -215,16 +209,14 @@ private:
 
         // The dialog's own control: the path that restyles every open window, not
         // only this one
-        void takeTo(const enums::Appearance appearance) override
+        void takeTo(const enums::Appearance appearance)
         {
             if (mpPreferences->comboBox_appearance->currentIndex() == appearance) {
                 mpPreferences->comboBox_appearance->setCurrentIndex(appearance == enums::Appearance::dark ? enums::Appearance::light : enums::Appearance::dark);
                 QCoreApplication::sendPostedEvents();
-                QTest::qWait(100ms);
             }
             mpPreferences->comboBox_appearance->setCurrentIndex(appearance);
             QCoreApplication::sendPostedEvents();
-            QTest::qWait(100ms);
         }
 
         void open()
@@ -282,7 +274,6 @@ private:
         QVERIFY2(sidebar.toggle()->isEnabled(), "the sidebar toggle is not pressable at this width");
         QTest::mouseClick(sidebar.toggle(), Qt::LeftButton);
         QCoreApplication::sendPostedEvents();
-        QTest::qWait(50ms);
     }
 
     // In bold, as a chosen row is drawn, so the same rect covers a name in either
@@ -394,7 +385,6 @@ private:
     {
         sidebar.list()->setCurrentRow(row);
         QCoreApplication::sendPostedEvents();
-        QTest::qWait(50ms);
     }
 
 private slots:
@@ -721,45 +711,48 @@ private slots:
                                     .arg(name, QString::number(paneBefore), QString::number(paneChosen), QString::number(rowBefore), QString::number(rowChosen))));
     }
 
-    void test_everyNameFitsItsRowUnderTheStyleDrawingThem_data() { addBothWindows(); }
-
+    // Both windows under each style, so each style is put on once
     void test_everyNameFitsItsRowUnderTheStyleDrawingThem()
     {
-        QFETCH(QString, window);
-        Sidebar& sidebar = sidebarNamed(window);
         const auto appearanceBefore = mudlet::self()->mAppearance;
         auto restore = qScopeGuard([appearanceBefore]() {
             // The loading flag makes setAppearance() rebuild its own style even
             // for the appearance already in force, replacing WiderTextMarginStyle
             mudlet::self()->setAppearance(appearanceBefore, true);
         });
-        if (sidebar.railShowing()) {
-            pressTheToggle(sidebar);
+        const QList<QPair<QString, Sidebar*>> sidebars{{qsl("editor"), &mEditor}, {qsl("settings"), &mSettings}};
+        for (const auto& [window, pSidebar] : sidebars) {
+            if (pSidebar->railShowing()) {
+                pressTheToggle(*pSidebar);
+            }
+            QVERIFY2(!pSidebar->railShowing(), qPrintable(qsl("%1: this case needs the names showing: %2").arg(window, pSidebar->state())));
         }
-        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("this case needs the names showing: %1").arg(sidebar.state())));
 
         QStringList squeezed;
-        const auto walkTheRows = [&sidebar, &squeezed](const QString& drawnBy) {
+        const auto walkTheRows = [&sidebars, &squeezed](const QString& drawnBy) {
             QCoreApplication::sendPostedEvents();
-            QTest::qWait(100ms);
-            sidebar.resizeWideUnderThisStyle();
-            // Reported, not asserted: QVERIFY2 in a lambda only returns from it,
-            // leaving the case passing on an empty list
-            if (sidebar.railShowing()) {
-                squeezed << qsl("%1: the sidebar gave its names up altogether (%2)").arg(drawnBy, sidebar.state());
-                return;
-            }
+            for (const auto& [window, pSidebar] : sidebars) {
+                pSidebar->resizeWideUnderThisStyle();
+                // Reported, not asserted: QVERIFY2 in a lambda only returns from it,
+                // leaving the case passing on an empty list
+                if (pSidebar->railShowing()) {
+                    squeezed << qsl("%1, %2: the sidebar gave its names up altogether (%3)").arg(window, drawnBy, pSidebar->state());
+                    continue;
+                }
 
-            QStringList measured;
-            const QStringList tooNarrow = namesTooNarrowForTheirRows(sidebar, measured);
-            qInfo().noquote() << qsl("  %1: %2").arg(drawnBy, measured.join(qsl("; ")));
-            for (const QString& complaint : tooNarrow) {
-                squeezed << qsl("%1: %2").arg(drawnBy, complaint);
+                QStringList measured;
+                const QStringList tooNarrow = namesTooNarrowForTheirRows(*pSidebar, measured);
+                qInfo().noquote() << qsl("  %1, %2: %3").arg(window, drawnBy, measured.join(qsl("; ")));
+                for (const QString& complaint : tooNarrow) {
+                    squeezed << qsl("%1, %2: %3").arg(window, drawnBy, complaint);
+                }
             }
         };
 
+        // Through the settings dialog's control, whose restyle reaches the editor
+        // too by the same setAppearance() the editor's own path calls
         for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
-            sidebar.takeTo(appearance.second);
+            mSettings.takeTo(appearance.second);
             walkTheRows(appearance.first);
         }
 

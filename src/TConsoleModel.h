@@ -259,16 +259,22 @@ struct TConsoleModel
 
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
     // line fragment, so what follows the last line feed is held until one arrives. Also tells
-    // mNotifier's textPrinted.
-    void mirrorToStdOut(const QString& text);
+    // mNotifier's textPrinted, as written in format, or in mFormatCurrent.
+    void mirrorToStdOut(const QString& text) { mirrorToStdOut(text, mFormatCurrent); }
+    void mirrorToStdOut(const QString& text, const TChar& format);
+    // For text copied from another buffer, whose links textPrinted then leaves out
+    void mirrorToStdOut(const QString& text, const TLineFormat& format);
     // mirrorToStdOut() without first writing out what triggers wrote and is still held
     void writeMirrorFragments(const QString& text);
     // Where printed text landed: a line already there (the one triggers are running on, one a command was
-    // echoed into, or wherever the cursor was moved), or the end.
-    enum class PrintedInto { committedLine, end };
+    // echoed into, or wherever the cursor was moved), the end of such a line, or the end.
+    enum class PrintedInto { committedLine, committedLineEnd, end };
     // Tells mNotifier's textPrinted of text, keeping the lines the view shows: a piece left open in one
-    // line is ended before text lands anywhere else.
-    void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
+    // line is ended before text lands anywhere else. format is what text was written in, the last of it for
+    // characters it has none for.
+    void notifyPrinted(const QString& text, PrintedInto into, const TChar& format, bool startsLine = false);
+    void notifyPrinted(const QString& text, PrintedInto into, TLineFormat format, bool startsLine = false);
+    PrintedInto triggerLineInto() const;
     // A line was committed or the buffer cleared, so no later text continues the open piece.
     void endPrintedLine() { mPrintedLineEnded = true; }
     // For a view told of a clear, which emptied its copy of the open piece's line too
@@ -293,6 +299,8 @@ struct TConsoleModel
         int linesCommitted = 0;
         // How many characters from start a replace took out
         int removed = 0;
+        // start is on an empty line the game sent, not one left for the next line to fill
+        bool ontoBlankLine = false;
     };
     MirrorMark markTriggerWriteForMirror(const QPoint& at) const;
     MirrorMark markTriggerAppendForMirror() const;
@@ -310,11 +318,17 @@ struct TConsoleModel
         // Ordered as held, so what a print's own append held is known from what was held before it
         quint64 serial = 0;
         int lastLine = -1;
+        // Set as it is taken: the console shows it on the end of the line that was last before it
+        bool continuesLine = false;
+        // It began on the end of a line that was already whole, with nothing shown below that line
+        bool ontoShownLine = false;
+        // An empty line of its own, kept while nothing is written onto it
+        bool blankLine = false;
     };
     // In the order the lines show them, each as a line of its own: the line feed it may open the line it
     // was written onto with, or close it with, dropped; read with the formatting the line has now
     QList<TriggerWrite> takeTriggerWritesForLineShown();
-    void holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end);
+    void holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end, bool ontoBlankLine = false);
     // An edit of line y at x, of removed characters taken out and inserted put in, that changed held writes:
     // they are read back as the line now shows them. False if it touched none, so it is held as one of its own.
     bool editHeldWritesForLineShown(int y, int x, int removed, int inserted);
@@ -460,7 +474,11 @@ struct TConsoleModel
     // report its scroll bar as gone.
     bool mScrollBarEnabled = true;
     QColor mBorderColor = QColorConstants::Black;
-    void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
+    void wrapLine(int line)
+    {
+        buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
+        emit mNotifier.contentEdited();
+    }
 
     // The name scripts know this console by. Only the main console, user
     // windows, miniconsoles and buffers can be addressed by scripts, so only
@@ -486,6 +504,8 @@ struct TConsoleModel
     bool mMirrorTriggerWriteEndedLine = false;
     // Lines committed, so a write that committed some (the OSC 8 documentation) is known
     int mLinesCommitted = 0;
+    // The trigger pass under way had lines committed inside it, so the receiver's last line is one of those
+    bool mPassCommittedLines = false;
     QList<TriggerWrite> mTriggerWritesForLineShown;
     quint64 mNextTriggerWriteSerial = 0;
     // Where each print under way started, innermost last
