@@ -475,10 +475,8 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-// The console's text pane sits beside the label rather than inside it, so what the label passes
-// on, offered only to its ancestors, never reaches the pane. This label, and any other stacked
-// under it that would pass the event on too, is left out of the hit test for a moment, so that
-// it finds what they cover.
+// The console's text pane is the label's sibling, not its ancestor, so an event the label passes on never reaches it;
+// the labels that would pass it on are made click-through just for the hit test, to find what they cover
 TTextEdit* TLabel::consolePaneUnder(const QPoint& globalPosition, bool (*passesOn)(const TLabel&))
 {
     QWidget* pParent = parentWidget();
