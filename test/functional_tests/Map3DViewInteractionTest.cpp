@@ -104,7 +104,7 @@ QPoint gReleaseAt;
 QMenu* gpPopup = nullptr;
 QPoint gPopupAt;
 
-int releaseInADialog(lua_State*)
+int releaseInADialog([[maybe_unused]] lua_State* L)
 {
     QDialog dialog;
     QTimer::singleShot(0, &dialog, [&dialog]() {
@@ -115,7 +115,7 @@ int releaseInADialog(lua_State*)
     return 0;
 }
 
-int openAPopup(lua_State*)
+int openAPopup([[maybe_unused]] lua_State* L)
 {
     gpPopup->popup(gPopupAt);
     return 0;

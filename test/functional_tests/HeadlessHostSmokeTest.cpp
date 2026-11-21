@@ -32,7 +32,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
-#include <QPromise>
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QSettings>
@@ -56,6 +55,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <memory>
 
@@ -12951,17 +12951,102 @@ headlessRecord("finished")
     // the profile's write must read as running
     void test_aWriteWaitingForAnEarlierOneReadsAsRunning()
     {
-        QPromise<bool> earlier;
-        earlier.start();
-        QFuture<bool> later = TBackgroundTask::runAfter({earlier.future()}, []() {
+        QSemaphore release;
+        // Shared, since the scope guard waits only for the earlier task, not later's queued continuation, which may
+        // still read this after a failed check returns
+        const auto earlierDone = std::make_shared<std::atomic_bool>(false);
+        const TBackgroundResult earlier = TBackgroundTask::run([&release, earlierDone]() {
+            release.acquire();
+            *earlierDone = true;
             return true;
         });
+        // A failed check returns early, which would leave earlier's pool thread blocked for good on a semaphore that has gone
+        const auto unblock = qScopeGuard([&release, &earlier]() {
+            release.release();
+            earlier.waitForFinished();
+        });
+        // Fails unless the earlier task had finished by the time this one ran, so it catches an ordering that only timing kept
+        const TBackgroundResult later = TBackgroundTask::runAfter({earlier}, [earlierDone]() {
+            return earlierDone->load();
+        });
+        // Long enough for a free pool thread to run it if nothing holds it back; the earlier one is still blocked, so a
+        // correctly queued write cannot have run or finished
+        QTest::qWait(100);
         QVERIFY2(later.isRunning(), "A write queued behind an earlier one did not read as running.");
         QVERIFY(!later.isFinished());
-        earlier.addResult(true);
-        earlier.finish();
+        release.release();
         QTRY_VERIFY_WITH_TIMEOUT(later.isFinished(), 5000);
-        QVERIFY(later.result());
+        QVERIFY2(later.succeeded(), "A write queued behind an earlier one ran before it finished.");
+
+        // Nor may inline running start one while an earlier one is still on a pool thread
+        QSemaphore releaseHeld;
+        const auto heldDone = std::make_shared<std::atomic_bool>(false);
+        const TBackgroundResult held = TBackgroundTask::run([&releaseHeld, heldDone]() {
+            releaseHeld.acquire();
+            *heldDone = true;
+            return true;
+        });
+        const auto unblockHeld = qScopeGuard([&releaseHeld, &held]() {
+            releaseHeld.release();
+            held.waitForFinished();
+        });
+        TBackgroundTask::setRunInline(true);
+        const auto restore = qScopeGuard([]() {
+            TBackgroundTask::setRunInline(false);
+        });
+        const TBackgroundResult queued = TBackgroundTask::runAfter({held}, [heldDone]() {
+            return heldDone->load();
+        });
+        QVERIFY2(queued.isRunning(), "With inline running set, a write queued behind one still on a pool thread ran inline before it.");
+        releaseHeld.release();
+        QTRY_VERIFY_WITH_TIMEOUT(queued.isFinished(), 5000);
+        QVERIFY2(queued.succeeded(), "With inline running set, a write queued behind one ran before it finished.");
+    }
+
+    // As in a browser build: a task run inline tells its context later, from the event loop, through a named child
+    // that a wait delivering only FutureCallOut events reaches, as it would a QFutureWatcher
+    void test_anInlineTaskTellsItsContextFromTheEventLoop()
+    {
+        TBackgroundTask::setRunInline(true);
+        const auto restore = qScopeGuard([]() {
+            TBackgroundTask::setRunInline(false);
+        });
+        const TBackgroundResult result = TBackgroundTask::run([]() {
+            return true;
+        });
+        QVERIFY(result.isFinished());
+        QVERIFY(!result.isRunning());
+        QVERIFY(result.succeeded());
+
+        QObject context;
+        bool told = false;
+        const QString notifierName = qsl("inlineNotifier");
+        result.whenFinished(&context, notifierName, [&told]() {
+            told = true;
+        });
+        QVERIFY2(!told, "An inline task's end was told during whenFinished().");
+        const auto notifiers = context.findChildren<QObject*>(notifierName, Qt::FindDirectChildrenOnly);
+        QCOMPARE(notifiers.size(), 1);
+        QCoreApplication::sendPostedEvents(notifiers.first(), QEvent::FutureCallOut);
+        QVERIFY2(told, "Sending the notifier its FutureCallOut did not tell the context.");
+        QTRY_VERIFY(context.findChildren<QObject*>(notifierName, Qt::FindDirectChildrenOnly).isEmpty());
+
+        bool toldGone = false;
+        {
+            QObject gone;
+            result.whenFinished(&gone, QString(), [&toldGone]() {
+                toldGone = true;
+            });
+        }
+        QCoreApplication::processEvents();
+        QVERIFY2(!toldGone, "A context that had gone was told.");
+
+        const TBackgroundResult failed = TBackgroundTask::runForReason([]() {
+            return qsl("no room");
+        });
+        QVERIFY(failed.isFinished());
+        QVERIFY(!failed.succeeded());
+        QCOMPARE(failed.reason(), qsl("no room"));
     }
 
     // As in a browser build, whose pool never runs a task: the save's writes, and an unzipAsync(), run as they are
@@ -13015,6 +13100,12 @@ headlessRecord("finished")
         QCOMPARE(saveCount(hostname), savesBefore + 1);
         QVERIFY(newestSaveIsComplete(hostname));
 
+        // A script's wait sends only the save's own posted events, and the inline writes' ends are among them
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QVERIFY(host->currentlySavingProfile());
+        host->waitForProfileSave(true);
+        QVERIFY2(!host->currentlySavingProfile(), "A wait for the save's own events did not deliver an inline write's end.");
+
         const QString extractTo = recordDir.filePath(qsl("extracted"));
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 registerAnonymousEventHandler("sysUnzipDone", function() headlessRecord("sysUnzipDone") end)
@@ -13034,7 +13125,7 @@ unzipAsync([[%1]], [[%2]])
         const QString autosave = MudletApp::getMudletPath(enums::profileMapPathFileName, hostname, qsl("autosave.dat"));
         QFile::remove(autosave);
         host->autoSaveMap();
-        QVERIFY2(host->mMapAutosaveFuture.isFinished(), "The map's autosave was left for a pool thread.");
+        QVERIFY2(host->mMapAutosave.isFinished(), "The map's autosave was left for a pool thread.");
         QVERIFY(QFileInfo(autosave).size() > 0);
         host->waitForMapAutosave();
         QVERIFY(!host->mpMap->isUnsaved());

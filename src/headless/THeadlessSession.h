@@ -89,6 +89,10 @@ public:
         // Mudlet.ini keeps them in the folder. Settled once a process, so a later start() may name it again, but
         // no other, nor leave it out for the GUI's. Never the GUI's folder.
         QString configDir;
+        // The app makes the connection to the game, for a platform with no sockets such as a browser: the profile
+        // asks for it with transportDialRequested, and never uses its own. Only for the session's profile, not
+        // ones its scripts open. See "The game connection" in docs/headless.md
+        bool supplyTransport = false;
     };
 
     // How the game asked for a run of a line to be shown. Reverse is not applied to the colours: the GUI
@@ -287,11 +291,12 @@ public:
         bool visited = false;
         // Chosen, in its selection group
         bool selected = false;
-        // How the GUI paints the link in its state now, which may differ from its runs as sent: each is empty where
-        // the run's own applies, and styles replaces only the run's bold, italic, underline, overline and strike-out
+        // How the GUI paints the link in its state now; each is empty where the run's own applies. styles turns on or
+        // off those of bold, italic, underline, overline and strike-out in stylesGiven, and the run keeps the rest.
         std::optional<QColor> foreground;
         std::optional<QColor> background;
         std::optional<TextStyles> styles;
+        TextStyles stylesGiven;
     };
     // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
     // open. A getter, so it may be called from any handler.
@@ -808,6 +813,16 @@ public:
     // other move, a release, an enter and a leave do nothing there.
     bool pointer(const QString& window, const WindowPointerEvent& event);
 
+    // With Options::supplyTransport, what the app's connection to the game reports: that it was made, each chunk the
+    // game sent, in order, and that it ended or could not be made, with why if known. Each names the connection
+    // transportDialRequested gave, and is dropped unless that is the profile's current one: a report about a
+    // connection the profile has since closed or dialled again in place of does nothing, however late it comes, nor
+    // does one about an earlier profile's, as no two dials in a process are given the same id.
+    // Callable from anywhere, a handler included, as the profile takes them up from the event loop.
+    void transportConnected(quint64 connection);
+    void transportReceived(quint64 connection, const QByteArray& data);
+    void transportClosed(quint64 connection, const QString& reason = QString());
+
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
     // profile loads, reconnects or runs a script, nested event loop or map operation, and during another
@@ -840,6 +855,9 @@ signals:
     void packageInstallFinished(const QString& path, THeadlessSession::PackageResult result, const QString& error);
     void shutdownFinished(bool succeeded, const QString& error);
     void saveFinished(bool succeeded, const QString& error);
+    // What Mudlet wrote into Options::configDir is complete: one for an event loop turn's writes, a save or a shutdown;
+    // a shutdown's comes before shutdown() returns or shutdownFinished. See "Keeping the profiles" in docs/headless.md
+    void configSaved();
     void profileLoaded(const QString& profile);
     // A line committed to the main console as the game's (what the game sends, feedTriggers(), Mudlet's own
     // OSC 8 examples), before triggers run on it; not what echo(), print() and Mudlet's messages add. A
@@ -1020,6 +1038,19 @@ signals:
     // What buttonBars() gives changed, by a script, a package or the profile's reset, for the app to read the bars
     // again. One for all the changes made before the event loop runs, from the event loop.
     void buttonsChanged(const QString& profile);
+    // With Options::supplyTransport, the profile wants a connection to host:port, as it starts, reconnects or a script
+    // connects: answer with transportConnected(), or transportClosed() if it cannot be made, passing connection, its
+    // id. tlsRequested is the profile's secure connection setting, for the app to honour as it can; the profile calls
+    // the connection open either way. Sent mid-write, as outputLine is, so a handler may call none of the session but
+    // the transport...() calls
+    void transportDialRequested(const QString& profile, quint64 connection, const QString& host, int port, bool tlsRequested);
+    // Bytes for the game on the connection last dialled, telnet negotiation and all, to be sent in order. Sent
+    // mid-write, as transportDialRequested
+    void transportWriteRequested(const QString& profile, const QByteArray& data);
+    // End the connection last dialled, or its dial: the profile has reported the end itself, so no transportClosed()
+    // is due, and one that comes is dropped. Sent mid-write, as transportDialRequested; not sent once the session has
+    // been deleted
+    void transportCloseRequested(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made, or was called off while connecting; from the event loop
@@ -1058,6 +1089,8 @@ signals:
 
 private:
     void tellLater(std::function<void()> tell);
+    void noteConfigWritten();
+    void tellConfigSaved();
     void beginStart(const Options&, std::function<void(StartResult)> done);
     std::optional<StartResult> prepareStart(Options&, std::optional<bool>& tls, bool& stalePasswords);
     StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password);
@@ -1167,6 +1200,7 @@ private:
     bool mRemovingStalePasswords = false;
     bool mInstallingPackage = false;
     bool mSaving = false;
+    bool mConfigSavedPending = false;
     bool mSecureConnectionOffered = false;
     // Bumped by each offer, to drop one still queued for the frontend once a later one is made
     unsigned int mSecureConnectionOffer = 0;
@@ -1221,6 +1255,9 @@ private:
     bool mLineShownLatched = false;
     class DebugSink;
     std::unique_ptr<DebugSink> mpDebugSink;
+    class Transport;
+    // A child, made by the first start() that supplies the connection
+    Transport* mpTransport = nullptr;
     // What consoleWrap() gave at profileLoaded, then each consoleWrapChanged; none before the load ends
     std::optional<ConsoleWrap> mDeliveredConsoleWrap;
     // The same for consoleForeground() and consoleBackground()

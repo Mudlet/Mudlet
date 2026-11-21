@@ -241,6 +241,78 @@ centerview(5)
         QCOMPARE(session.errorString(), qsl("No profile is open."));
     }
 
+    // centerview(roomID, false) shows another room as a pan would and leaves the player where they are; the view
+    // follows the player again once they move
+    void test_centerviewCanShowARoomWithoutMovingThePlayer()
+    {
+        const QString name = qsl("Headless Map Panned");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+openMapWidget()
+headlessWest = addAreaName("Headless West")
+headlessEast = addAreaName("Headless East")
+setCustomEnvColor(301, 200, 30, 30, 255)
+setCustomEnvColor(302, 30, 30, 200, 255)
+addRoom(5)
+setRoomArea(5, headlessWest)
+setRoomCoordinates(5, 3, 2, 0)
+setRoomEnv(5, 301)
+addRoom(6)
+setRoomArea(6, headlessEast)
+setRoomCoordinates(6, -4, 1, 0)
+setRoomEnv(6, 302)
+addRoom(7)
+setRoomArea(7, headlessWest)
+setRoomCoordinates(7, 5, 2, 0)
+setRoomEnv(7, 301)
+setMapZoom(10, headlessWest)
+setMapZoom(10, headlessEast)
+centerview(5)
+)lua")));
+        // A ring with a clear middle, so the room shows through the player's marker
+        TMap* pMap = session.host()->mpMap.data();
+        pMap->mPlayerRoomStyle = 1;
+        pMap->mPlayerRoomInnerDiameterPercentage = 70;
+        // paint() follows the player on the next pass of the event loop
+        QTest::qWait(50);
+        std::optional<QImage> image = rendered(session);
+        QVERIFY2(image, qPrintable(session.errorString()));
+        QVERIFY2(image->pixelColor(scmWidth / 2, scmHeight / 2) == westColour(), qPrintable(saved(*image, qsl("panned-start"))));
+
+        QVERIFY(session.runLua(qsl("headlessPanned = tostring(centerview(6, false))")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessPanned"), qsl("true"));
+        QTest::qWait(50);
+        QCOMPARE(pMap->mRoomIdHash.value(session.host()->getName()), 5);
+        // Drawn twice, as a pan has to survive the frame after it
+        for (const QString& frame : {qsl("panned"), qsl("panned-again")}) {
+            image = rendered(session);
+            QVERIFY2(image, qPrintable(session.errorString()));
+            QVERIFY2(image->pixelColor(scmWidth / 2, scmHeight / 2) == eastColour(), qPrintable(saved(*image, frame)));
+        }
+
+        QVERIFY(session.runLua(qsl("centerview(7)")));
+        QTest::qWait(50);
+        image = rendered(session);
+        QVERIFY2(image, qPrintable(session.errorString()));
+        QVERIFY2(image->pixelColor(scmWidth / 2, scmHeight / 2) == westColour(), qPrintable(saved(*image, qsl("followed"))));
+
+        // A move and then a pan before the next frame: the pan is the later request, so it is the one shown
+        QVERIFY(session.runLua(qsl("centerview(5) centerview(6, false)")));
+        QTest::qWait(50);
+        image = rendered(session);
+        QVERIFY2(image, qPrintable(session.errorString()));
+        QVERIFY2(image->pixelColor(scmWidth / 2, scmHeight / 2) == eastColour(), qPrintable(saved(*image, qsl("moved-then-panned"))));
+
+        // A view id beyond int's range is refused, not narrowed to 0, which would have moved the player
+        QVERIFY(session.runLua(qsl("headlessHugeView = tostring(pcall(centerview, 7, 4294967296))")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessHugeView"), qsl("false"));
+        QCOMPARE(pMap->mRoomIdHash.value(session.host()->getName()), 5);
+
+        QVERIFY(session.shutdown(false));
+    }
+
     // The GUI paints its map as the widget is shown, so an app hears it should draw when a script opens the map, shows
     // it again or replaces it with an embedded mapper, with nothing else changed
     void test_openingShowingOrReplacingTheMapAsksForADraw()
