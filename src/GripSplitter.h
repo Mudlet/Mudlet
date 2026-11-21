@@ -94,7 +94,7 @@ public:
     static constexpr int scmHandleThickness = 9;
 
     explicit GripSplitter(QWidget* pParent = nullptr);
-    GripSplitter(const Qt::Orientation orientation, QWidget* pParent = nullptr);
+    explicit GripSplitter(const Qt::Orientation orientation, QWidget* pParent = nullptr);
 
     // The handle above the widget at `index` exists only once that widget does,
     // so call this after the panes have been added.

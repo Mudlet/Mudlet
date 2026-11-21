@@ -20,6 +20,11 @@ The kernel completes the handshake from the listen backlog before accept() runs,
 so a connected client can be writing while ``received`` still holds the previous
 connection's bytes. accept() clears it and bumps ``connections`` in the same
 write, so a spec that notes the count before connecting can tell the two apart.
+
+Two variables, both hex, make it a game for a harness that wants one (the
+browser smoke test's --game-connection): ``MUDLET_TEST_TELNET_GREETING_HEX`` is
+sent to each connection as it is accepted, and once a connection has sent
+``MUDLET_TEST_TELNET_HANG_UP_HEX`` the server closes it.
 """
 
 import json
@@ -41,6 +46,8 @@ class TelnetServer:
         self.received = bytearray()
         self.connections = 0
         self.peer = None
+        self.greeting = bytes.fromhex(os.environ.get("MUDLET_TEST_TELNET_GREETING_HEX", ""))
+        self.hang_up_after = bytes.fromhex(os.environ.get("MUDLET_TEST_TELNET_HANG_UP_HEX", ""))
 
         self.selector = selectors.DefaultSelector()
         self.connection = None
@@ -82,6 +89,10 @@ class TelnetServer:
         self.connections += 1
         self.peer = "%s:%d" % address
         self.write_capture()
+        if self.greeting:
+            connection.setblocking(True)
+            connection.sendall(self.greeting)
+            connection.setblocking(False)
 
     def close_connection(self):
         if self.connection is None:
@@ -112,6 +123,8 @@ class TelnetServer:
         self.received.extend(chunk)
         del self.received[:-MAX_CAPTURE_BYTES]
         self.write_capture()
+        if self.hang_up_after and self.hang_up_after in self.received:
+            self.close_connection()
 
     def run(self):
         self.selector.register(self.listener, selectors.EVENT_READ)

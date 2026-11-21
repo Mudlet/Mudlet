@@ -30,7 +30,6 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -43,8 +42,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorKeyCaptureTest : public QObject
 {
@@ -82,7 +79,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
@@ -99,7 +96,7 @@ private slots:
 
         mpEditor->slot_showKeys();
         mpEditor->addKey(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpKeyItem = mpEditor->mpCurrentKeyItem;
         QVERIFY2(mpKeyItem != nullptr, "addKey() left no current key item");
     }
@@ -233,7 +230,6 @@ private slots:
 
         mpEditor->slot_showTimers();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QVERIFY2(!mpEditor->mIsGrabKey, "switching views left the editor listening for a keystroke");
         QCOMPARE(mpShortcutAction->shortcut(), mShortcut);
@@ -241,7 +237,6 @@ private slots:
         mpEditor->slot_showKeys();
         mpEditor->slot_keySelected(mpKeyItem);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     // TKey::match() never matches a folder. The row widget must hide with its
@@ -258,7 +253,6 @@ private slots:
 
         mpEditor->addKey(true);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
 
         QVERIFY2(!field()->isVisible(), "a key group is still offered a keystroke it can never match");
         QVERIFY2(!hint()->isVisible(), "a key group is still told how to set a keystroke");
@@ -279,7 +273,7 @@ private slots:
     {
         mpEditor->slot_showKeys();
         mpEditor->addKey(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QTreeWidgetItem* pItem = mpEditor->mpCurrentKeyItem;
         QVERIFY2(pItem != nullptr, "addKey() left no current key item");
         TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
@@ -301,7 +295,7 @@ private slots:
     {
         mpEditor->slot_showKeys();
         mpEditor->addKey(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QTreeWidgetItem* pItem = mpEditor->mpCurrentKeyItem;
         QVERIFY2(pItem != nullptr, "addKey() left no current key item");
         TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
