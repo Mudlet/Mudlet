@@ -650,11 +650,13 @@ describe("Tests the audit of a damaged binary map file", function()
                               "playerRoomOuterDiameterPercentage", "playerRoomInnerDiameterPercentage"}) do
           text = planted(text, ('\n    "%s": '):format(key), ('\n    "%s": -2147483649, "%sWas": '):format(key, key), 1)
         end
-        return planted(text, '\n    "mapSymbolFontFudgeFactor": ', '\n    "mapSymbolFontFudgeFactor": 1e300, "fudgeWas": ', 1)
+        return planted(text, '\n    "mapSymbolFontFudgeFactor": ',
+                       '\n    "mapSymbolFontFudgeFactor": 1e300, "fudgeWas": ', 1)
       end)
 
       assert.are.equal(area, getRoomArea(room))
       assert.are.equal(2, getConfig("mapSymbolFontScaling"))
+      assert.are.equal("0", savedHeaderValue("playerRoomStyle"))
       assert.are.equal("0", savedHeaderValue("playerRoomOuterDiameterPercentage"))
     end)
 
