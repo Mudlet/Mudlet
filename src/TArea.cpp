@@ -548,7 +548,7 @@ int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions
         span = qMax(span, qMax(qAbs(exitX - pR->x()), qAbs(exitY - pR->y())));
     }
     // Saturate: a span too large for an int cannot be skipped by any threshold either.
-    return int(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan));
+    return static_cast<int>(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan));
 }
 
 // Only whole-area changes come here, about once per map load; single-room changes re-file that room.
