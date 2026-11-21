@@ -38,12 +38,17 @@
  * while it holds the keyboard focus has to pass that focus to the main command
  * line.
  *
- * And the dock of a deleted user window, which has to leave the main window
- * straight away rather than when its deferred delete gets round to it.
+ * And the dock of a deleted user window, and a deleted label, which have to go
+ * from the screen straight away rather than when their deferred delete gets
+ * round to it.
+ *
+ * And the search box and buttons every TConsole builds, which only the main
+ * console lays out, so a deleted sub-console must free them itself.
  *
  * Bootstrap mirrors the other functional tests.
  */
 
+#include <QApplication>
 #include <QFileInfo>
 #include <QPointer>
 #include <QScopeGuard>
@@ -61,6 +66,7 @@
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "TLabel.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -184,6 +190,38 @@ private slots:
         runDeferredDeletes();
     }
 
+    // A sub-console builds its own search box and buttons too, with no layout to adopt them; any it
+    // leaves parentless stay listed by QApplication, so each create and delete would grow the heap
+    void test_deletedSubConsolesLeaveNoWidgetsBehind()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        const QString miniConsoleName = qsl("widgetCountMiniConsole");
+        const QString windowName = qsl("widgetCountUserWindow");
+        const QString bufferName = qsl("widgetCountBuffer");
+        auto createAndDelete = [&]() {
+            QVERIFY(console->createMiniConsole(QString(), miniConsoleName, 0, 0, 300, 100));
+            QVERIFY(mpHost->deleteMiniConsole(miniConsoleName).first);
+            QVERIFY(mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, qsl("l")).first);
+            QVERIFY(mpHost->deleteMiniConsole(windowName).first);
+            QVERIFY(mpHost->createBuffer(bufferName));
+            QVERIFY(mpHost->deleteMiniConsole(bufferName).first);
+            runDeferredDeletes();
+        };
+        // The first round may create widgets that are kept for reuse
+        createAndDelete();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const auto widgetsBefore = QApplication::allWidgets().size();
+
+        createAndDelete();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        QCOMPARE(QApplication::allWidgets().size(), widgetsBefore);
+    }
+
     // Route 2: createCommandLine() into a scroll box, then deleteScrollBox().
     void test_scrollBoxCommandLineDeregistersWhenScrollBoxDeleted()
     {
@@ -261,6 +299,47 @@ private slots:
 
         QVERIFY2(!stillDocked, "the deleted user window's dock was left in the main window's dock layout");
         QVERIFY2(hidden, "the deleted user window's dock was left showing");
+    }
+
+    // A nested event loop can hold the deferred delete back, and a deleted label left showing until then is still painted
+    void test_aDeletedLabelIsHiddenAtOnce()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        const QString name = qsl("hiddenAtOnceLabel");
+        auto [created, message] = mpHost->createLabel(qsl("main"), name, 0, 0, 100, 30, true, false);
+        QVERIFY2(created, qPrintable(message));
+        const QPointer<TLabel> label = console->labelWidget(name);
+        QVERIFY(label);
+        QVERIFY2(!label->isHidden(), "the label was never shown, so it being hidden proves nothing");
+
+        console->deleteLabel(name);
+        // Deliberately no event loop turn here - the label is still alive
+        QVERIFY(label);
+        const bool hidden = label->isHidden();
+        runDeferredDeletes();
+
+        QVERIFY2(hidden, "the deleted label was left showing until its deferred delete");
+        QVERIFY2(!label, "the deleted label was never destroyed");
+    }
+
+    // Hiding a label under the mouse sends it a leave, which a script never got from deleting one
+    void test_aDeletedLabelUnderTheMouseRunsNoLeaveCallback()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        const QString name = qsl("hoveredDeletedLabel");
+        auto [created, message] = mpHost->createLabel(qsl("main"), name, 0, 0, 100, 30, true, false);
+        QVERIFY2(created, qPrintable(message));
+        const QPointer<TLabel> label = console->labelWidget(name);
+        QVERIFY(label);
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl("hoveredLabelLeft = false; setLabelOnLeave('%1', function() hoveredLabelLeft = true end)").arg(name)));
+        QTest::mouseMove(label, label->rect().center());
+        QTRY_VERIFY2(label->underMouse(), "the label never came under the mouse, so no leave would be sent");
+
+        console->deleteLabel(name);
+        QVERIFY2(lua->compileAndExecuteScript(qsl("assert(hoveredLabelLeft == false)")), "deleting the label under the mouse ran its leave callback");
+        runDeferredDeletes();
+        QVERIFY(!label);
     }
 
     // deleteCommandLine() must not leave the entry behind either - it takes the
