@@ -2447,7 +2447,7 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
         const double rounded = std::round(number);
         // Converting NaN or a value outside int's range is undefined, and no button has such an ID
         if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
-            return {warnArgumentValue(L, func, qsl("no button item with ID %1 found").arg(number).toUtf8().constData()), pItem};
+            return {warnArgumentValue(L, func, qsl("no button item with ID %1 found").arg(number, 0, 'g', QLocale::FloatingPointShortest).toUtf8().constData()), pItem};
         }
         const int id = static_cast<int>(rounded);
         if (id < 0) {

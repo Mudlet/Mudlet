@@ -8950,22 +8950,29 @@ describe("Toolbar buttons", function()
       assert.are.equal("no button item with ID 999999 found", setErr)
     end)
 
-    it("both refuse an item ID that does not round to an int", function()
-      -- An unchecked cast saturates to INT_MAX on arm64, which would also start "no button item with ID "
-      local saturated = "no button item with ID 2147483647 found"
-      for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649, 2147483647.5, -2147483648.5}) do
+    it("both refuse an item ID that is NaN or rounds outside int's range", function()
+      -- Exact messages, as an unchecked cast gives INT_MAX or 0 on arm64 and INT_MIN on x86
+      local cases = {
+        {math.huge, "no button item with ID inf found"},
+        {-math.huge, "no button item with ID -inf found"},
+        {0 / 0, "no button item with ID nan found"},
+        {2147483648, "no button item with ID 2147483648 found"},
+        {-2147483649, "no button item with ID -2147483649 found"},
+        {2147483647.5, "no button item with ID 2147483647.5 found"},
+        {-2147483648.5, "no button item with ID -2147483648.5 found"},
+      }
+      for _, case in ipairs(cases) do
+        local id, message = case[1], case[2]
         local getOk, getErr = getButtonState(id)
         assert.is_nil(getOk, tostring(id))
-        assert.matches("^no button item with ID ", getErr)
-        assert.are_not.equal(saturated, getErr)
+        assert.are.equal(message, getErr)
         local setOk, setErr = setButtonState(id, true)
         assert.is_nil(setOk, tostring(id))
-        assert.matches("^no button item with ID ", setErr)
-        assert.are_not.equal(saturated, setErr)
+        assert.are.equal(message, setErr)
       end
     end)
 
-    it("both look up an item ID that rounds to the ends of int's range", function()
+    it("both take an item ID that rounds to an end of int's range as that int", function()
       local expected = {
         [2147483647] = "no button item with ID 2147483647 found",
         [2147483647.4] = "no button item with ID 2147483647 found",
