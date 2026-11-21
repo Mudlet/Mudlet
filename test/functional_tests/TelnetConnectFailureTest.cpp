@@ -675,8 +675,9 @@ private:
                 },
                 20s);
         if (countLines(host, qsl("Secure connection made")) == connectionsBefore) {
-            if (!ignoreAll) {
-                // A TLS backend can object to the stub's 100-year, CA-flagged certificate on more than its being self-signed
+            // macOS's TLS backend can object to the stub's 100-year, CA-flagged certificate on more than its being
+            // self-signed; OpenSSL raises only that, so anything more there is a regression rather than the stub
+            if (!ignoreAll && QSslSocket::activeBackend() != qsl("openssl")) {
                 QStringList otherErrors;
                 for (const auto& sslError : host->mTelnet.getSslErrors()) {
                     if (sslError.error() != QSslError::SelfSignedCertificate) {
