@@ -366,6 +366,16 @@ private:
         return nullptr;
     }
 
+    static QAction* actionNamed(const QMenu* menu, const QString& text)
+    {
+        for (QAction* action : menu->actions()) {
+            if (action->text() == text) {
+                return action;
+            }
+        }
+        return nullptr;
+    }
+
     static QStringList actionTexts(const QMenu* menu)
     {
         QStringList texts;
@@ -728,12 +738,7 @@ private slots:
         QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, pixelOfRoom(pModern, kOtherAreaRoomId));
         QMenu* menu = openMenu(pModern);
         QVERIFY2(menu, "right-clicking a room in the 3D view opened no menu");
-        QAction* moveToArea = nullptr;
-        for (QAction* action : menu->actions()) {
-            if (action->text() == qsl("Move to area...")) {
-                moveToArea = action;
-            }
-        }
+        QAction* moveToArea = actionNamed(menu, qsl("Move to area..."));
         QVERIFY2(moveToArea, qPrintable(actionTexts(menu).join(qsl(", "))));
         moveToArea->trigger();
         menu->close();
