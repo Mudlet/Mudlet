@@ -30,7 +30,6 @@
 #include <QKeySequence>
 #include <QToolBar>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -42,8 +41,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorKeyGrabShortcutsTest : public QObject
 {
@@ -89,7 +86,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
@@ -106,7 +103,7 @@ private slots:
 
         mpEditor->slot_showKeys();
         mpEditor->addKey(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY2(mpEditor->mpCurrentKeyItem != nullptr, "addKey() left no current key item");
     }
 

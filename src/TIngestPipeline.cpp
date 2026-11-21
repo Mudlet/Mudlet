@@ -45,6 +45,7 @@ constexpr std::chrono::microseconds kIdleSpin{300};
 
 bool TIngestPipeline::enabled()
 {
+#if QT_CONFIG(thread)
     static const bool on = [] {
         if (qEnvironmentVariableIsSet("MUDLET_INGEST_THREAD")) {
             const QByteArray value = qgetenv("MUDLET_INGEST_THREAD").toLower();
@@ -57,6 +58,9 @@ bool TIngestPipeline::enabled()
         return !settings || settings->value(qsl("ingestThread"), true).toBool();
     }();
     return on;
+#else
+    return false;
+#endif
 }
 
 bool TIngestPipeline::verifying()
@@ -76,11 +80,13 @@ TIngestPipeline::TIngestPipeline(Host* pHost)
 : mpTwin(std::make_unique<TBuffer>(pHost))
 , mWaitForWorker(qEnvironmentVariableIsSet("MUDLET_TEST_MODE"))
 {
+#if QT_CONFIG(thread)
     mpThread.reset(QThread::create([this] {
         workerLoop();
     }));
     mpThread->setObjectName(qsl("Ingest"));
     mpThread->start();
+#endif
 }
 
 TIngestPipeline::~TIngestPipeline()
@@ -89,12 +95,14 @@ TIngestPipeline::~TIngestPipeline()
     mStop.store(true, std::memory_order_relaxed);
     mEpoch.fetch_add(1);
     mEpoch.notify_one();
-    mpThread->wait();
+    if (mpThread) {
+        mpThread->wait();
+    }
 }
 
 TIngestJob* TIngestPipeline::begin(const TBuffer& source, const std::string& unit, const size_t decodableLength, const QVector<QChar>& lookupTable)
 {
-    if (!mpThread->isRunning()) {
+    if (!mpThread || !mpThread->isRunning()) {
         return nullptr;
     }
     TIngestJob& job = mJob;

@@ -124,7 +124,7 @@ modules:
     buildsystem: simple
     build-commands:
       - luarocks --tree=$FLATPAK_DEST build --deps-mode=none luafilesystem-1.9.0-1.src.rock
-      - luarocks --tree=$FLATPAK_DEST build --deps-mode=none luautf8-0.2.1-1.src.rock
+      - luarocks --tree=$FLATPAK_DEST build --deps-mode=none luautf8-0.3.0-1.src.rock
       - luarocks --tree=$FLATPAK_DEST build --deps-mode=none lpeg-1.1.0-2.src.rock
       - luarocks --tree=$FLATPAK_DEST build --deps-mode=none lua-zip-0.2-0.src.rock ZIP_DIR=$FLATPAK_DEST
       # Assigned first, as a failed command substitution inside the luarocks arguments would pass an empty path
@@ -141,8 +141,8 @@ modules:
         url: https://luarocks.org/luafilesystem-1.9.0-1.src.rock
         sha256: 3de68d619f6ad95a27f4728814375447d921305194b7050dee6199057c31282f
       - type: file
-        url: https://luarocks.org/luautf8-0.2.1-1.src.rock
-        sha256: 70c1590a6c2cfca417755b0bc79207bdfd0b469f854bfcc4e2cc5a39b5e3e3b6
+        url: https://luarocks.org/luautf8-0.3.0-1.src.rock
+        sha256: 2d7f5d8e4200c7c1557272868c4f8237a6e7cf53bd79197a73097bb96e162de5
       - type: file
         url: https://luarocks.org/lpeg-1.1.0-2.src.rock
         sha256: 836d315b920a5cdd62e21786c6c9fad547c4faa131d5583ebca64f0b6595ee76
