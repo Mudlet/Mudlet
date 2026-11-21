@@ -78,8 +78,8 @@ private:
         }
     }
 
-    // Every export parents a watcher of its own to the map and deletes it once
-    // the save has reported back, so none left means the pool threads are done
+    // An export saving on the thread pool parents its own watcher to the map until
+    // the save reports back, so none left means those saves are done
     static bool exportsInFlight(const T2DMap* pMap) { return !pMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty(); }
 
     // Waits for the saves themselves rather than for the whole global thread
@@ -205,9 +205,9 @@ private slots:
         // The export hands the actual file write to a background task
         QImage exportedImage;
         QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
-        // The file lands inside QImage::save(), before the task reports back,
-        // and the watcher is only deleted once it has - so this is what says the
-        // pool thread has let go of the widget the fixture is about to delete
+        // The file lands inside QImage::save(), before the task reports back, and
+        // the watcher is only deleted once it has - so wait for that too, or a later
+        // test's exportsInFlight() would see this export's watcher as its own
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
 
         // Both halves of the outline - the stub's and the arrowhead's - are
@@ -382,20 +382,21 @@ private slots:
         // have landed by the time the export returns
         auto* pool = QThreadPool::globalInstance();
         const int threads = pool->maxThreadCount();
-        QSemaphore held;
-        QSemaphore release;
+        // Shared, because a blocker still queued when the test gives up runs after the test returns
+        const auto held = std::make_shared<QSemaphore>();
+        const auto release = std::make_shared<QSemaphore>();
         for (int i = 0; i < threads; ++i) {
-            pool->start([&held, &release]() {
-                held.release();
-                release.acquire();
+            pool->start([held, release]() {
+                held->release();
+                release->acquire();
             });
         }
-        const auto freePool = qScopeGuard([&release, threads, pool]() {
+        const auto freePool = qScopeGuard([release, threads, pool]() {
             TBackgroundTask::setRunInline(false);
-            release.release(threads);
+            release->release(threads);
             pool->waitForDone(10000);
         });
-        QVERIFY(held.tryAcquire(threads, 10000));
+        QVERIFY(held->tryAcquire(threads, 10000));
         TBackgroundTask::setRunInline(true);
 
         const QString exportDir = qsl("%1/exports-inline").arg(mConfigDir.path());
