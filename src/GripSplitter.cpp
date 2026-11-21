@@ -252,8 +252,9 @@ void GripSplitterHandle::paintSeam(QPainter& painter, const ThemeTokens& tokens)
     painter.fillRect(QRect(middle - (thickness - scmSeamThickness) / 2, 0, thickness, height()), seamColor);
 }
 
-void GripSplitterHandle::paintEvent(QPaintEvent*)
+void GripSplitterHandle::paintEvent(QPaintEvent* event)
 {
+    Q_UNUSED(event)
     const ThemeTokens tokens = themeTokens();
 
     QPainter painter(this);

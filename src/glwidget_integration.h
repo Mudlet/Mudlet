@@ -28,6 +28,8 @@ class Host;
 class QWidget;
 
 namespace GLWidgetFactory {
+// Before a 3D view is made in parent, as Qt sets up the window's composing as the view arrives
+void matchWindowTo3DView(QWidget* parent, bool modern);
 QOpenGLWidget* createGLWidget(TMap* pMap, Host* pHost, QWidget* parent = nullptr);
 bool isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost);
 QString getWidgetTypeName(QOpenGLWidget* widget);
