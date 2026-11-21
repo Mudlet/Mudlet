@@ -83,10 +83,10 @@ cmake_language(DEFER CALL add_luarocks_paths_to_tests)
 # On Linux the lever is XDG_CONFIG_HOME. macOS never reads it: AppConfigLocation there is
 # NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask) plus
 # "/Preferences" and the application name, so the lever is CFFIXED_USER_HOME, the
-# home directory override CoreFoundation resolves that call against. It has to
-# arrive from here rather than from the test, because a test process cannot move it
-# once Foundation has answered - which is why the per-test qputenv() in
-# initTestCase() covers Linux only, and why HomeUntouchedTest checks this redirect
+# home directory override CoreFoundation resolves that call against. It has to be
+# set before Foundation first answers - here, or by a grouped binary's main()
+# (functional_tests/GroupedTestMain.cpp) run by hand - and not by the test, which
+# is why the per-test qputenv() in initTestCase() covers Linux only, and why HomeUntouchedTest checks this redirect
 # rather than trusting it (test/ci/home-untouched-test.sh). Windows has no such
 # override - SHGetKnownFolderPath reads no environment - so it stays uncovered.
 #
@@ -266,6 +266,17 @@ add_executable(IrcMessageFormatterTest
 )
 target_include_directories(IrcMessageFormatterTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(IrcMessageFormatterTest PRIVATE Qt6::Test communi)
+# Compiled here at build time: translations/ only runs lrelease when CMake configures,
+# so its copy goes stale after an edit to the .ts
+find_package(Qt6LinguistTools 6.8.2 REQUIRED)
+set(IRC_TEST_EN_US_QM "${CMAKE_CURRENT_BINARY_DIR}/mudlet_en_US.qm")
+add_custom_command(
+    OUTPUT ${IRC_TEST_EN_US_QM}
+    COMMAND Qt6::lrelease -silent ${CMAKE_SOURCE_DIR}/translations/translated/mudlet_en_US.ts -qm ${IRC_TEST_EN_US_QM}
+    DEPENDS ${CMAKE_SOURCE_DIR}/translations/translated/mudlet_en_US.ts
+)
+target_sources(IrcMessageFormatterTest PRIVATE ${IRC_TEST_EN_US_QM})
+target_compile_definitions(IrcMessageFormatterTest PRIVATE MUDLET_EN_US_QM="${IRC_TEST_EN_US_QM}")
 add_test(NAME IrcMessageFormatterTest COMMAND $<TARGET_FILE:IrcMessageFormatterTest>)
 set_tests_properties(IrcMessageFormatterTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"

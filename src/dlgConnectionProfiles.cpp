@@ -308,6 +308,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setObjectName(qsl("connectButton"));
+    connect_button->setProperty(uiDesign::scmProp_primaryButton, true);
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
     offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
     offline_button->setObjectName(qsl("offlineButton"));
@@ -574,12 +575,7 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
 
     informationArea->setStyleSheet(uiDesign::inputStyleSheet(tokens, qsl("#informationArea")) + uiDesign::scrollBarStyleSheet(qsl("#informationArea QPlainTextEdit"), tokens, tokens.field));
 
-    const QString buttonSheet = uiDesign::buttonStyleSheet(tokens)
-                                // :enabled, or a Connect the validator switched off would stay lit
-                                + qsl("QPushButton:default:enabled { background-color: %1; color: %2; border: %3px solid transparent; }"
-                                      "QPushButton:default:enabled:hover { background-color: %4; }"
-                                      "QPushButton:default:enabled:focus { border: %3px solid %5; }")
-                                          .arg(tokens.accentSoft, tokens.accentText.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.hoverSoft, tokens.accent.name());
+    const QString buttonSheet = uiDesign::buttonStyleSheet(tokens);
     // The Copy menu is parented under this row, so the row's sheet reaches it
     profileAdminArea->setStyleSheet(buttonSheet + uiDesign::menuStyleSheet(tokens));
     widget_bottom->setStyleSheet(buttonSheet);
@@ -877,6 +873,10 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 
     const QString profileName = pItem->data(csmNameRole).toString();
+    // An open profile read this when it loaded, and would otherwise sign in with the old password until reopened
+    if (Host* pHost = HostManager::self()->getHost(profileName)) {
+        pHost->setPass(pass);
+    }
 
     if (MudletApp::storingPasswordsSecurely()) {
         if (pass.trimmed().isEmpty()) {
@@ -2297,10 +2297,8 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
     const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
 
     QMenu menu;
-    if (hasCustomIcon(profileName)) {
-        //: Reset the custom picture for this profile in the connection dialog and show the default one instead
-        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
-    } else {
+    const bool customIconSet = hasCustomIcon(profileName);
+    if (!customIconSet) {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
                        //: Set a custom picture to show for the profile in the connection dialog
                        tr("Set custom icon"),
@@ -2311,6 +2309,10 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
                        tr("Set custom color"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
+    }
+    if (customIconSet || getCustomColor(profileName)) {
+        //: Reset the custom picture or color for this profile in the connection dialog and show the default one instead
+        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
     }
 
     // Built per call, out of the style pass's reach
@@ -2379,6 +2381,11 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
     const bool success = MudletApp::resetProfileIcon(profileName).first;
     if (!success) {
         return;
+    }
+    const QString profileColorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
+    if (QFileInfo::exists(profileColorPath) && !QFile::remove(profileColorPath)) {
+        // no return: the picture is already gone, so the list still has to be redrawn
+        qWarning() << "dlgConnectionProfiles::slot_resetCustomIcon: couldn't remove custom color file" << profileColorPath;
     }
 
     auto currentRow = listWidget_profiles->currentRow();
@@ -3180,6 +3187,8 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     bool iconLoaded = true;
     if (hasCustomIcon(mudServer)) {
         iconLoaded = setCustomIcon(mudServer, pItem);
+    } else if (const auto customColor = getCustomColor(mudServer)) {
+        pItem->setIcon(customIcon(mudServer, customColor));
     } else if (!iconFileName.isEmpty()) {
         if (const QPixmap pixmap(iconFileName); pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";

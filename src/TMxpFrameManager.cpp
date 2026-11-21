@@ -65,7 +65,9 @@ TMxpFrameManager::TMxpFrameManager(Host* host)
 
 TMxpFrameManager::~TMxpFrameManager()
 {
-    // Clean up all frames properly (children before parents, clear destinations, etc.)
+    // The Host members declared after this one are already gone, so closing the frames must lay nothing out and
+    // raise no event; ~Host() has dropped the frontend's frames
+    mpHost = nullptr;
     resetAllFrames();
 }
 

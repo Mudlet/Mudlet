@@ -85,9 +85,20 @@ private slots:
         QCOMPARE(MudletReplay::self()->speed(), 1);
         QAction* pFaster = mudlet::self()->findChild<QAction*>(qsl("replay_speed_up_action"));
         QVERIFY2(pFaster, "the replay toolbar carries no Faster button");
+        QAction* pSlower = mudlet::self()->findChild<QAction*>(qsl("replay_speed_down_action"));
+        QVERIFY2(pSlower, "the replay toolbar carries no Slower button");
+        // A replay starts at the slowest speed, so Slower has nothing to do yet
+        QVERIFY(!pSlower->isEnabled());
+        QVERIFY(pFaster->isEnabled());
+        // Headless sessions call speedDown() with no button in the way, and a
+        // zero speed would divide the replay chunk timer by zero
+        MudletReplay::self()->speedDown();
+        QCOMPARE(MudletReplay::self()->speed(), 1);
+        QVERIFY(!pSlower->isEnabled());
 
         pFaster->trigger();
         QCOMPARE(MudletReplay::self()->speed(), 2);
+        QVERIFY(pSlower->isEnabled());
 
         // far more clicks than the cap needs
         for (int click = 0; click < 20; ++click) {
@@ -95,6 +106,15 @@ private slots:
         }
 
         QCOMPARE(MudletReplay::self()->speed(), 1024);
+        QVERIFY(!pFaster->isEnabled());
+        QVERIFY(pSlower->isEnabled());
+        // The disabled button no longer reaches the clamp, so check it directly
+        MudletReplay::self()->speedUp();
+        QCOMPARE(MudletReplay::self()->speed(), 1024);
+
+        pSlower->trigger();
+        QCOMPARE(MudletReplay::self()->speed(), 512);
+        QVERIFY(pFaster->isEnabled());
     }
 };
 
