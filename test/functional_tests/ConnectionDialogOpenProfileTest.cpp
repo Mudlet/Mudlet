@@ -255,9 +255,7 @@ private slots:
         QCOMPARE(pHost->mTelnet.mAutoReconnect, wasReconnecting);
 
         // Unticking it is how a player stops a game that is down from being retried
-        if (!pHost->mTelnet.mAutoReconnect) {
-            dialog()->auto_reconnect->click();
-        }
+        dialog()->auto_reconnect->setChecked(true);
         pHost->mTelnet.mTimerFailedConnectionRetry->start(1h);
         dialog()->auto_reconnect->click();
         QVERIFY(!pHost->mTelnet.mAutoReconnect);
