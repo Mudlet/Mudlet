@@ -1250,6 +1250,80 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(fixtureBody, readFile(downloaded))
   end)
 
+  describe("media download events take the shape of downloadFile's", function()
+    -- Every argument of each event for a file whose path contains name, packed so a trailing nil still counts
+    local function captureFor(eventName, name)
+      local captured = {}
+      local handler = registerAnonymousEventHandler(eventName, function(...)
+        local args = {n = select("#", ...), ...}
+        if contains(tostring(args[eventName == "sysDownloadDone" and 2 or 3]), name) then
+          captured[#captured + 1] = args
+        end
+      end)
+      onCleanup(function() killAnonymousEventHandler(handler) end)
+      return captured
+    end
+
+    it("sysDownloadDone carries file, bytes, response and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local downloaded = mediaDirectory .. "/" .. fixtureFile
+      lfs.mkdir(mediaDirectory)
+      preserveMediaDirectory()
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
+
+      local done = captureFor("sysDownloadDone", fixtureFile)
+      assert.is_true(loadSoundFile({name = fixtureFile, url = fixtureUrl()}))
+      waitForCount("sysDownloadDone", done, 1)
+
+      assert.equals(1, #done)
+      local args = done[1]
+      assert.equals(5, args.n)
+      assert.equals(#fixtureBody, args[3])
+      assert.equals("table", type(args[4]))
+      assert.equals(200, args[4].status)
+      assert.equals("1", args[4].cookies["mudlet-fixture"])
+      assert.is_nil(args[5])
+    end)
+
+    it("a failed download carries message, file, url, response, body and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local name = "busted-media-missing.wav"
+      local errors = captureFor("sysDownloadError", name)
+      -- /missing is not below /media, so the fixture server answers 404
+      assert.is_true(loadSoundFile({name = name, url = fixtureUrl() .. "/missing"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals(fixtureUrl() .. "/missing/" .. name, args[4])
+      assert.equals("table", type(args[5]))
+      assert.equals(404, args[5].status)
+      assert.equals("string", type(args[6]))
+      assert.is_nil(args[7])
+    end)
+
+    it("a refused url carries message, file, url and nil for the response, body and request id", function()
+      local name = "busted-media-refused-shape.wav"
+      local errors = captureFor("sysDownloadError", name)
+      assert.is_true(loadSoundFile({name = name, url = "ftp://example.invalid/sounds"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals("ftp://example.invalid/sounds/" .. name, args[4])
+      assert.is_nil(args[5])
+      assert.is_nil(args[6])
+      assert.is_nil(args[7])
+    end)
+  end)
+
   it("a preload from a url keeps the file without playing it", function()
     if noFixtureServer() then
       return
