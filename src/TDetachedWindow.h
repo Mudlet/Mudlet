@@ -181,8 +181,6 @@ private slots:
     void slot_mudletDiscord();
 
     // Window menu activation slots
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
 

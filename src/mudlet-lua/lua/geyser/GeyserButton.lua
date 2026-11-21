@@ -14,8 +14,8 @@
 -- @field downMsg The text to put on the button in the 'down' state.
 -- @field tooltip The text to show when the button is hovered over. For two state buttons will be used for the 'up' tooltip
 -- @field downTooltip The text to show when the button is hovered over while in the 'down' state.
--- @field downCommand The command to send when the two state button is clicked while in the 'down' state. 'downFunction' is also valid and optional function to run when the two state button is clicked while in the 'down' state.
--- @field clickCommand The command to send when the button is clicked. For two state buttons, used when clicking in the 'up' state. Will be skipped if 'clickFunction' is defined.  'clickFunction' is also valid and optional function to run when button clicked. For two state buttons, used when clicking in the 'up' state. If defined takes precedence over clickCommand.
+-- @field downCommand The command to send when the two state button is clicked while in the 'down' state. 'downFunction' is also valid and optional function, or Lua code as a string, to run when the two state button is clicked while in the 'down' state.
+-- @field clickCommand The command to send when the button is clicked. For two state buttons, used when clicking in the 'up' state. Will be skipped if 'clickFunction' is defined.  'clickFunction' is also valid and optional function, or Lua code as a string, to run when button clicked. For two state buttons, used when clicking in the 'up' state. If defined takes precedence over clickCommand.
 -- @field twoState If true, the button will be treated as a two state button, with 'up' and 'down' states.
 -- @field state 'up' or 'down' depending on button state for two state buttons. Will always be 'up' if a single state button.
 -- @field toolTipDuration The amount of time for the tooltip to show. Used for both 'up' and 'down' states.
@@ -54,6 +54,20 @@ function Geyser.Button:new(cons, container)
     return nil, taken
   end
   setmetatable(me, self)
+  -- setClickFunction/setDownFunction compile Lua code given as a string; left
+  -- as a string, it would fail with "attempt to call" on every click.
+  -- Reported, not raised: scripts passing such code have always got a button back.
+  for _, field in ipairs({"clickFunction", "downFunction"}) do
+    local code = me[field]
+    if type(code) == "string" then
+      local func, err = loadstring(code)
+      if func then
+        me[field] = func
+      else
+        printError(f"Error while compiling Lua code from string for {field}: {err}", true, false)
+      end
+    end
+  end
   me:setClickCallback(function() me:press() end)
   -- an unusable state constraint would otherwise leave the button holding it
   -- and never painted, since setState returns before drawing anything

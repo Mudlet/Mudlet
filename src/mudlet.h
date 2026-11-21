@@ -133,6 +133,8 @@ public:
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // Set when a style was given with -style or QT_STYLE_OVERRIDE; the light appearance keeps it on macOS and Windows
+    inline static bool smStyleChosenByPlayer = false;
 
 
     void showEvent(QShowEvent*) override;
@@ -186,6 +188,7 @@ public:
     // The marker the main window carries, for any profile it holds
     QString mainWindowMicrophoneMarker() const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
+    bool multiView() const { return mMultiView; }
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
@@ -219,6 +222,10 @@ public:
     void closeComposer(QObject* composer) override;
     QString getOpenFileName(const QString& title, const QString& location) override;
     QString getExistingDirectory(const QString& title, const QString& location) override;
+    void getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void setClipboardText(const QString& text) override;
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
@@ -467,8 +474,6 @@ public slots:
     void slot_minimize();
     void slot_newMapWindow();
     void updateWindowMenu();
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
     void slot_replay();
@@ -509,6 +514,7 @@ public slots:
     void slot_showUiTour();
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
+    static void bringWindowToFront(QWidget* window);
     static void setWindowStaysOnTop(QWidget* window, const bool onTop);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);

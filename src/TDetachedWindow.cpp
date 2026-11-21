@@ -342,6 +342,12 @@ void TDetachedWindow::createMenus()
     mpMenuShowMapAction->setStatusTip(tr("Show or hide the game map."));
     connect(mpMenuShowMapAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMap);
     connect(toolboxMenu, &QMenu::aboutToShow, this, &TDetachedWindow::slot_updateShowMapActionText);
+    // The profile's setting can change from the main window or a script, so the checkmark is read when the menu opens
+    connect(toolboxMenu, &QMenu::aboutToShow, this, [this]() {
+        if (Host* pHost = HostManager::self() ? HostManager::self()->getHost(mCurrentProfileName) : nullptr) {
+            mpMenuCompactInputLineAction->setChecked(pHost->getCompactInputLine());
+        }
+    });
     toolboxMenu->addAction(mpMenuShowMapAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
@@ -349,6 +355,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Compact input line" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuCompactInputLineAction->setStatusTip(tr("Hide / show the search area and buttons at the bottom of the screen."));
     mpMenuCompactInputLineAction->setCheckable(true);
+    mpMenuCompactInputLineAction->setObjectName(qsl("menuCompactInputLine"));
     connect(mpMenuCompactInputLineAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleCompactInputLine);
     toolboxMenu->addAction(mpMenuCompactInputLineAction);
 
@@ -473,6 +480,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Multiview" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpMenuMultiViewAction->setStatusTip(tr("Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded."));
     mpMenuMultiViewAction->setCheckable(true);
+    mpMenuMultiViewAction->setObjectName(qsl("menuMultiView"));
     connect(mpMenuMultiViewAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMultiView);
     mpWindowMenu->addAction(mpMenuMultiViewAction);
 
@@ -1453,8 +1461,8 @@ void TDetachedWindow::updateWindowTitle()
         }
     } else {
         // Multiple profiles - show count and current
-        //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %1 is the number of profiles, %2 is the name of the profile currently shown.
-        title = tr("Mudlet (%1 profiles) - %2 (Detached)").arg(mProfileConsoleMap.size()).arg(mCurrentProfileName);
+        //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has several profiles opened in this window (or none, briefly, while it closes). %n is the number of profiles, never 1, and %1 is the name of the profile currently shown.
+        title = tr("Mudlet (%n profiles) - %1 (Detached)", nullptr, mProfileConsoleMap.size()).arg(mCurrentProfileName);
     }
 
     // Any profile this window holds, not only the one it is showing: a window
@@ -1815,6 +1823,9 @@ void TDetachedWindow::updateWindowMenu()
 
     // Disabled when hiding would cause lockout (menu bar also never shown)
     mpActionToggleToolBar->setEnabled(!(isToolBarVisible() && !canHideToolBar()));
+    if (mpMenuMultiViewAction) {
+        mpMenuMultiViewAction->setChecked(pMudlet->multiView());
+    }
 
     // Clean up existing window list actions
     for (QAction* action : std::as_const(mWindowListActions)) {
@@ -1903,46 +1914,6 @@ void TDetachedWindow::updateWindowMenu()
     }
 }
 
-void TDetachedWindow::slot_activateMainWindow()
-{
-    mudlet* mainWindow = mudlet::self();
-
-    if (mainWindow) {
-        mainWindow->raise();
-        mainWindow->activateWindow();
-        mainWindow->show(); // Ensure it's not minimized
-        updateWindowMenu(); // Refresh checkmarks
-    }
-}
-
-void TDetachedWindow::slot_activateDetachedWindow()
-{
-    QAction* action = qobject_cast<QAction*>(sender());
-
-    if (!action) {
-        return;
-    }
-
-    QString profileName = action->data().toString();
-    auto pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return;
-    }
-
-    const auto& detachedWindows = pMudlet->getDetachedWindows();
-
-    if (detachedWindows.contains(profileName)) {
-        TDetachedWindow* detachedWindow = detachedWindows[profileName];
-
-        if (detachedWindow) {
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
-            updateWindowMenu();     // Refresh checkmarks
-        }
-    }
-}
-
 void TDetachedWindow::slot_activateMainWindowProfile()
 {
     QAction* action = qobject_cast<QAction*>(sender());
@@ -1968,10 +1939,7 @@ void TDetachedWindow::slot_activateMainWindowProfile()
         }
 
         if (tabIndex >= 0) {
-            // Activate the main window first
-            mainWindow->raise();
-            mainWindow->activateWindow();
-            mainWindow->show(); // Ensure it's not minimized
+            mudlet::bringWindowToFront(mainWindow);
 
             // Switch to the specific tab
             mainWindow->mpTabBar->setCurrentIndex(tabIndex);
@@ -2004,10 +1972,7 @@ void TDetachedWindow::slot_activateDetachedWindowProfile()
 
     for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
-            // Activate the detached window
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
+            mudlet::bringWindowToFront(detachedWindow);
 
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);

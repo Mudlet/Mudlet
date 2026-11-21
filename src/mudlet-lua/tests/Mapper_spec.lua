@@ -3581,10 +3581,10 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     it("a component too large for an int hard-errors rather than wrapping", function()
-      -- getVerifiedInt() reads a Lua number as a 64 bit integer and refuses one
-      -- that will not fit an int, which is a separate refusal from the type
-      -- check above and from the 0-255 range check: without it the value would
-      -- be truncated into range and silently accepted.
+      -- getVerifiedInt() refuses a Lua number that will not fit an int, which is
+      -- a separate refusal from the type check above and from the 0-255 range
+      -- check: without it the value would be truncated into range and silently
+      -- accepted.
       local ok, err = pcall(function() setMapBackgroundColor(2 ^ 40, 0, 0) end)
       assert.is_false(ok)
       assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
@@ -3822,6 +3822,26 @@ describe("Tests mapper functions against a shared fixture", function()
       local info = getMapInfo()
       assert.is_nil(info["MapperSpecChurn"])
       assert.is_not_nil(info["MapperSpecChurn32"])
+    end)
+
+    it("runs a map info callback registered from a coroutine on the main Lua state", function()
+      local ranInCoroutine
+      local co = coroutine.create(function()
+        registerMapInfo("MapperSpecCoroutine", function()
+          ranInCoroutine = coroutine.running() ~= nil
+          return "coroutine"
+        end)
+        coroutine.yield()
+      end)
+      assert.is_true(coroutine.resume(co))
+      finally(function()
+        killMapInfo("MapperSpecCoroutine")
+        coroutine.resume(co)
+      end)
+      assert.is_true(enableMapInfo("MapperSpecCoroutine"))
+
+      assert.is_true(paintUntil(function() return ranInCoroutine ~= nil end), "the map info callback never ran")
+      assert.is_false(ranInCoroutine)
     end)
   end)
 
@@ -5028,6 +5048,19 @@ describe("Tests saveMap and loadMap", function()
   local notAMapXmlPath = getMudletHomeDir() .. "/mapper_spec_notamap.xml"
   local notXmlPath = getMudletHomeDir() .. "/mapper_spec_notxml.xml"
 
+  local function readFile(path)
+    local file = assert(io.open(path, "rb"))
+    local data = file:read("*a")
+    file:close()
+    return data
+  end
+
+  local function writeFile(path, data)
+    local file = assert(io.open(path, "wb"))
+    file:write(data)
+    file:close()
+  end
+
   -- saveMap() with no arguments writes a timestamped file of its own choosing,
   -- so the only way to clear up after it is to spot what appeared
   local function mapFiles()
@@ -5201,12 +5234,6 @@ describe("Tests saveMap and loadMap", function()
   it("saves a map larger than its write buffer whole", function()
     local path = mapDirectory .. "/mapper_spec_large.dat"
     finally(function() os.remove(path) end)
-    local function contents()
-      local file = assert(io.open(path, "rb"))
-      local data = file:read("*a")
-      file:close()
-      return data
-    end
     deleteMap()
     local area = addAreaName("MapperSpecLargeArea")
     local rooms = {}
@@ -5222,10 +5249,10 @@ describe("Tests saveMap and loadMap", function()
     setMapUserData("mapper spec big", big)
 
     assert.is_true(saveMap(path))
-    local saved = contents()
+    local saved = readFile(path)
     assert.is_true(#saved > 1024 * 1024)
     assert.is_true(saveMap(path))
-    assert.is_true(saved == contents(), "saving the same map twice wrote different files")
+    assert.is_true(saved == readFile(path), "saving the same map twice wrote different files")
 
     deleteMap()
     assert.is_true(loadMap(path))
@@ -5266,19 +5293,6 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(firstName, getRoomName(rooms[1]))
       assert.are.equal(area, getRoomArea(rooms[#rooms]))
       assert.are.equal("room number " .. #rooms, getRoomName(rooms[#rooms]))
-    end
-
-    local function readFile(path)
-      local file = assert(io.open(path, "rb"))
-      local data = file:read("*a")
-      file:close()
-      return data
-    end
-
-    local function writeFile(path, data)
-      local file = assert(io.open(path, "wb"))
-      file:write(data)
-      file:close()
     end
 
     -- The profile's own map files, and those of earlier specs, go aside for
@@ -5510,8 +5524,8 @@ describe("Tests saveMap and loadMap", function()
       assertKept(rooms, area, "Only In The Loaded Map")
     end)
 
-    -- A JSON export pumps the event loop as it goes, which runs timers - and
-    -- whatever they load - in the middle of it
+    -- The main window pumps the event loop as a JSON export goes, to repaint its
+    -- progress dialog, which runs timers - and whatever they load - in the middle of it
     local function loadDuringJsonExport(load)
       local exportPath = getMudletHomeDir() .. "/mapper_spec_export_under_load.json"
       local loadResult = "never ran"
@@ -5522,6 +5536,9 @@ describe("Tests saveMap and loadMap", function()
       -- An export that never pumped would leave the load to fire in a later spec
       killTimer(timer)
       os.remove(exportPath)
+      if loadResult == "never ran" then
+        pending("with no main window a JSON export runs no event loop, so nothing can load a map during it")
+      end
       return exported, message, loadResult
     end
 
@@ -5887,6 +5904,148 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
+  -- CI/wasm-headless-smoke.js checks the 32-bit browser build against the same
+  -- files; fixtures/maps/README.md says what they hold and how to remake them
+  describe("Tests the cross-platform map fixtures", function()
+    local fixtureDirectory = specDirectory .. "/fixtures/maps"
+    local fixturePath = fixtureDirectory .. "/cross-platform-map.dat"
+    local goldenPath = fixtureDirectory .. "/cross-platform-map.json"
+    local jsonPath = getMudletHomeDir() .. "/mapper_spec_cross_platform.json"
+
+    -- cross-platform-map-v<N>.dat is at a format newer than the default that this Mudlet can save
+    local newerVersions = {}
+    for entry in lfs.dir(fixtureDirectory) do
+      local version = entry:match("^cross%-platform%-map%-v(%d+)%.dat$")
+      if version then
+        newerVersions[#newerVersions + 1] = tonumber(version)
+      end
+    end
+    table.sort(newerVersions)
+
+    local normalised = dofile(fixtureDirectory .. "/normalise-map-json.lua")
+
+    local remake = "; if intended, remake the files as src/mudlet-lua/tests/fixtures/maps/README.md says"
+    local function itInEnglish(name, test)
+      it(name, function()
+        if mudlet.translations.interfacelanguage ~= "en_US" then
+          pending("the JSON holds the en_US names of the default and unnamed areas")
+          return
+        end
+        test()
+      end)
+    end
+
+    local function assertExportIsGolden(what, golden)
+      finally(function() os.remove(jsonPath) end)
+      assert.is_true(saveJsonMap(jsonPath))
+      local exported = normalised(readFile(jsonPath))
+      local nextGoldenLine = (readFile(golden) .. "\n"):gmatch("([^\n]*)\n")
+      local lineNumber = 0
+      for line in (exported .. "\n"):gmatch("([^\n]*)\n") do
+        lineNumber = lineNumber + 1
+        local goldenLine = nextGoldenLine()
+        if line ~= goldenLine then
+          error(string.format("the JSON export of %s differs from %s at line %d: %q where it has %q%s",
+                              what, golden, lineNumber, line, tostring(goldenLine), remake))
+        end
+      end
+      if nextGoldenLine() ~= nil then
+        error(string.format("the JSON export of %s ends at line %d, before %s does%s",
+                            what, lineNumber, golden, remake))
+      end
+    end
+
+    local function formatVersion(path)
+      -- QDataStream writes the leading int32 big-endian
+      local b1, b2, b3, b4 = readFile(path):byte(1, 4)
+      return ((b1 * 256 + b2) * 256 + b3) * 256 + b4
+    end
+
+    itInEnglish("loads to the JSON export it was committed with", function()
+      assert.is_true(loadMap(fixturePath))
+      assertExportIsGolden(fixturePath, goldenPath)
+    end)
+
+    itInEnglish("is at the format version this Mudlet saves by default, and loads back from that save", function()
+      assert.is_true(loadMap(fixturePath))
+      assert.is_true(saveMap(savePath))
+      assert.are.equal(formatVersion(savePath), formatVersion(fixturePath), "the default map format version changed" .. remake)
+
+      deleteMap()
+      assert.is_true(loadMap(savePath))
+      assertExportIsGolden("this Mudlet's save of " .. fixturePath, goldenPath)
+    end)
+
+    -- The routes the smoke test asks the browser build for, of each map it loads
+    local function assertFixtureRoutes(path)
+      assert.is_true(loadMap(path))
+      local function route(from, to)
+        local ok, weight = getPath(from, to)
+        return ok and table.concat(speedWalkDir, ",") .. " weighing " .. weight or "no route"
+      end
+      assert.are.equal("up,s,w weighing 3", route(4, 1))
+      -- 3's down exit is locked
+      assert.are.equal("no route", route(1, 4))
+      -- room 5 is locked
+      assert.are.equal("no route", route(4, 5))
+      assert.is_true(lockExit(3, "d", false))
+      assert.is_true(lockRoom(5, false))
+      -- across the weighted exit, the weighted room and the special exit
+      assert.are.equal("e,n,down,climb down the well weighing 12", route(1, 5))
+      -- locked past the start room, where findPath() leaves the lock to the graph
+      assert.is_true(lockSpecialExit(4, 5, "climb down the well", true))
+      assert.are.equal("no route", route(1, 5))
+      assert.is_true(lockSpecialExit(4, 5, "climb down the well", false))
+      -- 5's special exit is locked
+      assert.are.equal("no route", route(5, 4))
+      -- of two routes to 3, the cheaper, not the one with fewer steps
+      assert.is_true(setExit(1, 3, "ne"))
+      assert.is_true(setExitWeight(1, "ne", 5))
+      assert.are.equal("e,n weighing 4", route(1, 3))
+      assert.is_true(setExitWeight(1, "ne", 3))
+      assert.are.equal("ne weighing 3", route(1, 3))
+    end
+
+    it("gives the routes the smoke test asks the browser build for", function()
+      assertFixtureRoutes(fixturePath)
+    end)
+
+    for _, version in ipairs(newerVersions) do
+      local newerName = string.format("%s/cross-platform-map-v%d", fixtureDirectory, version)
+      local newerPath, newerGoldenPath = newerName .. ".dat", newerName .. ".json"
+      itInEnglish(string.format("loads cross-platform-map-v%d.dat to its JSON export, and back from a save at format %d",
+                                version, version), function()
+        assert.are.equal(version, formatVersion(newerPath), newerPath .. " is not at the format its name gives")
+        assert.is_true(loadMap(newerPath))
+        assertExportIsGolden(newerPath, newerGoldenPath)
+        assert.is_true(saveMap(savePath, version))
+
+        deleteMap()
+        assert.is_true(loadMap(savePath))
+        assertExportIsGolden("this Mudlet's save of " .. newerPath, newerGoldenPath)
+      end)
+
+      it(string.format("gives cross-platform-map-v%d.dat the routes the smoke test asks the browser build for",
+                       version), function()
+        assertFixtureRoutes(newerPath)
+      end)
+    end
+
+    it("covers the newest format version this Mudlet can save", function()
+      local newer = math.max(formatVersion(fixturePath), unpack(newerVersions)) + 1
+      assert.is_true(loadMap(fixturePath))
+      finally(function()
+        -- loading puts back the save version a save at another one keeps, and saving clears the unsaved flag a
+        -- refused save leaves, which puts a warning on the mapper for every spec that runs after this one
+        loadMap(fixturePath)
+        saveMap(savePath)
+        os.remove(savePath)
+      end)
+      assert.is_false(saveMap(savePath, newer), string.format("this Mudlet can save map format %d, newer than the "
+        .. "fixtures: add a fixture at that version as src/mudlet-lua/tests/fixtures/maps/README.md says", newer))
+    end)
+  end)
+
   -- QDataStream hands a list's length prefix straight to QList::reserve(), so
   -- one flipped byte in a binary map asked for gigabytes (#10689). The memory
   -- is never touched, so it never becomes resident: VmPeak is where it shows.
@@ -5919,15 +6078,11 @@ describe("Tests saveMap and loadMap", function()
       else
         assert.is_true(saveMap(savePath))
       end
-      local file = assert(io.open(savePath, "rb"))
-      local data = file:read("*a")
-      file:close()
+      local data = readFile(savePath)
       local at = data:find(marker, 1, true)
       assert.is_truthy(at, "the marker is not in the saved map")
       assert.is_nil(data:find(marker, at + 1, true), "the marker is in the saved map more than once")
-      file = assert(io.open(corruptPath, "wb"))
-      file:write(data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
-      file:close()
+      writeFile(corruptPath, data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
     end
 
     -- Loads the corrupt copy, asserting that VmPeak did not rise by anything
@@ -6132,6 +6287,33 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({4001}, getAllRoomEntrances(4002))
     end)
 
+    it("keeps the names of areas that share a name, told apart by a suffix", function()
+      local sharedPath = getMudletHomeDir() .. "/mapper_spec_shared_area_names.xml"
+      finally(function() os.remove(sharedPath) end)
+      local file = assert(io.open(sharedPath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas>
+    <area id="4101" name="Mapper Spec Song City"/>
+    <area id="4102" name="Mapper Spec Song City"/>
+    <area id="4103" name="Mapper Spec Song City"/>
+  </areas>
+  <rooms>
+    <room id="4101" area="4101"><coord x="0" y="0" z="0"/></room>
+    <room id="4102" area="4102"><coord x="0" y="0" z="0"/></room>
+    <room id="4103" area="4103"><coord x="0" y="0" z="0"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      assert.is_true(loadMap(sharedPath))
+      local names = getAreaTableSwap()
+      assert.are.equal("Mapper Spec Song City", names[4101])
+      assert.are.equal("Mapper Spec Song City_001", names[4102])
+      assert.are.equal("Mapper Spec Song City_002", names[4103])
+    end)
+
     it("throws away the map that was there before the import", function()
       local stray = createRoomID()
       addRoom(stray)
@@ -6235,7 +6417,8 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(mapRooms, rooms)
       local areas = 0
       for _ in pairs(getAreaTable()) do areas = areas + 1 end
-      assert.are.equal(mapAreas, areas)
+      -- every area the file lists, those sharing a name included, and the Default Area
+      assert.are.equal(mapAreas + 1, areas)
     end)
 
     teardown(function()

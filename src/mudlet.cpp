@@ -91,6 +91,7 @@
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QFile>
+#include <QClipboard>
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QImage>
@@ -3191,33 +3192,13 @@ void mudlet::updateWindowMenu()
     }
 }
 
-void mudlet::slot_activateMainWindow()
+// show() leaves a minimized window minimized; clearing just that bit keeps a maximized or full-screen state
+void mudlet::bringWindowToFront(QWidget* window)
 {
-    raise();
-    activateWindow();
-    show();             // Ensure it's not minimized
-    updateWindowMenu(); // Refresh checkmarks
-}
-
-void mudlet::slot_activateDetachedWindow()
-{
-    QAction* action = qobject_cast<QAction*>(sender());
-    if (!action) {
-        return;
-    }
-
-    QString profileName = action->data().toString();
-
-    if (mDetachedWindows.contains(profileName)) {
-        TDetachedWindow* detachedWindow = mDetachedWindows[profileName];
-
-        if (detachedWindow) {
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
-            updateWindowMenu();     // Refresh checkmarks
-        }
-    }
+    window->setWindowState((window->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+    window->show();
+    window->raise();
+    window->activateWindow();
 }
 
 void mudlet::slot_activateMainWindowProfile()
@@ -3241,10 +3222,7 @@ void mudlet::slot_activateMainWindowProfile()
     }
 
     if (tabIndex >= 0) {
-        // Activate the main window first
-        raise();
-        activateWindow();
-        show(); // Ensure it's not minimized
+        bringWindowToFront(this);
 
         // Switch to the specific tab
         mpTabBar->setCurrentIndex(tabIndex);
@@ -3269,10 +3247,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     // Find which detached window contains this profile
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
-            // Activate the detached window
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
+            bringWindowToFront(detachedWindow);
 
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);
@@ -3304,7 +3279,8 @@ void mudlet::closeHost(const QString& name)
     // script is still running, and destroying the Host would lua_close() the
     // state under it. Likewise a Host::waitForProfileSave(), whose pump runs
     // with the Host it waits on - and its caller - still on the stack, and a
-    // reconnect's pump in cTelnet::connectIt(). Retried on a timer rather than
+    // reconnect in cTelnet::connectIt() whose aborted connection's report ran
+    // the close. Retried on a timer rather than
     // immediately: the retry would otherwise land back in the same pump,
     // spinning until the operation ends instead of letting it get there.
     if (pH->deletionMustWait()) {
@@ -3700,6 +3676,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         connect(pMap, &TMap::signal_mapProgressSetValue, pConsole, &TMainConsole::setMapProgressDialogValue, Qt::UniqueConnection);
         connect(pMap, &TMap::signal_mapProgressDisableCancel, pConsole, &TMainConsole::disableMapProgressDialogCancel, Qt::UniqueConnection);
         connect(pMap, &TMap::signal_mapProgressClose, pConsole, &TMainConsole::closeMapProgressDialog, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressRepaintWanted, pConsole, &TMainConsole::repaintMapProgressDialog, Qt::UniqueConnection);
     }
 
     if (pH->mpMedia) {
@@ -4413,8 +4390,11 @@ void mudlet::keepFloatingDocksOnScreen()
             continue;
         }
         const QRect available = pScreen->availableGeometry();
-        // The frame is not known before the dock is first shown, so this is what QWidget::restoreGeometry() allows too
-        const int titleBarHeight = pDock->style()->pixelMetric(QStyle::PM_TitleBarHeight, nullptr, pDock);
+        // The frame the window manager put on the dock, once it has been shown; until then the style's metric stands
+        // in, as it does for QWidget::restoreGeometry(). Only the platform's own style sizes title bars like the window
+        // manager does, and the appearances draw on Fusion
+        const int frameAbove = geometry.top() - pDock->frameGeometry().top();
+        const int titleBarHeight = qMax(frameAbove, pDock->style()->pixelMetric(QStyle::PM_TitleBarHeight, nullptr, pDock));
         QRect fitted = geometry;
         fitted.setWidth(qMin(fitted.width(), available.width()));
         fitted.setHeight(qMin(fitted.height(), available.height() - titleBarHeight));
@@ -4528,6 +4508,51 @@ QString mudlet::getOpenFileName(const QString& title, const QString& location)
 QString mudlet::getExistingDirectory(const QString& title, const QString& location)
 {
     return QFileDialog::getExistingDirectory(nullptr, title, location);
+}
+
+namespace {
+// open(), not exec(): the dialog answers through finished from the event loop rather than one of its own. Parented,
+// so it goes with the main window rather than keep the application running on its own, and with its asker too.
+void openFileDialog(QWidget* pParent, const QString& title, const QString& location, const QFileDialog::FileMode mode, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    auto* pDialog = new QFileDialog(pParent, title, location);
+    pDialog->setAttribute(Qt::WA_DeleteOnClose);
+    pDialog->setFileMode(mode);
+    if (mode == QFileDialog::Directory) {
+        pDialog->setOption(QFileDialog::ShowDirsOnly);
+    }
+    const auto answer = QObject::connect(pDialog, &QFileDialog::finished, context, [pDialog, done = std::move(done)](const int result) {
+        done(result == QDialog::Accepted ? pDialog->selectedFiles().value(0) : QString());
+    });
+    // destroyed comes before the asker's connections go, so the close's finished would still reach it
+    QObject::connect(context, &QObject::destroyed, pDialog, [pDialog, answer]() {
+        QObject::disconnect(answer);
+        pDialog->close();
+    });
+    pDialog->open();
+}
+} // namespace
+
+void mudlet::getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    openFileDialog(this, title, location, QFileDialog::ExistingFile, context, std::move(done));
+}
+
+void mudlet::getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    openFileDialog(this, title, location, QFileDialog::Directory, context, std::move(done));
+}
+
+void mudlet::clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(QGuiApplication::clipboard()->text());
+    });
+}
+
+void mudlet::setClipboardText(const QString& text)
+{
+    QGuiApplication::clipboard()->setText(text);
 }
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
@@ -4696,7 +4721,7 @@ void mudlet::endProfileLoad()
 
 void mudlet::forceClose()
 {
-    // Host::forceClose() pumps events, which may close a profile or load a new one
+    // The events delivered after each profile's notice may close a profile or load a new one
     // (a pending telnet URI), so walk snapshots until a pass meets no host unvisited
     QList<QPointer<Host>> visited;
     bool metNewHost = true;
@@ -4712,7 +4737,11 @@ void mudlet::forceClose()
             if (pHost) {
                 visited.append(pHost);
                 metNewHost = true;
-                pHost->forceClose();
+                if (pHost->hasConsoleView()) {
+                    pHost->forceClose();
+                    // So that the notice forceClose() posted is shown before the profile closes
+                    QCoreApplication::processEvents();
+                }
             }
         }
     }
@@ -8170,8 +8199,15 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
             qApp->setStyle(new DarkTheme);
         } else {
+#if defined(Q_OS_MACOS) || defined(Q_OS_WINDOWS)
+            // On the dark appearance's Fusion, as the platform style here sizes and spaces controls its own way and
+            // every window would shift as the appearance changed; a style the player chose is kept instead
+            const QString lightStyle = smStyleChosenByPlayer ? mDefaultStyle : qsl("Fusion");
+#else
+            const QString lightStyle = mDefaultStyle;
+#endif
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(lightStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
