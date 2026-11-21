@@ -71,6 +71,24 @@ static constexpr int scmPackagesListShareDenominator = 3;
 static constexpr char scmPackagesSplitterKey[] = "packageManagerSplitterState";
 
 
+namespace {
+// The list sorts its rows, and QListWidgetItem's own order puts "Zeta" before "alpha"
+class PackageListItem : public QListWidgetItem
+{
+public:
+    explicit PackageListItem(const QString& name)
+    : QListWidgetItem(name)
+    {
+    }
+
+    bool operator<(const QListWidgetItem& other) const override
+    {
+        const int byLetters = text().compare(other.text(), Qt::CaseInsensitive);
+        return byLetters ? byLetters < 0 : text() < other.text();
+    }
+};
+} // namespace
+
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 : QDialog(parent)
 , mpHost(pHost)
@@ -1133,7 +1151,7 @@ void dlgPackageManager::slot_removePackages()
 
 QListWidgetItem* dlgPackageManager::installedPackageItem(const QString& packageName) const
 {
-    auto* item = new QListWidgetItem(packageName);
+    auto* item = new PackageListItem(packageName);
     const auto packageInfo = mpHost->mPackageInfo.value(packageName);
     if (const QString title = packageInfo.value(qsl("title")); !title.isEmpty()) {
         item->setData(Qt::UserRole, title);
@@ -1173,7 +1191,7 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 
             if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
                 || author.contains(searchText, Qt::CaseInsensitive)) {
-                QListWidgetItem* item = new QListWidgetItem(name);
+                QListWidgetItem* item = new PackageListItem(name);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }
@@ -1219,11 +1237,10 @@ void dlgPackageManager::slot_setPackageList()
         // No early return: the button toggles at the end must still run for this view
         if (readPackageRepositoryFile()) {
             for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
-                auto item = new QListWidgetItem();
                 const QJsonObject packageObj = packageVal.toObject();
                 const QString packageName = packageObj.value("mpackage").toString();
                 const QString title = packageObj.value("title").toString();
-                item->setText(packageName);
+                auto item = new PackageListItem(packageName);
                 if (!title.isEmpty()) {
                     item->setData(Qt::UserRole, title);
                 }

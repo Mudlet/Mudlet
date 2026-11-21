@@ -1109,7 +1109,8 @@ do
     local existinghandlers = handlers[event]
     if type(func) == "string" then
       local functionString = string.format("return %s(...)", func)
-      local functionExists = findStringEventHandler(existinghandlers, functionString)
+      -- a one-shot is a handler of its own: handing back the ID of one that stays would let killing it end that one
+      local functionExists = not isOneShot and findStringEventHandler(existinghandlers, functionString)
 
       if not functionExists then
         func = assert(loadstring(functionString))
@@ -1219,7 +1220,10 @@ do
       buffer[i], buffer[i + 1], buffer[i + 2] = nil, nil, nil
       if list[key] == func then
         local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
+        -- the built-in showHandlerError() raises unless given a string or number, which would skip every handler after this one
+        if not success and not pcall(showHandlerError, event, error) then
+          showHandlerError(event, "error object is a " .. type(error) .. " value")
+        end
       end
     end
     dispatchDepth = dispatchDepth - 1
@@ -1338,6 +1342,7 @@ end
 local function readJsonFile(input)
   local filePointer = io.open(input, "r")
   local str = filePointer:read("*all")
+  filePointer:close()
   if str == "" then
     return {}
   end
@@ -1393,12 +1398,21 @@ end
 
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
+-- the installer itself takes these in any case, as in a file called PACKAGE.MPACKAGE
+local function packageSuffix(suffix)
+  return type(suffix) == "string" and table.contains(acceptableSuffix, suffix:lower())
+end
+
 -- the file name installPackage() downloads a package URL under, or nil when target is not one
 local function packageFileFromUrl(target)
   if target:starts("http://") or target:starts("https://") then
-    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
-    if suffix and table.contains(acceptableSuffix, suffix) then
-      return string.format("%s.%s", fileName, suffix)
+    -- the whole URL first, as scripts rely on: get.php?file=package.mpackage names its file in the
+    -- query; a link such as .../package.mpackage?raw=true or ?dl=1 names it before the query
+    for _, candidate in ipairs({target, target:match("^[^?#]*")}) do
+      local fileName, suffix = candidate:match("([^/]+)%.([^./]+)$")
+      if packageSuffix(suffix) then
+        return string.format("%s.%s", fileName, suffix)
+      end
     end
   end
 end
@@ -1490,7 +1504,7 @@ end
 local oldInstallPackage = installPackage
 
 -- Override of original installPackage to allow installs from URL
--- @param target - file path or url (starting with http(s):// and ending with package file extensions)
+-- @param target - file path, or an http(s):// url naming a package file (.mpackage, .zip, .xml or .trigger, in any case), optionally followed by a ?query or #fragment
 function installPackage(target)
   -- the C++ side is what reports a bad argument in the same words as its siblings
   if type(target) ~= "string" then
@@ -1591,7 +1605,7 @@ end
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
 function packageDrop(event, fileName, suffix)
-  if not table.contains(acceptableSuffix, suffix) then
+  if not packageSuffix(suffix) then
     return
   end
   if holdingModifiers(mudlet.keymodifier.Control) then

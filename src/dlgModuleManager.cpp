@@ -49,6 +49,14 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
     connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
     connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    // Help opens the current row's page, which the arrow keys and a rebuild move without a click
+    connect(moduleTable, &QTableWidget::currentItemChanged, this, [this](QTableWidgetItem* current) {
+        if (current) {
+            slot_moduleClicked(current);
+        } else {
+            helpButton->setDisabled(true);
+        }
+    });
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgModuleManager::close);
     connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
