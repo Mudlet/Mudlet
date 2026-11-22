@@ -22,6 +22,7 @@
 
 // Only the executables' main() includes this: mudlet_core must not load libraries, as an app embedding it may not
 
+#include <QByteArrayView>
 #include <QtGlobal>
 #if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
 #include "utils.h"
