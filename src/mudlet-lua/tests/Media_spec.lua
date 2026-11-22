@@ -1250,6 +1250,80 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(fixtureBody, readFile(downloaded))
   end)
 
+  describe("media download events take the shape of downloadFile's", function()
+    -- Every argument of each event for a file whose path contains name, packed so a trailing nil still counts
+    local function captureFor(eventName, name)
+      local captured = {}
+      local handler = registerAnonymousEventHandler(eventName, function(...)
+        local args = {n = select("#", ...), ...}
+        if contains(tostring(args[eventName == "sysDownloadDone" and 2 or 3]), name) then
+          captured[#captured + 1] = args
+        end
+      end)
+      onCleanup(function() killAnonymousEventHandler(handler) end)
+      return captured
+    end
+
+    it("sysDownloadDone carries file, bytes, response and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local downloaded = mediaDirectory .. "/" .. fixtureFile
+      lfs.mkdir(mediaDirectory)
+      preserveMediaDirectory()
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
+
+      local done = captureFor("sysDownloadDone", fixtureFile)
+      assert.is_true(loadSoundFile({name = fixtureFile, url = fixtureUrl()}))
+      waitForCount("sysDownloadDone", done, 1)
+
+      assert.equals(1, #done)
+      local args = done[1]
+      assert.equals(5, args.n)
+      assert.equals(#fixtureBody, args[3])
+      assert.equals("table", type(args[4]))
+      assert.equals(200, args[4].status)
+      assert.equals("1", args[4].cookies["mudlet-fixture"])
+      assert.is_nil(args[5])
+    end)
+
+    it("a failed download carries message, file, url, response, body and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local name = "busted-media-missing.wav"
+      local errors = captureFor("sysDownloadError", name)
+      -- /missing is not below /media, so the fixture server answers 404
+      assert.is_true(loadSoundFile({name = name, url = fixtureUrl() .. "/missing"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals(fixtureUrl() .. "/missing/" .. name, args[4])
+      assert.equals("table", type(args[5]))
+      assert.equals(404, args[5].status)
+      assert.equals("string", type(args[6]))
+      assert.is_nil(args[7])
+    end)
+
+    it("a refused url carries message, file, url and nil for the response, body and request id", function()
+      local name = "busted-media-refused-shape.wav"
+      local errors = captureFor("sysDownloadError", name)
+      assert.is_true(loadSoundFile({name = name, url = "ftp://example.invalid/sounds"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals("ftp://example.invalid/sounds/" .. name, args[4])
+      assert.is_nil(args[5])
+      assert.is_nil(args[6])
+      assert.is_nil(args[7])
+    end)
+  end)
+
   it("a preload from a url keeps the file without playing it", function()
     if noFixtureServer() then
       return
@@ -2531,6 +2605,218 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #finished)
     assert.equals("busted-finish", finished[1].key)
     assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a finish position ends each pass of a loop count, not the whole request", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-loops"}))
+    waitForCount("sysMediaFinished", finished, 3)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(3, #started)
+    assert.equals(3, #finished)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a finish position with endless loops repeats the stretch before it until stopped", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- Each pass is 300ms from 8000ms in, so three starts fit inside waitForCount's
+    -- five seconds only if every later pass also seeks to the start: one from the
+    -- top of the file plays 8300ms before the next begins.
+    assert.is_true(playMusicFile({name = longSoundFile, start = 8000, finish = 8300, loops = -1, key = "busted-finish-forever"}))
+    waitForCount("sysMediaStarted", started, 3)
+    assert.is_true(#started >= 3)
+    assert.equals(1, #getPlayingMusic({key = "busted-finish-forever"}))
+    assert.is_true(stopMusic({key = "busted-finish-forever"}))
+    local startedBeforeStop = #started
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(startedBeforeStop, #started, "a pass started after the loop was stopped")
+    assert.equals(0, #getPlayingMusic({key = "busted-finish-forever"}))
+  end)
+
+  it("a sysMediaFinished handler between finish-ended passes can stop the rest", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-stopped" then
+        stopSounds({key = "busted-finish-stopped"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-stopped"}))
+    waitForCount("sysMediaFinished", finished, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(1, #started, "a pass started after the handler stopped the sound")
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-stopped"}))
+  end)
+
+  it("a sound a sysMediaFinished handler plays between finish-ended passes leaves the loop its passes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-handed-over" then
+        killAnonymousEventHandler(handler)
+        playSoundFile({name = soundFile, loops = 2, key = "busted-finish-taken-over"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-handed-over"}))
+    waitForCount("sysMediaFinished", finished, 5)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    local counts = {}
+    for _, event in ipairs(finished) do
+      counts["finished " .. event.key] = (counts["finished " .. event.key] or 0) + 1
+    end
+    for _, event in ipairs(started) do
+      counts["started " .. event.key] = (counts["started " .. event.key] or 0) + 1
+    end
+    assert.same({
+      ["started busted-finish-handed-over"] = 3,
+      ["finished busted-finish-handed-over"] = 3,
+      ["started busted-finish-taken-over"] = 2,
+      ["finished busted-finish-taken-over"] = 2,
+    }, counts)
+  end)
+
+  it("another file a sysMediaFinished handler plays under the key replaces the rest of a finish-ended loop", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-replaced" then
+        killAnonymousEventHandler(handler)
+        playSoundFile({name = soundFile, key = "busted-finish-replaced"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-replaced"}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started, "the loop started another pass after it was replaced")
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-replaced"}))
+  end)
+
+  it("the same music a sysMediaFinished handler plays under the key replaces a finish-ended loop", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-replayed" then
+        killAnonymousEventHandler(handler)
+        playMusicFile({name = longSoundFile, key = "busted-finish-replayed"})
+      end
+    end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+      stopMusic({key = "busted-finish-replayed"})
+    end)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-replayed"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started, "the loop started another pass beside the replayed track")
+    assert.equals(1, #getPlayingMusic({key = "busted-finish-replayed"}))
+  end)
+
+  it("a finish-ended loop stays stoppable when a handler crowds the player list between passes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-crowded" then
+        killAnonymousEventHandler(handler)
+        for i = 1, 30 do
+          playSoundFile({name = soundFile, key = "busted-finish-crowd-" .. i})
+        end
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-crowded"}))
+    local loopStarts = function()
+      local count = 0
+      for _, event in ipairs(started) do
+        if event.key == "busted-finish-crowded" then
+          count = count + 1
+        end
+      end
+      return count
+    end
+    for _ = 1, 10 do
+      if loopStarts() >= 3 then
+        break
+      end
+      waitForEvent("sysMediaStarted", 1000)
+    end
+    assert.is_true(loopStarts() >= 3, "the loop did not carry on past the crowding handler")
+    stopSounds({key = "busted-finish-crowded"})
+    local startedBeforeStop = loopStarts()
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(startedBeforeStop, loopStarts(), "a pass started after the loop was stopped")
+  end)
+
+  it("a finish at or before the start ends an endless loop after one pass", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 4000, loops = -1, key = "busted-finish-backwards"}))
+    waitForCount("sysMediaFinished", finished, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(1, #started)
+    assert.equals(1, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-backwards"}))
+
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 5000, loops = -1, key = "busted-finish-at-start"}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-at-start"}))
   end)
 
   it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
@@ -4302,6 +4588,29 @@ describe("Tests the text-to-speech Lua API", function()
         cleanups = {}
       end)
 
+      -- Checked from a build with TTS, the only place the real functions can be
+      -- listed: a script calling one that Other.lua has no shim for errors on a
+      -- build without TTS instead of carrying on.
+      it("Other.lua has a shim for every tts function, for builds without TTS", function()
+        if ttsUnsupported() then
+          return
+        end
+        local path = debug.getinfo(packageUrlDrop, "S").source:gsub("^@", "")
+        local file = assert(io.open(path, "r"))
+        local source = file:read("*a")
+        file:close()
+        local list = assert(source:match("if not ttsSpeak then.-local funcs = (%b{})"))
+        local shimmed = {}
+        for name in list:gmatch('"(tts%w+)"') do
+          shimmed[name] = true
+        end
+        for name, value in pairs(_G) do
+          if type(value) == "function" and name:match("^tts%u") then
+            assert.is_true(shimmed[name] == true, name .. " has no shim")
+          end
+        end
+      end)
+
       it("ttsSpeak rejects whitespace-only text", function()
         if ttsUnsupported() then
           return
@@ -4318,6 +4627,24 @@ describe("Tests the text-to-speech Lua API", function()
         local ok, err = ttsQueue("\t \n")
         assert.is_nil(ok)
         assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
+      end)
+
+      -- Only the brackets are dropped, so these would otherwise reach the
+      -- engine as nothing at all, which stalls the queue (#4688).
+      it("ttsSpeak and ttsQueue reject text that is nothing but angle brackets", function()
+        if ttsUnsupported() then
+          return
+        end
+        ttsClearQueue()
+        for _, markup in ipairs({"<>", "< >", "&lt;&gt;", " <<>> "}) do
+          local ok, err = ttsSpeak(markup)
+          assert.is_nil(ok, markup)
+          assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
+          ok, err = ttsQueue(markup)
+          assert.is_nil(ok, markup)
+          assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
+        end
+        assert.equals(0, #ttsGetQueue())
       end)
 
       it("ttsSpeak and ttsQueue raise a Lua error for a non-string argument", function()
