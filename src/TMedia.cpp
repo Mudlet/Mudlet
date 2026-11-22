@@ -144,6 +144,20 @@ std::optional<double> mediaNumber(const QJsonValue& value)
 
 // Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
 constexpr int maxQueuedLoops = 10000;
+
+// The download events share their shape with the downloadFile() ones, so these fill in what TMedia has of the rest
+void appendResponse(TEvent& event, Host* host, QNetworkReply* reply)
+{
+    event.mArgumentList << QString::number(host->getLuaInterpreter()->createHttpResponseTable(reply));
+    event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
+}
+
+// Also where the request id goes: no script call started a media download, so it has none
+void appendNil(TEvent& event)
+{
+    event.mArgumentList << QString();
+    event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
+}
 } // namespace
 
 // Public
@@ -1467,6 +1481,12 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << mediaData.mediaAbsolutePathFileName();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendResponse(event, mpHost, reply);
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendNil(event);
 
         reply->deleteLater();
         mpHost->raiseEvent(event);
@@ -1482,6 +1502,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't open the destination file for writing (permission errors?)");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            appendResponse(event, mpHost, reply);
+            appendNil(event);
 
             reply->deleteLater();
             mpHost->raiseEvent(event);
@@ -1501,6 +1523,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't write downloaded content into the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            appendResponse(event, mpHost, reply);
+            appendNil(event);
 
             reply->deleteLater();
             mpHost->raiseEvent(event);
@@ -1517,6 +1541,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                     event.mArgumentList << qsl("Failed to commit file: %1").arg(localFile.errorString());
                     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    appendResponse(event, mpHost, reply);
+                    appendNil(event);
 
                     reply->deleteLater();
                     mpHost->raiseEvent(event);
@@ -1529,6 +1555,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+                appendResponse(event, mpHost, reply);
+                appendNil(event);
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
@@ -1548,6 +1576,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << localFile.errorString();
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                appendResponse(event, mpHost, reply);
+                appendNil(event);
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
@@ -1621,6 +1651,12 @@ void TMedia::downloadFile(TMediaData& mediaData)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << mediaData.mediaAbsolutePathFileName();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << fileUrl.toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        // No request was made, so there is no response or body
+        appendNil(event);
+        appendNil(event);
+        appendNil(event);
         mpHost->raiseEvent(event);
         return;
     }
