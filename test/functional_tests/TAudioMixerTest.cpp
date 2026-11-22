@@ -195,8 +195,12 @@ private slots:
         media()->playMedia(data);
         QCOMPARE(media()->mediaPlayerCount(), 1);
         QCOMPARE(media()->playersMixed(), TMediaVoice::probePassed() ? 1 : 0);
-        // The voice it left is deleted later, and has to go before cleanup() takes the player: Qt 6.12 leaves a
-        // detached QAudioBufferOutput pointing at its player, so one deleted after the player crashes (QTBUG-152293)
+        // Sounds enough to evict that player in the same call, before the voice it left is deleted: Qt 6.12 leaves a
+        // detached QAudioBufferOutput pointing at its player, so a voice deleted after the player crashes (QTBUG-152293)
+        for (int sound = 0; sound <= media()->getMaxUnprunedPlayers(); ++sound) {
+            TMediaData burst = clipData(writeClip(qsl("burst%1.wav").arg(sound), 3000), TMediaData::MediaTypeSound);
+            media()->playMedia(burst);
+        }
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
