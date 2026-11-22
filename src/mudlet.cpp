@@ -9675,6 +9675,56 @@ QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
     return mMainWindowDockWidgetMap.value(mapKey);
 }
 
+// What these docked widgets take from the middle of the window, each area as deep as its deepest
+static QSize roomTakenBy(const QMainWindow* window, const QList<QDockWidget*>& docks)
+{
+    int left = 0;
+    int right = 0;
+    int top = 0;
+    int bottom = 0;
+    for (QDockWidget* dock : docks) {
+        switch (window->dockWidgetArea(dock)) {
+        case Qt::LeftDockWidgetArea:
+            left = std::max(left, dock->width());
+            break;
+        case Qt::RightDockWidgetArea:
+            right = std::max(right, dock->width());
+            break;
+        case Qt::TopDockWidgetArea:
+            top = std::max(top, dock->height());
+            break;
+        case Qt::BottomDockWidgetArea:
+            bottom = std::max(bottom, dock->height());
+            break;
+        default:
+            break;
+        }
+    }
+    const int separator = window->style()->pixelMetric(QStyle::PM_DockWidgetSeparatorExtent, nullptr, window);
+    const auto withSeparator = [separator](const int depth) { return depth > 0 ? depth + separator : 0; };
+    return {withSeparator(left) + withSeparator(right), withSeparator(top) + withSeparator(bottom)};
+}
+
+// User windows and toolbars stay docked whichever profile is in front, but each profile shows only its own map dock
+QSize mudlet::profileContainerSizeFor(const QString& profileName, const QSize containerSize) const
+{
+    QList<QDockWidget*> shownNow;
+    QList<QDockWidget*> shownThen;
+    for (QDockWidget* dock : findChildren<QDockWidget*>(Qt::FindDirectChildrenOnly)) {
+        if (dock->isFloating()) {
+            continue;
+        }
+        const QString key = mMainWindowDockWidgetMap.key(dock);
+        if (!dock->isHidden()) {
+            shownNow << dock;
+        }
+        if (key.isEmpty() ? !dock->isHidden() : key == qsl("map_%1").arg(profileName) && mMainWindowDockWidgetUserPreference.value(key, false)) {
+            shownThen << dock;
+        }
+    }
+    return containerSize + roomTakenBy(this, shownNow) - roomTakenBy(this, shownThen);
+}
+
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)
 {
     // Clear the current map dock widget reference first

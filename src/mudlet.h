@@ -185,6 +185,8 @@ public:
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
+    // The profile container's size once profileName is in front, from its size now
+    QSize profileContainerSizeFor(const QString& profileName, QSize containerSize) const;
     std::optional<QSize> getImageSize(const QString&) override;
     const QLocale& getUserLocale() const { return mUserLocale; }
     // Used to enable "emergency" control recovery action - if Mudlet is

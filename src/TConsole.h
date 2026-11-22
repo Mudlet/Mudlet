@@ -352,10 +352,6 @@ private:
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
     QSize mOldSize;
-    // This console's and the main window's sizes as it was put away behind another profile. Each profile shows only
-    // its own docks, so the shared container says nothing of them; they keep their size as the window resizes, though.
-    QSize mSizeWhenHidden;
-    QSize mWindowSizeWhenHidden;
     // only ever written from a size that was really measured, so what
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had

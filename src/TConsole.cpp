@@ -1503,19 +1503,6 @@ void TConsole::showEvent(QShowEvent* event)
 
 void TConsole::hideEvent(QHideEvent* event)
 {
-    // Spontaneous when the window is minimized, which hides no profile behind another. Only a console alone in the
-    // main window is put away at the size it comes back to: one leaving multi-view still has its share of the
-    // container, and a detached window's profiles are sized by that window. A console too small to measure is
-    // mid-switch, and the size it had before still stands.
-    if (mType == MainConsole && !event->spontaneous()) {
-        const QWidget* container = parentWidget();
-        if (!container || container->window() != mudlet::self() || size() != container->size()) {
-            mSizeWhenHidden = QSize();
-        } else if (width() >= 50 && height() > 0) {
-            mSizeWhenHidden = size();
-            mWindowSizeWhenHidden = mudlet::self()->size();
-        }
-    }
     if (mType & (MainConsole | Buffer)) {
         if (mudlet::self()->mWindowMinimized) {
             if (mpHost->mAlertOnNewData) {
@@ -2280,10 +2267,11 @@ void TConsole::syncHiddenScreenDimensions()
 QSize TConsole::sizeComingBackTo() const
 {
     const QWidget* container = parentWidget();
-    if (!mSizeWhenHidden.isValid() || !container || container->window() != mudlet::self()) {
-        return container ? container->size() : size();
+    if (!container) {
+        return size();
     }
-    return mSizeWhenHidden + (mudlet::self()->size() - mWindowSizeWhenHidden);
+    mudlet* const app = mudlet::self();
+    return container->window() == app ? app->profileContainerSizeFor(mpHost->getName(), container->size()) : container->size();
 }
 
 QSize TConsole::getMainWindowSize() const
