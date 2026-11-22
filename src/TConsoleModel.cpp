@@ -1094,7 +1094,7 @@ bool TConsoleModel::runLink(const int linkIndex, const int item, const bool from
         if (!mpHost->mEnableGMCP) {
             //: Shown when the player clicks a game's link that sends a GMCP message while GMCP is off in this profile's preferences; the path names the Preferences tab and group
             mpHost->postMessage(QCoreApplication::translate(
-                    "TConsoleModel", "[ INFO ]  - This link sends a GMCP message, and GMCP is off for this profile. Turn it on under Preferences, General, Game protocols, and reconnect."));
+                    "TConsoleModel", "[ INFO ]  - This link sends a GMCP message, and GMCP is off for this profile. Turn it on under Preferences, Connection, Game protocols, and reconnect."));
         } else if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
             //: Shown when the player clicks a game's link that sends a GMCP message while the profile is not connected
             mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ INFO ]  - This link sends a GMCP message, which can only reach the game while connected."));
