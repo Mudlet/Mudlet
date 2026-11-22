@@ -23,7 +23,7 @@ inline. For busted mechanics, see `src/mudlet-lua/tests/README.md`.
    them the top of the uncovered-mass ranking and let them pick. Skip what does not pay
    (list below).
 3. **Write specs first.** A busted spec is the default; a C++ functional test needs one of
-   the specific justifications in `CLAUDE.md`'s Tests section. Specs reach further than
+   the specific justifications in `AGENTS.md`'s Tests section. Specs reach further than
    they look (below).
 4. **Prove every test red before trusting it green** (see "Prove the test tests
    something"). Both harnesses fail silently when set up wrong - a misconfigured run is

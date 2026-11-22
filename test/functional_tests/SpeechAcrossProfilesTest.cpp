@@ -27,7 +27,7 @@
  * two profiles open.
  *
  * That is what puts this in a functional test rather than a spec, per the
- * testing note in CLAUDE.md: a spec runs inside one profile and cannot open a
+ * testing note in AGENTS.md: a spec runs inside one profile and cannot open a
  * second, so none of the cases here are reachable from one.
  *
  * No engine is installed in a test run, so none of this drives a real

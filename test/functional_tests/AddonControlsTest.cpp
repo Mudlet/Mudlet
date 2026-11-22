@@ -27,7 +27,7 @@
  *
  * The cheaper surface - icons, tooltips, checked state, pulse, unknown ids -
  * is covered by AddonCommand_spec.lua instead, per the testing note in
- * CLAUDE.md: a spec costs ~30KB and no rebuild, a functional test ~290MB and
+ * AGENTS.md: a spec costs ~30KB and no rebuild, a functional test ~290MB and
  * a link step.
  *
  * Run with: ctest -R AddonControlsTest -V
