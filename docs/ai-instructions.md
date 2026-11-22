@@ -13,6 +13,7 @@ Task-specific instructions live in `.agents/skills/<name>/SKILL.md`, in the [Age
 - `fuzz-apis` - fuzzing the parsers and scripting API under sanitizer builds
 - `improve-performance` - benchmarking, measurement discipline and finding where time goes
 - `improve-test-coverage` - measuring C++ line coverage and growing the test suite
+- `merge-many-prs` - merging more than a handful of PRs at once: test the batch together before any of it lands
 - `open-pr` - publishing a branch and opening a pull request upstream
 
 ## Coding standards
