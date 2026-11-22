@@ -79,6 +79,7 @@ QStringList systemEvents()
                                    qsl("sysLoadEvent"),
                                    qsl("sysLuaInstallModule"),
                                    qsl("sysLuaUninstallModule"),
+                                   qsl("sysMainWindowClassChangeEvent"),
                                    qsl("sysManualLocationSetEvent"),
                                    qsl("sysMapAreaChanged"),
                                    qsl("sysMapDownloadEvent"),

@@ -353,6 +353,7 @@ public:
     static int setCommandTooltip(lua_State*);
     static int setCommandPulse(lua_State*);
     static int showUnzipProgress(lua_State*);
+    static int setAdaptiveLayout(lua_State*);
     static int setAppStyleSheet(lua_State*);
     static int setProfileStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State*);
@@ -613,6 +614,7 @@ public:
     static int setLabelWheelCallback(lua_State*);
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
+    static int getMainWindowInfo(lua_State*);
     static int getMainWindowSize(lua_State*);
     static int getUserWindowSize(lua_State*);
     static int getWindowGeometry(lua_State*);

@@ -219,6 +219,8 @@ public:
     virtual QFont displayFont() const = 0;
     // The font of the main console's text, which a profile style sheet can make other than displayFont()
     virtual QFont mainTextFont() const { return displayFont(); }
+    // Physical pixels per logical pixel where the main window is drawn
+    virtual double mainWindowPixelRatio() const { return 1.0; }
     virtual void setFont(const QFont& font) = 0;
     virtual void setFontSize(int size) = 0;
 

@@ -912,6 +912,7 @@ void Host::startProfileScripts()
     // TMap::audit() method:
     mLuaInterpreter.loadGlobal();
     hideMudletsVariables();
+    mAnnouncedMainWindowInfo = mainWindowInfo();
 
     //do modules here
     QMapIterator<QString, int> it(mModulePriorities);
@@ -1824,6 +1825,9 @@ void Host::resetProfile_phase2()
     mEventHandlerMap.clear();
     mAnonymousEventHandlerFunctions.clear();
     mEventMap.clear();
+    // The scripts that run again below declare it again, as they did at load
+    const bool wasAdaptive = adaptiveLayout();
+    mAdaptiveLayoutOwners.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
     // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
@@ -1867,6 +1871,9 @@ void Host::resetProfile_phase2()
     reportScriptsThatFailedToLoad();
 
     mResetProfile = false;
+    if (adaptiveLayout() != wasAdaptive) {
+        emit signal_adaptiveLayoutChanged(adaptiveLayout());
+    }
 
     TEvent event{};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -8046,6 +8053,63 @@ std::optional<QSize> Host::mainWindowSize() const
     return {mWindowRegistry.mainWindowSize()};
 }
 
+std::optional<TMainWindowInfo> Host::mainWindowInfo() const
+{
+    const auto size = mainWindowSize();
+    if (!size) {
+        return {};
+    }
+    TMainWindowInfo info;
+    if (mGivenMainWindowDevice) {
+        info.device = *mGivenMainWindowDevice;
+    } else {
+        info.device.devicePixelRatio = consoleFrontend()->mainWindowPixelRatio();
+    }
+    info.size = QSizeF(*size) / info.device.pixelScale;
+    return info;
+}
+
+void Host::setMainWindowDevice(const TMainWindowInfo::Device& device)
+{
+    mGivenMainWindowDevice = device;
+    checkMainWindowClasses();
+}
+
+void Host::checkMainWindowClasses()
+{
+    // Till the scripts start there is no one to tell; startProfileScripts() takes what they start with
+    if (!mAnnouncedMainWindowInfo || closeStarted()) {
+        return;
+    }
+    const auto info = mainWindowInfo();
+    if (!info) {
+        return;
+    }
+    const bool changed = !info->sameClasses(*mAnnouncedMainWindowInfo);
+    mAnnouncedMainWindowInfo = info;
+    if (!changed) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysMainWindowClassChangeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
+}
+
+void Host::setAdaptiveLayout(const QString& owner, const bool adaptive)
+{
+    const bool wasAdaptive = adaptiveLayout();
+    if (adaptive) {
+        mAdaptiveLayoutOwners.insert(owner);
+    } else {
+        mAdaptiveLayoutOwners.remove(owner);
+    }
+    // A reset tells the frontend once its scripts have all declared it again
+    if (!mResetProfile && adaptiveLayout() != wasAdaptive) {
+        emit signal_adaptiveLayoutChanged(adaptiveLayout());
+    }
+}
+
 std::optional<QSize> Host::windowGridSize(const QString& name) const
 {
     const TConsoleModel* pModel = consoleModelNamed(name);
@@ -8385,6 +8449,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
     event.mArgumentList.append(qsl("main"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(event);
+    checkMainWindowClasses();
 }
 
 std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)

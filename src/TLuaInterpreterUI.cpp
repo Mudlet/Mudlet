@@ -1839,6 +1839,35 @@ int TLuaInterpreter::getProfileTabNumber(lua_State* L)
     return warnArgumentValue(L, __func__, "could not retrieve the tab number");
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainWindowInfo
+int TLuaInterpreter::getMainWindowInfo(lua_State* L)
+{
+    const auto info = getHostFromLua(L).mainWindowInfo();
+    if (!info) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    lua_createtable(L, 0, 9);
+    lua_pushnumber(L, info->size.width());
+    lua_setfield(L, -2, "width");
+    lua_pushnumber(L, info->size.height());
+    lua_setfield(L, -2, "height");
+    lua_pushstring(L, TMainWindowInfo::className(TMainWindowInfo::widthClass(info->size.width())));
+    lua_setfield(L, -2, "widthClass");
+    lua_pushstring(L, TMainWindowInfo::className(TMainWindowInfo::heightClass(info->size.height())));
+    lua_setfield(L, -2, "heightClass");
+    lua_pushstring(L, info->portrait() ? "portrait" : "landscape");
+    lua_setfield(L, -2, "orientation");
+    lua_pushstring(L, info->device.pointer == TMainWindowInfo::Pointer::coarse ? "coarse" : "fine");
+    lua_setfield(L, -2, "pointer");
+    lua_pushboolean(L, info->device.hover);
+    lua_setfield(L, -2, "hover");
+    lua_pushnumber(L, info->device.devicePixelRatio);
+    lua_setfield(L, -2, "devicePixelRatio");
+    lua_pushnumber(L, info->device.pixelScale);
+    lua_setfield(L, -2, "pixelScale");
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainWindowSize
 int TLuaInterpreter::getMainWindowSize(lua_State* L)
 {
@@ -2977,6 +3006,19 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         lua_pushfstring(L, "setActiveProfile: profile '%s' is closing", profileName.toUtf8().constData());
         return 2;
     }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAdaptiveLayout
+int TLuaInterpreter::setAdaptiveLayout(lua_State* L)
+{
+    const QString owner = getVerifiedString(L, __func__, 1, "owner");
+    if (owner.isEmpty()) {
+        return warnArgumentValue(L, __func__, "owner must not be an empty string");
+    }
+    const bool adaptive = getVerifiedBool(L, __func__, 2, "adaptive");
+    getHostFromLua(L).setAdaptiveLayout(owner, adaptive);
     lua_pushboolean(L, true);
     return 1;
 }

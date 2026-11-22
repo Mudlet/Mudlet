@@ -494,6 +494,7 @@ set(mudlet_HDRS
     TLabelModel.h
     TLinkStore.h
     TLuaInterpreter.h
+    TMainWindowInfo.h
     TMap.h
     TMapLabel.h
     TMapPainter.h

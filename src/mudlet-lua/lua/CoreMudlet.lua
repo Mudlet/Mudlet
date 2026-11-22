@@ -385,6 +385,45 @@ if false then
 
 
 
+  --- Tells what kind of main window the profile has, so a script can lay out for a phone held upright, a phone on
+  --- its side or a big screen, and for a finger or a mouse. It is the window getMainWindowSize() measures, in
+  --- logical pixels (Android's dp, CSS's px; on the desktop Mudlet's own pixels), so a small desktop window or a
+  --- split screen is laid out like a small screen. Read it again on sysMainWindowClassChangeEvent.
+  ---
+  --- @return a new table with these fields, or nil and a message when the profile has no main window:
+  ---   <pre>
+  ---   width, height     -- getMainWindowSize() divided by pixelScale
+  ---   widthClass        -- "compact" (below 600), "medium" (below 840) or "expanded": Material Design's
+  ---   heightClass       -- "compact" (below 480), "medium" (below 900) or "expanded": window size classes
+  ---   orientation       -- "portrait" when height is at least width, else "landscape"
+  ---   pointer           -- "coarse" for a finger, "fine" for a mouse, touchpad or stylus
+  ---   hover             -- whether that pointer can hover
+  ---   devicePixelRatio  -- physical pixels per logical pixel
+  ---   pixelScale        -- Mudlet's pixels per logical pixel: multiply a logical size by it to get the
+  ---                     -- pixels getMainWindowSize(), Geyser and every other Mudlet call use; 1 on the desktop
+  ---   </pre>
+  ---
+  --- @usage Material Design's reading of the classes.
+  ---   <pre>
+  ---   local info = getMainWindowInfo()
+  ---   if info.widthClass == "compact" then
+  ---     -- a phone held upright, or a narrow window: stack things
+  ---   elseif info.heightClass == "compact" then
+  ---     -- a phone on its side, or a short window: put things side by side
+  ---   else
+  ---     -- a tablet, an unfolded phone or a desktop window
+  ---   end
+  ---   -- a target a finger can hit is 48 logical pixels
+  ---   local target = info.pointer == "coarse" and 48 * info.pixelScale or 24 * info.pixelScale
+  ---   </pre>
+  ---
+  --- @see getMainWindowSize
+  --- @see setAdaptiveLayout
+  function getMainWindowInfo()
+  end
+
+
+
   --- Returns the time without stopping stop watch (milliseconds based) in form of 0.058
   --- (= clock ran for 58 milliseconds before it was stopped).
   --- @see createStopWatch
@@ -918,6 +957,17 @@ if false then
   ---   end
   ---   </pre>
   ---
+  --- <b><i>sysMainWindowClassChangeEvent</i></b><br/>
+  --- Raised, with no arguments, when what getMainWindowInfo() tells changes other than its exact width and height:
+  --- a size class, the orientation, the pointer, hover, the pixel ratio or the scale. A resize raises it after
+  --- its sysWindowResizeEvent. Lay out on it what depends on the kind of window, and on sysWindowResizeEvent
+  --- what depends on the exact size.
+  ---   <pre>
+  ---   registerAnonymousEventHandler("sysMainWindowClassChangeEvent", function()
+  ---     myUI.layOut(getMainWindowInfo())
+  ---   end)
+  ---   </pre>
+  ---
   --- <b><i>sysWindowMousePressEvent</i></b><br/>
   --- Raised when a mouse button is pressed down anywhere on the main window (note that a click is composed of a mouse
   --- press and mouse release). The button number and the x,y coordinates of the click are reported.
@@ -1095,6 +1145,30 @@ if false then
   ---
   --- @see setFgColor
   function setBgColor(windowName, r, g, b)
+  end
+
+
+
+  --- Says that the scripts of a package lay out for a main window of any size and shape, as a web page's
+  --- viewport tag says it, so a Mudlet that would otherwise give scripts made for desktop windows a window of
+  --- another shape than it shows gives this profile its real one: Mudlet for Android, for one, gives a phone held
+  --- upright a landscape main window unless the profile is adaptive. getMainWindowSize() and getMainWindowInfo()
+  --- both follow the window given. The profile is adaptive while any owner has it on, so one package turning it
+  --- off does not undo another's. It is not saved: call it as your scripts load. The desktop, whose main window is
+  --- always its real size, needs none.
+  ---
+  --- @param owner a name of your own, such as your package's
+  --- @param adaptive true while your scripts lay out for any shape of main window, false to take that back
+  --- @return true, or nil and a message for an empty owner
+  ---
+  --- @usage
+  ---   <pre>
+  ---   setAdaptiveLayout("my-ui", true)
+  ---   registerAnonymousEventHandler("sysMainWindowClassChangeEvent", function() myUI.layOut(getMainWindowInfo()) end)
+  ---   </pre>
+  ---
+  --- @see getMainWindowInfo
+  function setAdaptiveLayout(owner, adaptive)
   end
 
 

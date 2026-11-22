@@ -68,6 +68,7 @@ public:
     ~TMainConsole();
 
     void resizeEvent(QResizeEvent* event) override;
+    bool event(QEvent* event) override;
     void resetMainConsole() override;
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
@@ -88,6 +89,7 @@ public:
     bool requestClose() override;
     void requestRepaint();
     QFont displayFont() const override;
+    double mainWindowPixelRatio() const override { return devicePixelRatio(); }
     void setProfileStyleSheet(const QString& styleSheet) override;
     void applyBorders() override;
     // TConsole's, which as non-virtual members of another base cannot implement TConsoleFrontend's themselves.

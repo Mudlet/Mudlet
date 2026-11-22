@@ -7733,6 +7733,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapWidgetGeometry", TLuaInterpreter::getMapWidgetGeometry);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
+    lua_register(pGlobalLua, "getMainWindowInfo", TLuaInterpreter::getMainWindowInfo);
     lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);
     lua_register(pGlobalLua, "getWindowGeometry", TLuaInterpreter::getWindowGeometry);
     lua_register(pGlobalLua, "windowVisible", TLuaInterpreter::windowVisible);
@@ -7971,6 +7972,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "saveMap", TLuaInterpreter::saveMap);
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
+    lua_register(pGlobalLua, "setAdaptiveLayout", TLuaInterpreter::setAdaptiveLayout);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);

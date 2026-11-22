@@ -975,6 +975,39 @@ its own gives the area without them, and gives a smaller one as they grow; the s
 their room from it, so what a script reads of the main window's size changes with them only when the app
 gives a new one.
 
+### What kind of main window it is
+
+A script reads with `getMainWindowInfo()` what kind of main window it has: the size `getMainWindowSize()`
+gives, in logical pixels (dp, CSS pixels), its size classes and orientation from that, whether the pointer
+is a finger or a mouse and can hover, the screen's pixel ratio, and `pixelScale`, Mudlet's pixels per
+logical pixel, by which the size is divided. `sysMainWindowClassChangeEvent` tells it when any of those but
+the exact size changes, after the `sysWindowResizeEvent` of a resize that changes a class. With nothing
+given, the session reports a fine pointer that hovers and a ratio and a scale of 1. An app that draws the
+main window other than at Mudlet's own size, as one that scales it to fit a phone does, says how:
+
+```cpp
+TMainWindowInfo::Device device;
+device.pointer = TMainWindowInfo::Pointer::coarse;
+device.hover = false;
+device.devicePixelRatio = 2.625;  // the screen's density
+device.pixelScale = 1.6;          // Mudlet's pixels per dp, as the app scales the main window
+session->setMainWindowDevice(device);
+```
+
+`setMainWindowDevice()` may be called before `start()`: the session keeps it and gives it to each profile
+it starts before its scripts run, so they read it from their first line; given later, a change of class
+raises `sysMainWindowClassChangeEvent` at once. It is refused where `setApplicationActive()` is, and for a
+ratio or scale that is not a finite number above 0. A profile a script opens with `loadProfile()` is not
+the session's, and measures its own.
+
+A script's `setAdaptiveLayout(owner, true)` says it lays out for any shape of main window, as a web page's
+viewport tag does: an app that otherwise gives scripts made for desktop windows a main window of another
+shape than it shows, as Mudlet for Android gives a phone held upright a landscape one, gives an adaptive
+profile its real shape with `setMainWindowSize()`. `adaptiveLayout()` is true while any owner has it on;
+read it at `profileLoaded`, then follow `adaptiveLayoutChanged`, sent from the event loop and only when it
+differs from what the app last had. A reset of the profile clears it, and its scripts declare it again as
+they run.
+
 ## Embedding it: links in the main console and in windows
 
 Each `TextRun` of `outputLine` and `lineShown` has a `link`: the id of the main console's link the run is

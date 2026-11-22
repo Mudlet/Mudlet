@@ -50,7 +50,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
 
-    static bool writeProfile(const QString& name)
+    static bool writeProfile(const QString& name, const QString& script = QString())
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
         if (!QDir().mkpath(saveFolder)) {
@@ -60,12 +60,15 @@ private:
         if (!saveFile.open(QIODevice::WriteOnly)) {
             return false;
         }
-        saveFile.write(QByteArrayLiteral(R"(<?xml version="1.0" encoding="UTF-8"?>
+        saveFile.write(qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
 <HostPackage><Host></Host></HostPackage>
+<ScriptPackage><Script isActive="yes" isFolder="no"><name>headlessArea</name><packageName></packageName><script>%1</script><eventHandlerList/></Script></ScriptPackage>
 </MudletPackage>
-)"));
+)")
+                               .arg(script.toHtmlEscaped())
+                               .toUtf8());
         return true;
     }
 
@@ -87,6 +90,23 @@ private:
     static QString mainWindowSize(THeadlessSession& session) { return luaString(session, qsl("table.concat({getMainWindowSize()}, 'x')")); }
 
     static QSize grid(THeadlessSession& session) { return {luaString(session, qsl("getColumnCount()")).toInt(), luaString(session, qsl("getRowCount()")).toInt()}; }
+
+    static QString mainWindowInfo(THeadlessSession& session)
+    {
+        return luaString(session,
+                         qsl("(function(i) return ('%s %s %s %s %s %s %s %s %s'):format(i.width, i.height, i.widthClass, i.heightClass, i.orientation, i.pointer, tostring(i.hover), "
+                             "i.devicePixelRatio, i.pixelScale) end)(getMainWindowInfo())"));
+    }
+
+    static TMainWindowInfo::Device phone()
+    {
+        TMainWindowInfo::Device device;
+        device.pointer = TMainWindowInfo::Pointer::coarse;
+        device.hover = false;
+        device.devicePixelRatio = 2.5;
+        device.pixelScale = 1.5;
+        return device;
+    }
 
     static QVariantList area(const QSize& grid, const QRect& textRect) { return {grid, textRect}; }
 
@@ -486,6 +506,113 @@ end)
             QTest::qWait(50);
         }
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_withNoDeviceGivenTheMainWindowIsInMudletsPixels()
+    {
+        const QString name = qsl("Headless Area Main Window Measured");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(1000, 1000)));
+        QCOMPARE(mainWindowInfo(session), qsl("1000 1000 expanded expanded portrait fine true 1 1"));
+        QVERIFY(session.runLua(qsl("headlessAreaHeard = '' "
+                                   "registerAnonymousEventHandler('sysWindowResizeEvent', function() headlessAreaHeard = headlessAreaHeard .. 'resize;' end) "
+                                   "registerAnonymousEventHandler('sysMainWindowClassChangeEvent', function() headlessAreaHeard = headlessAreaHeard .. 'class;' end)")));
+
+        // After the resize, so its handlers have laid the borders out
+        QVERIFY(session.setMainWindowSize(QSize(1000, 500)));
+        QCOMPARE(luaString(session, qsl("headlessAreaHeard")), qsl("resize;class;"));
+        QCOMPARE(mainWindowInfo(session), qsl("1000 500 expanded medium landscape fine true 1 1"));
+        // The same classes, and a border, which leaves the main window as it was
+        QVERIFY(session.setMainWindowSize(QSize(1100, 520)));
+        QVERIFY(session.runLua(qsl("setBorderTop(100)")));
+        QCOMPARE(luaString(session, qsl("headlessAreaHeard")), qsl("resize;class;resize;resize;"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aDeviceGivenBeforeTheStartIsWhatScriptsFirstRead()
+    {
+        const QString name = qsl("Headless Area Main Window Device");
+        QVERIFY(writeProfile(name, qsl(R"lua(
+headlessDeviceAtLoad = getMainWindowInfo().pointer .. " " .. getMainWindowInfo().pixelScale
+headlessClassChanges = 0
+registerAnonymousEventHandler("sysMainWindowClassChangeEvent", function() headlessClassChanges = headlessClassChanges + 1 end)
+)lua")));
+        THeadlessSession session;
+        QVERIFY(!session.mainWindowDevice());
+        QVERIFY(session.setMainWindowDevice(phone()));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(luaString(session, qsl("headlessDeviceAtLoad")), qsl("coarse 1.5"));
+        QVERIFY(session.setMainWindowSize(QSize(600, 1200)));
+        QCOMPARE(mainWindowInfo(session), qsl("400 800 compact medium portrait coarse false 2.5 1.5"));
+        QVERIFY(session.runLua(qsl("headlessClassChanges = 0")));
+
+        // Whatever the device, the size is the main window's that getMainWindowSize() gives
+        QVERIFY(session.setMainWindowSize(QSize(630, 1170)));
+        QCOMPARE(mainWindowInfo(session), qsl("420 780 compact medium portrait coarse false 2.5 1.5"));
+        QCOMPARE(luaString(session, qsl("headlessClassChanges")), qsl("0"));
+        QVERIFY(session.setMainWindowSize(QSize(1200, 600)));
+        QCOMPARE(luaString(session, qsl("headlessClassChanges")), qsl("1"));
+        QCOMPARE(mainWindowInfo(session), qsl("800 400 medium compact landscape coarse false 2.5 1.5"));
+        TMainWindowInfo::Device mouse = phone();
+        mouse.pointer = TMainWindowInfo::Pointer::fine;
+        mouse.hover = true;
+        QVERIFY(session.setMainWindowDevice(mouse));
+        QCOMPARE(luaString(session, qsl("headlessClassChanges")), qsl("2"));
+        QCOMPARE(mainWindowInfo(session), qsl("800 400 medium compact landscape fine true 2.5 1.5"));
+        TMainWindowInfo::Device unscaled = mouse;
+        unscaled.pixelScale = 1;
+        QVERIFY(session.setMainWindowDevice(unscaled));
+        QCOMPARE(luaString(session, qsl("headlessClassChanges")), qsl("3"));
+        QCOMPARE(mainWindowInfo(session), qsl("1200 600 expanded medium landscape fine true 2.5 1"));
+
+        for (const double refused : {0.0, -1.0, qQNaN(), qInf()}) {
+            TMainWindowInfo::Device badScale = mouse;
+            badScale.pixelScale = refused;
+            QVERIFY(!session.setMainWindowDevice(badScale));
+            QVERIFY2(session.errorString().contains(qsl("above 0")), qPrintable(session.errorString()));
+            TMainWindowInfo::Device badRatio = mouse;
+            badRatio.devicePixelRatio = refused;
+            QVERIFY(!session.setMainWindowDevice(badRatio));
+        }
+        QCOMPARE(mainWindowInfo(session), qsl("1200 600 expanded medium landscape fine true 2.5 1"));
+        QCOMPARE(luaString(session, qsl("headlessClassChanges")), qsl("3"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLayoutIsAdaptiveWhileAnyOwnerSaysSo()
+    {
+        const QString name = qsl("Headless Area Adaptive");
+        QVERIFY(writeProfile(name, qsl(R"lua(setAdaptiveLayout("at load", true))lua")));
+        THeadlessSession session;
+        QVERIFY(!session.adaptiveLayout());
+        QSignalSpy changes(&session, &THeadlessSession::adaptiveLayoutChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.adaptiveLayout());
+        QTest::qWait(100);
+        QCOMPARE(changes.count(), 0);
+
+        QVERIFY(session.runLua(qsl(R"lua(setAdaptiveLayout("other", true) setAdaptiveLayout("at load", false))lua")));
+        QVERIFY(session.adaptiveLayout());
+        QVERIFY(session.runLua(qsl(R"lua(setAdaptiveLayout("other", false))lua")));
+        QVERIFY(!session.adaptiveLayout());
+        QTRY_COMPARE(changes.count(), 1);
+        QCOMPARE(changes.at(0), (QVariantList{name, false}));
+        // Taken back in the same turn, it is as it was, so nothing is sent
+        QVERIFY(session.runLua(qsl(R"lua(setAdaptiveLayout("brief", true) setAdaptiveLayout("brief", false))lua")));
+        QTest::qWait(100);
+        QCOMPARE(changes.count(), 1);
+        QVERIFY(session.runLua(qsl(R"lua(setAdaptiveLayout("other", true))lua")));
+        QTRY_COMPARE(changes.count(), 2);
+        QCOMPARE(changes.at(1), (QVariantList{name, true}));
+
+        QCOMPARE(luaString(session, qsl("select(2, setAdaptiveLayout('', true))")), qsl("owner must not be an empty string"));
+        QCOMPARE(luaString(session, qsl("pcall(setAdaptiveLayout, 'other', 'yes')")), qsl("false"));
+        QCOMPARE(luaString(session, qsl("pcall(setAdaptiveLayout, 'other')")), qsl("false"));
+        QVERIFY(session.adaptiveLayout());
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.adaptiveLayout());
     }
 
     void test_aMainWindowSizeIsRefusedMidWrite()
