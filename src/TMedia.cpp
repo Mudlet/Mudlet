@@ -182,7 +182,7 @@ bool mp3TurnsMono(const QString& fileName)
             break;
         }
 
-        expected = runsOn;
+        expected = frameLength(pos + length) > 0;
         pos += length;
     }
 

@@ -733,6 +733,7 @@ describe("Media playback effects with a generated sound file", function()
       ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
       ["busted-turns-mono-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 40, 1),
       ["busted-turns-mono-last.mp3"] = frames({stereo}, 40) .. frames({mono}, 1),
+      ["busted-turns-mono-last-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 1, 1),
       -- playback can start in the stereo part
       ["busted-mono-stereo-mono.mp3"] = frames({mono}, 20) .. frames({stereo}, 20) .. frames({mono}, 20),
       ["busted-wildcard-a.mp3"] = frames({stereo}, 20) .. frames({mono}, 20),
@@ -751,7 +752,8 @@ describe("Media playback effects with a generated sound file", function()
     local started = {}
     collect("sysMediaStarted", started)
 
-    for _, name in ipairs({"busted-turns-mono.mp3", "busted-turns-mono-48k.mp3", "busted-turns-mono-last.mp3", "busted-mono-stereo-mono.mp3"}) do
+    for _, name in ipairs({"busted-turns-mono.mp3", "busted-turns-mono-48k.mp3", "busted-turns-mono-last.mp3", "busted-turns-mono-last-48k.mp3",
+                          "busted-mono-stereo-mono.mp3"}) do
       playSoundFile({name = name})
     end
     -- past the first second, where the mono frames would reach the resampler
