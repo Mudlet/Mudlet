@@ -3465,9 +3465,9 @@ describe("Tests UI functions", function()
         BaseUI.layoutDock()
       end
       savedWidth, savedX, savedY = BaseUI.container.width, BaseUI.container.x, BaseUI.container.y
-      savedFitted = BaseUI.fittedWidth
+      savedFitted = BaseUI.fittedDock
       -- what the earlier specs left is not a width the player chose
-      BaseUI.fittedWidth = nil
+      BaseUI.fittedDock = nil
       BaseUI.fitDock()
     end)
 
@@ -3477,7 +3477,7 @@ describe("Tests UI functions", function()
       if not BaseUI.container.attached and not BaseUI.container.hidden then
         BaseUI.container:attachToBorder("right")
       end
-      BaseUI.fittedWidth = savedFitted
+      BaseUI.fittedDock = savedFitted
       if testMode then
         assert.is_true(sizeConsole(originalWidth, originalHeight), "the window was not put back to its size")
       end
@@ -3580,6 +3580,125 @@ describe("Tests UI functions", function()
       end
       assert.are.equal("30%", BaseUI.container.width)
       assert.are.equal(480, BaseUI.container:get_width())
+    end)
+
+    it("should say it lays itself out for any screen only while it is shown", function()
+      local real, said = setAdaptiveLayout, {}
+      setAdaptiveLayout = function(owner, adaptive)
+        said[#said + 1] = owner .. "=" .. tostring(adaptive)
+        return true
+      end
+      finally(function()
+        setAdaptiveLayout = real
+      end)
+      clickClose()
+      expandAlias("baseui show", false)
+      assert.are.same({ "mudlet-base-ui=false", "mudlet-base-ui=true" }, said)
+    end)
+
+    describe("on a screen of another shape", function()
+      local realShape
+
+      before_each(function()
+        realShape = BaseUI.screenShape
+      end)
+
+      after_each(function()
+        BaseUI.screenShape = realShape
+        BaseUI.fitDock()
+      end)
+
+      local function shapedAs(name)
+        BaseUI.screenShape = function()
+          return name
+        end
+        BaseUI.fitDock()
+      end
+
+      it("should read the shape from the main window's size classes", function()
+        local real = getMainWindowInfo
+        finally(function()
+          getMainWindowInfo = real
+        end)
+        local function shapeOf(widthClass, heightClass)
+          getMainWindowInfo = function()
+            return { widthClass = widthClass, heightClass = heightClass }
+          end
+          return realShape()
+        end
+        assert.are.equal("narrow", shapeOf("compact", "medium"))
+        assert.are.equal("narrow", shapeOf("compact", "compact"))
+        assert.are.equal("short", shapeOf("expanded", "compact"))
+        assert.are.equal("roomy", shapeOf("medium", "medium"))
+        assert.are.equal("roomy", shapeOf("expanded", "expanded"))
+        getMainWindowInfo = function()
+          return nil, "no main window"
+        end
+        assert.are.equal("roomy", realShape())
+        getMainWindowInfo = nil
+        assert.are.equal("roomy", realShape())
+      end)
+
+      it("should run along the bottom of a narrow one, the map beside the chat window", function()
+        shapedAs("narrow")
+        local dock = BaseUI.container
+        local width, height = getMainWindowSize()
+        assert.are.equal("bottom", dock.attached)
+        assert.is_true(math.abs(dock:get_width() - width) <= 1, dock:get_width())
+        assert.is_true(math.abs(dock:get_y() + dock:get_height() - height) <= 1, "not flush with the bottom edge")
+        assert.is_true(math.abs(dock:get_height() - height * 0.45) <= 1, dock:get_height())
+        assert.is_true(math.abs(height - dock:get_y() + dock.attachedMargin - getBorderBottom()) <= 1, getBorderBottom())
+        local map, chat = BaseUI.sections.map, BaseUI.sections.chat
+        if not BaseUI.sectionFloating("map") and not BaseUI.sectionFloating("chat") then
+          assert.are.equal(map:get_y(), chat:get_y())
+          assert.is_true(map:get_x() + map:get_width() <= chat:get_x(), "the map and the chat window overlap")
+        end
+      end)
+
+      it("should go back to the right border when the screen is roomy again", function()
+        if realShape() == "narrow" then
+          pending("this screen is itself narrow")
+          return
+        end
+        shapedAs("narrow")
+        BaseUI.screenShape = realShape
+        BaseUI.fitDock()
+        assertOnRightBorder()
+        assert.are.equal(originalBorders.bottom, getBorderBottom())
+      end)
+
+      it("should leave a dock the player moved to another border where they put it", function()
+        BaseUI.container:detach()
+        BaseUI.container:move("10%", "10%")
+        shapedAs("narrow")
+        assert.is_falsy(BaseUI.container.attached)
+        assert.are.equal("10%", BaseUI.container.x)
+      end)
+
+      it("should put two bars to a row on a short one, keeping the right border", function()
+        local made = {}
+        for _, key in ipairs({ "hp", "mp" }) do
+          if not BaseUI.gauges[key] and BaseUI.ensureGauge(key) then
+            made[#made + 1] = key
+          end
+        end
+        finally(function()
+          for _, key in ipairs(made) do
+            BaseUI.gauges[key]:delete()
+            BaseUI.gauges[key] = nil
+            BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots - 1
+          end
+          BaseUI.layoutGauges()
+        end)
+        local hp, mp = BaseUI.gauges.hp, BaseUI.gauges.mp
+        assert.is_not_nil(hp and mp, "no room for the hp and mp bars")
+        shapedAs("roomy")
+        assert.is_true(hp:get_y() < mp:get_y(), "the roomy shape puts its bars one to a row")
+        shapedAs("short")
+        assert.are.equal(hp:get_y(), mp:get_y())
+        assert.is_true(hp:get_x() + hp:get_width() <= mp:get_x(), "the bars overlap")
+        assertOnRightBorder()
+      end)
     end)
 
     it("should leave a dock the player took off the border where they put it", function()

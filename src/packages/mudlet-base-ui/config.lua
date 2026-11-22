@@ -15,6 +15,11 @@ MSDP or from the sentence some games print describing it ("The orc
 has a few scratches."). Nothing appears until your game has sent
 something to show.
 
+It fits the screen it is on. On a narrow one - a phone held upright,
+or a narrow window - the dock runs along the bottom with the map beside
+the chat window; on a short one, such as a phone on its side, the bars
+sit two to a row.
+
 No section is stuck in the dock: drag the map, the chat window or the
 health bars out by its header row and it will sit wherever you drop it
 over the game's text. The sections left behind share out the space it
@@ -47,5 +52,5 @@ stay solid.
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.9.7]]
+version = [[1.9.8]]
 created = "2026-07-25T12:00:00+00:00"
