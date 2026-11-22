@@ -732,6 +732,11 @@ describe("Media playback effects with a generated sound file", function()
     local files = {
       ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
       ["busted-turns-mono-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 40, 1),
+      ["busted-turns-mono-last.mp3"] = frames({stereo}, 40) .. frames({mono}, 1),
+      -- playback can start in the stereo part
+      ["busted-mono-stereo-mono.mp3"] = frames({mono}, 20) .. frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-a.mp3"] = frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-b.mp3"] = frames({stereo}, 40),
       ["busted-turns-stereo.mp3"] = frames({mono}, 40) .. frames({stereo}, 40),
       ["busted-stereo-tagged.mp3"] = tagged,
     }
@@ -746,8 +751,9 @@ describe("Media playback effects with a generated sound file", function()
     local started = {}
     collect("sysMediaStarted", started)
 
-    playSoundFile({name = "busted-turns-mono.mp3"})
-    playSoundFile({name = "busted-turns-mono-48k.mp3"})
+    for _, name in ipairs({"busted-turns-mono.mp3", "busted-turns-mono-48k.mp3", "busted-turns-mono-last.mp3", "busted-mono-stereo-mono.mp3"}) do
+      playSoundFile({name = name})
+    end
     -- past the first second, where the mono frames would reach the resampler
     pumpEvents(2000)
     assert.equals(0, #started)
@@ -757,6 +763,13 @@ describe("Media playback effects with a generated sound file", function()
       assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
       assert.equals(i, #started)
       assert.equals(name, started[i].file)
+    end
+
+    -- a wildcard passes over a refused match to one that plays
+    for i = 3, 6 do
+      playSoundFile({name = "busted-wildcard-*.mp3"})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals("busted-wildcard-b.mp3", started[i].file)
     end
   end)
 

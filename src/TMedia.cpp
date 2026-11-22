@@ -97,8 +97,8 @@ bool mediaTypeNamed(const QJsonObject& json)
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
 }
 
-// Qt 6.12's FFmpeg backend builds its resampler from the first frame and rebuilds it only on a seek or an
-// output change, so a mono frame in an MP3 that began in stereo makes swresample read a missing channel.
+// Qt 6.12's FFmpeg backend builds its resampler from the first frame it plays and rebuilds it only on a seek or an
+// output change, so a mono frame after a stereo one makes swresample read a missing channel.
 bool mp3TurnsMono(const QString& fileName)
 {
     if (!fileName.endsWith(qsl(".mp3"), Qt::CaseInsensitive)) {
@@ -158,24 +158,31 @@ bool mp3TurnsMono(const QString& fileName)
 
     bool stereoSeen = false;
     bool turnsMono = false;
+    // Whether the last frame counted ran into one starting here
+    bool expected = false;
 
     while (pos + 4 <= size) {
         const qint64 length = frameLength(pos);
+        const bool runsOn = length > 0 && frameLength(pos + length) > 0 && streamBits(pos + length) == streamBits(pos);
 
-        // Only a frame that runs into another of its version and rate counts: anything else is a false sync, as in a
-        // tag or junk. A stream may change rate partway, as when two files are joined, and FFmpeg follows it
-        if (length == 0 || frameLength(pos + length) == 0 || streamBits(pos + length) != streamBits(pos)) {
+        // A frame counts when it runs into another of its version and rate, or when the last one ran into it and it
+        // fits in the file: anything else is a false sync, as in a tag or junk. A stream may change rate partway, as
+        // when two files are joined, and FFmpeg follows it
+        if (!runsOn && !(expected && pos + length <= size)) {
+            expected = false;
             ++pos;
             continue;
         }
 
-        if ((data[pos + 3] >> 6) == 3) {
-            turnsMono = stereoSeen;
+        // A mono start doesn't settle it: playback can start at a later stereo part
+        if ((data[pos + 3] >> 6) != 3) {
+            stereoSeen = true;
+        } else if (stereoSeen) {
+            turnsMono = true;
             break;
         }
 
-        stereoSeen = true;
-
+        expected = runsOn;
         pos += length;
     }
 
@@ -2546,30 +2553,51 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    if (mediaData.mediaInput() == TMediaData::MediaInputFile) {
-        fileNameList.removeIf([this](const QString& fileName) {
-            if (!mp3TurnsMono(fileName)) {
-                return false;
-            }
-
-            qWarning().noquote() << qsl("TMedia::play() WARNING - refusing \"%1\": it switches from stereo to mono, which crashes Qt's FFmpeg backend.").arg(fileName);
-            static QSet<QString> reported;
-
-            if (!reported.contains(fileName)) {
-                reported.insert(fileName);
-                //: %1 is the path of a sound or music file
-                mpHost->printSystemMessage(tr("Not playing %1: it switches from stereo to mono partway through, which would crash Mudlet. "
-                                              "Converting it to all stereo or all mono fixes this.")
-                                                   .arg(fileName)
-                                           + QChar('\n'));
-            }
-
-            return true;
-        });
-
-        if (fileNameList.isEmpty()) {
-            return;
+    const auto refused = [this](const QString& fileName) {
+        if (!mp3TurnsMono(fileName)) {
+            return false;
         }
+
+        qWarning().noquote() << qsl("TMedia::play() WARNING - refusing \"%1\": it switches from stereo to mono, which crashes Qt's FFmpeg backend.").arg(fileName);
+        static QSet<QString> reported;
+
+        if (!reported.contains(fileName)) {
+            reported.insert(fileName);
+            //: %1 is the path of a sound or music file
+            mpHost->printSystemMessage(tr("Not playing %1: it switches from stereo to mono partway through, which would crash Mudlet. "
+                                          "Converting it to all stereo or all mono fixes this.")
+                                               .arg(fileName)
+                                       + QChar('\n'));
+        }
+
+        return true;
+    };
+
+    // Scans only the files it picks, so a wildcard over a large folder doesn't read every match first
+    const auto pickFile = [this, &mediaData, &fileNameList, &refused]() -> QString {
+        while (!fileNameList.isEmpty()) {
+            if (fileNameList.size() == 1 && mediaData.mediaInput() == TMediaData::MediaInputStream) {
+                return getStreamUrl(mediaData);
+            }
+
+            const qsizetype index = fileNameList.size() > 1 ? QRandomGenerator::global()->bounded(fileNameList.size()) : 0;
+            const QString fileName = fileNameList.at(index);
+
+            if (mediaData.mediaInput() != TMediaData::MediaInputFile || !refused(fileName)) {
+                return fileName;
+            }
+
+            fileNameList.removeAt(index);
+        }
+
+        return QString();
+    };
+
+    // A file found playable stays in the list, so later picks always find one
+    QString absolutePathFileName = pickFile();
+
+    if (mediaData.mediaInput() == TMediaData::MediaInputFile && absolutePathFileName.isEmpty()) {
+        return;
     }
 
     std::shared_ptr<TMediaPlayer> pPlayer;
@@ -2613,8 +2641,6 @@ void TMedia::play(TMediaData& mediaData)
         playlist->setPlaybackMode(TMediaPlaylist::Sequential);
     }
 
-    QString absolutePathFileName;
-
     if (mediaData.mediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
         playlist->setPlaybackMode(TMediaPlaylist::Sequential);
 
@@ -2630,9 +2656,6 @@ void TMedia::play(TMediaData& mediaData)
                 return; // No action required. Continue playing the same media.
             }
         }
-
-        absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
-                                                       : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 
         if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) {
             return;
@@ -2656,9 +2679,6 @@ void TMedia::play(TMediaData& mediaData)
                     return; // Continue playing
                 }
             }
-
-            absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
-                                                           : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 
             if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) {
                 return;
@@ -2687,8 +2707,9 @@ void TMedia::play(TMediaData& mediaData)
             }
 
             for (int k = 0, loops = std::min(mediaData.mediaLoops(), maxQueuedLoops); k < loops; k++) {
-                absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
-                                                               : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
+                if (k > 0) {
+                    absolutePathFileName = pickFile();
+                }
 
                 if (k == 0 && !TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) {
                     return;
