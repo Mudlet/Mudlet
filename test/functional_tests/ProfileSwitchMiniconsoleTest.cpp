@@ -512,6 +512,58 @@ private slots:
         QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
     }
 
+    // A window shrunk below what the docks and the console need squeezes the docks, so the console keeps its least room
+    void test_aHiddenProfileWhoseMapDockIsSqueezedKeepsTheConsolesLeastRoom()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            closeMapDockOf(mpFirstHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        QDockWidget* pDock = openMapDockOf(mpFirstHost);
+        QVERIFY2(pDock, "the map dock did not open");
+        mudlet::self()->resizeDocks({pDock}, {600}, Qt::Horizontal);
+        QTest::qWait(200ms);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        switchTo(mpSecondHost);
+
+        mudlet::self()->resize(960, mudlet::self()->height());
+        QTest::qWait(300ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        QCOMPARE(wrapBehind, autoWrapOf(mpFirstHost));
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // A drag resizes the window a step at a time, and a profile behind a tab only needs the size it ends at
+    void test_aWindowDraggedBehindAnotherTabTellsTheHiddenProfileOnce()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([windowSize]() {
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("if not _hiddenResizeHandler then\n"
+                           "  _hiddenResizeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function() _hiddenResizes = _hiddenResizes + 1 end)\n"
+                           "end"))
+                        .isNull());
+        switchTo(mpSecondHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_hiddenResizes = 0")).isNull());
+
+        for (int step = 1; step <= 10; ++step) {
+            mudlet::self()->resize(windowSize.width() + step * 10, windowSize.height());
+            QCoreApplication::processEvents();
+        }
+        QTest::qWait(500ms);
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_hiddenResizes")), 1);
+    }
+
     // A switch hides the console before the docks change over, so it is not told of the room the other profile's leave
     void test_switchingTabsWithADockOpenLeavesTheHiddenProfileAlone()
     {

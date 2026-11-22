@@ -287,6 +287,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpModel->mShowTimeStamps = true;
     } else if (mType == MainConsole) {
         mBorders = mpHost->borders();
+        mpHiddenSyncTimer = new QTimer(this);
+        mpHiddenSyncTimer->setSingleShot(true);
+        mpHiddenSyncTimer->setInterval(100ms);
+        connect(mpHiddenSyncTimer, &QTimer::timeout, this, &TConsole::syncHiddenScreenDimensions);
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
     } else if (mType == Buffer) {
@@ -985,9 +989,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
             for (const auto& otherHostPtr : *HostManager::self()) {
                 Host* otherHost = otherHostPtr.data();
-                if (otherHost && otherHost != mpHost.data() && otherHost->mainConsoleView()) {
+                if (TConsole* const other = otherHost && otherHost != mpHost.data() ? otherHost->mainConsoleView() : nullptr) {
                     // Queued: it runs that profile's resize handlers, which could close this profile mid-resize
-                    QTimer::singleShot(0ms, otherHost->mainConsoleView(), &TConsole::syncHiddenScreenDimensions);
+                    other->mpHiddenSyncTimer->start();
                 }
             }
         }

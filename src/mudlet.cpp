@@ -9722,7 +9722,9 @@ QSize mudlet::profileContainerSizeFor(const QString& profileName, const QSize co
             shownThen << dock;
         }
     }
-    return containerSize + roomTakenBy(this, shownNow) - roomTakenBy(this, shownThen);
+    // A window too narrow for its docks squeezes them, never the profile below the least room it needs
+    const QSize overhead = centralWidget()->size() - containerSize;
+    return (containerSize + roomTakenBy(this, shownNow) - roomTakenBy(this, shownThen)).expandedTo(centralWidget()->minimumSizeHint() - overhead);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)

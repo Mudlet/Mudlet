@@ -50,6 +50,7 @@ class QLineEdit;
 class QScrollBar;
 class QShortcut;
 class QSplitter;
+class QTimer;
 class QToolButton;
 class QVideoWidget;
 
@@ -352,6 +353,8 @@ private:
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
     QSize mOldSize;
+    // MainConsole only: restarted by each step of a drag, so a hidden profile is resized once, for the size it ends at
+    QTimer* mpHiddenSyncTimer = nullptr;
     // only ever written from a size that was really measured, so what
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had
