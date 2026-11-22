@@ -11,6 +11,7 @@ Error Package_spec.lua: Tests opening a profile whose script fails as it loads r
 Failure Mapper_spec.lua: Tests closing another profile that opened a map widget survives the main window being activated again after the close
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes after resetProfile() then closeProfile()
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes another profile after closeProfile(), then closes
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop does not reuse an http request id after resetProfile()
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop loads another profile after closeProfile(), then closes
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop loads another profile after resetProfile(), then resets
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop never runs another function for a timer made while its state closed
