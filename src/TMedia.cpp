@@ -151,7 +151,7 @@ bool mp3TurnsMono(const QString& fileName)
 
     qint64 pos = 0;
 
-    // ID3v2: a 10 byte header holding a syncsafe size, and 10 more for a footer
+    // ID3v2: a 10 byte header holding a syncsafe size, plus 10 more if a footer follows
     if (size >= 10 && std::memcmp(data, "ID3", 3) == 0) {
         pos = 10 + ((data[6] & 0x7F) << 21 | (data[7] & 0x7F) << 14 | (data[8] & 0x7F) << 7 | (data[9] & 0x7F)) + ((data[5] & 0x10) ? 10 : 0);
     }
