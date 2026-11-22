@@ -121,15 +121,14 @@ bool mp3TurnsMono(const QString& fileName)
         return false;
     }
 
-    // Version, layer and sample rate, which stay the same for a whole stream, as FFmpeg's parser expects
+    // Version, layer and sample rate of the frame at pos
     const auto streamBits = [data](const qint64 pos) {
         return (data[pos + 1] & 0x1E) << 8 | (data[pos + 2] & 0x0C);
     };
-    std::optional<int> stream;
 
     // Length of the MPEG layer III frame starting at pos, or 0 if there is none
-    const auto frameLength = [data, size, &streamBits, &stream](const qint64 pos) -> qint64 {
-        if (pos + 4 > size || data[pos] != 0xFF || (data[pos + 1] & 0xE6) != 0xE2 || (stream && streamBits(pos) != *stream)) {
+    const auto frameLength = [data, size](const qint64 pos) -> qint64 {
+        if (pos + 4 > size || data[pos] != 0xFF || (data[pos + 1] & 0xE6) != 0xE2) {
             return 0;
         }
 
@@ -157,27 +156,25 @@ bool mp3TurnsMono(const QString& fileName)
         pos = 10 + ((data[6] & 0x7F) << 21 | (data[7] & 0x7F) << 14 | (data[8] & 0x7F) << 7 | (data[9] & 0x7F)) + ((data[5] & 0x10) ? 10 : 0);
     }
 
-    bool firstFrame = true;
+    bool stereoSeen = false;
     bool turnsMono = false;
 
     while (pos + 4 <= size) {
         const qint64 length = frameLength(pos);
 
-        // Only a frame that runs into another counts: anything else is a false sync, as in a tag or junk
-        if (length == 0 || frameLength(pos + length) == 0) {
+        // Only a frame that runs into another of its version and rate counts: anything else is a false sync, as in a
+        // tag or junk. A stream may change rate partway, as when two files are joined, and FFmpeg follows it
+        if (length == 0 || frameLength(pos + length) == 0 || streamBits(pos + length) != streamBits(pos)) {
             ++pos;
             continue;
         }
 
         if ((data[pos + 3] >> 6) == 3) {
-            turnsMono = !firstFrame;
+            turnsMono = stereoSeen;
             break;
         }
 
-        if (firstFrame) {
-            stream = streamBits(pos);
-            firstFrame = false;
-        }
+        stereoSeen = true;
 
         pos += length;
     }

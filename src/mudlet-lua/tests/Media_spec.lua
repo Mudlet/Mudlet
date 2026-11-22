@@ -715,20 +715,23 @@ describe("Media playback effects with a generated sound file", function()
     if mediaPlaybackUnavailable() then
       return
     end
-    -- Silent 417 byte MPEG-1 layer III frames, 40 to a second, cycling through the given channel modes
-    local function frames(modes, count)
+    -- Silent 128 kbps MPEG-1 layer III frames, about 40 to a second, cycling through the given channel modes, at
+    -- 44.1 kHz or, given rate 1, 48 kHz
+    local function frames(modes, count, rate)
+      rate = rate or 0
       local out = {}
       for i = 1, count do
-        out[i] = string.char(0xFF, 0xFB, 0x90, modes[(i - 1) % #modes + 1] * 64) .. string.rep("\0", 413)
+        out[i] = string.char(0xFF, 0xFB, 0x90 + rate * 4, modes[(i - 1) % #modes + 1] * 64) .. string.rep("\0", rate == 0 and 413 or 380)
       end
       return table.concat(out)
     end
     local stereo, jointStereo, mono = 0, 1, 3
     local tagged = frames({stereo}, 80)
     -- a frame header inside the last frame's data, which no frame follows, then an ID3v1 tag
-    tagged = tagged:sub(1, -21) .. string.char(0xFF, 0xFB, 0x90, 0xC0) .. string.rep("\0", 16) .. "TAG" .. string.rep("\0", 125)
+    tagged = tagged:sub(1, -21) .. string.char(0xFF, 0xFB, 0x90, mono * 64) .. string.rep("\0", 16) .. "TAG" .. string.rep("\0", 125)
     local files = {
       ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
+      ["busted-turns-mono-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 40, 1),
       ["busted-turns-stereo.mp3"] = frames({mono}, 40) .. frames({stereo}, 40),
       ["busted-stereo-tagged.mp3"] = tagged,
     }
@@ -744,6 +747,7 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     playSoundFile({name = "busted-turns-mono.mp3"})
+    playSoundFile({name = "busted-turns-mono-48k.mp3"})
     -- past the first second, where the mono frames would reach the resampler
     pumpEvents(2000)
     assert.equals(0, #started)
