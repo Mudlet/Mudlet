@@ -44,9 +44,9 @@ inline.
    by code reading (rules below).
 5. **Fix and re-measure A/B.** Keep the fix only if the end-to-end number moves, not just
    the microbenchmark.
-6. **Prove no behaviour change** - run the busted specs
-   (`.claude/scripts/run-lua-tests.sh` on Linux, see below for elsewhere) and `ctest` -
-   then open a pull request with the
+6. **Prove no behaviour change** - with the `verify-mudlet` skill, `diff replay` (the svof
+   session through the base and the change, diffing console, sends, events and errors) and
+   `diff specs`, plus `ctest` - then open a pull request with the
    `open-pr` skill, quoting before/after numbers and the exact invocation so a reviewer
    can reproduce them.
 
@@ -271,7 +271,5 @@ Two platform catches:
   the build copies `mudlet-lua` into the `.app` bundle, so the bundled copy shadows your
   edit. Re-run `cmake --build` after each swap - it is only a file copy, seconds, not a
   rebuild - or edit the copy inside the bundle directly.
-- `.claude/scripts/run-lua-tests.sh` is Linux-only: it drives the run under `xvfb-run` and
-  leans on GNU `timeout`. Elsewhere set the same environment by hand and launch the binary
-  windowed or with `-platform offscreen`; `src/mudlet-lua/tests/README.md` has the
-  per-platform busted setup and the isolated-config-root invocation.
+- The `verify-mudlet` skill runs the specs on Linux, macOS and Windows, and stages a macOS
+  bundle with the source tree's Lua itself.

@@ -58,9 +58,7 @@ cmake --preset linux-debug-nosan -B build-coverage \
   -DCMAKE_EXE_LINKER_FLAGS=--coverage
 cmake --build build-coverage
 
-# run-lua-tests.sh is Linux-only (xvfb-run, GNU timeout); see
-# src/mudlet-lua/tests/README.md for the per-platform equivalent.
-.claude/scripts/run-lua-tests.sh build-coverage/src/mudlet
+.agents/skills/verify-mudlet/scripts/verify-mudlet.sh specs --binary build-coverage/src/mudlet
 (cd build-coverage && ctest --output-on-failure)
 
 # Restrict the search paths as below: pointed at the whole build tree, gcovr
