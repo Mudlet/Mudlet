@@ -38,6 +38,7 @@
 #include <QComboBox>
 #include <QContextMenuEvent>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QFileInfo>
 #include <QFontMetrics>
@@ -598,6 +599,83 @@ private slots:
         for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
             QVERIFY2(!pCombo->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has no accessible name").arg(pCombo->objectName())));
         }
+    }
+
+    // Tab goes down the dialog as its controls stand, along each row from the colour field to its Reset, and reaches OK
+    // and Cancel last; the colour fields and the opacity box are made after the form's own tab order was set
+    void tabGoesThroughTheControlsInTheOrderTheyStand()
+    {
+        // As nextInFocusChain() reaches them; the line edit inside a spin or combo box hands its focus to the box
+        const auto tabStops = [](dlgRoomProperties* pDlg) {
+            QPushButton* pOk = pDlg->dialogButtonBox->button(QDialogButtonBox::Ok);
+            QPushButton* pCancel = pDlg->dialogButtonBox->button(QDialogButtonBox::Cancel);
+            QStringList stops;
+            QWidget* pWidget = pDlg->lineEdit_name;
+            do {
+                if ((pWidget->focusPolicy() & Qt::TabFocus) == Qt::TabFocus && !pWidget->focusProxy() && pWidget->isVisibleTo(pDlg) && pWidget->isEnabled()) {
+                    stops.append(pWidget == pOk ? qsl("OK") : pWidget == pCancel ? qsl("Cancel") : pWidget->objectName());
+                }
+                pWidget = pWidget->nextInFocusChain();
+            } while (pWidget && pWidget != pDlg->lineEdit_name);
+            return stops;
+        };
+        // Where the platform puts OK and Cancel, which is where Tab has to find them
+        const auto buttonsAsTheyStand = [](dlgRoomProperties* pDlg) {
+            const bool okFirst = pDlg->dialogButtonBox->button(QDialogButtonBox::Ok)->x() < pDlg->dialogButtonBox->button(QDialogButtonBox::Cancel)->x();
+            return okFirst ? QStringList{qsl("OK"), qsl("Cancel")} : QStringList{qsl("Cancel"), qsl("OK")};
+        };
+
+        // Rooms that agree on symbol and weight show the plain fields; two of them offer both Resets
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QVERIFY(pDlg->pushButton_resetSymbolColor->isEnabled() && pDlg->pushButton_resetBorderColor->isEnabled());
+        QVERIFY(borderOpacity(pDlg)->isEnabled());
+        QCOMPARE(tabStops(pDlg),
+                 QStringList({qsl("lineEdit_name"),
+                              qsl("pushButton_setRoomColor"),
+                              qsl("lineEdit_roomSymbol"),
+                              qsl("roomPropertiesSymbolColour"),
+                              qsl("pushButton_setSymbolColor"),
+                              qsl("pushButton_resetSymbolColor"),
+                              qsl("roomPropertiesBorderColour"),
+                              qsl("roomPropertiesBorderOpacity"),
+                              qsl("pushButton_setBorderColor"),
+                              qsl("pushButton_resetBorderColor"),
+                              qsl("spinBox_borderThickness"),
+                              qsl("spinBox_weight"),
+                              qsl("checkBox_locked"),
+                              qsl("checkBox_hidden")})
+                         + buttonsAsTheyStand(pDlg));
+        pDlg->reject();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        // ...and rooms that differ show the dropdowns in their place
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        room(scmFirstRoom)->setWeight(3);
+        room(scmSecondRoom)->setWeight(9);
+        pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QCOMPARE(tabStops(pDlg),
+                 QStringList({qsl("lineEdit_name"),
+                              qsl("pushButton_setRoomColor"),
+                              qsl("comboBox_roomSymbol"),
+                              qsl("roomPropertiesSymbolColour"),
+                              qsl("pushButton_setSymbolColor"),
+                              qsl("pushButton_resetSymbolColor"),
+                              qsl("roomPropertiesBorderColour"),
+                              qsl("roomPropertiesBorderOpacity"),
+                              qsl("pushButton_setBorderColor"),
+                              qsl("pushButton_resetBorderColor"),
+                              qsl("spinBox_borderThickness"),
+                              qsl("comboBox_weight"),
+                              qsl("checkBox_locked"),
+                              qsl("checkBox_hidden")})
+                         + buttonsAsTheyStand(pDlg));
     }
 
     // The whole point of the placeholders: a field left showing one has to come

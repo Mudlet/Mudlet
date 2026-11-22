@@ -62,6 +62,29 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     mpBorderColour->opacityBox()->setObjectName(qsl("roomPropertiesBorderOpacity"));
     mpSymbolColour->setChooseButton(pushButton_setSymbolColor);
     mpBorderColour->setChooseButton(pushButton_setBorderColor);
+    // Made after setupUi() set the form's tab order, the colour fields and the opacity box would come after OK and
+    // Cancel, so the whole chain goes here in the order the controls stand on screen
+    QList<QWidget*> tabOrder{lineEdit_name,
+                             pushButton_setRoomColor,
+                             lineEdit_roomSymbol,
+                             comboBox_roomSymbol,
+                             mpSymbolColour,
+                             pushButton_setSymbolColor,
+                             pushButton_resetSymbolColor,
+                             mpBorderColour,
+                             mpBorderColour->opacityBox(),
+                             pushButton_setBorderColor,
+                             pushButton_resetBorderColor,
+                             spinBox_borderThickness,
+                             spinBox_weight,
+                             comboBox_weight,
+                             checkBox_locked,
+                             checkBox_hidden};
+    // OK and Cancel trade places between platforms
+    uiDesign::collectFocusableInLayoutOrder(dialogButtonBox->layout(), tabOrder);
+    for (int i = 1, total = tabOrder.size(); i < total; ++i) {
+        setTabOrder(tabOrder.at(i - 1), tabOrder.at(i));
+    }
     restyleColourRows();
     connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgRoomProperties::restyleColourRows);
     // A typed colour goes the way one chosen in the colours window does

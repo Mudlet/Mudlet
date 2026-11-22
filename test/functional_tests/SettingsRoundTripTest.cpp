@@ -1597,6 +1597,62 @@ private slots:
         }
     }
 
+    // The preview is drawn in the display font as well, so a size set here is drawn there at once, not only once the
+    // apply re-reads the colours
+    void test_theDisplayPreviewFollowsTheDisplayFontSize()
+    {
+        const QFont priorFont = mpHost->getDisplayFont();
+        restoreLater([this, priorFont]() {
+            mpHost->setDisplayFont(priorFont);
+        });
+
+        openPreferences();
+        QWidget* pPreview = displayPreviewOnShow();
+        QVERIFY2(pPreview, "there is no display preview on show");
+        QSpinBox* pSize = mpPreferences->spinBox_displayFontSize;
+        // Words take up more of the preview the larger they are drawn
+        const auto wordPixels = [this, pPreview]() {
+            const QImage image = pPreview->grab().toImage();
+            const QRgb background = mpHost->mBgColor.rgb();
+            const QRgb commandLine = mpHost->mCommandLineBgColor.rgb();
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QRgb pixel = image.pixelColor(x, y).rgb();
+                    count += pixel != background && pixel != commandLine;
+                }
+            }
+            return count;
+        };
+        PaintCounter paints(pPreview);
+        const auto settleThenCount = [&paints]() {
+            for (int wait = 0; wait < 20; ++wait) {
+                paints.reset();
+                QTest::qWait(300);
+                if (paints.count() == 0) {
+                    return;
+                }
+            }
+        };
+
+        // Small enough that the preview has no need to draw any smaller, so both sizes are drawn as set
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pSize->setValue(4);
+        QCOMPARE(mpHost->getDisplayFont().pointSize(), 4);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        const int small = wordPixels();
+        settleThenCount();
+        applySpy.clear();
+        pSize->setValue(8);
+        QCOMPARE(mpHost->getDisplayFont().pointSize(), 8);
+        QTRY_VERIFY2(paints.count() > 0, "the preview was not drawn again for a new display font size");
+        // The apply's refresh draws the preview again whatever changed, 400 ms after the edit
+        QVERIFY2(applySpy.isEmpty(), "the preview was drawn again only once the apply re-read the settings");
+        const int large = wordPixels();
+        QVERIFY2(large > small * 3 / 2,
+                 qPrintable(qsl("the words fill %1 pixels at 4 points and %2 at 8, in a preview %3 by %4").arg(small).arg(large).arg(pPreview->width()).arg(pPreview->height())));
+    }
+
     // The line over the preview's command line is the one the console draws over its own, in the command line's colours
     void test_theDisplayPreviewSeamMatchesTheConsole()
     {

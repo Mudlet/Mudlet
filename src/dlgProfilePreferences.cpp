@@ -10237,6 +10237,8 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
     }
     rememberDisplayFontFamilyShown();
+    // Drawn in the display font, which it takes from the Host at every paint
+    mpConsoleColourPreview->update();
     // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
     // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
     // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
