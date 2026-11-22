@@ -1422,11 +1422,11 @@ void cTelnet::slot_socketConnected()
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 #if defined(Q_OS_WINDOWS)
     // Windows fixes a socket's receive buffer at 64 KB, so a burst of game text refills it every
-    // 64 KB with a notifier round trip each time; other platforms size it themselves. The cap on
-    // Qt's own buffer leaves what the queued reads have not caught up with in the socket instead
+    // 64 KB with a notifier round trip each time; other platforms size it themselves.
     mpSocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024);
-    mpSocket->setReadBufferSize(1024 * 1024);
 #endif
+    // Leaves what the queued reads have not caught up with in the socket rather than in memory
+    mpSocket->setReadBufferSize(1024 * 1024);
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
@@ -6561,15 +6561,18 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
-#if defined(Q_OS_WINDOWS)
-    // This runs inside the socket notifier, which Qt's Windows dispatcher serves ahead of every
-    // timer: reading here as well as in the queued chain would hold the timers off until a flood
-    // was all in. The Unix dispatcher runs timers every turn; there the skip only slows a burst
+    // One read to an event-loop turn however long a flood lasts, or input, timers and painting wait for
+    // them all. The queued read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
     if (mReadPending) {
         return;
     }
-#endif
     readPendingSocketData();
+    // Queued even with nothing left to read: QSslSocket emits readyRead() for each record it decrypts,
+    // many in one turn, and those after this one have to wait for the next turn
+    if (!mReadPending) {
+        mReadPending = true;
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
 }
 
 // Requeues itself for what is left after one BUFFER_SIZE read, or deferred by a drain: readyRead()
@@ -6579,7 +6582,8 @@ void cTelnet::slot_socketReadyToBeRead()
 void cTelnet::readPendingSocketData()
 {
     mReadPending = false;
-    if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect) {
+    // drainBeforeDisconnection() does the reading once the close is noticed
+    if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect || mDisconnectionPending) {
         return;
     }
     // Qt never emits a socket's readyRead() from inside its handler, but a trigger's nested event loop can take up a
@@ -6595,7 +6599,8 @@ void cTelnet::readPendingSocketData()
         return;
     }
 
-    if (readSocketDataOnce()) {
+    // A trigger's nested event loop can have queued one during that read
+    if (readSocketDataOnce() && !mReadPending) {
         mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
@@ -6614,7 +6619,11 @@ bool cTelnet::readSocketDataOnce()
         std::array<char, BUFFER_SIZE + 10> in_buffer;
 
         amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
-        processSocketData(in_buffer.data(), amount);
+        // The read queued behind every readyRead() finds nothing once a burst is in, and inside a
+        // trigger's nested event loop at the depth cap that would warn of lost data
+        if (amount > 0) {
+            processSocketData(in_buffer.data(), amount);
+        }
     } else if (unreadBytes() > 0) {
         std::array<char, BUFFER_SIZE + 10> in_buffer;
 
