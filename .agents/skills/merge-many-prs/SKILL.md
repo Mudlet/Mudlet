@@ -1,7 +1,7 @@
 ---
 name: merge-many-prs
 description: >-
-  Read before merging more than a handful of pull requests into development in one sitting,
+  Read before merging five or more pull requests into development in one sitting,
   by hand or with agents. Gives the trial-merge workflow that tests the whole batch once
   before any of it lands.
 ---
@@ -13,7 +13,7 @@ PRs that are green on their own can still break `development` together, and a PR
 - #12664 removed `utils.h` from `dlgMapLabel.cpp`, and #12669 added `qsl()` calls to the same file. Each passed alone; together they broke the build on every platform.
 - #12770's last CI run predated the WebAssembly workflow, so its spec failures there only showed up after it merged.
 
-Re-running CI on every PR against the new base would take days. Test the batch once instead:
+Re-running CI on every PR against the new base would take days. When you have five or more PRs to merge, test the batch once instead (fewer than five can merge one at a time as usual):
 
 1. Merge every PR you plan to land into a scratch branch off the current `development`, in the order you will merge them. Resolve conflicts there first: a PR that conflicts with the batch is not ready.
 2. Build it and run the Lua specs locally (see the `build-mudlet` skill). This takes minutes and catches PRs that compile or pass only on their own.
