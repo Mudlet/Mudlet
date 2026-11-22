@@ -711,6 +711,39 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("playSoundFile refuses an MP3 that turns from stereo to mono, which crashes Qt's FFmpeg backend", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- 40 silent MPEG-1 layer III frames in one channel mode, then 40 in the other: about a second each
+    local function silentMp3(firstMode, secondMode)
+      local function frames(mode)
+        return (string.char(0xFF, 0xFB, 0x90, mode * 64) .. string.rep("\0", 413)):rep(40)
+      end
+      return frames(firstMode) .. frames(secondMode)
+    end
+    local stereo, mono = 0, 3
+    for name, contents in pairs({["busted-turns-mono.mp3"] = silentMp3(stereo, mono), ["busted-turns-stereo.mp3"] = silentMp3(mono, stereo)}) do
+      lfs.mkdir(mediaDirectory)
+      local handle = io.open(mediaDirectory .. "/" .. name, "wb")
+      handle:write(contents)
+      handle:close()
+      onCleanup(function() os.remove(mediaDirectory .. "/" .. name) end)
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    playSoundFile({name = "busted-turns-mono.mp3"})
+    -- past the first second, where the mono frames would reach the resampler
+    pumpEvents(2000)
+    assert.equals(0, #started)
+
+    playSoundFile({name = "busted-turns-stereo.mp3"})
+    assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+    assert.equals(1, #started)
+    assert.equals("busted-turns-stereo.mp3", started[1].file)
+  end)
+
   it("playSoundFile plays a file given in the ordered argument form", function()
     if mediaPlaybackUnavailable() then
       return
@@ -5113,10 +5146,16 @@ describe("Tests the text-to-speech Lua API", function()
 describe("FFmpeg's hardware device types", function()
   local variables = {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}
 
-  it("are named on Linux only, unless already set, so Qt does not try each one when the first sound plays", function()
+  it("are named on Linux and Windows, unless already set, so Qt does not try each one when the first sound plays", function()
     local named = "vaapi,vdpau,qsv,drm"
+    if getOS() == "windows" then
+      for _, variable in ipairs(variables) do
+        assert.equals("d3d11va,dxva2", os.getenv(variable))
+      end
+      return
+    end
     if getOS() ~= "linux" then
-      -- Qt's own list there holds the platform's decoders, such as D3D11 and VideoToolbox
+      -- Qt's own list there holds the platform's decoders, such as VideoToolbox
       for _, variable in ipairs(variables) do
         assert.are_not.equals(named, os.getenv(variable))
         assert.are_not.equals("cuda," .. named, os.getenv(variable))
