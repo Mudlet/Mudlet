@@ -209,7 +209,7 @@ successes):
   wrapper for it) — starts the HTTP/Discord/MMCP fixtures from `CI/` and runs the self-test
   profile under xvfb like the "(Linux) Run Lua tests" CI step. Concurrent runs are safe (one per worktree, or even the
   same tree): fixtures bind ephemeral ports handed over via a per-run temp directory, cleanup
-  kills only that run's fixture PIDs, and each run gets a private HOME so no two Mudlets — nor
+  kills only that run's fixture PIDs, and each run gets a private config directory (and HOME, on Linux) so no two Mudlets — nor
   leftovers of an aborted run — share the self-test profile's saved state. Sharing a profile
   tree is not survivable: stale state fails ~38 Networking specs with "Expected objects to be
   the same" at the `ensurePeer` assertion. The run is capped at 900s (set

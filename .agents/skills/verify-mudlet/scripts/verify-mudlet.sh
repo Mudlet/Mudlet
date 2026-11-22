@@ -39,15 +39,16 @@ diff options:
   --no-recheck         report spec differences without re-running them
 replay options:
   --log FILE           raw session bytes, as a game sent them (telnet codes and all)
-  --package FILE       install this package or module first (repeatable)
+  --package FILE       install this package first (repeatable)
   --home-files DIR     copy DIR's contents into the profile's home directory first
   --setup FILE         Lua to run in the profile before the packages are installed
-  --settle MS          let the profile run this long after installing (default 4000)
+  --settle MS          with --package or --setup: let the profile run this long after (default 4000)
   --plain              compare console text only, without colours (faster)
   --no-noise-check     run each side once, not twice (faster; timing noise then shows as changes)
 
-Exit status: 0 no failures/differences, 1 failures or differences, 2 harness problem,
-3 Mudlet stopped before the specs finished, 124 a run hit --timeout.
+Exit status: 0 no failures/differences, 1 failures or differences, 2 harness problem (and a
+replay that did not complete), 3 Mudlet stopped before the specs finished (diff specs: also a
+timeout), 124 a run hit --timeout.
 EOF
 }
 
@@ -84,8 +85,6 @@ resolve() {
 link_into() {
   if [ "$OS" = windows ]; then cp -R "$1" "$2"; else ln -s "$1" "$2"; fi
 }
-
-# ---------------------------------------------------------------- arguments
 
 COMMAND=""
 DIFF_KIND=""
@@ -214,8 +213,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# ---------------------------------------------------------------- finding a binary and its Lua
-
 default_binaries() { # checkout -> candidate binaries, best first
   local root="$1" dir
   case "$OS" in
@@ -259,9 +256,8 @@ preset_binary() { # checkout preset
   esac
 }
 
-# The first LuaGlobal.lua TLuaInterpreter::loadGlobal() finds next to this binary - only the first
-# existing candidate is ever loaded. Its compiled-in LUA_SOURCE_PATH comes after these and is checked
-# after the run instead.
+# The LuaGlobal.lua loadGlobal() should run for this binary: the first existing candidate. If that one
+# fails to load Mudlet falls through to the next, or to its compiled-in LUA_SOURCE_PATH; run_mudlet checks.
 loaded_lua_global() { # binary
   local bindir candidate
   bindir="$(cd "$(dirname "$1")" && pwd)"
@@ -348,8 +344,6 @@ binary_for_lua() { # binary root label
   printf '%s\n' "$staged"
 }
 
-# ---------------------------------------------------------------- staging specs
-
 # busted only takes a directory, and a few specs reach their fixtures and src/packages relative to
 # their own file, so the specs to run are linked into a tree of the same shape
 stage_specs() { # stage root, then specs ("@name" = inside root's tests directory)
@@ -380,9 +374,7 @@ stage_specs() { # stage root, then specs ("@name" = inside root's tests director
   cp "$HERE/results_hook.lua" "$tests/!verify_results_spec.lua"
 }
 
-# ---------------------------------------------------------------- fixtures
-
-wait_for_file() { # file [what]
+wait_for_file() { # file
   local _
   for _ in $(seq 1 100); do
     [ -s "$1" ] && return 0
@@ -427,8 +419,6 @@ start_fixtures() { # run dir
   fi
 }
 
-# ---------------------------------------------------------------- running Mudlet
-
 # Lua rock paths, read once against the real HOME before a run replaces it
 ROCK_ENV=()
 if command -v luarocks > /dev/null 2>&1; then
@@ -461,7 +451,14 @@ bounded() { # seconds log command...
   fi
   "$@" > "$log" 2>&1 &
   local pid=$! rc=0 started=$SECONDS
-  (sleep "$seconds"; kill -TERM "$pid" 2> /dev/null; sleep 10; kill -KILL "$pid" 2> /dev/null) &
+  # the sleeps run in the background so a TERM ends them too, instead of leaving them behind
+  (
+    trap 'kill "$nap" 2> /dev/null; exit 0' TERM
+    sleep "$seconds" & nap=$!; wait "$nap"
+    kill -TERM "$pid" 2> /dev/null
+    sleep 10 & nap=$!; wait "$nap"
+    kill -KILL "$pid" 2> /dev/null
+  ) > /dev/null 2>&1 &
   local watcher=$!
   wait "$pid" || rc=$?
   kill "$watcher" 2> /dev/null || true
@@ -474,9 +471,9 @@ bounded() { # seconds log command...
 
 # Runs one Mudlet over the staged specs in a profile of its own. Leaves $dir/log.txt,
 # $dir/results.tsv (+ .details), and sets RUN_STATUS: passed, failed, crashed, timeout or broken.
-run_mudlet() { # label binary lua-root stage-root [extra env...]
-  local label="$1" binary="$2" stage="$4"
-  shift 4
+run_mudlet() { # label binary stage-root [extra env...]
+  local label="$1" binary="$2" stage="$3"
+  shift 3
   local dir="$OUT/$label" run="$WORK/run-$label"
   rm -rf "$dir" "$run"
   mkdir -p "$dir" "$run/xdg/mudlet/profiles" "$run/home"
@@ -592,6 +589,15 @@ run_mudlet() { # label binary lua-root stage-root [extra env...]
     note "$label: every spec passed but Mudlet exited $rc - see $dir/log.txt"
     RUN_STATUS=failed
   fi
+  if [ "$RUN_STATUS" = passed ] || [ "$RUN_STATUS" = failed ]; then
+    if grep -q "^=== verify-mudlet results hook failed" "$dir/results.tsv.details"; then
+      note "$label: the results hook failed, so results.tsv is incomplete - see $dir/results.tsv.details"
+      RUN_STATUS=broken
+    elif [ ! -s "$dir/results.tsv" ]; then
+      note "$label: no test reported a result - see $dir/log.txt"
+      RUN_STATUS=broken
+    fi
+  fi
 }
 
 # Windows may capture no stdout from a GUI Mudlet, so the streamed results are the fallback evidence
@@ -643,8 +649,6 @@ status_exit() { # RUN_STATUS -> exit code
   esac
 }
 
-# ---------------------------------------------------------------- specs
-
 head_binary() {
   if [ -n "$BINARY" ]; then
     [ -x "$BINARY" ] || die "$BINARY is not executable"
@@ -654,7 +658,6 @@ head_binary() {
   find_binary "$WS" || die "no Mudlet build in $WS - build first (see the build-mudlet skill) or pass --binary"
 }
 
-# A binary that runs this checkout's Lua, staging one where the build carries another copy
 head_side() {
   local binary
   binary="$(head_binary)"
@@ -688,12 +691,10 @@ cmd_specs() {
   local binary
   binary="$(head_side)"
   stage_specs "$WORK/stage-head" "$WS" ${RESOLVED_SPECS[@]+"${RESOLVED_SPECS[@]}"}
-  run_mudlet head "$binary" "$WS" "$WORK/stage-head"
+  run_mudlet head "$binary" "$WORK/stage-head"
   report_run head
   exit "$(status_exit "$RUN_STATUS")"
 }
-
-# ---------------------------------------------------------------- diff: the base side
 
 resolve_base() {
   local ref="$BASE_REF" remote url
@@ -751,15 +752,15 @@ head_cmake_args() {
   sed -En 's/^(CMAKE_PREFIX_PATH|Qt6_DIR):[A-Z]*=(.+)$/-D\1=\2/p' "$cache"
 }
 
-# A build of the base commit, in one reusable worktree inside this repository's git directory so a
-# later run only rebuilds what changed. MUDLET_VERIFY_JOBS sets the job count; a machine-wide
-# build-slot gate is used when one is installed.
+# One reusable worktree for base builds, so a later run only rebuilds what changed
 build_base() { # head binary
   local preset="${BASE_PRESET:-$(default_preset)}" tree lock
   tree="${MUDLET_VERIFY_BASE_TREE:-$(git -C "$WS" rev-parse --path-format=absolute --git-common-dir)/mudlet-verify-base}"
   lock="$tree.lock"
   mkdir "$lock" 2> /dev/null || die "another verify-mudlet is building the base in $tree (remove $lock if not)"
-  trap 'rmdir "$lock" 2> /dev/null; cleanup' EXIT
+  # expanded now: lock is local, and a set -e exit runs the trap outside this function
+  # shellcheck disable=SC2064
+  trap "rmdir $(printf %q "$lock") 2> /dev/null; cleanup" EXIT
   if [ ! -d "$tree" ]; then
     note "creating the base worktree $tree"
     git -C "$WS" worktree add --detach "$tree" "$BASE_SHA" > /dev/null
@@ -794,7 +795,6 @@ prepare_base() { # head binary
   elif binary_changed; then
     build_base "$1"
   else
-    # Only Lua read from disk changed: this checkout's binary with the base's Lua is the base build
     note "only Lua changed since the base, so the base side reuses this binary with the base's Lua"
     BASE_ROOT="$WORK/base-src"
     mkdir -p "$BASE_ROOT"
@@ -803,8 +803,6 @@ prepare_base() { # head binary
   fi
   BASE_SIDE_BINARY="$(binary_for_lua "$BASE_BINARY" "$BASE_ROOT" base)"
 }
-
-# ---------------------------------------------------------------- diff specs
 
 # One "<file>\t<test>\t<n>\t<status>" per test, n counting repeats of a name
 outcomes() { # results.tsv
@@ -830,10 +828,10 @@ diff_specs_round() { # suffix, then specs
   rm -rf "$WORK/stage-base$suffix" "$WORK/stage-head$suffix"
   stage_specs "$WORK/stage-base$suffix" "$specs_root" "$@"
   stage_specs "$WORK/stage-head$suffix" "$specs_root" "$@"
-  run_mudlet "base$suffix" "$BASE_SIDE_BINARY" "$BASE_ROOT" "$WORK/stage-base$suffix"
+  run_mudlet "base$suffix" "$BASE_SIDE_BINARY" "$WORK/stage-base$suffix"
   BASE_STATUS=$RUN_STATUS
   report_run "base$suffix" brief
-  run_mudlet "head$suffix" "$HEAD_SIDE_BINARY" "$WS" "$WORK/stage-head$suffix"
+  run_mudlet "head$suffix" "$HEAD_SIDE_BINARY" "$WORK/stage-head$suffix"
   HEAD_STATUS=$RUN_STATUS
   report_run "head$suffix" brief
 }
@@ -845,6 +843,7 @@ cmd_diff_specs() {
   note "running ${SPECS_FROM}'s specs on both sides"
   diff_specs_round "" ${RESOLVED_SPECS[@]+"${RESOLVED_SPECS[@]}"}
   differences "$OUT/base/results.tsv" "$OUT/head/results.tsv" > "$OUT/differences.tsv"
+  local first_base=$BASE_STATUS first_head=$HEAD_STATUS
 
   if [ "$RECHECK" = true ] && [ -s "$OUT/differences.tsv" ]; then
     # Re-run the spec files involved; a difference has to show up both times to count
@@ -857,10 +856,11 @@ cmd_diff_specs() {
     for file in ${files[@]+"${files[@]}"}; do
       if [ -e "$source/$file" ]; then
         recheck_specs+=("@$file")
+        echo "$file" >> "$WORK/rechecked.txt"
       else
         # a probe from outside the tests directory, named on the command line
         for spec in ${RESOLVED_SPECS[@]+"${RESOLVED_SPECS[@]}"}; do
-          [ "$(basename "$spec")" = "$file" ] && recheck_specs+=("$spec")
+          [ "$(basename "$spec")" = "$file" ] && { recheck_specs+=("$spec"); echo "$file" >> "$WORK/rechecked.txt"; }
         done
       fi
     done
@@ -868,9 +868,10 @@ cmd_diff_specs() {
       note "re-running ${#recheck_specs[@]} spec file(s) with differences to drop flaky ones"
       diff_specs_round "-recheck" "${recheck_specs[@]}"
       differences "$OUT/base-recheck/results.tsv" "$OUT/head-recheck/results.tsv" > "$WORK/recheck.tsv"
-      # keep a difference only if the re-run reproduced it exactly
-      awk -F'\t' 'NR == FNR { again[$0] = 1; next } ($0 in again) { print; next } { print > "/dev/stderr" }' \
-        "$WORK/recheck.tsv" "$OUT/differences.tsv" > "$WORK/confirmed.tsv" 2> "$OUT/flaky.tsv"
+      # only a file that was re-run can be found flaky
+      awk -F'\t' 'FILENAME == ARGV[1] { rerun[$0] = 1; next } FILENAME == ARGV[2] { again[$0] = 1; next }
+        !($1 in rerun) || ($0 in again) { print; next } { print > "/dev/stderr" }' \
+        "$WORK/rechecked.txt" "$WORK/recheck.tsv" "$OUT/differences.tsv" > "$WORK/confirmed.tsv" 2> "$OUT/flaky.tsv"
       mv "$WORK/confirmed.tsv" "$OUT/differences.tsv"
     fi
   fi
@@ -885,14 +886,19 @@ cmd_diff_specs() {
   else
     echo "no test behaves differently between the base and this checkout"
   fi
-  case "$BASE_STATUS $HEAD_STATUS" in
-    *crashed* | *timeout* | *broken*) echo "a run did not finish (base: $BASE_STATUS, head: $HEAD_STATUS) - the comparison is partial"; exit 3 ;;
+  case "$first_base $first_head $BASE_STATUS $HEAD_STATUS" in
+    *crashed* | *timeout* | *broken*)
+      echo "a run did not finish (base: $first_base, head: $first_head; re-run: $BASE_STATUS, $HEAD_STATUS) - the comparison is partial"
+      exit 3
+      ;;
   esac
   [ ! -s "$OUT/differences.tsv" ] || exit 1
+  if [ "$first_base" = passed ] && [ "$first_head" = failed ]; then
+    echo "but Mudlet exited with an error on this checkout and not on the base - see $OUT/head/log.txt"
+    exit 1
+  fi
   exit 0
 }
-
-# ---------------------------------------------------------------- diff replay
 
 SVOF_URL="https://github.com/Mudlet/bench-data/releases/download/svof-1/SvofBench.mpackage"
 SVOF_SHA256="1659af70b73c0e74ea5bb0a3cd53b7f5d6f2392f5acc6b1a0ba41c2fab16c980"
@@ -907,6 +913,8 @@ md5_of() {
 
 # The default workload: svof, a 2,500-trigger curing system, playing a recorded Achaea session
 svof_workload() {
+  [ ${#REPLAY_PACKAGES[@]} -eq 0 ] && [ -z "$REPLAY_HOME" ] && [ -z "$REPLAY_SETUP" ] \
+    || die "--package, --home-files and --setup need --log: the svof session brings its own"
   local cache="${SVOF_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/svof-replay}"
   # the same cache test/svof-replay/run.sh fills
   local bundle="$cache/SvofBench-svof-1.mpackage" dir
@@ -941,7 +949,7 @@ lua_string() { # a Lua long string that cannot be closed early by the value
   printf '[%s[%s]%s]' "$level" "$value" "$level"
 }
 
-replay_once() { # label binary lua-root
+replay_once() { # label binary
   local label="$1" dir="$OUT/$1" stage="$WORK/stage-$1" config="$WORK/replay-$1.lua"
   rm -rf "$stage"
   mkdir -p "$stage/src/mudlet-lua/tests" "$dir"
@@ -966,7 +974,7 @@ replay_once() { # label binary lua-root
     echo "  plain = $REPLAY_PLAIN,"
     echo "}"
   } > "$config"
-  run_mudlet "$label" "$2" "$3" "$stage" "MUDLET_VERIFY_REPLAY_CONFIG=$(native "$config")"
+  run_mudlet "$label" "$2" "$stage" "MUDLET_VERIFY_REPLAY_CONFIG=$(native "$config")"
   # --mirror copies the editor's error console to stdout as "<profile>.errors_<profile>| ...", the
   # only place a script's Lua errors leave the profile
   grep -aE '^\**[^|]*\.errors_[^|]*\| ' "$dir/log.txt" | grep -v '\*\*\* starting new session \*\*\*' | sed 's/^[^|]*| //' > "$dir/errors.txt" || true
@@ -983,11 +991,11 @@ cmd_diff_replay() {
   HEAD_SIDE_BINARY="$(head_side)"
   prepare_base "$(head_binary)"
   local runs=(base head)
-  replay_once base "$BASE_SIDE_BINARY" "$BASE_ROOT"
-  replay_once head "$HEAD_SIDE_BINARY" "$WS"
+  replay_once base "$BASE_SIDE_BINARY"
+  replay_once head "$HEAD_SIDE_BINARY"
   if [ "$NOISE_CHECK" = true ]; then
-    replay_once base-again "$BASE_SIDE_BINARY" "$BASE_ROOT"
-    replay_once head-again "$HEAD_SIDE_BINARY" "$WS"
+    replay_once base-again "$BASE_SIDE_BINARY"
+    replay_once head-again "$HEAD_SIDE_BINARY"
     runs+=(base-again head-again)
   fi
 
@@ -1005,10 +1013,11 @@ cmd_diff_replay() {
       continue
     fi
     [ "$text" -eq 0 ] || changed=1
+    # timings a script prints land in the console; sends, events and errors carry none of their own
+    [ "$stream" = console.txt ] || [ "$numbers" -eq 0 ] || changed=1
     echo "$stream: $text line(s) changed - $OUT/$stream.changes"
     show_changes text 40 "$OUT/$stream.changes"
     if [ "$numbers" -gt 0 ]; then
-      # timings a script prints agree within each side by chance often enough to land here
       echo "  and $numbers line(s) differ only in their numbers - timings, or a real numeric change:"
       show_changes numbers 5 "$OUT/$stream.changes"
     fi
@@ -1024,13 +1033,8 @@ show_changes() { # kind max file
     printf "    base %d -> head %d  (base line %d, head line %d) %s\n", $1, $2, $3, $4, substr($6, 1, 160) }' "$3"
 }
 
-# Compares runs as multisets of lines - one count per distinct line - because a script's timers and
-# timings make line order and some lines themselves vary from run to run. Files: base, head, then
-# optionally a second base and a second head. A line counts as changed only where both runs of a side
-# agree on its count and the sides disagree. A line whose count varies between the runs of one side
-# is timing-dependent: its numbers are folded (colour tags aside), so "(0.008s)" and "(0.007s)" match.
-# Prints "<base count>\t<head count>\t<first base line>\t<first head line>\t<text|numbers>\t<line>",
-# "numbers" where the change is confined to digits.
+# Multisets of lines, as timers make order and some lines vary between runs. Files: base, head, then
+# optionally base and head again. Prints "<base n>\t<head n>\t<first base line>\t<first head line>\t<text|numbers>\t<line>".
 compare_stream() { # noisy-out file...
   local noisy="$1"
   shift
@@ -1046,7 +1050,9 @@ compare_stream() { # noisy-out file...
       }
       return out digits(s)
     }
-    FNR == 1 { f++ }
+    # by argument position, as an empty file has no first record to count
+    BEGIN { for (i = 1; i < ARGC; i++) slot[ARGV[i]] = i }
+    { f = slot[FILENAME] }
     { n[f, $0]++; seen[$0] = 1; if (!((f, $0) in at)) at[f, $0] = FNR }
     END {
       if (runs == 4) {

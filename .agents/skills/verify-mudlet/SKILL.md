@@ -14,8 +14,9 @@ license: GPL-2.0-or-later
 - To check a claim about behaviour (a review finding, a bug report): write a probe spec and run it.
 - To show a new test bites: `diff specs path/to/new_spec.lua` must show it failing on the base.
 
-Everything runs in a throwaway profile with its own HOME and config directory, under Xvfb on
-Linux (or `--offscreen`), with the test fixtures CI uses. It never touches your real profiles.
+Everything runs in a throwaway profile with its own config directory (and HOME, on Linux), under
+Xvfb on Linux (or `--offscreen`), with the test fixtures CI uses. It never touches your real
+profiles.
 Results are a checking aid, not proof: QA still happens on top.
 
 ## Commands
@@ -30,14 +31,15 @@ $S diff replay                            # svof + a recorded Achaea session, bo
 $S diff replay --log session.raw --package my.mpackage
 ```
 
-`--help` lists every option. Exit status: 0 clean, 1 failures or differences, 2 harness problem,
-3 Mudlet died before the specs finished, 124 timeout. Output is a short summary; everything else
+`--help` lists every option. Exit status: 0 clean, 1 failures or differences, 2 harness problem
+(including a replay run that did not complete), 3 Mudlet died before the specs finished (for
+`diff specs`, also a timeout), 124 timeout. Output is a short summary; everything else
 (log, `results.tsv` with one line per test, failure tracebacks, replay streams and diffs) is under
 `--out DIR`, or a temp directory the summary names.
 
 ## What it does for you
 
-- **Binary**: this checkout's build (`build-<platform>-debug-nosan`, then `build`, ...), or
+- **Binary**: this checkout's build (the platform's usual build directories in turn), or
   `--binary`. A binary from another worktree is fine for a Lua-only change: it is staged so that it
   runs *this* checkout's `src/mudlet-lua`, and `MudletBusted_spec.lua` confirms the right copy
   loaded. Its C++ and its compiled-in resources (`src/packages`, `utf8_filenames.lua`) are still
@@ -65,23 +67,27 @@ the log as `<profile>.errors_<profile>| ...` lines.
 
 ## Replay
 
-`diff replay` feeds the session synchronously in 100 KB chunks, so both sides see identical
-input timing. It records every console line with its colours (`--plain` for text only, faster),
-everything scripts sent with the line it happened on, every event raised with its arguments, and
-the Lua errors. A changed line is a behaviour change somewhere between the base and this checkout;
-whether it is the intended one is for you to judge. Each change prints as the base line, then the
-head line that replaced it. Lines that differ only in their digits are listed separately and do not
+`diff replay` feeds the session synchronously in 100 KB chunks, so both sides see identical input
+timing. It records every console line with its colours (`--plain` for text only, faster), everything
+scripts sent with the line it happened on, every event raised with its arguments, and the Lua
+errors. A changed line is a behaviour change somewhere between the base and this checkout; whether
+it is the intended one is for you to judge. Each change prints as the base line, then the head line
+that replaced it. Console lines that differ only in their digits are listed separately and do not
 fail the run: script timings land there (svof prints hundreds), but so would a real numeric change.
-A line that only moved is not reported. Without `--log` it uses the svof benchmark bundle
-(downloaded once, checksum-verified; see `test/svof-replay/README.md`), about two minutes for the
-four runs. A replay only exercises what the session's scripts actually reach: svof shows a change
-to `decho`, but not one to `table.size` or `string.title`.
+In sends, events and errors they fail it. A line that only moved is not reported. Without `--log` it
+uses the svof benchmark bundle (downloaded once, checksum-verified; see
+`test/svof-replay/README.md`), which brings its own package, files and setup; the four runs take
+about two minutes. A replay only exercises what the session's scripts actually reach: svof shows a
+change to `decho`, but not one to `table.size` or `string.title`.
 
 ## Platform notes
 
-- **macOS**: run from the shell that can open GUI apps; the binary must be inside its `.app`.
+- **macOS**: run from the shell that can open GUI apps; the binary should be inside its `.app`.
   The staged copy of a bundle is an APFS clone, so it costs no space.
 - **Windows**: an MSYS2 CLANG64 shell, with a Windows `python`. Only the HTTP fixture runs (as on
-  CI), so specs that need the MMCP, telnet or Discord fixtures pend. A borrowed binary is staged by
-  copying its DLLs and Qt plugin folders beside a copy of the exe.
-- A `portable.txt` beside the binary would redirect its config, so such a binary is staged without it.
+  CI), so specs that need the MMCP, telnet or Discord fixtures pend. `diff replay` reads Lua errors
+  from Mudlet's mirrored output, which Windows may not capture, so `errors.txt` can read empty
+  there. A borrowed binary is staged by copying its DLLs and Qt plugin folders beside a copy of the
+  exe.
+- A `portable.txt` beside the binary would redirect its config, so such a binary is staged
+  without it.
