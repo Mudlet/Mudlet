@@ -17,9 +17,9 @@ Re-running CI on every PR against the new base would take days. When you have fi
 
 1. Merge every PR you plan to land into a scratch branch off the current `development`, in the order you will merge them. Resolve conflicts there first: a PR that conflicts with the batch is not ready.
 2. Build it and run the Lua specs locally (see the `build-mudlet` skill). This takes minutes and catches PRs that compile or pass only on their own.
-3. Push the branch and open a draft PR from it. Pushing alone runs nothing: the build workflows trigger on `pull_request`, and the WebAssembly and headless Lua workflows on pushes to `development` only. The draft runs every workflow once for the whole batch, including any that older PRs never ran.
-4. If it fails, halve the batch to find the PR responsible, drop it, and test again.
-5. Once the draft is green, close it and merge the individual PRs in the same order. Their own checks may be old or missing; the batch run is what covers them.
+3. Push the branch and open a draft PR from it. Pushing alone runs nothing: the build workflows trigger on `pull_request`, and the WebAssembly and headless Lua workflows run on a PR only when it touches their paths. The draft can still skip some: `headless-lua-tests.yml` has a narrow path list, and `build-mudlet.yml` and `build-mudlet-win.yml` run only after a merge. Start whichever the draft did not run on the scratch branch by hand (`workflow_dispatch`, which these and `wasm-build.yml` all accept), and check that every workflow `development` runs has reported before you trust the result.
+4. If it fails, halve the batch to find the PR responsible, drop it, and test again. If both halves pass, the failure needs PRs from both: add the other half's PRs back to one half a few at a time until it fails again. Whatever you drop, rerun the whole remaining batch before merging any of it.
+5. Once the batch is green, close the draft and merge the individual PRs in the same order. Their own checks may be old or missing; the batch run is what covers them. Note the `development` commit and each PR's head commit you tested, and merge with the expected head set to that commit (`--match-head-commit` with `gh pr merge`). If a PR gained commits or `development` moved for any reason other than your own merges, rebuild the batch and test it again.
 
 Also:
 
