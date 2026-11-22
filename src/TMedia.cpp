@@ -97,10 +97,14 @@ bool mediaTypeNamed(const QJsonObject& json)
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
 }
 
-// Qt's FFmpeg backend sets its resampler up for the first frame's channels and keeps it, so a mono
-// frame later in an MP3 that began in stereo hands swresample a channel that is not there: a crash.
+// Qt 6.12's FFmpeg backend builds its resampler from the first frame and rebuilds it only on a seek or an
+// output change, so a mono frame in an MP3 that began in stereo makes swresample read a missing channel.
 bool mp3TurnsMono(const QString& fileName)
 {
+    if (!fileName.endsWith(qsl(".mp3"), Qt::CaseInsensitive)) {
+        return false;
+    }
+
     static QHash<QString, bool> verdicts;
     const QFileInfo info(fileName);
     const QString key = qsl("%1|%2|%3").arg(info.absoluteFilePath(), QString::number(info.size()), QString::number(info.lastModified().toMSecsSinceEpoch()));
@@ -117,15 +121,22 @@ bool mp3TurnsMono(const QString& fileName)
         return false;
     }
 
+    // Version, layer and sample rate, which stay the same for a whole stream, as FFmpeg's parser expects
+    const auto streamBits = [data](const qint64 pos) {
+        return (data[pos + 1] & 0x1E) << 8 | (data[pos + 2] & 0x0C);
+    };
+    std::optional<int> stream;
+
     // Length of the MPEG layer III frame starting at pos, or 0 if there is none
-    const auto frameLength = [data, size](const qint64 pos) -> qint64 {
-        if (pos + 4 > size || data[pos] != 0xFF || (data[pos + 1] & 0xE6) != 0xE2) {
+    const auto frameLength = [data, size, &streamBits, &stream](const qint64 pos) -> qint64 {
+        if (pos + 4 > size || data[pos] != 0xFF || (data[pos + 1] & 0xE6) != 0xE2 || (stream && streamBits(pos) != *stream)) {
             return 0;
         }
 
         static constexpr int mpeg1Kbps[] = {0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320};
         static constexpr int mpeg2Kbps[] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160};
-        static constexpr int mpeg1Rates[] = {44100, 48000, 32000};
+        // Indexed by the header's version bits: 0 is MPEG-2.5, 2 is MPEG-2, 3 is MPEG-1
+        static constexpr int sampleRates[4][3] = {{11025, 12000, 8000}, {}, {22050, 24000, 16000}, {44100, 48000, 32000}};
         const int version = (data[pos + 1] >> 3) & 3;
         const int bitrateIndex = data[pos + 2] >> 4;
         const int rateIndex = (data[pos + 2] >> 2) & 3;
@@ -134,36 +145,38 @@ bool mp3TurnsMono(const QString& fileName)
             return 0;
         }
 
-        const int sampleRate = mpeg1Rates[rateIndex] >> (version == 3 ? 0 : version == 2 ? 1 : 2);
+        const int sampleRate = sampleRates[version][rateIndex];
         const int padding = (data[pos + 2] >> 1) & 1;
         return (version == 3 ? 144000 * mpeg1Kbps[bitrateIndex] : 72000 * mpeg2Kbps[bitrateIndex]) / sampleRate + padding;
     };
 
     qint64 pos = 0;
 
+    // ID3v2: a 10 byte header holding a syncsafe size, and 10 more for a footer
     if (size >= 10 && std::memcmp(data, "ID3", 3) == 0) {
         pos = 10 + ((data[6] & 0x7F) << 21 | (data[7] & 0x7F) << 14 | (data[8] & 0x7F) << 7 | (data[9] & 0x7F)) + ((data[5] & 0x10) ? 10 : 0);
     }
 
-    std::optional<bool> startedMono;
+    bool firstFrame = true;
     bool turnsMono = false;
 
     while (pos + 4 <= size) {
         const qint64 length = frameLength(pos);
 
-        // A real frame runs into the next one or into the end; anything else is a false sync in a tag
-        if (length == 0 || (pos + length + 4 <= size && frameLength(pos + length) == 0)) {
+        // Only a frame that runs into another counts: anything else is a false sync, as in a tag or junk
+        if (length == 0 || frameLength(pos + length) == 0) {
             ++pos;
             continue;
         }
 
-        const bool mono = (data[pos + 3] >> 6) == 3;
-
-        if (!startedMono) {
-            startedMono = mono;
-        } else if (mono && !*startedMono) {
-            turnsMono = true;
+        if ((data[pos + 3] >> 6) == 3) {
+            turnsMono = !firstFrame;
             break;
+        }
+
+        if (firstFrame) {
+            stream = streamBits(pos);
+            firstFrame = false;
         }
 
         pos += length;
@@ -2542,15 +2555,16 @@ void TMedia::play(TMediaData& mediaData)
                 return false;
             }
 
+            qWarning().noquote() << qsl("TMedia::play() WARNING - refusing \"%1\": it switches from stereo to mono, which crashes Qt's FFmpeg backend.").arg(fileName);
             static QSet<QString> reported;
 
             if (!reported.contains(fileName)) {
                 reported.insert(fileName);
-                qWarning().noquote() << qsl("TMedia::play() WARNING - refusing \"%1\": it switches from stereo to mono, which crashes Qt's FFmpeg backend.").arg(fileName);
                 //: %1 is the path of a sound or music file
-                mpHost->printSystemMessage(qsl("%1\n").arg(tr("Not playing %1: it switches from stereo to mono partway through, which would crash Mudlet. "
-                                                              "Saving it again as all stereo or all mono fixes this.")
-                                                                   .arg(fileName)));
+                mpHost->printSystemMessage(tr("Not playing %1: it switches from stereo to mono partway through, which would crash Mudlet. "
+                                              "Converting it to all stereo or all mono fixes this.")
+                                                   .arg(fileName)
+                                           + QChar('\n'));
             }
 
             return true;

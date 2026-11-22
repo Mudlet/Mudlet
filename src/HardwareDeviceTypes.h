@@ -31,14 +31,14 @@
 #endif
 #include <QByteArray>
 
-// On Linux and Windows, names FFmpeg's hardware device types unless already set; otherwise Qt Multimedia opens a device
-// of each type as the first sound plays, blocking the main thread
+// On Linux and Windows, names FFmpeg's hardware device types unless already set, so Qt Multimedia doesn't open a device
+// of each type as the first sound plays: that blocks the main thread, and on Windows can crash
 inline void nameHardwareDeviceTypes()
 {
 #if (defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)) || defined(Q_OS_WINDOWS)
 #if defined(Q_OS_WINDOWS)
-    // Qt prefers D3D11VA here; probing the other types opens Microsoft's Vulkan-on-Direct3D 12 layer, which crashes
-    // some AMD drivers (#12990)
+    // D3D11VA is Qt's own first choice; naming the types skips its probe of the rest, and probing Vulkan through
+    // Microsoft's Vulkan-on-Direct3D 12 layer crashes some AMD drivers (#12990)
     const QByteArray deviceTypes = "d3d11va,dxva2";
 #else
     // Named types skip Qt's driver prechecks, so this repeats its CUDA one: FFmpeg can crash without libnvcuvid

@@ -715,20 +715,30 @@ describe("Media playback effects with a generated sound file", function()
     if mediaPlaybackUnavailable() then
       return
     end
-    -- 40 silent MPEG-1 layer III frames in one channel mode, then 40 in the other: about a second each
-    local function silentMp3(firstMode, secondMode)
-      local function frames(mode)
-        return (string.char(0xFF, 0xFB, 0x90, mode * 64) .. string.rep("\0", 413)):rep(40)
+    -- Silent 417 byte MPEG-1 layer III frames, 40 to a second, cycling through the given channel modes
+    local function frames(modes, count)
+      local out = {}
+      for i = 1, count do
+        out[i] = string.char(0xFF, 0xFB, 0x90, modes[(i - 1) % #modes + 1] * 64) .. string.rep("\0", 413)
       end
-      return frames(firstMode) .. frames(secondMode)
+      return table.concat(out)
     end
-    local stereo, mono = 0, 3
-    for name, contents in pairs({["busted-turns-mono.mp3"] = silentMp3(stereo, mono), ["busted-turns-stereo.mp3"] = silentMp3(mono, stereo)}) do
-      lfs.mkdir(mediaDirectory)
-      local handle = io.open(mediaDirectory .. "/" .. name, "wb")
+    local stereo, jointStereo, mono = 0, 1, 3
+    local tagged = frames({stereo}, 80)
+    -- a frame header inside the last frame's data, which no frame follows, then an ID3v1 tag
+    tagged = tagged:sub(1, -21) .. string.char(0xFF, 0xFB, 0x90, 0xC0) .. string.rep("\0", 16) .. "TAG" .. string.rep("\0", 125)
+    local files = {
+      ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
+      ["busted-turns-stereo.mp3"] = frames({mono}, 40) .. frames({stereo}, 40),
+      ["busted-stereo-tagged.mp3"] = tagged,
+    }
+    lfs.mkdir(mediaDirectory)
+    for name, contents in pairs(files) do
+      local path = mediaDirectory .. "/" .. name
+      local handle = io.open(path, "wb")
       handle:write(contents)
       handle:close()
-      onCleanup(function() os.remove(mediaDirectory .. "/" .. name) end)
+      onCleanup(function() os.remove(path) end)
     end
     local started = {}
     collect("sysMediaStarted", started)
@@ -738,10 +748,12 @@ describe("Media playback effects with a generated sound file", function()
     pumpEvents(2000)
     assert.equals(0, #started)
 
-    playSoundFile({name = "busted-turns-stereo.mp3"})
-    assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
-    assert.equals(1, #started)
-    assert.equals("busted-turns-stereo.mp3", started[1].file)
+    for i, name in ipairs({"busted-turns-stereo.mp3", "busted-stereo-tagged.mp3"}) do
+      playSoundFile({name = name})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals(i, #started)
+      assert.equals(name, started[i].file)
+    end
   end)
 
   it("playSoundFile plays a file given in the ordered argument form", function()
