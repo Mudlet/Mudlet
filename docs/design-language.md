@@ -400,7 +400,8 @@ three things on `::menu-button`, which is `scmInputDropDownWidth` (18px) wide at
   takes, because the body's hover fills the whole button, the half included:
   where the body lights to `hoverSoft` the half lights to `accentSoft` - the
   same wash a row of the menu it opens takes under the pointer - and where the
-  body is pressed to `accentSoft` the half takes twice that. A half washed in
+  body is pressed to `accentSoft` under a tenth of black, so that a press
+  sinks past the hover on both appearances, the half takes twice `accentSoft`. A half washed in
   what the body is already washed in never reads as its own target.
 
   **It says the half is a target, not that it is the one under the pointer**,
