@@ -5022,6 +5022,59 @@ end))lua")));
         session.shutdown(false);
     }
 
+    // A frontend that draws the main console in a font of its own tells the game its own columns and rows, and the
+    // main window it gave in pixels keeps that size
+    void test_aGameScreenSizeReachesTheGameAndLeavesTheMainWindow()
+    {
+        const QString name = qsl("Headless Game Screen Size");
+        QVERIFY(writeProfile(name, QString()));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QVERIFY(!session.setGameScreenSize(60, 40));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        const QSize grid = session.mainConsoleGrid();
+        // Before the game asks, so it is told when it does
+        QVERIFY(session.setGameScreenSize(70, 30));
+        QTRY_VERIFY_WITH_TIMEOUT(server.clientConnected(), 10000);
+        server.sendRaw(QByteArray::fromHex("fffd1f"));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(70, 30)}), 10000);
+        server.clearNawsUpdates();
+        QCOMPARE(session.mainConsoleGrid(), grid);
+        QVERIFY(session.runLua(qsl("local w, h = getMainWindowSize(); headlessMainWindow = w .. 'x' .. h")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessMainWindow"), qsl("800x600"));
+
+        // The main window's grid follows its size, and the game is still told the frontend's
+        QVERIFY(session.setMainWindowSize(QSize(600, 600)));
+        QVERIFY(session.mainConsoleGrid() != grid);
+        QTest::qWait(1000);
+        QVERIFY(server.nawsUpdates().isEmpty());
+
+        QVERIFY(session.setGameScreenSize(72, 20));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(72, 20)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.runLua(qsl("local w, h = getMainWindowSize(); headlessMainWindow = w .. 'x' .. h")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessMainWindow"), qsl("600x600"));
+        // As setScreenSize() tells it
+        QVERIFY(session.setGameScreenSize(20, 20));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(40, 20)}), 10000);
+        server.clearNawsUpdates();
+
+        for (const auto& [columns, rows] : {std::pair(0, 40), std::pair(60, 0), std::pair(65536, 40), std::pair(60, 65536)}) {
+            QVERIFY(!session.setGameScreenSize(columns, rows));
+            QVERIFY2(session.errorString().contains(qsl("from 1 to 65535")), qPrintable(session.errorString()));
+        }
+        QTest::qWait(500);
+        QVERIFY(server.nawsUpdates().isEmpty());
+        session.shutdown(false);
+    }
+
     // As the GUI's main console takes a border from its text, and tells the game and scripts
     void test_aBorderTakesItsRoomFromTheGrid()
     {

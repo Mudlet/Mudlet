@@ -321,10 +321,10 @@ public:
     bool setTextBoxText(const QString& name, const QString& text) override;
     bool clearTextBox(const QString& name) override { return setTextBoxText(name, QString()); }
     bool setTextBoxReadOnly(const QString& name, bool readOnly) override;
-    // What these set changes nothing a Lua call reads back
-    bool setTextBoxPlaceholder(const QString& name, const QString&) override { return mTextBoxes.contains(name); }
+    // What these set no Lua call reads back; textBoxRecord() gives it to a frontend that draws the box
+    bool setTextBoxPlaceholder(const QString& name, const QString& text) override;
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
-    bool setTextBoxTabMovesFocus(const QString& name, bool) override { return mTextBoxes.contains(name); }
+    bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     void createBuffer(const QString& name) override;
     void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
@@ -468,6 +468,19 @@ public:
         qint64 made = 0;
     };
     std::optional<LabelRecord> labelRecord(const QString& name) const;
+    // What a text box keeps beside its text and font, which are the registry's, as a real TTextBox keeps it in its
+    // widget; and whether a player could type in it, as it shows, as does each window it is in
+    struct TextBoxRecord
+    {
+        bool readOnly = false;
+        QString placeholder;
+        QString styleSheet;
+        bool tabMovesFocus = false;
+        bool shown = false;
+    };
+    std::optional<TextBoxRecord> textBoxRecord(const QString& name) const;
+    // The player's typing in it, as QPlainTextEdit::textChanged gives the registry its text, which raises nothing
+    void typeTextBox(const QString& name, const QString& text);
     // A label's model while it is made, or once deleted till deferred deletes run, as the GUI's TLabel is
     bool holdsLabelModel(const TLabelModel* pModel) const;
     // Changes as the label of the name is made, hides or moves into another window, or as the console or scroll box
@@ -568,6 +581,9 @@ private:
         // QPlainTextEdit::isReadOnly() and the window's own sheet, which its limits depend on
         bool readOnly = false;
         QString styleSheet;
+        // A text box's QPlainTextEdit::placeholderText() and tabChangesFocus()
+        QString placeholder;
+        bool tabMovesFocus = false;
         qint64 stackOrder = 0;
     };
     struct SubConsole

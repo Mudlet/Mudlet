@@ -274,11 +274,16 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
                 }
                 WindowsTold now = windowsNow();
                 QStringList names = changedNames(byName(mDeliveredWindows->windows), byName(now.windows));
-                for (auto it = now.labels.cbegin(); it != now.labels.cend(); ++it) {
-                    if (const auto told = mDeliveredWindows->labels.constFind(it.key()); told != mDeliveredWindows->labels.cend() && *told != it.value()) {
-                        names << it.key();
+                // A label or text box told before whose content differs
+                const auto changedContent = [&names](const auto& told, const auto& current) {
+                    for (auto it = current.cbegin(); it != current.cend(); ++it) {
+                        if (const auto was = told.constFind(it.key()); was != told.cend() && *was != it.value()) {
+                            names << it.key();
+                        }
                     }
-                }
+                };
+                changedContent(mDeliveredWindows->labels, now.labels);
+                changedContent(mDeliveredWindows->textBoxes, now.textBoxes);
                 if (names.isEmpty()) {
                     return;
                 }
@@ -417,14 +422,17 @@ bool THeadlessSession::submitWindowCommandLine(const QString& commandLine, const
 
 THeadlessSession::WindowsTold THeadlessSession::windowsNow() const
 {
-    WindowsTold now{scriptWindows(), {}};
+    WindowsTold now{scriptWindows(), {}, {}};
     for (const ScriptWindow& window : std::as_const(now.windows)) {
-        if (window.kind != ScriptWindow::Kind::label) {
-            continue;
-        }
-        // The list is the null view's and the content the registry's model, which could disagree
-        if (std::optional<LabelContent> content = labelContent(window.name)) {
-            now.labels.insert(window.name, std::move(*content));
+        if (window.kind == ScriptWindow::Kind::label) {
+            // The list is the null view's and the content the registry's model, which could disagree
+            if (std::optional<LabelContent> content = labelContent(window.name)) {
+                now.labels.insert(window.name, std::move(*content));
+            }
+        } else if (window.kind == ScriptWindow::Kind::textBox) {
+            if (std::optional<TextBoxContent> content = textBoxContent(window.name)) {
+                now.textBoxes.insert(window.name, std::move(*content));
+            }
         }
     }
     return now;
@@ -466,6 +474,50 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.accessibleButton = pModel->actsAsButton();
     content.styleSheet = pModel->mStyleSheet;
     return content;
+}
+
+std::optional<THeadlessSession::TextBoxContent> THeadlessSession::textBoxContent(const QString& name) const
+{
+    const auto* pView = mpHost ? dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()) : nullptr;
+    const std::optional<TNullConsoleFrontend::TextBoxRecord> record = pView ? pView->textBoxRecord(name) : std::nullopt;
+    // The record is the null view's and the text the registry's, which could disagree
+    const std::optional<QString> text = record ? mpHost->windowRegistry().textBoxText(name) : std::nullopt;
+    if (!text) {
+        return std::nullopt;
+    }
+    return TextBoxContent{*text, record->readOnly, record->placeholder, record->styleSheet, record->tabMovesFocus};
+}
+
+bool THeadlessSession::setTextBoxText(const QString& name, const QString& text)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    const std::optional<TNullConsoleFrontend::TextBoxRecord> record = pView ? pView->textBoxRecord(name) : std::nullopt;
+    if (!record) {
+        //: Error from a frontend with no window that was given what the player typed in a text box that the profile's scripts have not made; %1 is the name it gave
+        mErrorString = tr("The profile has no text box called \"%1\".").arg(name);
+        return false;
+    }
+    if (!record->shown) {
+        //: Error from a frontend with no window that was given what the player typed in a text box that a script has hidden, or that is in a hidden window, which a player could not type in; %1 is its name
+        mErrorString = tr("The text box \"%1\" is not shown, so nothing can be typed in it.").arg(name);
+        return false;
+    }
+    if (record->readOnly) {
+        //: Error from a frontend with no window that was given what the player typed in a text box that a script made read-only; %1 is its name
+        mErrorString = tr("The text box \"%1\" is read-only, so nothing can be typed in it.").arg(name);
+        return false;
+    }
+    pView->typeTextBox(name, text);
+    // The app has what the player typed, so it is not told it back; what a script sets is told
+    if (mDeliveredWindows) {
+        if (const auto told = mDeliveredWindows->textBoxes.find(name); told != mDeliveredWindows->textBoxes.end()) {
+            told->text = mpHost->windowRegistry().textBoxText(name).value_or(QString());
+        }
+    }
+    return true;
 }
 
 bool THeadlessSession::setUserWindowGeometry(const QString& name, const QRect& geometry, const bool floating)
