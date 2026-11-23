@@ -297,6 +297,7 @@ private:
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
+    void updateCaretKeyClashNote();
     void switchEditorTheme(const QString& themeName);
     static QString dictionaryDisplayName(const QString&);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
@@ -534,6 +535,8 @@ private:
     QLabel* mpLabel_pageTitleIcon = nullptr;
     QFrame* mpFrame_migrationBanner = nullptr;
     QLabel* mpLabel_noProfileNotice = nullptr;
+    // Under the caret mode key, while that key is also one of Mudlet's shortcuts
+    QLabel* mpLabel_caretKeyClash = nullptr;
     QScrollArea* mpScrollArea_searchResults = nullptr;
     QVBoxLayout* mpLayout_searchResults = nullptr;
     QLabel* mpLabel_searchEmpty = nullptr;

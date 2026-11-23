@@ -32,6 +32,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QAccessible>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
@@ -65,6 +66,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
+#include "ShortcutsManager.h"
+#include "TKeySequenceEdit.h"
 #include "mudlet.h"
 #include "uiDesign.h"
 
@@ -1768,6 +1771,135 @@ private slots:
             QVERIFY2(pPage->widget()->isAncestorOf(pOption), qPrintable(qsl("%1 fell off the Accessibility page when its card was split").arg(pOption->objectName())));
             QVERIFY2(pOption->isVisible(), qPrintable(qsl("%1 is not showing on the Accessibility page").arg(pOption->objectName())));
         }
+    }
+
+    // The caret mode key wins over a Mudlet shortcut on the same key, so the settings say which one stops working
+    void test_aCaretKeyThatIsAlsoAShortcutSaysWhichOne()
+    {
+        auto* pNote = mpPreferences->findChild<QLabel*>(qsl("settingsCaretKeyClash"));
+        QVERIFY2(pNote, "the accessibility settings have no note for a caret mode key that is also a shortcut");
+        const int savedChoice = mpPreferences->comboBox_caretModeKey->currentIndex();
+        const auto restore = qScopeGuard([this, savedChoice]() {
+            mpPreferences->comboBox_caretModeKey->setCurrentIndex(savedChoice);
+        });
+
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::F6));
+        QVERIFY2(pNote->isHidden(), qPrintable(qsl("F6, which no Mudlet shortcut uses, was said to be one: %1").arg(pNote->text())));
+
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::CtrlTab));
+        QVERIFY2(!pNote->isHidden(), "Ctrl+Tab, the next profile shortcut, was not said to be one");
+        const QString nextProfile = mudlet::self()->mpShortcutsManager->getLabel(qsl("Next profile"));
+        QVERIFY2(pNote->text().contains(nextProfile), qPrintable(qsl("the note does not name '%1': %2").arg(nextProfile, pNote->text())));
+
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::F6));
+        QVERIFY2(pNote->isHidden(), "the note stayed up once the caret mode key was moved off the shortcut");
+    }
+
+    // Read from the Shortcuts page as it is being edited, not as it was saved
+    void test_theCaretKeyNoteFollowsTheShortcutsBeingEdited()
+    {
+        auto* pNote = mpPreferences->findChild<QLabel*>(qsl("settingsCaretKeyClash"));
+        QVERIFY(pNote);
+        ShortcutsManager* pManager = mudlet::self()->mpShortcutsManager;
+        const QString nextLabel = pManager->getLabel(qsl("Next profile"));
+        const QString previousLabel = pManager->getLabel(qsl("Previous profile"));
+        TKeySequenceEdit* pNextProfile = nullptr;
+        TKeySequenceEdit* pPreviousProfile = nullptr;
+        for (auto* pEdit : mpPreferences->findChildren<TKeySequenceEdit*>()) {
+            const QWidget* pNamed = pEdit->focusProxy() ? pEdit->focusProxy() : pEdit;
+            if (pNamed->accessibleName() == nextLabel) {
+                pNextProfile = pEdit;
+            } else if (pNamed->accessibleName() == previousLabel) {
+                pPreviousProfile = pEdit;
+            }
+        }
+        QVERIFY2(pNextProfile && pPreviousProfile, "the Shortcuts page has no editor for the next or previous profile shortcut");
+        const QKeySequence savedNext = pNextProfile->keySequence();
+        const QKeySequence savedPrevious = pPreviousProfile->keySequence();
+        const int savedChoice = mpPreferences->comboBox_caretModeKey->currentIndex();
+        // Put back before the apply timer runs, so nothing reaches the profile
+        const auto restore = qScopeGuard([this, pNextProfile, pPreviousProfile, savedNext, savedPrevious, savedChoice]() {
+            pNextProfile->setKeySequence(savedNext);
+            emit pNextProfile->editingFinished();
+            pPreviousProfile->setKeySequence(savedPrevious);
+            emit pPreviousProfile->editingFinished();
+            mpPreferences->comboBox_caretModeKey->setCurrentIndex(savedChoice);
+        });
+        const auto setShortcut = [](TKeySequenceEdit* pEdit, const QKeySequence& sequence) {
+            pEdit->setKeySequence(sequence);
+            emit pEdit->editingFinished();
+        };
+
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::CtrlTab));
+        setShortcut(pNextProfile, QKeySequence(Qt::Key_F7));
+        setShortcut(pPreviousProfile, QKeySequence(Qt::Key_F8));
+        QVERIFY2(pNote->isHidden(), qPrintable(qsl("moving both profile shortcuts off Ctrl+Tab left the note up: %1").arg(pNote->text())));
+
+        // A Ctrl+Shift+Tab press arrives as Backtab, which the caret key leaves to the shortcut
+        const Qt::KeyboardModifiers caretModifiers = Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab).keyboardModifiers();
+        setShortcut(pPreviousProfile, QKeySequence(caretModifiers | Qt::ShiftModifier | Qt::Key_Tab));
+        QVERIFY2(pNote->isHidden(), qPrintable(qsl("Ctrl+Shift+Tab, which the Ctrl+Tab caret key leaves alone, was said to clash: %1").arg(pNote->text())));
+
+        // The caret key takes Ctrl+Tab with other modifiers held, and a sequence never gets past its first press
+        setShortcut(pPreviousProfile, QKeySequence(caretModifiers | Qt::AltModifier | Qt::Key_Tab));
+        QVERIFY2(!pNote->isHidden(), "Ctrl+Alt+Tab, which the Ctrl+Tab caret key takes, was not said to clash");
+        QVERIFY2(pNote->text().contains(previousLabel) && !pNote->text().contains(nextLabel), qPrintable(pNote->text()));
+        setShortcut(pPreviousProfile, QKeySequence(Qt::Key_F8));
+        const QKeyCombination ctrlTab = Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab);
+        setShortcut(pNextProfile, QKeySequence(ctrlTab, QKeyCombination(Qt::Key_F7)));
+        QVERIFY2(!pNote->isHidden(), "a shortcut starting with Ctrl+Tab, which the caret key takes, was not said to clash");
+        QVERIFY2(pNote->text().contains(nextLabel), qPrintable(pNote->text()));
+
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::F6));
+        QVERIFY(pNote->isHidden());
+        setShortcut(pNextProfile, QKeySequence(Qt::Key_F6));
+        QVERIFY2(!pNote->isHidden(), "moving the next profile shortcut onto F6, the caret mode key, said nothing");
+    }
+
+    // A screen reader hears the clash with the hint it gets on picking the key, worked out for the key just picked
+    void test_aScreenReaderHearsTheCaretKeyClash()
+    {
+        static QStringList heard;
+        heard.clear();
+        const bool wasActive = QAccessible::isActive();
+        const QAccessible::UpdateHandler previous = QAccessible::installUpdateHandler([](QAccessibleEvent* pEvent) {
+            if (pEvent->type() == QAccessible::Announcement) {
+                heard.append(static_cast<QAccessibleAnnouncementEvent*>(pEvent)->message());
+            }
+        });
+        QAccessible::setActive(true);
+        const int savedChoice = mpPreferences->comboBox_caretModeKey->currentIndex();
+        const auto restore = qScopeGuard([this, wasActive, previous, savedChoice]() {
+            mpPreferences->comboBox_caretModeKey->setCurrentIndex(savedChoice);
+            QAccessible::installUpdateHandler(previous);
+            QAccessible::setActive(wasActive);
+        });
+        auto* pNote = mpPreferences->findChild<QLabel*>(qsl("settingsCaretKeyClash"));
+        QVERIFY(pNote);
+
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::CtrlTab));
+        QTRY_VERIFY(!heard.isEmpty());
+        QVERIFY2(heard.last().startsWith(pNote->text()), qPrintable(heard.last()));
+
+        heard.clear();
+        mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::F6));
+        QTRY_VERIFY(!heard.isEmpty());
+        QVERIFY2(!heard.last().contains(mudlet::self()->mpShortcutsManager->getLabel(qsl("Next profile"))), qPrintable(heard.last()));
+    }
+
+    // A player who already uses the clashing key sees the note as soon as the settings open
+    void test_theCaretKeyNoteShowsForAClashAlreadySaved()
+    {
+        const auto savedChoice = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedChoice]() {
+            mpHost->mCaretShortcut = savedChoice;
+        });
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        cleanup();
+        openPreferences();
+        auto* pNote = mpPreferences->findChild<QLabel*>(qsl("settingsCaretKeyClash"));
+        QVERIFY(pNote);
+        QVERIFY2(!pNote->isHidden(), "the settings opened on a saved Ctrl+Tab without saying it is also the next profile shortcut");
     }
 
     // Unnamed, a combo box is announced by its current item: what is picked, not what is being picked
