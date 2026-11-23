@@ -747,6 +747,93 @@ end)
         QVERIFY(!session.closeUserWindow(qsl("uw")));
     }
 
+    void test_aTextBoxsContentIsWhatScriptsSetAndThePlayerTypes()
+    {
+        using TextBoxContent = THeadlessSession::TextBoxContent;
+        const QString name = qsl("Headless Text Box Content");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        // Refused where runLua() is
+        QVERIFY(!session.setTextBoxText(qsl("notes"), qsl("early")));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createTextEdit("notes", 0, 0, 200, 100)
+createLabel("lbl", 0, 200, 100, 20, 1)
+createScrollBox("sb", 300, 0, 200, 100)
+createTextEdit("sb", "inBox", 0, 0, 100, 50)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<TextBoxContent> content = session.textBoxContent(qsl("notes"));
+        QVERIFY(content);
+        QVERIFY(*content == TextBoxContent{});
+        for (const QString& other : {QString(), qsl("lbl"), qsl("sb"), qsl("nope")}) {
+            QVERIFY(!session.textBoxContent(other));
+            QVERIFY(!session.setTextBoxText(other, qsl("x")));
+            QCOMPARE(session.errorString(), qsl("The profile has no text box called \"%1\".").arg(other));
+        }
+
+        // Each setting alone names the box
+        const auto toldBy = [&](const QString& lua) {
+            if (!session.runLua(lua) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("notes")};
+            changes.clear();
+            return named;
+        };
+        QVERIFY(toldBy(qsl(R"(setTextEditText("notes", "line one\nline two"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditPlaceholder("notes", "Your notes"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditStyleSheet("notes", "color: red;"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditTabMovesFocus("notes", true))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditReadOnly("notes", true))")));
+        content = session.textBoxContent(qsl("notes"));
+        QVERIFY(content);
+        QCOMPARE(content->text, qsl("line one\nline two"));
+        QCOMPARE(content->placeholder, qsl("Your notes"));
+        QCOMPARE(content->styleSheet, qsl("color: red;"));
+        QVERIFY(content->tabMovesFocus);
+        QVERIFY(content->readOnly);
+        // What it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setTextEditReadOnly("notes", true) setTextEditPlaceholder("notes", "Your notes"))")));
+        QVERIFY(!changes.wait(200));
+
+        // A player cannot type in a read-only box, so neither can the app; a script still sets its text
+        QVERIFY(!session.setTextBoxText(qsl("notes"), qsl("typed")));
+        QCOMPARE(session.errorString(), qsl("The text box \"notes\" is read-only, so nothing can be typed in it."));
+        QCOMPARE(luaString(session, qsl("getTextEditText('notes')")), qsl("line one\nline two"));
+        QVERIFY(toldBy(qsl(R"(setTextEditReadOnly("notes", false))")));
+
+        // What the player typed is what a script reads, as a line break and a non-breaking space come back from the
+        // GUI's box, and it is not told back
+        QVERIFY(session.setTextBoxText(qsl("notes"), qsl("typed here now")));
+        QCOMPARE(luaString(session, qsl("getTextEditText('notes')")), qsl("typed\nhere now"));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, qsl("typed\nhere now"));
+        QVERIFY(!changes.wait(200));
+        // A script's text is told, though the box had it when last told
+        QVERIFY(toldBy(qsl(R"(setTextEditText("notes", "line one\nline two"))")));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, qsl("line one\nline two"));
+        QVERIFY(toldBy(qsl(R"(clearTextEdit("notes"))")));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, QString());
+
+        // Nor in one hidden, or in a hidden window
+        QVERIFY(session.runLua(qsl("hideWindow('notes') hideWindow('sb')")));
+        for (const QString& hidden : {qsl("notes"), qsl("inBox")}) {
+            QVERIFY(!session.setTextBoxText(hidden, qsl("unseen")));
+            QCOMPARE(session.errorString(), qsl("The text box \"%1\" is not shown, so nothing can be typed in it.").arg(hidden));
+            QCOMPARE(session.textBoxContent(hidden)->text, QString());
+        }
+        QVERIFY(session.runLua(qsl("showWindow('notes') showWindow('sb')")));
+        QVERIFY(session.setTextBoxText(qsl("notes"), qsl("seen")));
+        QVERIFY(session.setTextBoxText(qsl("inBox"), qsl("seen")));
+        QCOMPARE(luaString(session, qsl("getTextEditText('inBox')")), qsl("seen"));
+
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aUserWindowsSheetFindsItsTextByTheGuisName()
     {
         const QString name = qsl("HeadlessPaneSheet");

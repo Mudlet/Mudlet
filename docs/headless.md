@@ -920,8 +920,8 @@ it out:
 - What they leave is where the main console's text goes, `mainConsoleTextRect()`, in pixels from the
   area's top left corner.
 - The main console's grid, `mainConsoleGrid()`, is as many characters of its font as fit there, never
-  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, and a
-  script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
+  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, unless the
+  app gave `setGameScreenSize()` (below), and a script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
 - Borders wider than the area leave the text no room, as in the GUI: `mainConsoleTextRect()` and
   `sysWindowResizeEvent` give a width or height of 0, never a negative one, and the grid stays at its
   40 columns, or 1 row.
@@ -938,6 +938,13 @@ Either raises `sysWindowResizeEvent` with the text's width and height in pixels,
 window does in the GUI, and nothing when the size is the one already given; a border change raises it
 too. Both are refused where `submit()` is, and for a size of no character, or more than 65535, either
 way.
+
+An app that draws the main console in a font of its own counts its columns and rows itself:
+`setGameScreenSize(columns, rows)` tells the game (NAWS) that size from then on, in place of the grid,
+with the same 40-column floor, wrap-width cap and 0.3 s settling as `setScreenSize()`. It changes
+neither the area nor the grid, so a main window given with `setMainWindowSize()` keeps its size and
+scripts read it; a later `setScreenSize()` still resizes the area. It is refused where `setScreenSize()`
+is, and holds until the profile closes.
 
 `mainConsoleAreaChanged` carries the grid and where the text goes when either changes: from a border, a
 font change, either call, or a script's own `setMainWindowSize()`. Read both at `profileLoaded`; the
@@ -1228,6 +1235,27 @@ script sets another, as on the desktop.
 
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
+
+`textBoxContent(name)` is what a text box from `createTextEdit()` holds, beside the place and font its
+`ScriptWindow` has, for the app to draw as an editable box of its own:
+
+- `text`, what `getTextEditText()` reads: as `setTextEditText()` or `clearTextEdit()` left it, or as the
+  player typed it;
+- `readOnly`, as `setTextEditReadOnly()` gave it;
+- `placeholder`, as `setTextEditPlaceholder()` gave it, shown while the box is empty;
+- `styleSheet`, as `setTextEditStyleSheet()` gave it, which Mudlet does not interpret for the app, as a
+  label's;
+- `tabMovesFocus`, as `setTextEditTabMovesFocus()` gave it: Tab moves on to the next control rather than
+  typing a tab.
+
+A script's change to any of these names the box in `scriptWindowsChanged`. It is empty for a name that is
+not a text box's.
+
+`setTextBoxText(name, text)` is what the player has typed in it so far, the whole of the box's text, which
+a script's `getTextEditText()` then reads. The GUI's box gives Mudlet its text as it changes and raises no
+event for that, so neither does this; nor is it told back in `scriptWindowsChanged`. It is false for a name
+that is not a text box's, for a box that is read-only or not `shown` in `scriptWindows()`, which a player
+could not type in, though a script still sets its text, and where `runLua()` is refused.
 
 ### Reading a console's text
 

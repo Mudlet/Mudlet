@@ -3561,11 +3561,17 @@ std::pair<bool, QString> TNullConsoleFrontend::deleteTextBox(const QString& name
 
 bool TNullConsoleFrontend::setTextBoxText(const QString& name, const QString& text)
 {
+    mWindowNotifier.note();
     if (!mTextBoxes.contains(name)) {
         return false;
     }
     mpHost->windowRegistry().setTextBoxText(name, plainText(text));
     return true;
+}
+
+void TNullConsoleFrontend::typeTextBox(const QString& name, const QString& text)
+{
+    mpHost->windowRegistry().setTextBoxText(name, plainText(text));
 }
 
 bool TNullConsoleFrontend::setTextBoxFont(const QString& name, const QFont& font)
@@ -3580,11 +3586,34 @@ bool TNullConsoleFrontend::setTextBoxFont(const QString& name, const QFont& font
 
 bool TNullConsoleFrontend::setTextBoxReadOnly(const QString& name, const bool readOnly)
 {
+    mWindowNotifier.note();
     const auto it = mTextBoxes.find(name);
     if (it == mTextBoxes.end()) {
         return false;
     }
     it->second.readOnly = readOnly;
+    return true;
+}
+
+bool TNullConsoleFrontend::setTextBoxPlaceholder(const QString& name, const QString& text)
+{
+    mWindowNotifier.note();
+    const auto it = mTextBoxes.find(name);
+    if (it == mTextBoxes.end()) {
+        return false;
+    }
+    it->second.placeholder = text;
+    return true;
+}
+
+bool TNullConsoleFrontend::setTextBoxTabMovesFocus(const QString& name, const bool tabMovesFocus)
+{
+    mWindowNotifier.note();
+    const auto it = mTextBoxes.find(name);
+    if (it == mTextBoxes.end()) {
+        return false;
+    }
+    it->second.tabMovesFocus = tabMovesFocus;
     return true;
 }
 
@@ -4977,6 +5006,16 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         records.push_back({qsl("mapper"), Kind::mapper, QString(), mMapWidget->geometry, mMapWidget->shown, mMapWidget->shown, mMapWidget->stackOrder, QColor(), QFont(), true});
     }
     return records;
+}
+
+std::optional<TNullConsoleFrontend::TextBoxRecord> TNullConsoleFrontend::textBoxRecord(const QString& name) const
+{
+    const auto it = mTextBoxes.find(name);
+    if (it == mTextBoxes.end()) {
+        return std::nullopt;
+    }
+    const PlainWindow& textBox = it->second;
+    return TextBoxRecord{textBox.readOnly, textBox.placeholder, textBox.styleSheet, textBox.tabMovesFocus, textBox.shown && shownWithin(textBox.userWindow, textBox.box.get())};
 }
 
 std::optional<TNullConsoleFrontend::LabelRecord> TNullConsoleFrontend::labelRecord(const QString& name) const
