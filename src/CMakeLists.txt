@@ -28,15 +28,47 @@ set(EXE_MUDLET_TARGET "mudlet_executable")
 set(mudlet_RCCS mudlet.qrc)
 configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
-if(USE_VARIABLE_SPLASH_SCREEN)
-  list(APPEND mudlet_RCCS additional_splash_screens.qrc)
-endif()
-
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
   if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
     list(APPEND mudlet_RCCS mudlet_fonts_posix.qrc)
+    set(INCLUDE_EMOJI_FONT ON)
   endif()
+endif()
+
+# Mudlet's Lua files and their translations, laid out as "make install" lays them out. A test loads it
+# too, so it is written whether or not USE_BUILTIN_MUDLET_LUA builds it into mudlet_core.
+set(BUILTIN_LUA_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+set(BUILTIN_LUA_TRANSLATIONS_FOLDER "${mudlet_SOURCE_DIR}/translations/lua")
+file(GLOB_RECURSE BUILTIN_LUA_FILES CONFIGURE_DEPENDS
+     RELATIVE "${BUILTIN_LUA_FOLDER}" "${BUILTIN_LUA_FOLDER}/*.lua")
+file(GLOB_RECURSE BUILTIN_LUA_TRANSLATIONS CONFIGURE_DEPENDS
+     RELATIVE "${BUILTIN_LUA_TRANSLATIONS_FOLDER}" "${BUILTIN_LUA_TRANSLATIONS_FOLDER}/*.json")
+if(NOT BUILTIN_LUA_FILES)
+  message(FATAL_ERROR "No Lua files found in ${BUILTIN_LUA_FOLDER}")
+endif()
+# A checkout's path may hold what XML reserves
+foreach(BUILTIN_LUA_PATH BUILTIN_LUA_FOLDER BUILTIN_LUA_TRANSLATIONS_FOLDER)
+  string(REPLACE "&" "&amp;" ${BUILTIN_LUA_PATH} "${${BUILTIN_LUA_PATH}}")
+  string(REPLACE "<" "&lt;" ${BUILTIN_LUA_PATH} "${${BUILTIN_LUA_PATH}}")
+  string(REPLACE ">" "&gt;" ${BUILTIN_LUA_PATH} "${${BUILTIN_LUA_PATH}}")
+endforeach()
+set(BUILTIN_LUA_QRC "<RCC>\n<qresource prefix=\"/builtin/mudlet-lua/lua\">\n")
+foreach(BUILTIN_LUA_FILE ${BUILTIN_LUA_FILES})
+  string(APPEND BUILTIN_LUA_QRC "<file alias=\"${BUILTIN_LUA_FILE}\">${BUILTIN_LUA_FOLDER}/${BUILTIN_LUA_FILE}</file>\n")
+endforeach()
+foreach(BUILTIN_LUA_FILE ${BUILTIN_LUA_TRANSLATIONS})
+  string(APPEND BUILTIN_LUA_QRC
+         "<file alias=\"translations/${BUILTIN_LUA_FILE}\">${BUILTIN_LUA_TRANSLATIONS_FOLDER}/${BUILTIN_LUA_FILE}</file>\n")
+endforeach()
+string(APPEND BUILTIN_LUA_QRC "</qresource>\n</RCC>\n")
+# Only when it changes, as every build would otherwise compile it again
+set(BUILTIN_LUA_QRC_WRITTEN "")
+if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc")
+  file(READ "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc" BUILTIN_LUA_QRC_WRITTEN)
+endif()
+if(NOT BUILTIN_LUA_QRC_WRITTEN STREQUAL BUILTIN_LUA_QRC)
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc" "${BUILTIN_LUA_QRC}")
 endif()
 
 # Add every .cpp source file that does not need Qt Widgets here, for mudlet_core, kept
@@ -57,10 +89,12 @@ set(mudlet_SRCS
     EditorUndoStack.cpp
     EnvironmentKit.cpp
     EventLoopPump.cpp
+    EventNames.cpp
     ExitAppearance.cpp
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
+    GmcpLinkUri.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -96,10 +130,13 @@ set(mudlet_SRCS
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TAudioMixer.cpp
+    TBackgroundTask.cpp
     TBuffer.cpp
     TCommandHistory.cpp
+    TCommandLineCompletion.cpp
     TConsoleModel.cpp
     TDebug.cpp
+    TelnetUri.cpp
     TEncodingHelper.cpp
     TEncodingTable.cpp
     TEntityHandler.cpp
@@ -126,6 +163,7 @@ set(mudlet_SRCS
     TLuaInterpreterUI.cpp
     TMap.cpp
     TMapLabel.cpp
+    TMapPainter.cpp
     TMedia.cpp
     TMediaVoice.cpp
     TMediaPlaylist.cpp
@@ -186,6 +224,11 @@ set(mudlet_SRCS
 # here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
+    AboutLinkButton.cpp
+    AlphaColourWell.cpp
+    AboutSupporterBanner.cpp
+    ChipRow.cpp
+    ContentScrollArea.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -220,8 +263,16 @@ set(mudlet_app_SRCS
     dlgVarsMainArea.cpp
     EAction.cpp
     EditorAutoCompleteFocusHandler.cpp
+    EditorLineMarginDelegate.cpp
+    EditorPlaceholderButton.cpp
+    EditorTreeDelegate.cpp
+    EditorTreeRowDelegate.cpp
+    EditorTreeRowMetrics.cpp
     exitstreewidget.cpp
+    ExporterTreeDelegate.cpp
     FileOpenHandler.cpp
+    FlowLayout.cpp
+    GripSplitter.cpp
     HostDialogs.cpp
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
@@ -229,11 +280,15 @@ set(mudlet_app_SRCS
     MudletInstanceCoordinator.cpp
     MudletProxyStyle.cpp
     PackageItemDelegate.cpp
+    PairGridLayout.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
     RoomMoveDragHandler.cpp
+    SearchResultDelegate.cpp
     SelectionRectangleHandler.cpp
+    SidebarItemDelegate.cpp
+    SidebarToggle.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleLabel.cpp
@@ -261,9 +316,12 @@ set(mudlet_app_SRCS
     TTabBar.cpp
     TTextBox.cpp
     TTextEdit.cpp
+    ToolBarOverflow.cpp
     TToolBar.cpp
     TTreeWidget.cpp
     TUiTour.cpp
+    uiDesign.cpp
+    VariableTreeDelegate.cpp
     WideComboBox.cpp
     widgetutils.cpp)
 
@@ -362,10 +420,12 @@ set(mudlet_HDRS
     EnvironmentKit.h
     enums.h
     EventLoopPump.h
+    EventNames.h
     ExitAppearance.h
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
+    GmcpLinkUri.h
     Host.h
     HostManager.h
     ircmessageformatter.h
@@ -406,18 +466,22 @@ set(mudlet_HDRS
     TAreaZLevelIndex.h
     TAstar.h
     TAudioMixer.h
+    TBackgroundTask.h
     TBuffer.h
     TCommandHistory.h
+    TCommandLineCompletion.h
     TConsoleFrontend.h
     TConsoleModel.h
     TConsoleModelNotifier.h
     TDebug.h
+    TelnetUri.h
     TEncodingHelper.h
     TEncodingTable.h
     TEntityHandler.h
     TEntityResolver.h
     TEvent.h
     TGameDetails.h
+    TGameTransport.h
     TGlyphCache.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h
@@ -432,6 +496,7 @@ set(mudlet_HDRS
     TLuaInterpreter.h
     TMap.h
     TMapLabel.h
+    TMapPainter.h
     TMapViewFrontend.h
     TMapViewsFrontend.h
     TMatchState.h
@@ -493,6 +558,7 @@ set(mudlet_HDRS
     TTimer.h
     TTrigger.h
     TVar.h
+    TWindowNotifier.h
     TWindowRegistry.h
     UntrustedText.h
     utils.h
@@ -507,6 +573,11 @@ set(mudlet_HDRS
 # here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
+    AboutLinkButton.h
+    AlphaColourWell.h
+    AboutSupporterBanner.h
+    ChipRow.h
+    ContentScrollArea.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -541,8 +612,16 @@ set(mudlet_app_HDRS
     dlgVarsMainArea.h
     EAction.h
     EditorAutoCompleteFocusHandler.h
+    EditorLineMarginDelegate.h
+    EditorPlaceholderButton.h
+    EditorTreeDelegate.h
+    EditorTreeRowDelegate.h
+    EditorTreeRowMetrics.h
     exitstreewidget.h
+    ExporterTreeDelegate.h
     FileOpenHandler.h
+    FlowLayout.h
+    GripSplitter.h
     HostDialogs.h
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
@@ -550,11 +629,15 @@ set(mudlet_app_HDRS
     MudletInstanceCoordinator.h
     MudletProxyStyle.h
     PackageItemDelegate.h
+    PairGridLayout.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
+    SearchResultDelegate.h
     SelectionRectangleHandler.h
+    SidebarItemDelegate.h
+    SidebarToggle.h
     SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
@@ -583,9 +666,12 @@ set(mudlet_app_HDRS
     TTabBar.h
     TTextBox.h
     TTextEdit.h
+    ToolBarOverflow.h
     TToolBar.h
     TTreeWidget.h
     TUiTour.h
+    uiDesign.h
+    VariableTreeDelegate.h
     WideComboBox.h
     widgetutils.h)
 
@@ -677,8 +763,7 @@ find_package(Qt6 6.8.2 REQUIRED
                Multimedia
                Network
                OpenGL
-               Svg
-               Concurrent)
+               Svg)
 if(USE_GUI)
   find_package(Qt6 6.8.2 REQUIRED
       COMPONENTS MultimediaWidgets
@@ -696,8 +781,7 @@ find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 message(STATUS "Qt version: ${Qt6Core_VERSION}")
 
 set(QT_MAJOR_VERSION 6)
-set(QT_LIBS Qt6::Concurrent
-              Qt6::Core
+set(QT_LIBS Qt6::Core
               Qt6::Core5Compat
               Qt6::Gui
               Qt6::Network
@@ -709,6 +793,18 @@ set(QT_APP_LIBS Qt6::MultimediaWidgets
                 Qt6::OpenGLWidgets
                 Qt6::UiTools
                 Qt6::Widgets)
+
+# A Qt built without threads, as for a browser, has no Concurrent; TBackgroundTask runs the core's file work
+# inline there
+if(QT_FEATURE_concurrent)
+  find_package(Qt6 6.8.2 REQUIRED COMPONENTS Concurrent)
+  list(APPEND QT_LIBS Qt6::Concurrent)
+endif()
+
+# The host's rcc compresses with zstd, which a browser build's QtCore cannot read back
+if(EMSCRIPTEN)
+  list(APPEND CMAKE_AUTORCC_OPTIONS --no-zstd)
+endif()
 
 if(USE_MCPSERVER)
   list(APPEND QT_LIBS Qt6::HttpServer)
@@ -732,9 +828,66 @@ if(NOT USE_BUNDLED_LUA)
   find_package(Lua51 REQUIRED)
 endif()
 find_package(ZLIB REQUIRED)
+if(EMSCRIPTEN)
+  # wasm has only static libraries, and PCRE2's package config looks for shared ones unless told.
+  set(PCRE2_USE_STATIC_LIBS ON)
+endif()
 # 10.36 is the floor for PCRE2_MATCH_INVALID_UTF: it arrived in 10.34, and 10.36
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
 find_package(PCRE2 10.36 REQUIRED)
+# Where the zlib and PCRE2 that will be linked came from: each header, library and package config is cached on its own,
+# and a PCRE2 config need not set PCRE2_INCLUDE_DIR
+block()
+  set(found_lib_paths)
+  if(PCRE2_DIR)
+    list(APPEND found_lib_paths "${PCRE2_DIR}")
+  endif()
+  foreach(found_lib_target ZLIB::ZLIB PCRE2::PCRE2)
+    if(NOT TARGET ${found_lib_target})
+      continue()
+    endif()
+    set(found_lib_properties INTERFACE_INCLUDE_DIRECTORIES IMPORTED_LOCATION)
+    get_target_property(found_lib_configs ${found_lib_target} IMPORTED_CONFIGURATIONS)
+    if(found_lib_configs)
+      list(TRANSFORM found_lib_configs PREPEND IMPORTED_LOCATION_)
+      list(APPEND found_lib_properties ${found_lib_configs})
+    endif()
+    foreach(found_lib_property IN LISTS found_lib_properties)
+      get_target_property(found_lib_value ${found_lib_target} ${found_lib_property})
+      if(found_lib_value)
+        list(APPEND found_lib_paths ${found_lib_value})
+      endif()
+    endforeach()
+  endforeach()
+  foreach(found_lib_path IN LISTS found_lib_paths)
+    if(EMSCRIPTEN)
+      cmake_path(IS_PREFIX MUDLET_WASM_DEPS_DIR "${found_lib_path}" NORMALIZE found_in_wasm_deps)
+      if(NOT found_in_wasm_deps)
+        message(FATAL_ERROR "ZLIB or PCRE2 was found in ${found_lib_path}, outside ${MUDLET_WASM_DEPS_DIR}, the "
+                            "prefix MUDLET_WASM_DEPS names: a build directory keeps the libraries it first found, so "
+                            "after changing MUDLET_WASM_DEPS configure afresh, as in cmake --fresh --preset "
+                            "wasm-headless")
+      endif()
+    else()
+      # Checked where they were found, as a prefix is searched through the environment's CMAKE_PREFIX_PATH as well
+      # as the cache's. Every ancestor is checked, as headers may sit in include/pcre2 and a package config in
+      # lib/cmake/pcre2
+      cmake_path(GET found_lib_path PARENT_PATH found_lib_dir)
+      cmake_path(GET found_lib_dir PARENT_PATH found_lib_parent)
+      while(NOT found_lib_dir STREQUAL found_lib_parent)
+        if(IS_DIRECTORY "${found_lib_dir}/${MUDLET_WASM_DEPS_STAMPS_SUBDIR}")
+          message(FATAL_ERROR "ZLIB or PCRE2 was found in ${found_lib_dir}, a prefix of WebAssembly libraries from "
+                              "CI/build-wasm-dependencies.sh that only an Emscripten build can link. For the "
+                              "wasm-headless preset point QT_ROOT_DIR at Qt for WebAssembly; otherwise keep that "
+                              "prefix out of CMAKE_PREFIX_PATH (cache and environment) and PATH. Then reconfigure "
+                              "with cmake --fresh")
+        endif()
+        set(found_lib_dir "${found_lib_parent}")
+        cmake_path(GET found_lib_dir PARENT_PATH found_lib_parent)
+      endwhile()
+    endif()
+  endforeach()
+endblock()
 find_package(PUGIXML REQUIRED)
 # lua-yajl already needs libyajl at runtime; parseJSON() drives its parser directly
 find_package(YAJL REQUIRED)
@@ -869,6 +1022,10 @@ endif()
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
+if(USE_BUILTIN_MUDLET_LUA)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc")
+  set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUILTIN_MUDLET_LUA)
+endif()
 
 set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
@@ -890,6 +1047,10 @@ endif()
 
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
+  # Code tests this, not Q_OS_LINUX, which Qt defines for Android too
+  if(INCLUDE_EMOJI_FONT)
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_EMOJI_FONT)
+  endif()
 endif()
 
 if(UNIX)
@@ -990,6 +1151,15 @@ target_include_directories(${LIB_MUDLET_TARGET} INTERFACE
     ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/include
 )
 
+if(USE_BUNDLED_LUA_MODULES)
+  # From here, where the libraries the modules link against have been found
+  include(BundledLuaModules)
+  # After ${QT_LIBS}: under Emscripten qt6keychain is a .so carrying Qt's PCRE2, linked whole, and libpcre2-8.a, which
+  # CMake puts after these modules, must follow it, or its pcre2_chkdint.o is pulled in and defines _pcre2_ckd_smul twice
+  target_link_libraries(${LIB_MUDLET_TARGET} mudlet_lua_modules)
+  set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUNDLED_LUA_MODULES)
+endif()
+
 if (SYSINFO_LIBRARY)
   target_link_libraries(${LIB_MUDLET_TARGET} ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
 endif (SYSINFO_LIBRARY)
@@ -1045,10 +1215,6 @@ if(USE_SPEECH_ENGINES)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPEECH_ENGINES)
 endif()
 
-if(USE_VARIABLE_SPLASH_SCREEN)
-  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
-endif()
-
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 # The widgets: main window, dialogs, consoles, map views and editors.
@@ -1064,6 +1230,11 @@ if(USE_GUI)
     AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
     AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
     AUTOGEN_ORIGIN_DEPENDS OFF)
+  # Only the desktop GUI shows a splash, so these images stay out of mudlet_core and mudlet-headless
+  if(USE_VARIABLE_SPLASH_SCREEN)
+    target_sources(${LIB_MUDLET_APP_TARGET} PRIVATE additional_splash_screens.qrc)
+    target_compile_definitions(${LIB_MUDLET_APP_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
                  APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
@@ -1270,7 +1441,9 @@ if(UNIX AND NOT APPLE)
     # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
     PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     # binary map fixtures
-    PATTERN "*.dat" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.dat" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # the JSON export one of them is compared against
+    PATTERN "*.json" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

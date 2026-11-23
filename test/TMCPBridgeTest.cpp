@@ -29,10 +29,15 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QTcpServer>
 #include <QTemporaryDir>
 
 #include <filesystem> // NOLINT(build/c++17) - Qt cannot set the time of a directory, see ageDirectory() below
+
+#if defined(MUDLET_FCHMOD_REFUSAL)
+#include "FchmodRefusal.h"
+#endif
 
 #if defined(Q_OS_WIN32)
 #ifndef NOMINMAX
@@ -57,8 +62,11 @@ class TMCPBridgeTest : public QObject
     Q_OBJECT
 
 private slots:
+    void cleanup();
+
     void discoveryRoundTrip();
     void discoveryFileIsPrivate();
+    void discoveryFileIsPrivateWhereTheOpenFileCannotBeNarrowed();
     void discoveryMissingFile();
     void discoveryGarbage_data();
     void discoveryGarbage();
@@ -102,6 +110,7 @@ private slots:
     void codexEntryFollowsXdgConfigHome();
     void codexMergeIntoEmptyConfig();
     void codexMergeKeepsUserToml();
+    void codexMergeKeepsMainKeysOutOfASubTableWrittenFirst();
     void codexMergeIgnoresHeaderInsideString();
     void codexMergeIgnoresHeaderInsideArray();
     void codexMergeRefusesUnterminatedString();
@@ -145,6 +154,13 @@ private slots:
     void wrongTokenSurfacesAsError();
 };
 
+void TMCPBridgeTest::cleanup()
+{
+#if defined(MUDLET_FCHMOD_REFUSAL)
+    setRefuseOwnerOnlyOnOpenFiles(false);
+#endif
+}
+
 void TMCPBridgeTest::discoveryRoundTrip()
 {
     QTemporaryDir dir;
@@ -166,6 +182,33 @@ void TMCPBridgeTest::discoveryFileIsPrivate()
     QVERIFY(TMCPBridge::writeDiscoveryFile(dir.path(), 1, qsl("t")));
     const QFileDevice::Permissions permissions = QFileInfo(TMCPBridge::discoveryFilePath(dir.path())).permissions();
     QVERIFY2(!(permissions & (QFileDevice::ReadGroup | QFileDevice::ReadOther)), "the token in the discovery file must not be readable by other users");
+}
+
+// Where the file system refuses owner-only on the file while it is written, the file is still
+// written, and narrowed by path once it is in place
+void TMCPBridgeTest::discoveryFileIsPrivateWhereTheOpenFileCannotBeNarrowed()
+{
+#if !defined(MUDLET_FCHMOD_REFUSAL)
+    QSKIP("needs fchmod() to be replaced, which this binary does only on Linux");
+#else
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    // Narrowed by path, so there is nothing to warn about
+    QTest::failOnWarning(QRegularExpression(qsl("can still read")));
+    const int refusalsBefore = ownerOnlyRefusals();
+    setRefuseOwnerOnlyOnOpenFiles(true);
+    const bool written = TMCPBridge::writeDiscoveryFile(dir.path(), 12345, qsl("sekrit"));
+    setRefuseOwnerOnlyOnOpenFiles(false);
+    QVERIFY(written);
+    QVERIFY2(ownerOnlyRefusals() > refusalsBefore, "nothing asked for owner-only on the open file, so this case proves nothing");
+
+    const QFileDevice::Permissions permissions = QFileInfo(TMCPBridge::discoveryFilePath(dir.path())).permissions();
+    QVERIFY2(!(permissions & (QFileDevice::ReadGroup | QFileDevice::ReadOther)), "the token in the discovery file must not be readable by other users");
+    const MCPDiscovery discovery = TMCPBridge::readDiscoveryFile(dir.path());
+    QVERIFY(discovery.valid());
+    QCOMPARE(discovery.port, quint16(12345));
+    QCOMPARE(discovery.token, qsl("sekrit"));
+#endif
 }
 
 void TMCPBridgeTest::discoveryMissingFile()
@@ -838,6 +881,31 @@ void TMCPBridgeTest::codexMergeKeepsUserToml()
     // Replaced in place, once - not removed there and appended again at the end.
     QCOMPARE(merged.count(qsl("[mcp_servers.mudlet]")), qsizetype(1));
     QVERIFY(merged.indexOf(qsl("[mcp_servers.mudlet]")) < merged.indexOf(qsl("[mcp_servers.other]")));
+}
+
+void TMCPBridgeTest::codexMergeKeepsMainKeysOutOfASubTableWrittenFirst()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // TOML lets a sub-table come before its parent. The rebuilt entry puts the parent's
+    // header first, so the parent's own keys must not end up under the sub-table's header.
+    const QByteArray original = "[mcp_servers.mudlet.env]\n"
+                                "MY_VAR = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "enabled = false\n";
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok));
+    QVERIFY(ok);
+    const qsizetype enabledAt = merged.indexOf(qsl("enabled = false"));
+    QVERIFY2(enabledAt >= 0, qPrintable(merged));
+    QVERIFY2(enabledAt < merged.indexOf(qsl("[mcp_servers.mudlet.env]")), qPrintable(merged));
+    QVERIFY2(merged.indexOf(qsl("[mcp_servers.mudlet.env]")) < merged.indexOf(qsl("MY_VAR = \"kept\"")), qPrintable(merged));
+    bool okAgain = false;
+    QCOMPARE(QString::fromUtf8(TMCPBridge::mergeCodexConfig(merged.toUtf8(), qsl("/usr/bin/mudlet"), okAgain)), merged);
+    QVERIFY(okAgain);
 }
 
 void TMCPBridgeTest::codexMergeIgnoresHeaderInsideString()

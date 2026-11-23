@@ -208,7 +208,11 @@ bool environmentDefined(const TMap& map, const int environmentId)
 
 QColor environmentColor(const TMap& map, const Host& host, const int environmentId)
 {
-    const int env = colorEnvironment(map, environmentId).value_or(1);
+    const std::optional<int> definedEnv = colorEnvironment(map, environmentId);
+    if (!definedEnv) {
+        return host.mapperDefaultRoomColor();
+    }
+    const int env = *definedEnv;
     switch (env) {
     case 1:
         return host.mRed_2;
@@ -262,7 +266,7 @@ QColor environmentColor(const TMap& map, const Host& host, const int environment
         }
         // mEnvColors can remap onto an id with no colour, as map files aren't validated. Fall back as
         // for an unmapped env: the background colour would make the room invisible.
-        return host.mRed_2;
+        return host.mapperDefaultRoomColor();
     }
 }
 

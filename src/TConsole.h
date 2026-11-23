@@ -130,9 +130,14 @@ public:
     THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
+    int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
-    void scrollDown(int lines);
-    void scrollUp(int lines);
+    // Whether a wheel turn that way is the console's: never with scrolling disabled; always while scrolled back, so it
+    // keeps the wheel until back at its bottom; otherwise only up, with lines above the screen. False lets it go on to the parent
+    bool usesWheel(bool up);
+    // Return what usesWheel() did before the scroll; scrollUp() also does nothing when that was false
+    bool scrollDown(int lines);
+    bool scrollUp(int lines);
     // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
     void scrollTo(int line);
     void print(const QString& msg);
@@ -339,7 +344,8 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
-    // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
+    // MainConsole only: subtract the profile's main window borders. The height spans a
+    // scrollback split as well, since that is what the game is told.
     int upperPaneWidthFor(const int consoleWidth) const;
     int upperPaneHeightFor(const int consoleHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
@@ -347,6 +353,8 @@ private:
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    void applyFootSeamColour();
+    int footSeamHeightShown() const;
     // Returns whether the lower pane was hidden
     bool showLowerPane();
 
@@ -372,6 +380,9 @@ private:
     QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning
     bool mWindowBgCoverScaleFailed = false;
+    // In the main console the search box shares commandSplitter, so the seam must span mpFoot
+    QWidget* mpFootSeam = nullptr;
+    QWidget* mpFoot = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

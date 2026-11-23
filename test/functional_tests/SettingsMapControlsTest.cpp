@@ -35,6 +35,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QApplication>
 #include <QImage>
 #include <QPointer>
 #include <QPushButton>
@@ -234,6 +235,29 @@ private slots:
         QCOMPARE(frame.pixelColor(frame.width() - 5, frame.height() - 5), picked);
     }
 
+    // macOS's native colour panel hands the activation to the main window as
+    // it closes, cancelled or not, so after every colour dialog the settings
+    // take it back and the well that was clicked takes the keyboard. The
+    // dialog itself is modal and native, so it is the step after it that is
+    // tested here, with the main window holding the activation as the panel
+    // leaves it.
+    void test_theSettingsTakeTheActivationBackAfterAColourDialog()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        mpPreferences->setTab(qsl("mapper"));
+        QPushButton* pWell = mpPreferences->pushButton_mapInfoBg;
+        QVERIFY2(pWell->isVisible(), "the map info background well is not on show");
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QTRY_COMPARE(QApplication::activeWindow(), mudlet::self());
+        QVERIFY(QApplication::focusWidget() != pWell);
+
+        mpPreferences->returnFromColourDialog(pWell);
+        QTRY_COMPARE(QApplication::activeWindow(), mpPreferences);
+        QCOMPARE(QApplication::focusWidget(), pWell);
+    }
+
     // The spin box counts in tenths of a room, and the profile and the 2D map
     // have to end up holding the same size - the widget was once handed the
     // spin box's own number, so the map drew rooms ten times too big (#8513).
@@ -312,6 +336,27 @@ private slots:
         QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
         // Spaces dropped, since a wrap can fall inside the path
         QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
+    }
+
+    // Host::loadMapFile() audits what it loads, so the dialog must not audit it again
+    void test_loadingAMapAuditsItOnce()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("audited.dat"));
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap->mpRoomDB->addRoom(pMap->createNewRoomID()));
+        QVERIFY(mpHost->saveMapFile(path));
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        // Every audit ends by calling the Lua condenseMapLoad(), so counting those calls counts audits
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("specAudits = 0 specCondense = condenseMapLoad "
+                                                  "condenseMapLoad = function() specAudits = specAudits + 1 return specCondense() end")));
+        const auto restoreCondense = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("condenseMapLoad = specCondense specCondense = nil specAudits = nil"));
+        });
+        mpPreferences->loadMap(path);
+        QCOMPARE(pLua->getLuaString(qsl("tostring(specAudits)")), qsl("1"));
     }
 };
 

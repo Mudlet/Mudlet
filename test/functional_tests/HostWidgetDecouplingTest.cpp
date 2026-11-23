@@ -742,6 +742,47 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QCOMPARE(nullViewItemAfter, qsl("nil"));
     }
 
+    // While a view has the profile its sheet goes to the view, and the console the view replaced takes the font a
+    // sheet gave it with it
+    void test_nullViewMainTextFollowsTheSheetAViewWasGiven()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+mainTextBase = getFontSize("main")
+assert(setProfileStyleSheet("TTextEdit { font-size: 20pt; }"))
+mainTextStyled = getFontSize("main")
+)lua")));
+        host->setMainConsoleView(console);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(setProfileStyleSheet("")))lua")));
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+mainTextAfterView = getFontSize("main")
+assert(setProfileStyleSheet("TConsole { font-size: 23pt; }"))
+setFontSize("main", mainTextBase + 1)
+setFontSize("main", mainTextBase)
+mainConsoleStyled = getFontSize("main")
+)lua")));
+        host->setMainConsoleView(console);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(setProfileStyleSheet("")))lua")));
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+mainTextSizes = table.concat({mainTextBase, mainTextStyled, mainTextAfterView, mainConsoleStyled, getFontSize("main")}, ",")
+)lua")));
+        host->setMainConsoleView(console);
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mainTextSizes");
+        const QString sizes = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(sizes, qsl("%1,20,%1,23,%1").arg(sizes.section(u',', 0, 0)));
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()
@@ -1161,6 +1202,9 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QCOMPARE(preferences->styleSheet(), styleSheet);
         QCOMPARE(notepad->styleSheet(), styleSheet);
         QCOMPARE(note->styleSheet(), styleSheet);
+        auto* laterNote = notepad->tabWidget->widget(notepad->addTab());
+        QVERIFY2(laterNote && laterNote != note, "Adding a note did not make a tab of its own.");
+        QCOMPARE(laterNote->styleSheet(), styleSheet);
     }
 
     // The main window's own bars take the style sheet of the profile on show,
@@ -1177,13 +1221,14 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
 
         const QString styleSheet = qsl("QWidget { color: #123456; }");
-        QVERIFY2(menuBar->styleSheet() != styleSheet && toolBar->styleSheet() != styleSheet && tabBar->styleSheet() != styleSheet,
+        QVERIFY2(menuBar->styleSheet() != styleSheet && !toolBar->styleSheet().endsWith(styleSheet) && tabBar->styleSheet() != styleSheet,
                  "SETUP: a bar already carries the style sheet, so the assertions below cannot fail.");
 
         QVERIFY(host->setProfileStyleSheet(styleSheet));
 
         QCOMPARE(menuBar->styleSheet(), styleSheet);
-        QCOMPARE(toolBar->styleSheet(), styleSheet);
+        // The toolbar carries the design's own sheet with the profile's appended, so the profile's rules come last and win
+        QVERIFY2(toolBar->styleSheet().endsWith(styleSheet), qPrintable(qsl("The toolbar's sheet does not end with the profile's: %1").arg(toolBar->styleSheet().right(200))));
         QCOMPARE(tabBar->styleSheet(), styleSheet);
     }
 
@@ -1201,16 +1246,18 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QToolBar* toolBar = mudlet::self()->mpMainToolBar;
         TTabBar* tabBar = mudlet::self()->mpTabBar;
         QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+        // Neither profile has a sheet yet, so the bar carries the design's rules alone; a profile's comes after them
+        const QString designSheet = toolBar->styleSheet();
 
         const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
         QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
-        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() != firstStyleSheet && tabBar->styleSheet() != firstStyleSheet,
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() == designSheet && tabBar->styleSheet() != firstStyleSheet,
                  "A profile that is not the active one restyled the main window.");
 
         const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
         QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
         QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
-        QCOMPARE(toolBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), designSheet + secondStyleSheet);
         QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
 
         tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
@@ -1218,7 +1265,7 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
 
         QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
         QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
-        QCOMPARE(toolBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), designSheet + firstStyleSheet);
         QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
     }
 

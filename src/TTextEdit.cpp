@@ -36,11 +36,10 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TGlyphCache.h"
-#include "THyperlinkSelectionManager.h"
-#include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -290,9 +289,9 @@ void TTextEdit::needUpdate(int y1, int y2)
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-    // The central debug console's menus never took the grab from the profile's own console
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-    if (!centralDebug && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+    // The central debug console's and the error console's menus never took the grab from the profile's own console
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+    if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
         grabKeyboard();
     }
 #endif
@@ -308,14 +307,14 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // rather than forcing focus to the command line. This pane's own menus only
     // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
     const QWidget* popup = QApplication::activePopupWidget();
-    // The central debug console shares its Host's caret mode without driving it.
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    // The central debug console and the error console share their Host's caret mode without driving it.
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
     if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // Caret mode's keyboard grab would otherwise beat the popup to every key
         releaseKeyboard();
 #endif
-    } else if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    } else if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -446,10 +445,15 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance - for the UPPER pane
-        // so that they are available for NAWS:
-        if (!mIsLowerPane) {
-            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+        // Note the values in the "parent" Host instance so that they are
+        // available for NAWS. The lower pane is laid out after the upper one,
+        // so it is the one that knows the split's height once both have moved;
+        // the width is the upper pane's unless it is dragged out of sight. A
+        // pane that sees nothing of itself, as in a background tab, knows neither.
+        if (!drawable.isEmpty()) {
+            const bool measuresWidth = !mIsLowerPane || mpConsole->mUpperPane->drawableSize().isEmpty();
+            const int columns = measuresWidth ? mScreenWidth : mpHost->mScreenWidth;
+            mpHost->setScreenDimensions(columns, mpConsole->mUpperPane->mainWindowRows());
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -467,6 +471,20 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = mpBuffer->linesTrimmedTotal();
+}
+
+// Scrolling back splits the main window without making it any shorter, so the
+// game is told the rows of both panes together
+int TTextEdit::mainWindowRows() const
+{
+    const TTextEdit* pLower = mpConsole->mLowerPane;
+    // An overlay can cover all of the lower pane, leaving the upper pane's own bottom the lowest seen
+    const int lowerSeen = pLower && !pLower->isHidden() ? pLower->drawableSize().height() : 0;
+    if (lowerSeen == 0) {
+        return mScreenHeight;
+    }
+    return (height() + mpConsole->splitter->handleWidth() + lowerSeen) / mFontHeight;
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -500,9 +518,13 @@ void TTextEdit::showNewLines()
         mpBuffer->mCursorY = mpBuffer->size();
     }
 
-    const int previousOldScrollPos = mOldScrollPos;
+    // A trim off the top of the buffer moves the last line seen up with everything else, and must
+    // not read as the new lines that came in with it being taken away
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const int previousOldScrollPos = std::max(0, mOldScrollPos - static_cast<int>(linesTrimmed - mLinesTrimmedAtOldScrollPos));
 
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = linesTrimmed;
 
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
@@ -1197,10 +1219,9 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     QColor overlineColor = defaultColor;
     QColor strikeoutColor = defaultColor;
 
-    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
-        Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
-        styling.currentState = mpBuffer->getLinkState(linkIndex);
-        Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+    if (linkIndex > 0 && (mpBuffer->mLinkStore.hasStyling(linkIndex) || mpBuffer->showsFocus(linkIndex))) {
+        // From the buffer, which adds Mudlet's focus cue to a link the game gave no focus style, and to MXP and script links
+        const Mudlet::HyperlinkStyling effectiveStyle = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
 
         if (effectiveStyle.hasUnderlineColor) {
             underlineColor = effectiveStyle.underlineColor;
@@ -2080,10 +2101,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
     if (lineIndex < lineCount && tCharIndex < charCount && mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
         int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
-        setCursor(Qt::PointingHandCursor);
-        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-        // If a special tooltip hint was given, use that one.
+        setCursor(mpBuffer->linkIsNote(linkIndex) ? Qt::IBeamCursor : Qt::PointingHandCursor);
         // The server chooses this text and QToolTip renders anything
         // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
         // in an explicit document rather than letting that guess decide
@@ -2091,7 +2109,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         // breaks the plain-text path used to give.
         // An empty string is how QToolTip is told to hide, so it has to
         // stay empty rather than becoming an empty document.
-        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipText = mpBuffer->mLinkStore.tooltip(linkIndex);
         const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
         QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
@@ -2282,39 +2300,15 @@ void TTextEdit::slot_popupMenu()
     }
     // index is set to be greater than zero for every possible sender():
     const int index = pA->data().toInt();
-    if (index && mPopupCommands.contains(index)) {
-        QString cmd = mPopupCommands.value(index).first;
-        const int luaReference = mPopupCommands.value(index).second;
-
-        // Apply selection-group state to the chosen popup item, mirroring the
-        // direct-activation paths (mousePressEvent / showKeyboardContextMenu /
-        // keyPressEvent). Without this, multi-command links activated via the
-        // popup menu would silently skip toggle / exclusive-group propagation.
-        if (mPopupLinkIndex > 0 && mpBuffer) {
-            const auto styling = mpBuffer->mLinkStore.getStyling(mPopupLinkIndex);
-            if (styling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(mPopupLinkIndex, cmd, styling.selection, "TTextEdit::slot_popupMenu");
-            }
-            if (mpConsole) {
-                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(mPopupLinkIndex);
-            } else {
-                qWarning() << "TTextEdit::slot_popupMenu() - mpConsole is null, skipping visibility manager notification for link" << mPopupLinkIndex;
-            }
-            mpBuffer->markLinkAsVisited(mPopupLinkIndex);
-        }
-
+    if (index && mPopupLinkIndex > 0 && mpConsole) {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // The item may open a dialog, whose keys caret mode's keyboard grab would keep for this pane
         releaseKeyboard();
 #endif
-        if (!luaReference) {
-            mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
-        } else {
-            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
-        }
+        mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1, mPopupLinkAlreadyActivated);
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-        const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-        if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
+        const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+        if (!borrowsCaretMode && mpHost->caretEnabled() && hasFocus()) {
             grabKeyboard();
         }
 #endif
@@ -2369,55 +2363,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     int linkIndex = mpBuffer->buffer.at(y).at(x).linkIndex();
                     QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
-                    int luaReference = mpBuffer->mLinkStore.getReference(linkIndex).value(0, false);
-                    QString func;
-                    if (!command.empty() && mpHost) {
-                        func = command.at(0);
-#if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
-#endif
-
+                    // A note has nothing for a click to do, so the press selects text as it would anywhere else
+                    if (!command.empty() && mpHost && mpConsole && !mpBuffer->linkIsNote(linkIndex)) {
                         mpBuffer->setActiveLink(linkIndex);
-
-                        Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
-
-#if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "disabled:" << hyperlinkStyling.selection.disabled
-                                 << "hasSelectionSettings:" << hyperlinkStyling.selection.hasSelectionSettings << "isSpoiler:" << hyperlinkStyling.isSpoiler;
-#endif
-
-                        // Handle spoiler revealing first (even for disabled links)
-                        if (hyperlinkStyling.isSpoiler) {
-                            // Check if this spoiler hasn't been revealed yet
-                            bool wasUnrevealed = mpBuffer->isSpoilerUnrevealed(linkIndex);
-                            mpBuffer->revealSpoilerLink(linkIndex);
-
-                            // For unrevealed spoilers, the first click should ONLY reveal, not execute the function
-                            if (wasUnrevealed && !hyperlinkStyling.selection.disabled) {
-#if defined(DEBUG_OSC_PROCESSING)
-                                qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "first spoiler reveal, blocking function execution until next click";
-#endif
-                                forceUpdate();
-                                return;
-                            }
-
-                            // Update styling after spoiler reveal
-                            hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
-                        }
-
-                        // Check for disabled links - they can reveal spoilers but can't execute functions
-                        if (hyperlinkStyling.selection.disabled) {
-#if defined(DEBUG_OSC_PROCESSING)
-                            qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "is disabled, allowing spoiler reveal but blocking function execution";
-#endif
-                            // Disabled links only update visual state, don't execute functions
-                            mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+                        if (mpConsole->model().linkMayRun(linkIndex) != TConsoleModel::LinkFollowed::ran) {
                             forceUpdate();
                             return;
-                        }
-
-                        if (hyperlinkStyling.selection.hasSelectionSettings) {
-                            applyHyperlinkSelectionGroupState(linkIndex, func, hyperlinkStyling.selection, "TTextEdit::mousePressEvent");
                         }
 
                         // Clear hover to show selection immediately; mouse move will restore it
@@ -2428,20 +2379,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
                         forceUpdate();
 
-                        // Notify visibility manager that link was clicked (activates timers)
-                        if (mpConsole) {
-                            mpConsole->getHyperlinkVisibilityManager().onLinkClicked(linkIndex);
+                        mpConsole->model().runLink(linkIndex, 0, false);
+                        if (mpBuffer->linkOpensItsMenu(linkIndex)) {
+                            // The popup takes the release, which is what would have ended the active state
+                            mpBuffer->setActiveLink(0);
+                            showLinkMenuAt(linkIndex, event->globalPosition().toPoint(), true);
                         }
-
-                        if (!luaReference) {
-                            mpHost->mLuaInterpreter.compileAndExecuteScript(func);
-                        } else {
-                            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoLink"));
-                        }
-
-                        // Mark link as visited after execution (will update to visited state)
-                        mpBuffer->markLinkAsVisited(linkIndex);
-
                         return;
                     }
                 }
@@ -3047,8 +2990,10 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer.at(static_cast<size_t>(y)).size()) && !isOutOfbounds) {
-                if (mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex()) {
-                    int linkIndex = mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex();
+                const int cellLinkIndex = mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex();
+                // A note gets the menu any other text would
+                if (cellLinkIndex && !mpBuffer->linkIsNote(cellLinkIndex)) {
+                    int linkIndex = cellLinkIndex;
 
                     // Check if link is disabled - disabled links don't show context menus
                     Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
@@ -3069,18 +3014,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                         return;
                     }
 
-                    QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
-                    QStringList hint = mpBuffer->mLinkStore.getHints(linkIndex);
-                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(linkIndex);
-                    if (command.size() > 1 || hint.size() > command.size()) {
-                        // This is a popup menu rather than a link as it has
-                        // more than one item, or has menu hints indicating menu items.
-
-                        // Skip a special tooltip hint (at the start of the
-                        // hints), if one was given, i.e. there is (at least)
-                        // an extra one:
-                        int hint_offset = (hint.size() > command.size()) ? 1 : 0;
-
+                    if (mpBuffer->mLinkStore.opensMenu(linkIndex)) {
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
                         popup->setFont(font());
@@ -3121,39 +3055,24 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                             popup->addSeparator();
                         }
 
-                        mPopupCommands.clear();
                         mPopupLinkIndex = linkIndex;
-                        for (int i = 0, total = command.size(); i < total; ++i) {
-                            QAction* pA = nullptr;
-                            // Check to see if this item has a command/function
-                            // so we can disable it if not:
-                            const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
-                            // A safety flag in case we have too few hints:
-                            const bool useHintNotCommand = (i + hint_offset) < hint.size();
-                            // If it doesn't have a hint either then make it
-                            // into a separator in the context menu:
-                            const bool makeASeparator = !doesSomething && hint.at(i + hint_offset).isEmpty();
-                            const QString actionText = useHintNotCommand ? hint.at(i + hint_offset) : command.at(i);
-                            if (makeASeparator) {
-                                pA = popup->addSeparator();
-                            } else {
-                                pA = popup->addAction(actionText);
-                            }
-                            mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
-                            // We now use this to index into mPopupCommands
-                            // when the action is triggered - but we do offset
-                            // it by one so that the first one is NOT zero:
+                        mPopupLinkAlreadyActivated = false;
+                        mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(linkIndex);
+                        const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(linkIndex);
+                        for (int i = 0, total = items.size(); i < total; ++i) {
+                            QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
+                            // The item's index, offset by one so that the first one is NOT zero:
                             pA->setData(i + 1);
-                            if (doesSomething) {
+                            if (items.at(i).enabled) {
                                 connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                             } else {
                                 pA->setEnabled(false);
                             }
                         }
                         popup->popup(eventGlobalPos);
+                        mIsCommandPopup = true;
+                        return;
                     }
-                    mIsCommandPopup = true;
-                    return;
                 }
             }
         }
@@ -3294,8 +3213,9 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
 
     if (mpConsole->getType() == TConsole::ErrorConsole) {
         QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
-        connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
-            mpConsole->buffer.clear();
+        clearErrorConsole->setObjectName(qsl("consoleClearErrorConsole"));
+        connect(clearErrorConsole, &QAction::triggered, this, [this]() {
+            mpConsole->clear();
             mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
         });
         popup->addAction(clearErrorConsole);
@@ -3346,6 +3266,16 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     }
 }
 
+// A small shrink can move the lower pane up without resizing it, and the rows
+// measured while it hung below the splitter's new bottom were short
+void TTextEdit::moveEvent(QMoveEvent* event)
+{
+    if (mIsLowerPane && mpConsole && mpConsole->getType() == TConsole::MainConsole) {
+        updateScreenView();
+    }
+    QWidget::moveEvent(event);
+}
+
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
     // Make the speed up be half of the (upper pane) lines - need to round it so
@@ -3371,13 +3301,15 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // Store the (rounded) remainder
     mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
 
+    // Left unaccepted, a turn the console has no use for scrolls what holds it, such as a scroll box. A touchpad turn
+    // too small for a whole line is still the console's when it would take a whole one
     bool used = false;
     if (yDelta > 0) {
-        mpConsole->scrollUp(yDelta);
-        used = true;
+        used = mpConsole->scrollUp(yDelta);
     } else if (yDelta < 0) {
-        mpConsole->scrollDown(-yDelta);
-        used = true;
+        used = mpConsole->scrollDown(-yDelta);
+    } else if (e->angleDelta().y() != 0) {
+        used = mpConsole->usesWheel(e->angleDelta().y() > 0);
     }
 
     // Space for future use of xDelta
@@ -3802,7 +3734,7 @@ QString TTextEdit::selectionAnalysisHtml()
     QChar zero('0');
     // Start the UTF-8 indexing at 1 so that it directly maps to string indexing
     // in Lua.
-    short int utf8Index = 1;
+    int16_t utf8Index = 1;
     char utf8Bytes[5];
 
     int total = 0;
@@ -4333,17 +4265,54 @@ void TTextEdit::announceLinkFocus(int linkIndex)
         return;
     }
 
-    QString announcement;
-    QString tooltip = mpBuffer->getLinkTooltip(linkIndex);
-    const QStringList commands = mpBuffer->mLinkStore.getLinksConst(linkIndex);
+    if (auto* pMudlet = mudlet::self()) {
+        pMudlet->announce(linkAnnouncement(linkIndex), QString(), true);
+    }
+}
 
-    if (!tooltip.isEmpty()) {
-        announcement = tooltip;
-    } else if (!commands.isEmpty() && !commands.first().isEmpty()) {
-        announcement = commands.first();
+QString TTextEdit::linkAnnouncement(const int linkIndex) const
+{
+    const QString tooltip = mpBuffer->getLinkTooltip(linkIndex);
+    const QStringList commands = mpBuffer->mLinkStore.getLinksConst(linkIndex);
+    const Mudlet::HyperlinkStyling styling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
+    const bool selected = mpBuffer->isLinkSelected(linkIndex);
+
+    // A link is announced by what it does, which its appearance need not show
+    QString role;
+    if (mpBuffer->linkIsNote(linkIndex)) {
+        //: Screen reader role for marked-up text from the game that does nothing when activated, such as text that only carries a tooltip
+        role = tr("note");
+    } else if (styling.isSpoiler && mpBuffer->isSpoilerUnrevealed(linkIndex)) {
+        //: Screen reader role for a game's hidden text that activating the link reveals
+        role = tr("button");
+    } else if (styling.selection.hasSelectionSettings && styling.selection.exclusive) {
+        if (selected) {
+            //: Screen reader role for the selected link of a group where only one can be selected
+            role = tr("radio button, checked");
+        } else {
+            //: Screen reader role for an unselected link of a group where only one can be selected
+            role = tr("radio button, not checked");
+        }
+    } else if (styling.selection.hasSelectionSettings) {
+        if (selected) {
+            //: Screen reader role for a selected link that can be selected independently of any others
+            role = tr("checkbox, checked");
+        } else {
+            //: Screen reader role for an unselected link that can be selected independently of any others
+            role = tr("checkbox, not checked");
+        }
     } else {
-        //: Generic screen-reader announcement for a link with no tooltip or URL — used as fallback link description
-        announcement = tr("link");
+        //: Screen reader role for an ordinary link, announced after its tooltip or command, or alone when it has neither
+        role = tr("link");
+    }
+
+    QString announcement;
+    if (!tooltip.isEmpty()) {
+        announcement = qsl("%1, %2").arg(tooltip, role);
+    } else if (!commands.isEmpty() && !commands.first().isEmpty()) {
+        announcement = qsl("%1, %2").arg(commands.first(), role);
+    } else {
+        announcement = role;
     }
 
     if (mpBuffer->isLinkVisited(linkIndex)) {
@@ -4354,85 +4323,12 @@ void TTextEdit::announceLinkFocus(int linkIndex)
         //: Appended to link announcement when the link is disabled
         announcement += tr(", disabled");
     }
-    if (mpBuffer->isLinkSelected(linkIndex)) {
-        //: Appended to link announcement when the link is selected
-        announcement += tr(", selected");
-    }
 
-    if (commands.size() > 1) {
+    if (commands.size() > 1 || mpBuffer->mLinkStore.getHintsConst(linkIndex).size() > commands.size()) {
         //: Appended to link announcement when the link opens a menu
         announcement += tr(", has menu");
     }
-
-    if (auto* pMudlet = mudlet::self()) {
-        pMudlet->announce(announcement, QString(), true);
-    }
-}
-
-void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext)
-{
-    if (!selection.hasSelectionSettings) {
-        return;
-    }
-    if (!mpBuffer) {
-        qWarning() << callerContext << "- mpBuffer is null, skipping selection-group state update for link" << linkIndex;
-        return;
-    }
-    auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
-    if (!mgr) {
-        qWarning() << callerContext << "- Selection manager is null, skipping selection-group state update for link" << linkIndex;
-        return;
-    }
-
-    const QString& group = selection.group;
-    const QString& value = selection.value;
-
-    mgr->setGroupExclusive(group, selection.exclusive);
-
-    if (selection.toggle) {
-        mgr->toggleSelection(group, value);
-    } else {
-        mgr->setSelected(group, value, true);
-    }
-
-    const bool newSelected = mgr->isSelected(group, value);
-
-    // A menu link's commands are built from its menu items and the base URI's
-    // command is discarded, so baseCommand matches none of what can actually be
-    // run here. Callers pass the item the user picked; rebuilding from the base
-    // would send something they did not choose. A one-item menu has a single
-    // command too, but its hints carry the tooltip ahead of the item's label.
-    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1 && mpBuffer->mLinkStore.getHintsConst(linkIndex).size() <= 1) {
-        const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
-        const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
-        if (!rebuiltUri.isEmpty()) {
-            uri = rebuiltUri;
-        }
-    }
-
-    mpBuffer->setLinkSelected(linkIndex, newSelected);
-    mpBuffer->setLinkState(linkIndex, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-    mpBuffer->updateLinkCharacters(linkIndex);
-
-    if (!mgr->isGroupExclusive(group)) {
-        return;
-    }
-
-    // For exclusive groups, propagate visual state to all other members
-    // that may have been deselected by the toggle/setSelected call above.
-    const QStringList groupMembers = mgr->getGroupMembers(group);
-    for (const QString& member : std::as_const(groupMembers)) {
-        if (member == value) {
-            continue;
-        }
-        const bool memberSelected = mgr->isSelected(group, member);
-        const QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
-        for (const int otherLinkId : std::as_const(matchingLinkIds)) {
-            mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-            mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-            mpBuffer->updateLinkCharacters(otherLinkId);
-        }
-    }
+    return announcement;
 }
 
 void TTextEdit::showKeyboardContextMenu()
@@ -4442,7 +4338,8 @@ void TTextEdit::showKeyboardContextMenu()
     }
 
     int focusedLink = mpBuffer->getFocusedLink();
-    if (focusedLink <= 0) {
+    // A note takes no keys, so the Menu key on one opens what it would on any other text
+    if (focusedLink <= 0 || mpBuffer->linkIsNote(focusedLink)) {
         // The central debug console builds its own menu in contextMenuEvent()
         if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
             showContextMenu(caretGlobalPosition());
@@ -4463,39 +4360,24 @@ void TTextEdit::showKeyboardContextMenu()
         return;
     }
 
-    QStringList command = mpBuffer->mLinkStore.getLinksConst(focusedLink);
-    if (command.isEmpty()) {
+    if (mpBuffer->mLinkStore.getLinksConst(focusedLink).isEmpty() || !mpConsole) {
         return;
     }
-    QStringList hint = mpBuffer->mLinkStore.getHintsConst(focusedLink);
-    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(focusedLink);
 
-    if (command.size() <= 1 && hint.size() <= command.size()) {
+    if (!mpBuffer->mLinkStore.opensMenu(focusedLink)) {
         // No menu needed: one command and no extra hints means direct activation
-        if (!command.isEmpty()) {
-            if (hyperlinkStyling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(focusedLink, command[0], hyperlinkStyling.selection, "TTextEdit::showKeyboardContextMenu");
-            }
-
-            if (mpConsole) {
-                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
-            } else {
-                qWarning() << "TTextEdit::showKeyboardContextMenu() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
-            }
-            const int ref = luaReference.value(0, 0);
-            if (ref) {
-                mpHost->mLuaInterpreter.callAnonymousFunction(ref, qsl("echoLink"));
-            } else {
-                mpHost->mLuaInterpreter.compileAndExecuteScript(command.first());
-            }
-            mpBuffer->markLinkAsVisited(focusedLink);
-        }
+        mpConsole->model().runLink(focusedLink, 0, false);
         return;
     }
 
     // Show popup at caret position (not mouse position) since this is keyboard-driven
-    int hintOffset = (hint.size() > command.size()) ? 1 : 0;
+    showLinkMenuAt(focusedLink, caretGlobalPosition());
+}
 
+void TTextEdit::showLinkMenuAt(const int linkIndex, const QPoint& globalPosition, const bool alreadyActivated)
+{
+    mPopupLinkAlreadyActivated = alreadyActivated;
+    const Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
     auto popup = new QMenu(this);
     popup->setAttribute(Qt::WA_DeleteOnClose);
     popup->setFont(font());
@@ -4535,29 +4417,20 @@ void TTextEdit::showKeyboardContextMenu()
         popup->addSeparator();
     }
 
-    mPopupCommands.clear();
-    mPopupLinkIndex = focusedLink;
-    for (int i = 0, total = command.size(); i < total; ++i) {
-        QAction* pA = nullptr;
-        const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
-        const bool useHintNotCommand = (i + hintOffset) < hint.size();
-        const bool makeASeparator = !doesSomething && useHintNotCommand && hint.at(i + hintOffset).isEmpty();
-        const QString actionText = useHintNotCommand ? hint.at(i + hintOffset) : command.at(i);
-        if (makeASeparator) {
-            pA = popup->addSeparator();
-        } else {
-            pA = popup->addAction(actionText);
-        }
-        mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
+    mPopupLinkIndex = linkIndex;
+    mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(linkIndex);
+    const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(linkIndex);
+    for (int i = 0, total = items.size(); i < total; ++i) {
+        QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
         pA->setData(i + 1);
-        if (doesSomething) {
+        if (items.at(i).enabled) {
             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
         } else {
             pA->setEnabled(false);
         }
     }
 
-    popup->popup(caretGlobalPosition());
+    popup->popup(globalPosition);
 }
 
 QPoint TTextEdit::caretGlobalPosition()
@@ -4585,10 +4458,11 @@ bool TTextEdit::event(QEvent* event)
         // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
         // beat any application-wide QShortcut - the profile-switching ones
         // use Ctrl+Tab by default and all of them can be remapped onto these
-        // keys - so claim it here to make it arrive as a KeyPress for the
-        // caret-toggling code in keyPressEvent():
+        // keys - so claim it here, and on macOS post the KeyPress Cocoa
+        // withholds, for the caret-toggling code in keyPressEvent():
         if (mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
+            TCommandLine::pressClaimedControlTab(this, ke);
             return true;
         }
     }
@@ -4620,8 +4494,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     // refreshed when the caret moves, so deleteLine() or a buffer trim can leave it naming a
     // link that is no longer under the caret.
     const int focusedLinkIndex = mpBuffer->getFocusedLink();
-    const bool activatesFocusedLink = event->key() == Qt::Key_Space && focusedLinkIndex > 0 && mpBuffer->getLinkIndexAt(mCaretLine, mCaretColumn) == focusedLinkIndex
-                                      && !mpBuffer->mLinkStore.getLinksConst(focusedLinkIndex).isEmpty();
+    const bool activatesFocusedLink = event->key() == Qt::Key_Space && focusedLinkIndex > 0 && !mpBuffer->linkIsNote(focusedLinkIndex)
+                                      && mpBuffer->getLinkIndexAt(mCaretLine, mCaretColumn) == focusedLinkIndex && !mpBuffer->mLinkStore.getLinksConst(focusedLinkIndex).isEmpty();
     if (!activatesFocusedLink && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
         if (mpConsole && mpConsole->mpCommandLine) {
             mpHost->setCaretEnabled(false);
@@ -4882,54 +4756,22 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Enter:
     case Qt::Key_Space: {
         int focusedLink = mpBuffer->getFocusedLink();
-        if (focusedLink > 0) {
-            Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(focusedLink);
-
-            // Handle spoiler revealing first (even for disabled links)
-            if (hyperlinkStyling.isSpoiler) {
-                bool wasUnrevealed = mpBuffer->isSpoilerUnrevealed(focusedLink);
-                mpBuffer->revealSpoilerLink(focusedLink);
-
-                // For unrevealed spoilers, the first activation should ONLY reveal
-                if (wasUnrevealed && !hyperlinkStyling.selection.disabled) {
-                    forceUpdate();
-                    return;
-                }
-
-                hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(focusedLink);
-            }
-
-            if (hyperlinkStyling.selection.disabled) {
-                mpBuffer->setLinkState(focusedLink, Mudlet::HyperlinkStyling::StateDisabled);
+        if (focusedLink > 0 && mpConsole && !mpBuffer->linkIsNote(focusedLink)) {
+            const TConsoleModel::LinkFollowed mayRun = mpConsole->model().linkMayRun(focusedLink);
+            if (mayRun == TConsoleModel::LinkFollowed::revealedSpoiler || mayRun == TConsoleModel::LinkFollowed::disabled) {
                 forceUpdate();
                 return;
             }
 
-            QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
-            if (commands.isEmpty()) {
+            if (mpBuffer->mLinkStore.getLinksConst(focusedLink).isEmpty()) {
                 QWidget::keyPressEvent(event);
                 return;
             }
 
-            if (hyperlinkStyling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(focusedLink, commands[0], hyperlinkStyling.selection, "TTextEdit::keyPressEvent");
+            mpConsole->model().runLink(focusedLink, 0, false);
+            if (mpBuffer->linkOpensItsMenu(focusedLink)) {
+                showLinkMenuAt(focusedLink, caretGlobalPosition(), true);
             }
-
-            if (mpConsole) {
-                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
-            } else {
-                qWarning() << "TTextEdit::keyPressEvent() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
-            }
-
-            QVector<int> luaReference = mpBuffer->mLinkStore.getReference(focusedLink);
-            const int ref = luaReference.value(0, 0);
-            if (ref) {
-                mpHost->mLuaInterpreter.callAnonymousFunction(ref, qsl("echoLink"));
-            } else {
-                mpHost->mLuaInterpreter.compileAndExecuteScript(commands.first());
-            }
-
-            mpBuffer->markLinkAsVisited(focusedLink);
             return;
         }
         break;

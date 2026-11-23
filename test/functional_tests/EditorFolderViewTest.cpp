@@ -19,10 +19,11 @@
 
 /*
  * The editor's Folders view, which lists every item type in one tree grouped
- * by folder name. It is all widget state behind the editor's toolbar, which
+ * by folder name. It is all widget state behind the editor's sidebar, which
  * Lua has no way to see.
  */
 
+#include <QListWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolBar>
@@ -32,6 +33,7 @@
 
 #include "Host.h"
 #include "AliasUnit.h"
+#include "EditorTreeDelegate.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "HostDialogs.h"
@@ -220,12 +222,126 @@ private slots:
     {
         QVERIFY(!mpHost->folderViewInEditor());
         QVERIFY(!mpEditor->mpViewFoldersAction->isVisible());
+        QVERIFY(mpEditor->mpSidebarItem_folders);
+        QVERIFY2(mpEditor->mpSidebarItem_folders->isHidden(), "the sidebar offered the Folders view while its setting was off");
         mpEditor->slot_showFolders();
         QVERIFY2(!mpEditor->mFolderViewActive, "the Folders view opened while its setting was off");
         QVERIFY(mpEditor->mpFolderTree->isHidden());
 
         mpHost->setFolderViewInEditor(true);
         QVERIFY(mpEditor->mpViewFoldersAction->isVisible());
+        QVERIFY(!mpEditor->mpSidebarItem_folders->isHidden());
+    }
+
+    void test_theFoldersRowFollowsVariablesInTheSidebar()
+    {
+        QListWidget* pSidebar = mpEditor->mpListWidget_editorSidebar;
+        const int foldersRow = pSidebar->row(mpEditor->mpSidebarItem_folders);
+        QVERIFY(foldersRow > 0);
+        QCOMPARE(pSidebar->item(foldersRow - 1)->text(), dlgTriggerEditor::tr("Variables"));
+        QCOMPARE(mpEditor->mpSidebarItem_folders->text(), dlgTriggerEditor::tr("Folders"));
+        QVERIFY2(!mpEditor->mpSidebarItem_folders->icon().isNull(), "the Folders row has no glyph to stand for it in the sidebar's rail");
+        QVERIFY2(mpEditor->mEditorViewActions.contains(mpEditor->mpViewFoldersAction), "a key grab would leave the Folders view's action live");
+    }
+
+    void test_theSidebarRowEntersAndLeavesTheFoldersView()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        QListWidget* pSidebar = mpEditor->mpListWidget_editorSidebar;
+        QListWidgetItem* pTriggersRow = pSidebar->currentItem();
+        QVERIFY(pTriggersRow);
+        QCOMPARE(pTriggersRow->text(), dlgTriggerEditor::tr("Triggers"));
+
+        pSidebar->setCurrentItem(mpEditor->mpSidebarItem_folders);
+        QVERIFY2(mpEditor->mFolderViewActive, "choosing the Folders row did not open the Folders view");
+        QVERIFY(!mpEditor->mpFolderTree->isHidden());
+
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaKill")));
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
+        QVERIFY2(pSidebar->currentItem() == mpEditor->mpSidebarItem_folders, "opening an alias from the Folders view moved the sidebar off the Folders row");
+
+        pSidebar->setCurrentItem(pTriggersRow);
+        QVERIFY2(!mpEditor->mFolderViewActive, "choosing the Triggers row left the Folders view open");
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+        QVERIFY(!mpEditor->treeWidget_triggers->isHidden());
+        QVERIFY(mpEditor->mpFolderTree->isHidden());
+    }
+
+    void test_theFoldersTreeIsDrawnLikeTheItemTrees()
+    {
+        mpEditor->slot_showFolders();
+        auto* pDelegate = qobject_cast<uiDesign::EditorTreeDelegate*>(mpEditor->mpFolderTree->itemDelegate());
+        QVERIFY2(pDelegate, "the Folders tree is not drawn by EditorTreeDelegate");
+        QVERIFY2(!mpEditor->mpFolderTree->rootIsDecorated() && mpEditor->mpFolderTree->indentation() == 0, "the view draws its own branch column beside the delegate's chevrons");
+        QVERIFY2(mpEditor->mpFolderTree->isColumnHidden(1), "the item type has a column of its own rather than being drawn after the name");
+
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        QTreeWidgetItem* pOther = topLevelNamed(qsl("qaOther"));
+        QTreeWidgetItem* pKill = childNamed(pCombat, qsl("qaKill"));
+        QVERIFY(pCombat && pOther && pKill);
+        QCOMPARE(pKill->text(1), dlgTriggerEditor::tr("Alias"));
+        const auto indexOf = [this](QTreeWidgetItem* pItem) {
+            return mpEditor->mpFolderTree->indexFromItem(pItem);
+        };
+        const auto stateOf = [pDelegate, indexOf](QTreeWidgetItem* pItem) {
+            return pDelegate->stateOf(indexOf(pItem));
+        };
+        const auto dotHitRect = [pDelegate, indexOf](QTreeWidgetItem* pItem) {
+            const QModelIndex index = indexOf(pItem);
+            return pDelegate->dotHitRect(pDelegate->rowOption(index), index);
+        };
+        mpEditor->resize(1280, 800);
+        pCombat->setExpanded(true);
+        QTest::qWait(50ms);
+
+        TAlias* pAlias = mpHost->getAliasUnit()->getAlias(pKill->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().constFirst().split(QLatin1Char(':')).constLast().toInt());
+        QVERIFY(pAlias);
+        QCOMPARE(stateOf(pKill).mark, uiDesign::EditorTreeDelegate::RowMark::None);
+        const auto dotBefore = stateOf(pKill).dot;
+        const bool wasActive = pAlias->isActive();
+        pAlias->setIsActive(!wasActive);
+        const auto dotAfter = stateOf(pKill).dot;
+        pAlias->setIsActive(wasActive);
+        QVERIFY2(dotAfter != dotBefore, "an alias's row in the Folders view does not follow the alias's own state");
+        QVERIFY2(!dotHitRect(pKill).isEmpty(), "an alias in the Folders view has no dot to switch it with");
+        QCOMPARE(stateOf(pOther).mark, uiDesign::EditorTreeDelegate::RowMark::Folder);
+        QVERIFY2(!dotHitRect(pOther).isEmpty(), "a folder of one item type lost the dot its own tree draws it with");
+        QCOMPARE(stateOf(pCombat).mark, uiDesign::EditorTreeDelegate::RowMark::Folder);
+        QVERIFY2(dotHitRect(pCombat).isEmpty(), "a merged folder offered one switch for folders of several types");
+        QVERIFY2(!pDelegate->chevronHitRect(pDelegate->rowOption(indexOf(pCombat)), indexOf(pCombat)).isEmpty(), "a top-level folder of the Folders view cannot be folded away");
+        QTreeWidgetItem* pLoose = mpEditor->mFolderTreeNodes.value(qsl("loose"));
+        QVERIFY(pLoose);
+        QCOMPARE(stateOf(pLoose).mark, uiDesign::EditorTreeDelegate::RowMark::Folder);
+    }
+
+    void test_aDotClickInTheFoldersViewTogglesTheItem()
+    {
+        mpEditor->slot_showFolders();
+        mpEditor->resize(1280, 800);
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        QVERIFY(pCombat);
+        pCombat->setExpanded(true);
+        QTreeWidgetItem* pHit = childNamed(pCombat, qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->scrollToItem(pHit);
+        QTest::qWait(50ms);
+        auto* pDelegate = qobject_cast<uiDesign::EditorTreeDelegate*>(mpEditor->mpFolderTree->itemDelegate());
+        QVERIFY(pDelegate);
+        const QModelIndex hitIndex = mpEditor->mpFolderTree->indexFromItem(pHit);
+        const QRect dot = pDelegate->dotHitRect(pDelegate->rowOption(hitIndex), hitIndex);
+        QVERIFY(!dot.isEmpty());
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(pHit->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().constFirst().split(QLatin1Char(':')).constLast().toInt());
+        QVERIFY(pTrigger);
+        const bool wasActive = pTrigger->isActive();
+
+        QTest::mouseClick(mpEditor->mpFolderTree->viewport(), Qt::LeftButton, Qt::NoModifier, dot.center());
+        QCOMPARE(pTrigger->isActive(), !wasActive);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+        QCOMPARE(mpEditor->treeWidget_triggers->currentItem()->text(0), qsl("qaHit"));
+
+        emit mpEditor->mpFolderTree->itemActivated(pHit, 0);
+        QCOMPARE(pTrigger->isActive(), wasActive);
     }
 
     void test_foldersOfTheSameNameMergeAcrossTypes()
@@ -552,21 +668,23 @@ private slots:
         QCOMPARE(mpEditor->mpAliasMainArea->lineEdit_alias_name->text(), qsl("qaKill"));
     }
 
-    void test_anIconChangeJustBeforeLeavingIsKept()
+    // A save or a toggle rewrites a type tree row's description, which is what its state is
+    // announced by. The script is one no test opens, so no save rewrites it back.
+    void test_aRowChangeJustBeforeLeavingIsKept()
     {
         mpEditor->slot_showFolders();
-        QTreeWidgetItem* pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
-        QVERIFY(pHitNode);
-        const QList<QTreeWidgetItem*> hits = mpEditor->treeWidget_triggers->findItems(qsl("qaHit"), Qt::MatchExactly | Qt::MatchRecursive);
-        QCOMPARE(hits.size(), 1);
-        const QIcon newIcon(qsl(":/icons/folder-red.png"));
-        hits.constFirst()->setIcon(0, newIcon);
+        const QList<QTreeWidgetItem*> helpers = mpEditor->treeWidget_scripts->findItems(qsl("qaCombatHelpers"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(helpers.size(), 1);
+        const QString before = helpers.constFirst()->data(0, Qt::AccessibleDescriptionRole).toString();
+        helpers.constFirst()->setData(0, Qt::AccessibleDescriptionRole, qsl("qaChangedBeforeLeaving"));
         mpEditor->leaveFolderView();
         mpEditor->slot_showTriggers();
         mpEditor->slot_showFolders();
-        pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
-        QVERIFY(pHitNode);
-        QCOMPARE(pHitNode->icon(0).cacheKey(), hits.constFirst()->icon(0).cacheKey());
+        QTreeWidgetItem* pHelpersNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaCombatHelpers"));
+        QVERIFY(pHelpersNode);
+        const QString shown = pHelpersNode->data(0, Qt::AccessibleDescriptionRole).toString();
+        helpers.constFirst()->setData(0, Qt::AccessibleDescriptionRole, before);
+        QCOMPARE(shown, qsl("qaChangedBeforeLeaving"));
     }
 
     void test_activatingAnItemTogglesIt()
@@ -700,13 +818,16 @@ private slots:
     {
         mpEditor->leaveFolderView();
         mpEditor->slot_showTriggers();
-        const QList<QTreeWidgetItem*> hits = mpEditor->treeWidget_triggers->findItems(qsl("qaHit"), Qt::MatchExactly | Qt::MatchRecursive);
-        QCOMPARE(hits.size(), 1);
-        hits.constFirst()->setIcon(0, QIcon(qsl(":/icons/folder-green.png")));
+        const QList<QTreeWidgetItem*> helpers = mpEditor->treeWidget_scripts->findItems(qsl("qaCombatHelpers"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(helpers.size(), 1);
+        const QString before = helpers.constFirst()->data(0, Qt::AccessibleDescriptionRole).toString();
+        helpers.constFirst()->setData(0, Qt::AccessibleDescriptionRole, qsl("qaChangedWhileClosed"));
         mpEditor->slot_showFolders();
-        QTreeWidgetItem* pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
-        QVERIFY(pHitNode);
-        QCOMPARE(pHitNode->icon(0).cacheKey(), hits.constFirst()->icon(0).cacheKey());
+        QTreeWidgetItem* pHelpersNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaCombatHelpers"));
+        QVERIFY(pHelpersNode);
+        const QString shown = pHelpersNode->data(0, Qt::AccessibleDescriptionRole).toString();
+        helpers.constFirst()->setData(0, Qt::AccessibleDescriptionRole, before);
+        QCOMPARE(shown, qsl("qaChangedWhileClosed"));
     }
 
     void test_aMergedFolderHidesAnErrorInTheItemLeftBehind()
@@ -806,16 +927,16 @@ private slots:
     void test_theFoldersTreeOffersToRestoreAHiddenToolbar()
     {
         mpEditor->slot_showFolders();
-        mpEditor->toolBar2->hide();
+        mpEditor->toolBar->hide();
         QTest::qWait(20ms);
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
         QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
-        QAction* pRestore = mpEditor->mpAction_restoreEditorItemsToolbar;
+        QAction* pRestore = mpEditor->mpAction_restoreEditorActionsToolbar;
         const bool offered = mpEditor->mpFolderTree->actions().contains(pRestore) && pRestore->isVisible() && pRestore->isEnabled();
         pRestore->setEnabled(true);
         pRestore->trigger();
-        QTRY_VERIFY(mpEditor->toolBar2->isVisible());
-        QVERIFY2(offered, "with the Items toolbar hidden the Folders view has no way back to it");
+        QTRY_VERIFY(mpEditor->toolBar->isVisible());
+        QVERIFY2(offered, "with the toolbar hidden the Folders view has no way back to it");
     }
 
     void test_aMergedFolderOverOneFoldersFormCanStillBeChosen()
@@ -1027,6 +1148,8 @@ private slots:
 
         QVERIFY(!mpEditor->mFolderViewActive);
         QVERIFY(!mpEditor->mpViewFoldersAction->isVisible());
+        QVERIFY(mpEditor->mpSidebarItem_folders->isHidden());
+        QVERIFY2(mpEditor->mpListWidget_editorSidebar->currentItem() != mpEditor->mpSidebarItem_folders, "the sidebar was left on a row it no longer shows");
         QVERIFY(mpEditor->mpFolderTree->isHidden());
         QVERIFY(!mpEditor->treeWidget_triggers->isHidden());
     }

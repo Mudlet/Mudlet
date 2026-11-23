@@ -32,16 +32,17 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "TimerUnit.h"
+#include "ToolBarOverflow.h"
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
 #include <QAction>
 #include <QComboBox>
 #include <QCompleter>
+#include <QEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
-#include <QStyle>
 #include <QTimer>
 #include <QToolButton>
 
@@ -145,14 +146,14 @@ TDebugFilterBar::TDebugFilterBar(QWidget* parent)
     setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
 
     //: Button in the Central Debug Console that stops new messages appearing
-    mpActionPause = addAction(style()->standardIcon(QStyle::SP_MediaPause), tr("Pause"));
+    mpActionPause = addAction(tr("Pause"));
     mpActionPause->setCheckable(true);
     //: Tooltip for the Central Debug Console's Pause button
     mpActionPause->setToolTip(utils::richText(tr("Hold back new messages so the console stays still. They are shown when you resume.")));
     connect(mpActionPause, &QAction::toggled, this, &TDebugFilterBar::slot_togglePause);
 
     //: Button in the Central Debug Console that empties it
-    auto* pActionClear = addAction(style()->standardIcon(QStyle::SP_DialogResetButton), tr("Clear"));
+    auto* pActionClear = addAction(tr("Clear"));
     //: Tooltip for the Central Debug Console's Clear button
     pActionClear->setToolTip(utils::richText(tr("Empty the console.")));
     connect(pActionClear, &QAction::triggered, this, &TDebugFilterBar::slot_clear);
@@ -171,13 +172,32 @@ TDebugFilterBar::TDebugFilterBar(QWidget* parent)
     mpPausedLabelTimer = new QTimer(this);
     mpPausedLabelTimer->setInterval(500ms);
     connect(mpPausedLabelTimer, &QTimer::timeout, this, &TDebugFilterBar::slot_updatePausedCount);
+
+    mActionGlyphs = {{mpActionPause, qsl(":/icons/debug-pause.svg"), qsl(":/icons/debug-resume.svg")}, {pActionClear, qsl(":/icons/debug-clear.svg"), QString()}};
+    restyleIcons();
+}
+
+void TDebugFilterBar::restyleIcons()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    uiDesign::restyleActionGlyphs(mActionGlyphs, tokens);
+    uiDesign::ToolBarOverflow::restyle(this, tokens);
+    // A widget, not an action, so restyleActionGlyphs() does not reach it
+    mpCategoryButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-filter.svg"), tokens));
+}
+
+void TDebugFilterBar::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
+        restyleIcons();
+    }
+    QToolBar::changeEvent(event);
 }
 
 void TDebugFilterBar::addCategoryMenu()
 {
     mpCategoryButton = new QToolButton(this);
     auto* pButton = mpCategoryButton;
-    pButton->setIcon(QIcon(qsl(":/icons/view-filter.png")));
     //: Menu button in the Central Debug Console for picking which kinds of message it shows
     pButton->setText(tr("Show"));
     pButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -420,7 +440,6 @@ void TDebugFilterBar::addTextFilter()
 void TDebugFilterBar::slot_togglePause(const bool paused)
 {
     TDebug::setPaused(paused);
-    mpActionPause->setIcon(style()->standardIcon(paused ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
     //: Button in the Central Debug Console that lets held-back messages through again
     mpActionPause->setText(paused ? tr("Resume") : tr("Pause"));
     mpActionPausedLabel->setVisible(paused);

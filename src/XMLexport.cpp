@@ -28,6 +28,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "TBackgroundTask.h"
 #include "CredentialManager.h"
 #include "ShortcutsManager.h"
 #include "TAction.h"
@@ -41,8 +42,6 @@
 #include <QSaveFile>
 #include <QRegularExpression>
 #include <QVersionNumber>
-#include <QtConcurrentRun>
-#include <QFutureWatcher>
 #include <QFile>
 #include <QGuiApplication>
 #include <QMetaEnum>
@@ -221,30 +220,23 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
     QPointer<Host> host = mpHost;
-    // Written on the pool thread before the future finishes, read only after it has
-    auto reason = std::make_shared<QString>();
-    auto future = QtConcurrent::run([fileName, doc = takeExportDocument(), reason]() {
-        return XMLexport::saveXmlDocToFile(fileName, *doc, reason.get());
+    // Every failure saveXmlDocToFile() reports carries a reason, so an empty one is a success
+    const TBackgroundResult result = TBackgroundTask::runForReason([fileName, doc = takeExportDocument()]() {
+        QString reason;
+        return XMLexport::saveXmlDocToFile(fileName, *doc, &reason) ? QString() : reason;
     });
-    // Parented to the profile for the same reason the module save's watcher is: the
-    // deleteLater() below needs an event loop that is still running to be delivered,
-    // and the save that matters most here is the one on the way out.
-    auto watcher = new QFutureWatcher<bool>(host);
-    watcher->setObjectName(Host::scmProfileSaveWatcherName);
-    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey, fileName, watcher, reason]() {
+    result.whenFinished(host, Host::scmProfileSaveWatcherName, [host, xmlSavedKey, fileName, result]() {
         if (!host) {
             return;
         }
         // The caller was told the save had started long before this, so the console is the only place left to say it
-        if (!watcher->result()) {
+        if (!result.succeeded()) {
             //: %1 is the file the profile was being saved to, %2 is the reason it could not be
-            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(fileName, *reason));
+            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(fileName, result.reason()));
         }
         host->xmlSaved(xmlSavedKey);
     });
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
-    watcher->setFuture(future);
-    saveFutures.append(future);
+    saveResults.append(result);
 }
 
 namespace {
@@ -714,6 +706,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         upperLevelColorNode.text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
         upperLevelColorNode.append_attribute("alpha").set_value(pHost->mUpperLevelColor.alpha());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
+        // Only once set: unset, it follows mRed2
+        if (pHost->mMapperDefaultRoomColor.isValid()) {
+            host.append_child("mMapperDefaultRoomColor").text().set(pHost->mMapperDefaultRoomColor.name().toUtf8().constData());
+        }
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
         auto mapGridColorNode = host.append_child("mMapGridColor");
         mapGridColorNode.text().set(pHost->mMapGridColor.name().toUtf8().constData());
@@ -1531,8 +1527,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList& patternList, co
                             case 13:    fg = 11;    break; // light magenta
                             case 14:    fg = 13;    break; // light cyan
                             case 15:    fg = 15;    break; // light white
-                            default:
-                                   ; // No-op for other color codes
+                            default:                break; // No-op for other color codes
                             }
                             // clang-format on
                         } else {
@@ -1573,8 +1568,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList& patternList, co
                             case 13:    bg = 11;    break; // light magenta
                             case 14:    bg = 13;    break; // light cyan
                             case 15:    bg = 15;    break; // light white
-                            default:
-                                   ; // No-op for other color codes
+                            default:                break; // No-op for other color codes
                             }
                             // clang-format on
                         } else {

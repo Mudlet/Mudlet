@@ -28,9 +28,11 @@
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
+#include "EventNames.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
+#include "TBackgroundTask.h"
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
@@ -43,7 +45,6 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
-#include <QFuture>
 #include <QList>
 #include <QMargins>
 #include <QPointer>
@@ -69,6 +70,7 @@ class xml_document;
 
 class QJsonObject;
 class QKeyEvent;
+class QMouseEvent;
 class QSettings;
 
 class TEvent;
@@ -321,16 +323,23 @@ public:
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
-    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if the
-    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet
+    // The save a close makes without asking: the profile, Mudlet's settings and the map; done is told false if the
+    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet.
+    // It waits for no save: done runs once they are written, or at once when nothing is written.
+    void saveForClose(std::function<void(bool saved)> done);
+    // The same, waited for in waitForProfileSave(), for the desktop GUI's close, which must answer at once
     bool saveForClose();
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
     bool deletionMustWait();
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
+    // Whether a close with no main window has run sysExitEvent and is still writing its save
+    bool closeSaveInFlight() const { return mCloseSaveInFlight; }
+    // Runs then once that save is written and the close is done: now if none is under way. Never once the Host is gone.
+    void whenCloseSaveEnds(std::function<void()> then);
     // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
-    // reconnect's event loop, which only a deletion must outwait
+    // reconnect on the stack, which only a deletion must outwait
     bool busyRunning() const;
 
     // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
@@ -353,6 +362,12 @@ public:
     const KeyUnit* getKeyUnit() const { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
+
+    // Sorted case-insensitively, without repeats. Not const: the units hand out
+    // their contents only through non-const accessors.
+    // Reads every item's code, so it is for when the names are about to be offered
+    QList<eventNames::Entry> knownEventNames();
+    static QList<eventNames::Entry> eventNameEntries(const QStringList& names);
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
@@ -489,6 +504,8 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
+    // sysWindowMousePressEvent or sysWindowMouseReleaseEvent, for a press or release at a point in that window
+    void raiseWindowMouseEvent(const QString& window, const QMouseEvent& event, bool press);
     // This disables all the triggers/timers/keys in preparation to resetting
     // them - and sets a timer to do resetProfile_phase2() when it is safe to do
     // so. We need to do it this way because a lua script containing the call to
@@ -559,6 +576,7 @@ public:
     // creates.
     void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
+    void removeProfileIniData(const QString& item);
     // Now, not from the event loop; false if the file could not be written
     bool syncProfileIni();
     void xmlSaved(const QString& xmlName);
@@ -575,6 +593,9 @@ public:
     // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
     // it ends, and their scripts can raise a global event that reaches this profile's handlers.
     void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    // Runs then once no save is running: now if none is, else from the event loop once the save has ended, or
+    // has gone mProfileSaveNotificationTimeout past its writes without saying so. Never once the Host is gone.
+    void whenProfileSaveEnds(std::function<void()> then);
     inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
     bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
@@ -882,6 +903,38 @@ public:
     static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
+    // With no view: the main window's area, which the borders take from. Given in the main console's cells, a
+    // font change counts it again in the new font's; given in pixels, the font decides the grid.
+    QSize mainAreaCells() const { return mMainAreaCells.value_or(QSize(mScreenWidth, mScreenHeight)); }
+    void setMainAreaCells(const QSize& cells)
+    {
+        mMainAreaCells = cells;
+        mMainAreaPixels.reset();
+    }
+    void setMainAreaPixels(const QSize& pixels) { mMainAreaPixels = pixels; }
+    // The frontend gave the area: from mainWindowResizeRequested's handler, answering the size and request that
+    // names, or later, answering what a script last asked for, as a window resizes once its window system answers,
+    // or with nothing asked for, of its own accord. False for an answer to a request a newer one has replaced, which
+    // is not to be laid out: the newer one's answer decides.
+    bool noteMainAreaGiven(const std::optional<std::pair<QSize, quint64>>& answering);
+    // Nothing listens for that request, so nothing will answer it
+    void noteMainWindowRequestUnheard(quint64 request);
+    bool mainAreaInPixels() const { return mMainAreaPixels.has_value(); }
+    // With no view: where the main console's text goes in the main window's area, what the borders leave of it
+    QRect mainTextRectWithNoView() const;
+    // With no view, as the GUI lays the main console out: fits its grid to what the borders leave of the main
+    // window's area, then tells scripts as a change of border or a resize of the main window does there; a font
+    // change, which does not resize the main window, tells them nothing. A handler can close the profile. Nothing
+    // is laid out while the save loads; load lays out what it left, and tells scripts nothing, as none has run yet.
+    enum class MainAreaChange { borders, area, font, load };
+    void layOutMainAreaWithNoView(MainAreaChange);
+    // With no view, a script's setMainWindowSize(): tells the frontend, then takes the size as one it gave in
+    // pixels, as there is no window's frame or menu to take from it. Refuses, as the frontend's own call does, a
+    // size that holds no character of the main console's font or more than NAWS can carry. A size the frontend
+    // answered with the one it gave is not asked for again till it gives one of its own accord or a script asks
+    // for another, as a window manager that holds the GUI's window gives it no new size, so a resize handler that
+    // asks for it settles.
+    std::pair<bool, QString> resizeMainWindowWithNoView(const QSize& pixels);
     void loadMap();
     bool saveMapFile(const QString& location, int saveVersion = 0);
     // Call before writing or reading the profile's map files: the newest of them is the one a profile loads
@@ -916,8 +969,11 @@ public:
 
 private:
     // A main console's close, for a profile that never had one; it saves, as the GUI's "Yes" does, unless the
-    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing.
-    bool closeWithNoView();
+    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing. It
+    // returns once sysExitEvent has run; closed runs once the save is written, and until then deletionMustWait().
+    bool closeWithNoView(std::function<void()> closed = {});
+    void runSaveEndContinuations();
+    void checkSaveEndWatchdog();
     QSettings& profileIni();
 
     bool mNoAntiAlias = false;
@@ -1021,6 +1077,8 @@ public:
     bool mFORCE_SAVE_ON_EXIT = true;
 
     bool mSslTsl = false;
+    // A game's telnets:// link asks for TLS until the profile closes; unlike mSslTsl it is never saved
+    bool mUseTlsThisSession = false;
     bool mSslIgnoreExpired = false;
     bool mSslIgnoreSelfSigned = false;
     bool mSslIgnoreAll = false;
@@ -1136,6 +1194,9 @@ public:
     bool mResetProfile = false;
     int mScreenHeight = 25;
     int mScreenWidth = 90;
+    // With no view, what the game is told (NAWS) in place of mScreenWidth and mScreenHeight, from a frontend that
+    // counts the main console's columns and rows in a font of its own: THeadlessSession::setGameScreenSize()
+    std::optional<QSize> mGameScreenSize;
 
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
@@ -1177,15 +1238,18 @@ public:
     bool mEditorAutoComplete = true;
 
     // code editor theme for light mode (human-friendly name)
-    QString mEditorTheme = QLatin1String("Mudlet");
+    QString mEditorTheme = QLatin1String("Mudlet Light");
     // code editor theme file for light mode on disk for edbee to load
-    QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
+    QString mEditorThemeFile = QLatin1String("Mudlet Light.tmTheme");
     // code editor theme for dark mode (human-friendly name), auto-populated on first dark mode switch
     QString mEditorThemeDark;
     // code editor theme file for dark mode on disk for edbee to load
     QString mEditorThemeFileDark;
+    // Both answer the bundled theme when the profile's own is not on this machine, rather than
+    // edbee's own fallback. Never saved, so reinstalling the chosen theme brings it back.
     QString getEditorTheme() const;
     QString getEditorThemeFile() const;
+    void storedEditorTheme(QString& themeName, QString& themeFile) const;
     void editorThemeChanged();
 
     // search engine URL prefix to search query
@@ -1248,6 +1312,9 @@ public:
     QColor mUpperLevelColor{scmDefaultUpperLevelColor};
     static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomBorderColor{scmDefaultRoomBorderColor};
+    // For rooms whose environment has no colour of its own; unset, it is mRed_2, as those rooms were before it existed
+    QColor mMapperDefaultRoomColor;
+    QColor mapperDefaultRoomColor() const { return mMapperDefaultRoomColor.isValid() ? mMapperDefaultRoomColor : mRed_2; }
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
@@ -1357,6 +1424,10 @@ public:
     // shortcuts options visually impaired players have to switch between the input line and the main window
     enum class CaretShortcut { None, Tab, CtrlTab, F6 };
     Q_ENUM(CaretShortcut)
+    // The combination a Mudlet shortcut would hold to clash with this choice (Meta+Tab for Ctrl+Tab on macOS); empty for None
+    static QKeyCombination caretShortcutCombination(CaretShortcut);
+    // Whether a key with these modifiers is the one the given choice toggles caret mode with
+    static bool caretShortcutMatches(CaretShortcut, QKeyCombination);
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
     // Bumped each time TMainConsole::focusActiveCommandLine() or caret mode takes the keyboard, so that function's
@@ -1414,6 +1485,10 @@ signals:
     void signal_packageListChanged();
     void signal_profileStyleSheetChanged(const QString& styleSheet);
     void signal_consoleFontChanged(const QFont& font);
+    // With no view: the main console's grid, or where its text goes, may have changed
+    void signal_mainAreaLaidOut();
+    // request counts the requests made, so an answer to one a newer one has replaced is known
+    void signal_mainWindowResizeRequested(const QSize& pixels, quint64 request);
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
@@ -1443,6 +1518,7 @@ signals:
     void signal_scriptToggled(int id);
     void signal_scriptCodeChanged(int id);
     void signal_itemsChangedByScript();
+    void signal_emergencyStopChanged(bool stopped);
     void signal_keyBoundByScript(int id);
     void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
     // For the profile's module manager, if it has one: a script installed or
@@ -1502,7 +1578,7 @@ private:
         enums::PackageModuleType thing;
         bool operator==(const DeferredUninstall&) const = default;
     };
-    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred);
+    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred, bool waitedForASave = false);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     // A single module queued to be written out during a profile save. Its XML document
     // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
@@ -1526,22 +1602,23 @@ private:
     QList<ModuleWriteJob> prepareModuleSaves(bool backup);
     // Writes the prepared module documents (and updates their zips) to disk. Static on
     // purpose: it must keep working after the Host that ordered it has been destroyed,
-    // so it may not reach for any member. Usually a thread pool task, but a waiter in
-    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    // so it may not reach for any member. Usually a thread pool task, but where saves run
+    // inline (see TBackgroundTask) it runs on the main thread, so it must suit either.
     // False if a module was not written, with a console line for each in failures.
     static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures);
     static bool updateModuleZip(const ModuleWriteJob& job, QString& reason);
-    // Main thread only: snapshot of the still-pending profile-save futures, so a
-    // background task never reads `writers`/`saveFutures` while the main thread mutates
+    // Main thread only: snapshot of the still-pending profile saves, so a
+    // background task never reads `writers`/`saveResults` while the main thread mutates
     // them (that concurrent access is a heap-corrupting data race).
-    QList<QFuture<bool>> pendingXmlSaveFutures() const;
+    QList<TBackgroundResult> pendingXmlSaves() const;
     void waitForAsyncXmlSave();
     void reloadModules();
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     void autoSaveMapInBackground(const QString& path);
-    void closeChildren();
+    // connectionEnded, for a close with no view, has the connection wait from the event loop for the game to close too
+    void closeChildren(std::function<void()> connectionEnded = {});
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
 
@@ -1591,6 +1668,14 @@ private:
     int mProfileSaveWaitDepth = 0;
     // Long enough that reaching it means something is wrong, not that a disk is busy
     std::chrono::milliseconds mProfileSaveNotificationTimeout = std::chrono::seconds(30);
+    QList<std::function<void()>> mSaveEndContinuations;
+    // While mSaveEndContinuations waits: catches a save that has written everything and never says it has ended
+    QTimer mSaveEndWatchdog;
+    std::optional<std::chrono::steady_clock::time_point> mSaveWritesEndedAt;
+    // While the blocking saveForClose() waits, which runs the continuations itself
+    int mSaveEndContinuationsHeld = 0;
+    bool mCloseSaveInFlight = false;
+    QList<std::function<void()>> mCloseEndContinuations;
 
     QFile mErrorLogFile;
 
@@ -1635,6 +1720,19 @@ private:
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
+    void rememberEventName(const QString& name);
+    // Session only: the one record of names a game sends, and of no use to another profile. Its protocols
+    // name a fixed set, so the limit only guards against a game that misbehaves.
+    QSet<QString> mGameEventNamesSeen;
+    static constexpr int scmGameEventNamesLimit = 2000;
+    // Names scripts raise, each with when it was last raised: a script can build a new name every time,
+    // so only the most recent are kept, and one raised again stays
+    QHash<QString, quint64> mScriptEventNamesSeen;
+    quint64 mScriptEventNameTick = 0;
+    static constexpr int scmScriptEventNamesLimit = 200;
+    // Trimmed back to the limit only once this many more have come, so a flood of new names sorts rarely
+    static constexpr int scmScriptEventNamesSlack = 50;
+
     QStringList mActiveModules;
 
     std::function<bool(const QString&, const QString&, std::optional<int>)> mNotificationHandler;
@@ -1657,8 +1755,8 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
-    QFuture<bool> mModuleFuture;
-    QFuture<QString> mMapAutosaveFuture;
+    TBackgroundResult mModuleWrite;
+    TBackgroundResult mMapAutosave;
     bool mMapAutosaveResultPending = false;
 
     // Will be null/empty if is to use Mudlet's default/own presence
@@ -1770,6 +1868,15 @@ private:
     QMargins mBorders;
     QMargins mUserBorders;
     QMargins mMxpBorders;
+    // Unset till a frontend gives an area or a border first takes from it, so till then it is the grid
+    std::optional<QSize> mMainAreaCells;
+    std::optional<QSize> mMainAreaPixels;
+    // What a script's setMainWindowSize() asked for that the frontend answered, till it gives an area of its own accord
+    // or a script asks for another
+    std::optional<QSize> mAnsweredMainWindowRequest;
+    // What a script's setMainWindowSize() last asked for, till the frontend answers it or nothing listens for it
+    std::optional<QSize> mUnansweredMainWindowRequest;
+    quint64 mMainWindowRequests = 0;
 
     // 0 to scmMaxCommandLineHistorySaveSize lines, for ALL command lines; 0 turns
     // saving the history off:

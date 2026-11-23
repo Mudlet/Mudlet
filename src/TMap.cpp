@@ -41,7 +41,6 @@
 #include "mapInfoContributorManager.h"
 
 #include <QBuffer>
-#include <QCoreApplication>
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFileInfo>
@@ -351,6 +350,11 @@ bool TMap::setRoomArea(int id, int area)
         // instantiate the required TArea structure - this seems a bit twisty
         // and convoluted, but it was how previous code was wired up and we need
         // to retain the API for the lua subsystem...
+    } else if (pR->getArea() == area && pA->getAreaRooms().contains(id)) {
+        // Mapping scripts set the area of every room they arrive in, and redoing
+        // it would make the next path search rebuild the whole map's graph.
+        // A new room's area is -1 before that area holds it, hence the second test.
+        return true;
     }
 
     const bool result = pR->setArea(area);
@@ -777,13 +781,19 @@ void TMap::audit()
                             appendAreaErrorMsg(areaID, tr("[ WARN ] - CONVERTING: cannot convert old style label with id: %1.").arg(i));
                         }
                     }
-                    if ((l.size.width() > std::numeric_limits<qreal>::max()) || (l.size.width() < -std::numeric_limits<qreal>::max())) {
-                        pArea->mMapLabels[i].size.setWidth(l.pix.width());
-                    }
-                    if ((l.size.height() > std::numeric_limits<qreal>::max()) || (l.size.height() < -std::numeric_limits<qreal>::max())) {
-                        pArea->mMapLabels[i].size.setHeight(l.pix.height());
-                    }
                 }
+            }
+        }
+    }
+
+    // A damaged file can hold a NaN or infinite label size, which the 2D map cannot round to pixels
+    for (auto* pArea : mpRoomDB->getAreaMap()) {
+        for (auto& label : pArea->mMapLabels) {
+            if (!std::isfinite(label.size.width())) {
+                label.size.setWidth(label.pix.width());
+            }
+            if (!std::isfinite(label.size.height())) {
+                label.size.setHeight(label.pix.height());
             }
         }
     }
@@ -1997,8 +2007,7 @@ bool TMap::restore(QString location)
                 appendErrorMsgWithNoLf(infoMsg);
                 postMessage(infoMsg);
             }
-            // Allow for somethings to be updated - especially on Windows?
-            QCoreApplication::processEvents();
+            emit signal_mapProgressRepaintWanted();
         }
         return false;
     }
@@ -2834,7 +2843,6 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     QListIterator<QString> itMapMsg(mapAuditErrors);
     while (itMapMsg.hasNext()) {
         pHost->mErrorLogStream << itMapMsg.next() << QLatin1Char('\n');
-        ;
     }
 
     pHost->mErrorLogStream << createFileHeaderLine(tr("Area issues"), QLatin1Char('='));
@@ -2869,7 +2877,6 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
         QListIterator<QString> itMapRoomMsg(itRoomsMsg.value());
         while (itMapRoomMsg.hasNext()) {
             pHost->mErrorLogStream << itMapRoomMsg.next() << QLatin1Char('\n');
-            ;
         }
     }
 
@@ -2981,8 +2988,6 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     const QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
-    QCoreApplication::processEvents();
-    // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
     //: %1 is the name of the current Mudlet profile
@@ -3297,11 +3302,8 @@ void TMap::reportStringToProgressDialog(const QString text)
 {
     if (hasActiveTransferProgress()) {
         updateTransferProgressLabel(text);
-        // Needed to make the changed text show, it does increase the overall
-        // time a little but as the main usage is when parsing XML room data
-        // and that can take MORE THAN A MINUTE the activity is essential to
-        // inform the user that something IS happening...
-        QCoreApplication::processEvents();
+        // Parsing XML room data can take more than a minute, so a window that shows the text must repaint it now
+        emit signal_mapProgressRepaintWanted();
     }
 }
 
@@ -3656,7 +3658,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    QCoreApplication::processEvents();
+    emit signal_mapProgressRepaintWanted();
     QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
@@ -3906,7 +3908,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    QCoreApplication::processEvents();
+    emit signal_mapProgressRepaintWanted();
 
     // A file not written by Mudlet may not give these, and an empty one cannot name an area
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
@@ -4237,14 +4239,15 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
                                                      QString::number(mProgressDialogLabelsCount),
                                                      QString::number(mProgressDialogLabelsTotal)));
     }
-    QCoreApplication::processEvents();
+    // Where the progress dialog's Abort reaches the operation, in the GUI
+    emit signal_mapProgressRepaintWanted();
     return mMapProgressCancelRequested;
 }
 
 void TMap::areasAboutToBeDeleted()
 {
-    // The export walks the live areas and pumps the event loop as it goes, so a
-    // script can delete the one it is writing; it stops at its next progress step
+    // The export walks the live areas and, in the GUI, pumps the event loop as it
+    // goes, so a script can delete the one it is writing; it stops at its next progress step
     if (mJsonExportInProgress) {
         mJsonExportLostAnArea = true;
         mMapProgressCancelRequested = true;
@@ -4452,10 +4455,8 @@ QColor TMap::getColor(int id)
     int env = room->environment;
     if (mEnvColors.contains(env)) {
         env = mEnvColors.value(env);
-    } else {
-        if (!mCustomEnvColors.contains(env)) {
-            env = 1;
-        }
+    } else if (!mCustomEnvColors.contains(env)) {
+        return mpHost->mapperDefaultRoomColor();
     }
     switch (env) {
     case 1:

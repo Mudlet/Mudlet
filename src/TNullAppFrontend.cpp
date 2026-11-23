@@ -36,8 +36,10 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDebug>
+#include <QClipboard>
 #include <QDesktopServices>
 #include <QFile>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QList>
 #include <QMap>
@@ -176,6 +178,36 @@ QPointer<const QObject> windowIdentity(const Host* pHost, const QString& name)
     return pModel ? &pModel->mNotifier : nullptr;
 }
 } // namespace
+
+void TNullAppFrontend::getOpenFileNameAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::getExistingDirectoryAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [this, done = std::move(done)]() {
+        done(qobject_cast<QGuiApplication*>(QCoreApplication::instance()) ? QGuiApplication::clipboard()->text() : mClipboardText);
+    });
+}
+
+void TNullAppFrontend::setClipboardText(const QString& text)
+{
+    if (qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        QGuiApplication::clipboard()->setText(text);
+        return;
+    }
+    mClipboardText = text;
+}
 
 TAppFrontend* TAppFrontend::nullView()
 {
@@ -358,6 +390,12 @@ QString TNullAppFrontend::addonPlacementRefusal(const CommandRequest& request, c
 {
     if (!request.shortcut.isEmpty()) {
         const QKeySequence sequence(request.shortcut);
+        // Ahead of the commands' own, in the order of mudlet::addonShortcutUsable()
+        for (const ReservedShortcut& reserved : mReservedShortcuts) {
+            if (reserved.sequence == sequence) {
+                return addonShortcutTakenRefusal(sequence, reserved.holder);
+            }
+        }
         for (const AddonCommand& command : mAddonCommands) {
             if (command.request.surfaces == CommandSurface::Toolbar || command.request.shortcut.isEmpty() || QKeySequence(command.request.shortcut) != sequence) {
                 continue;
@@ -600,6 +638,14 @@ static void raiseProfileFocusChange(Host* pHost, const bool gained)
     pHost->raiseEvent(event);
 }
 
+std::pair<bool, QString> TNullAppFrontend::resizeMainWindow(Host* pHost, const int width, const int height)
+{
+    if (!pHost) {
+        return {false, QString()};
+    }
+    return pHost->resizeMainWindowWithNoView(QSize(width, height));
+}
+
 bool TNullAppFrontend::setActiveProfileTab(const QString& profileName)
 {
     HostManager* pool = HostManager::self();
@@ -649,11 +695,21 @@ namespace {
 bool sForceClosePending = false;
 bool sQuitPending = false;
 
+bool eventLoopRunning()
+{
+#if QT_CONFIG(thread)
+    return QThread::currentThread()->loopLevel() > 0;
+#else
+    // The browser's own loop runs from the start
+    return true;
+#endif
+}
+
 // quit() ends only a running exec() and does nothing from an event loop pump before one, which is
 // where an embedder loading profiles meets this. A nested loop before exec() still loses it.
 void quitOnceRunning()
 {
-    if (QThread::currentThread()->loopLevel() == 0) {
+    if (!eventLoopRunning()) {
         QTimer::singleShot(50ms, quitOnceRunning);
         return;
     }
@@ -662,6 +718,7 @@ void quitOnceRunning()
 }
 
 void closeAllAndQuit();
+void quitOnceClosed();
 
 // Nothing would delete a profile taken out of the pool after the quit, and its script may open another
 void closeAllOnceReleased()
@@ -691,14 +748,20 @@ void closeAllAndQuit()
                 mustWait = true;
                 break;
             }
-            mustWait |= pHost->profileResetInProgress() && !pHost->isClosingDown() && !pHost->getLuaInterpreter()->luaOnStack();
+            mustWait |= pHost->profileResetInProgress() && !pHost->closeStarted() && !pHost->getLuaInterpreter()->luaOnStack();
         }
         if (mustWait) {
             QTimer::singleShot(50ms, closeAllAndQuit);
             return;
         }
-        pool->closeAllProfiles();
+        pool->closeAllProfiles(quitOnceClosed);
+        return;
     }
+    quitOnceClosed();
+}
+
+void quitOnceClosed()
+{
     if (HostManager::releasingProfile()) {
         QTimer::singleShot(50ms, closeAllOnceReleased);
         return;
@@ -706,7 +769,7 @@ void closeAllAndQuit()
     sForceClosePending = false;
     if (!sQuitPending) {
         sQuitPending = true;
-        if (QThread::currentThread()->loopLevel() == 0) {
+        if (!eventLoopRunning()) {
             qDebug() << "TNullAppFrontend::armForceClose() INFO - no event loop is running yet, so the quit waits for one";
         }
         quitOnceRunning();
@@ -727,7 +790,9 @@ void TNullAppFrontend::writeSettings()
     pSettings->sync();
     if (pSettings->status() != QSettings::NoError) {
         qWarning().nospace() << "TNullAppFrontend::writeSettings() ERROR - failed to save the settings to " << pSettings->fileName() << ", status: " << pSettings->status();
+        return;
     }
+    configWritten();
 }
 
 void TNullAppFrontend::armForceClose()
@@ -777,6 +842,7 @@ bool TNullAppFrontend::saveWindowLayoutForScript()
     }
     mDeleted = Layout();
     mClosedProfiles = Layout();
+    configWritten();
     return true;
 }
 

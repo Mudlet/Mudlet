@@ -462,6 +462,25 @@ describe("Tests the rest of the SGR decoder", function()
     end
   end)
 
+  -- underline colour is not drawn, but its arguments must not be read as codes
+  -- of their own; each semicolon form ends in a value that would show if it were
+  it("steps over the arguments of an underline colour and applies the codes around it", function()
+    for i, colour in ipairs({"58;5;9", "58;2;1;2;3", "58;3;1;2;3", "58;4;1;2;3;7", "58;1", "59", "58:5:196", "58:2::1:2:3"}) do
+      local marker = ("SgrUnderlineColour%02d"):format(i)
+      feed("\27[4;" .. colour .. ";41;31m" .. marker)
+      local format = formatOf(marker)
+      assert.is_true(format.underline, "the underline before SGR " .. colour .. " was dropped")
+      assert.equals("none", format.blinking, "an argument of SGR " .. colour .. " was read as blink")
+      assert.is_false(format.italic, "an argument of SGR " .. colour .. " was read as italic")
+      assert.is_false(format.bold, "an argument of SGR " .. colour .. " was read as bold")
+      assert.is_false(format.reverse, "an argument of SGR " .. colour .. " was read as reverse")
+      assert.is_false(format.strikeout, "an argument of SGR " .. colour .. " was read as strikeout")
+      selectMarker(marker)
+      assert.is_true(isAnsiBgColor(4), "the background after SGR " .. colour .. " was dropped")
+      assert.is_true(isAnsiFgColor(4), "the foreground after SGR " .. colour .. " was dropped")
+    end
+  end)
+
   -- a sequence with an intermediate byte is held over a split between two
   -- reads like any other, rather than its tail reaching the screen
   it("carries a sequence with an intermediate byte over to the next read", function()
@@ -1027,6 +1046,45 @@ describe("Tests MSDP subnegotiation handling", function()
     end)
 end)
 
+describe("Tests MSSP subnegotiation handling", function()
+  local VAR, VAL = "<01>", "<02>"
+
+  local function feedMssp(payload)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSSP>" .. payload .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  teardown(function()
+    mssp.MSSPDESC = nil
+    mssp.MSSPESC = nil
+    mssp.MSSPNAME = nil
+    mssp.MSSPEND = nil
+    mssp.MSSPLEAD = nil
+  end)
+
+  it("keeps an escape character as the byte the game sent", function()
+    feedMssp(VAR .. "MSSPESC" .. VAL .. "a<ESC>b")
+    assert.equals("a\27b", mssp.MSSPESC)
+  end)
+
+  it("drops the line break that ends a value", function()
+    feedMssp(VAR .. "MSSPNAME" .. VAL .. "Test Realm<CR><LF>" .. VAR .. "MSSPEND" .. VAL .. "one<CR><LF>two<CR><LF>")
+    assert.equals("Test Realm", mssp.MSSPNAME)
+    assert.equals("one\ntwo", mssp.MSSPEND)
+  end)
+
+  it("drops the line break ahead of a value", function()
+    feedMssp(VAR .. "MSSPLEAD" .. VAL .. "<CR><LF>Test Realm")
+    assert.equals("Test Realm", mssp.MSSPLEAD)
+  end)
+
+  it("still reads the variables after a multi-line one", function()
+    feedMssp(VAR .. "MSSPDESC" .. VAL .. "one<CR><LF>two" .. VAR .. "MSSPNAME" .. VAL .. "Test Realm")
+    assert.equals("one\ntwo", mssp.MSSPDESC)
+    assert.equals("Test Realm", mssp.MSSPNAME)
+  end)
+end)
+
 describe("Tests GMCP decode failures", function()
   it("raises no events for a GMCP message whose JSON cannot be decoded", function()
     -- the decode-failure path is shared with MSDP: no arrival events for a
@@ -1068,6 +1126,28 @@ describe("Tests how a GMCP message is split into name and data", function()
     assert.is_nil(gmcp.Spec and gmcp.Spec.NewlineSplit)
     feed("<T_IAC><T_SB><O_GMCP>Spec.NewlineSplit\n{\"a\": 1}<T_IAC><T_SE>")
     assert.same({a = 1}, gmcp.Spec.NewlineSplit)
+  end)
+
+  it("takes a CRLF or a tab as the separator without keeping any of it in the name", function()
+    local fired = {}
+    local ids = {}
+    for _, name in ipairs({"CrlfSplit", "CrlfPing", "TabSplit"}) do
+      ids[#ids + 1] = registerAnonymousEventHandler("gmcp.Spec." .. name, function(event, key)
+        fired[name] = key
+      end)
+    end
+    finally(function()
+      for _, id in ipairs(ids) do
+        killAnonymousEventHandler(id)
+      end
+    end)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.CrlfSplit\r\n{\"a\": 1}<T_IAC><T_SE>")
+    feed("<T_IAC><T_SB><O_GMCP>Spec.CrlfPing\r\n<T_IAC><T_SE>")
+    feed("<T_IAC><T_SB><O_GMCP>Spec.TabSplit\t{\"b\": 2}<T_IAC><T_SE>")
+    assert.same({a = 1}, gmcp.Spec.CrlfSplit)
+    assert.same({}, gmcp.Spec.CrlfPing)
+    assert.same({b = 2}, gmcp.Spec.TabSplit)
+    assert.same({CrlfSplit = "gmcp.Spec.CrlfSplit", CrlfPing = "gmcp.Spec.CrlfPing", TabSplit = "gmcp.Spec.TabSplit"}, fired)
   end)
 
   it("reads a payload the game spread over several lines", function()
@@ -1845,6 +1925,73 @@ describe("Tests telnet option negotiation", function()
     assert.equals(3, channel102[5])
   end)
 
+  -- _G because busted runs each spec in an environment of its own
+  it("starts a fresh channel102 table when a script has replaced it", function()
+    local saved = _G.channel102
+    local seen
+    local handler = registerAnonymousEventHandler("channel102Message", function(_, variable, value)
+      seen = {variable, value}
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      _G.channel102 = saved
+    end)
+
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    local function receiveAfterReplacingWith(replacement)
+      _G.channel102 = replacement
+      seen = nil
+      feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+      assert.same({[5] = 3}, _G.channel102)
+      assert.same({5, 3}, seen)
+    end
+    receiveAfterReplacingWith(nil)
+    receiveAfterReplacingWith("not a table")
+  end)
+
+  it("keeps the channel102 table a script holds and what is already in it", function()
+    local saved = _G.channel102
+    finally(function() _G.channel102 = saved end)
+
+    local held = {[9] = 1}
+    _G.channel102 = held
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+    assert.equals(held, _G.channel102)
+    assert.same({[9] = 1, [5] = 3}, held)
+  end)
+
+  it("starts a fresh atcp table when a script has replaced it", function()
+    local saved = _G.atcp
+    local raised
+    local id = registerAnonymousEventHandler("RoomBrief", function(_, value) raised = value end)
+    finally(function()
+      killAnonymousEventHandler(id)
+      _G.atcp = saved
+    end)
+
+    local function receiveAfterReplacingWith(replacement)
+      _G.atcp = replacement
+      raised = nil
+      feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+      assert.same({RoomBrief = "Spec cave"}, _G.atcp)
+      assert.equals("Spec cave", raised)
+    end
+    receiveAfterReplacingWith(nil)
+    receiveAfterReplacingWith("not a table")
+  end)
+
+  it("keeps the atcp table a script holds and what is already in it", function()
+    local saved = _G.atcp
+    finally(function() _G.atcp = saved end)
+
+    local held = {Existing = "kept"}
+    _G.atcp = held
+    feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+    assert.equals(held, _G.atcp)
+    assert.same({Existing = "kept", RoomBrief = "Spec cave"}, held)
+  end)
+
   it("switches the MXP processor on for the rest of the connection", function()
     -- the MXP mode escapes only act on data flagged as coming from a server, so
     -- this is a path feedTriggers cannot reach at all
@@ -2210,6 +2357,41 @@ describe("Tests CHARSET negotiation", function()
   it("takes a variant spelling of ASCII as ASCII", function()
     request("US-ASCII")
     assert.equals("ASCII", getServerEncoding())
+  end)
+
+  -- RFC 2066 names come from the IANA registry, where each has aliases, and
+  -- servers also offer the codec names of the language they are written in
+  it("recognises a character set offered by an alias", function()
+    local cases = {
+      {"UTF8", "UTF-8"},
+      {"ANSI_X3.4-1968", "ASCII"},
+      {"latin1", "ISO 8859-1"},
+      {"ISO_8859-1:1987", "ISO 8859-1"},
+      {"ISO_8859-15", "ISO 8859-15"},
+      {"IBM437", "CP437"},
+      {"cp1252", "WINDOWS-1252"},
+      {"CP1251", "WINDOWS-1251"},
+      {"SJIS", "SHIFT_JIS"},
+      {"Big-5", "BIG5"},
+    }
+    for _, case in ipairs(cases) do
+      local offered, expected = case[1], case[2]
+      setServerEncoding(expected == "UTF-8" and "CP437" or "UTF-8")
+      request(offered)
+      assert.equals(expected, getServerEncoding(), "offering " .. offered)
+    end
+  end)
+
+  it("does not take GB2312 as GBK", function()
+    -- GBK decodes GB2312, but what Mudlet sends would be GBK, which a GB2312 game cannot read
+    request("GB2312")
+    assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  it("still prefers the encoding in use over an alias for another", function()
+    setServerEncoding("ISO 8859-1")
+    request("UTF-8", "latin1")
+    assert.equals("ISO 8859-1", getServerEncoding())
   end)
 
   it("ignores a request with nothing on offer after the separator", function()

@@ -27,6 +27,7 @@
 #include "MapStyle.h"
 #include "CredentialManager.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "ShortcutsManager.h"
 #include "TAction.h"
@@ -50,6 +51,7 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <algorithm>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -168,7 +170,10 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        const float versionNumber = versionString.toFloat(&isOk);
+                        // No Mudlet wrote a version that reads as NaN, negative or past 255: it is refused as a later
+                        // Mudlet's, rather than overflowing qFloor() or wrapping the quint8 major version
+                        const float parsedVersion = versionString.toFloat(&isOk);
+                        const float versionNumber = parsedVersion >= 0.0f ? std::min(parsedVersion, 255.0f) : 255.0f;
                         if (isOk) {
                             mVersionMajor = qFloor(versionNumber);
                             mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
@@ -468,9 +473,16 @@ void XMLimport::readArea()
 {
     if (attributes().hasAttribute(qsl("id"))) {
         const int id = attributes().value(qsl("id")).toString().toInt();
-        const QString name = attributes().value(qsl("name")).toString();
+        const QString wantedName = attributes().value(qsl("name")).toString();
+        TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
 
-        mpHost->mpMap->mpRoomDB->addArea(id, name);
+        // Game maps reuse area names, which addArea() refuses: the area would be
+        // dropped, or remade for its rooms under an "Unnamed Area" name
+        QString name = wantedName;
+        for (int suffix = 1; !name.isEmpty() && pRoomDB->hasAreaName(name); ++suffix) {
+            name = qsl("%1_%2").arg(wantedName).arg(suffix, 3, 10, QLatin1Char('0'));
+        }
+        pRoomDB->addArea(id, name);
     }
 }
 
@@ -929,11 +941,15 @@ void XMLimport::readHost(Host* pHost)
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     if (pHost->mEditorTheme.isEmpty() || pHost->mEditorThemeFile.isEmpty()) {
-        pHost->mEditorTheme = qsl("Mudlet");
-        pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
+        pHost->mEditorTheme = MudletApp::scmEditorThemeNameLight;
+        pHost->mEditorThemeFile = MudletApp::scmEditorThemeFileLight;
     }
     pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
     pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
+    // Both halves, because a profile that was in dark mode when it last picked a
+    // theme could have picked the bundled one there too
+    MudletApp::migrateBundledEditorTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
+    MudletApp::migrateBundledEditorTheme(pHost->mEditorThemeDark, pHost->mEditorThemeFileDark);
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -1346,6 +1362,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QAnyStringView elementName)
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
+            {qsl("mMapperDefaultRoomColor"), &Host::mMapperDefaultRoomColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
             {qsl("mLightBlack2"), &Host::mLightBlack_2},

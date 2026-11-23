@@ -273,8 +273,6 @@ private slots:
         // Hidden, or the triggers introduction would replace the notice anyway
         pEditor->setBannerPermanentlyHidden(EditorViewType::cmTriggerView, qsl("intro"), true);
         pEditor->showWarning(qsl("qaNoticeBeforeTheBuild"), false);
-        // Filled in by the triggers view's own setup, which a bare switch to the view skips
-        pEditor->mTriggerEditorSplitterState.clear();
         pEditor->doCleanReset();
         QTest::qWait(50ms);
         QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
@@ -283,7 +281,10 @@ private slots:
 
         QVERIFY2(pEditor->isVisible(), "the Script Editor button did not open the editor");
         QVERIFY2(pEditor->mCurrentView == EditorViewType::cmTriggerView, "the editor did not open on the triggers view");
-        QVERIFY2(!pEditor->mTriggerEditorSplitterState.isEmpty(), "the triggers view was switched to without its layout being set up");
+        // A bare switch to the view shows the trigger form; the view's own setup hides it while no trigger is chosen
+        const QTreeWidgetItem* pChosen = pEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(!pChosen || pChosen == pEditor->treeWidget_triggers->topLevelItem(0), "setup: a trigger is chosen, so its form would show either way");
+        QVERIFY2(pEditor->mpTriggersMainArea->isHidden(), "the triggers view was switched to without its own setup");
         QVERIFY2(pEditor->mpSystemMessageArea->isHidden() || !pEditor->mpSystemMessageArea->notificationAreaMessageBox->text().contains(qsl("qaNoticeBeforeTheBuild")),
                  "a notice the reset should have cleared is still showing");
 

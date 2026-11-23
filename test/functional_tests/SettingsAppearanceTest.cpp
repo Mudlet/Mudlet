@@ -24,25 +24,40 @@
  * that stylesheet leaves the whole of the dialog in the previous theme while
  * the text on it turns over to the new one.
  *
+ * It also keeps the page-scoped field recipe off the search field and sidebar.
+ *
  * Run with: ctest -R SettingsAppearanceTest -V
  */
 
+#include <algorithm>
 #include <cmath>
+#include <memory>
 
 #include <QDir>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
+#include <QImage>
 #include <QLabel>
+#include <QLineEdit>
+#include <QMenu>
 #include <QPixmap>
 #include <QRegularExpression>
+#include <QCheckBox>
+#include <QRadioButton>
+#include <QScrollBar>
+#include <QStackedWidget>
+#include <QVBoxLayout>
 
 #include "MudletApp.h"
+#include "PixelTestHelper.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -50,6 +65,7 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -86,7 +102,9 @@ private:
         QVERIFY(themes.write("[]") == 2);
     }
 
-    QWidget* shell() const { return mpPreferences->findChild<QWidget*>(qsl("settingsShell")); }
+    static QWidget* shellOf(const dlgProfilePreferences* pDialog) { return pDialog->findChild<QWidget*>(qsl("settingsShell")); }
+
+    QWidget* shell() const { return shellOf(mpPreferences); }
 
     // mudlet::showOptionsDialog() assigns the profile's Lua stylesheet to the
     // dialog on every show, so a dialog built by hand here is not the one the
@@ -122,7 +140,13 @@ private:
     // of the shell is one of its own surfaces rather than anything on a page -
     // and the shell and the sidebar are painted the same colour, so this reads
     // the page colour whichever of the two the pixel lands on.
-    QColor paintedSurface() const { return pixelOf(shell(), QPoint(3, shell()->height() - 3)); }
+    static QColor paintedSurfaceOf(const dlgProfilePreferences* pDialog)
+    {
+        QWidget* pShell = shellOf(pDialog);
+        return pixelOf(pShell, QPoint(3, pShell->height() - 3));
+    }
+
+    QColor paintedSurface() const { return paintedSurfaceOf(mpPreferences); }
 
     // Which side of the light/dark line the application has moved to. The shell
     // has to be on the same one, whatever it was painted in a moment ago.
@@ -161,6 +185,48 @@ private:
         return QColor::fromString(value);
     }
 
+    static QStringList selectorsIn(const QString& styleSheet)
+    {
+        QStringList selectors;
+        const QStringList rules = styleSheet.split(QLatin1Char('}'), Qt::SkipEmptyParts);
+        for (const QString& rule : rules) {
+            const QString selectorList = rule.section(QLatin1Char('{'), 0, 0);
+            const QStringList parts = selectorList.split(QLatin1Char(','), Qt::SkipEmptyParts);
+            for (const QString& part : parts) {
+                if (const QString selector = part.simplified(); !selector.isEmpty()) {
+                    selectors.append(selector);
+                }
+            }
+        }
+        return selectors;
+    }
+
+    // Only for a hand-built sheet with no selectors or nesting: declarations lie between semicolons
+    static QString declarationValue(const QString& styleSheet, const QString& property)
+    {
+        for (const QString& declaration : styleSheet.split(QLatin1Char(';'), Qt::SkipEmptyParts)) {
+            if (declaration.section(QLatin1Char(':'), 0, 0).trimmed() == property) {
+                return declaration.section(QLatin1Char(':'), 1).trimmed();
+            }
+        }
+        return QString();
+    }
+
+    // The wash composited over its surface: what a word on it is actually read against
+    static QColor washOver(const QColor& surface, const QString& value)
+    {
+        static const QRegularExpression channels(qsl("^rgba?\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*(?:,\\s*([0-9.]+)\\s*)?\\)$"));
+        const QRegularExpressionMatch match = channels.match(value);
+        if (!match.hasMatch()) {
+            return QColor();
+        }
+        const qreal alpha = match.captured(4).isEmpty() ? 1.0 : match.captured(4).toDouble();
+        const auto mix = [alpha](const int over, const int under) {
+            return qRound(under + (over - under) * alpha);
+        };
+        return QColor(mix(match.captured(1).toInt(), surface.red()), mix(match.captured(2).toInt(), surface.green()), mix(match.captured(3).toInt(), surface.blue()));
+    }
+
     static QString describe(const QColor& surface)
     {
         return qsl("the shell is painted %1 (lightness %2) while the application palette is %3 (Base %4)")
@@ -170,9 +236,8 @@ private:
     // A theme stylesheet that paints every widget, as dark-theme packages do, decides the shell's colours as
     // it did before the shell drew its own surfaces: otherwise each control the theme paints sits in a dark
     // box on a light card (#11839)
-    void checkTheShellFollowsTheThemeStyleSheet()
+    void checkTheShellFollowsTheThemeStyleSheet(const QColor& themeFill = QColor(qsl("#181818")))
     {
-        const QColor themeFill(qsl("#181818"));
         const QColor surface = paintedSurface();
         QVERIFY2(surface == themeFill, qPrintable(qsl("the theme paints every widget %1, yet the shell is %2").arg(themeFill.name(), surface.name())));
 
@@ -185,6 +250,21 @@ private:
         const QColor ink = mpPreferences->label_appearance->palette().color(mpPreferences->label_appearance->foregroundRole());
         const qreal ratio = contrastRatio(cardFill, ink);
         QVERIFY2(ratio >= 4.5, qPrintable(qsl("a card is painted %1 under %2 text, a contrast of %3:1").arg(cardFill.name(), ink.name(), QString::number(ratio, 'f', 2))));
+    }
+
+    // Exact: rules aimed at the cards and the fields paint them red and green, and the shell's recipes have to win
+    void checkTheShellsSurfacesAreTheRecipes(const QColor& card, const QColor& field, const QString& when)
+    {
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_theme"));
+        QVERIFY2(pCard, "the Appearance card this case reads its colours off is not there any more");
+        const QColor cardFill = pixelOf(pCard, QPoint(pCard->width() / 2, pCard->height() - 4));
+        QVERIFY2(cardFill.rgb() == card.rgb(), qPrintable(qsl("%1, a card is painted %2 rather than the card recipe's %3").arg(when, cardFill.name(), card.name())));
+
+        auto* pField = mpPreferences->lineEdit_logFileFolder;
+        QVERIFY2(pField, "the log folder field this case reads is not there any more");
+        // Inside the border and padding, before the text
+        const QColor fieldFill = pixelOf(pField, QPoint(uiDesign::scmInputBorderWidth + 2, pField->height() / 2));
+        QVERIFY2(fieldFill.rgb() == field.rgb(), qPrintable(qsl("%1, a field is painted %2 rather than the field recipe's %3").arg(when, fieldFill.name(), field.name())));
     }
 
 private slots:
@@ -269,9 +349,86 @@ private slots:
         QVERIFY2(paintedSurface().lightness() < 128, qPrintable(describe(paintedSurface())));
     }
 
-    // A card is filled by the shell stylesheet and the text on it is not, so when
-    // the two stop agreeing about the theme the result is a dark card under dark
-    // text - 1.2:1 before this was fixed, against the 4.5:1 text should keep
+    // mudlet::signal_appearanceChanged fires after the mode has turned over, so a dialog
+    // comparing the mode before and after its call finds it unmoved. The counts catch
+    // the first dialog re-entering its slot through that signal, invisible otherwise.
+    void test_aSecondDialogFollowsAThemeChangeMadeInTheFirst()
+    {
+        // So the move below is a real one whichever appearance the machine is in
+        setAppearance(enums::Appearance::light);
+
+        // Given what mudlet::showOptionsDialog() gives a dialog it puts on screen
+        auto pSecond = std::make_unique<dlgProfilePreferences>(mudlet::self(), mpHost);
+        pSecond->setStyleSheet(mpHost->mProfileStyleSheet);
+        pSecond->resize(1060, 760);
+        pSecond->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pSecond.get()));
+        QVERIFY2(shellOf(pSecond.get()), "the second dialog's settings shell was never built");
+        pSecond->grab();
+
+        const QString lightPage = uiDesign::themeTokens().page.name();
+        int firstStyled = mpPreferences->mShellStyleApplications;
+        int secondStyled = pSecond->mShellStyleApplications;
+
+        // Through the first dialog: the second has only the application's signal to go on
+        setAppearance(enums::Appearance::dark);
+        pSecond->grab();
+        const QString darkPage = uiDesign::themeTokens().page.name();
+        QVERIFY2(!applicationIsLight(), "the application did not go dark, so the flip below is not the one this case is about");
+        QVERIFY2(darkPage != lightPage, "the two appearances lay the page in the same colour, so the sheets below cannot be told apart");
+        QVERIFY2(paintedSurfaceOf(pSecond.get()).lightness() < 128,
+                 qPrintable(qsl("the second dialog is painted %1 (lightness %2) while the application went dark")
+                                    .arg(paintedSurfaceOf(pSecond.get()).name(), QString::number(paintedSurfaceOf(pSecond.get()).lightness()))));
+        QVERIFY2(shellOf(pSecond.get())->styleSheet().contains(darkPage),
+                 qPrintable(qsl("the second dialog's shell is still mixed from the light page's %1 rather than the dark page's %2").arg(lightPage, darkPage)));
+        QVERIFY2(pSecond->mShellStyleApplications - secondStyled == 1,
+                 qPrintable(qsl("the second dialog restyled %1 times for one appearance change").arg(pSecond->mShellStyleApplications - secondStyled)));
+        QVERIFY2(mpPreferences->mShellStyleApplications - firstStyled == 1,
+                 qPrintable(qsl("the dialog the change was made in restyled %1 times for it").arg(mpPreferences->mShellStyleApplications - firstStyled)));
+
+        firstStyled = mpPreferences->mShellStyleApplications;
+        secondStyled = pSecond->mShellStyleApplications;
+
+        // And back: a fix that records the theme once could be right one way only
+        setAppearance(enums::Appearance::light);
+        pSecond->grab();
+        QVERIFY2(applicationIsLight(), "the application did not go light, so the flip below is not the one this case is about");
+        QVERIFY2(paintedSurfaceOf(pSecond.get()).lightness() >= 128,
+                 qPrintable(qsl("the second dialog is painted %1 (lightness %2) while the application went light")
+                                    .arg(paintedSurfaceOf(pSecond.get()).name(), QString::number(paintedSurfaceOf(pSecond.get()).lightness()))));
+        QVERIFY2(shellOf(pSecond.get())->styleSheet().contains(lightPage),
+                 qPrintable(qsl("the second dialog's shell is still mixed from the dark page's %1 rather than the light page's %2").arg(darkPage, lightPage)));
+        QVERIFY2(pSecond->mShellStyleApplications - secondStyled == 1,
+                 qPrintable(qsl("the second dialog restyled %1 times for one appearance change").arg(pSecond->mShellStyleApplications - secondStyled)));
+        QVERIFY2(mpPreferences->mShellStyleApplications - firstStyled == 1,
+                 qPrintable(qsl("the dialog the change was made in restyled %1 times for it").arg(mpPreferences->mShellStyleApplications - firstStyled)));
+    }
+
+    // QLabel bakes an anchor's colour into its document at setText, so a QPalette::Link
+    // set afterwards is ignored; only the label's text shows the ink it really uses
+    void test_everyLinkCarriesTheAccentInBothAppearances()
+    {
+        auto* pLink = mpPreferences->findChild<QLabel*>(qsl("settingsHeroLink"));
+        QVERIFY2(pLink, "the security status card has no 'settingsHeroLink'");
+        QVERIFY2(pLink->text().contains(qsl("<a ")), "the hero link carries no anchor, so nothing below is measured");
+
+        setAppearance(enums::Appearance::dark);
+        const QString onDark = uiDesign::themeTokens().accentText.name();
+        const QString linkOnDark = pLink->text();
+
+        setAppearance(enums::Appearance::light);
+        const QString onLight = uiDesign::themeTokens().accentText.name();
+        const QString linkOnLight = pLink->text();
+
+        qInfo().noquote() << qsl("  the hero link reads \"%1\" on dark and \"%2\" on light").arg(linkOnDark, linkOnLight);
+        QVERIFY2(onDark != onLight, "the two appearances answer the same accent ink, so the check below cannot tell them apart");
+        QVERIFY2(linkOnDark.contains(qsl("color: %1").arg(onDark)), qPrintable(qsl("the hero link is not inked %1 on the dark appearance: \"%2\"").arg(onDark, linkOnDark)));
+        QVERIFY2(linkOnLight.contains(qsl("color: %1").arg(onLight)),
+                 qPrintable(qsl("the hero link is not inked %1 on the light appearance - an appearance change did not re-ink it: \"%2\"").arg(onLight, linkOnLight)));
+    }
+
+    // The card's fill comes from the shell stylesheet and its text does not, so the
+    // two can disagree about the theme
     void test_aCardsTextStaysReadableAfterAThemeChange()
     {
         setAppearance(enums::Appearance::dark);
@@ -284,6 +441,72 @@ private slots:
         const QColor ink = pLabel->palette().color(pLabel->foregroundRole());
         const qreal ratio = contrastRatio(fill, ink);
         QVERIFY2(ratio >= 4.5, qPrintable(qsl("a card is painted %1 under %2 text, a contrast of %3:1").arg(fill.name(), ink.name(), QString::number(ratio, 'f', 2))));
+    }
+
+    void test_theCertificateWarningReadsOnItsWashInBothAppearances()
+    {
+        // As the SSL error path does: restyleCertificateWarnings() rewrites only the
+        // controls already carrying a sheet of their own
+        const QList<QWidget*> warned{mpPreferences->checkBox_self_signed, mpPreferences->ssl_issuer_label};
+        for (QWidget* pControl : warned) {
+            pControl->setStyleSheet(qsl("font-weight: bold;"));
+        }
+
+        // Each measured after a real move, not after asking for the appearance already in force
+        setAppearance(enums::Appearance::dark);
+        setAppearance(enums::Appearance::light);
+        QStringList washes;
+        for (const enums::Appearance appearance : {enums::Appearance::light, enums::Appearance::dark}) {
+            setAppearance(appearance);
+            // The controls stand on the SSL cards, so the wash lies over the card tone
+            const QColor card = uiDesign::themeTokens().card;
+            for (QWidget* pControl : warned) {
+                const QString sheet = pControl->styleSheet();
+                const QColor ink(declarationValue(sheet, qsl("color")));
+                const QColor wash = washOver(card, declarationValue(sheet, qsl("background")));
+                QVERIFY2(ink.isValid() && wash.isValid(),
+                         qPrintable(qsl("%1 was not restyled for the %2 appearance - its sheet reads \"%3\"")
+                                            .arg(pControl->objectName(), appearance == enums::Appearance::dark ? qsl("dark") : qsl("light"), sheet)));
+                washes.append(wash.name());
+                const qreal ratio = contrastRatio(ink, wash);
+                QVERIFY2(ratio >= uiDesign::scmTextMinimumRatio,
+                         qPrintable(qsl("%1 is written %2 on a warning wash that comes out %3, a contrast of %4:1 against the %5 floor")
+                                            .arg(pControl->objectName(), ink.name(), wash.name(), QString::number(ratio, 'f', 2), QString::number(uiDesign::scmTextMinimumRatio, 'f', 1))));
+            }
+        }
+        qInfo().noquote() << qsl("  the warning wash comes out %1").arg(washes.join(qsl(", ")));
+        QVERIFY2(washes.at(0) != washes.at(2), "the wash is the same colour in both appearances, so it is not being mixed against the page");
+    }
+
+    // The shell's surfaces are its own, and a profile's Lua stylesheet is
+    // applied to the whole dialog - so its rules reach the controls on a page
+    // but cannot repaint the cards and fields the shell draws, before a theme
+    // change or after one, nor under a theme that decides the shell's colours.
+    void test_aProfileStyleSheetsRulesDoNotRepaintTheShellsSurfaces()
+    {
+        const QString rules = qsl("QGroupBox { background-color: rgb(255, 0, 0); } QLineEdit { background-color: rgb(0, 255, 0); }");
+        setAppearance(enums::Appearance::dark);
+        mpPreferences->setStyleSheet(rules);
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        checkTheShellsSurfacesAreTheRecipes(uiDesign::themeTokens().card, uiDesign::themeTokens().field, qsl("before any theme change"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        setAppearance(enums::Appearance::light);
+        QVERIFY2(applicationIsLight(), "the application did not go light, so this is not the mid-life flip");
+        checkTheShellsSurfacesAreTheRecipes(uiDesign::themeTokens().card, uiDesign::themeTokens().field, qsl("after the theme change"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // The theme decides the tones, and the rules beside it still do not reach the surfaces
+        const QColor themeFill(qsl("#181818"));
+        mpPreferences->setStyleSheet(qsl("QWidget { background-color: %1; color: #a0a0a0; } %2").arg(themeFill.name(), rules));
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        checkTheShellsSurfacesAreTheRecipes(themeFill, themeFill, qsl("under a theme stylesheet"));
     }
 
     void test_aProfileStyleSheetThemeDecidesTheShellsColours()
@@ -316,11 +539,33 @@ private slots:
         QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
     }
 
+    // The tokens' light treatment comes from the theme's palette, not the application's
+    void test_aLightThemeStyleSheetLightensTheShellOnTheDarkAppearance()
+    {
+        setAppearance(enums::Appearance::dark);
+        const QColor themeFill(qsl("#f0f0f0"));
+        mpPreferences->setStyleSheet(qsl("QWidget { background-color: %1; color: #202020; }").arg(themeFill.name()));
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        QVERIFY2(!applicationIsLight(), "the application did not stay dark, so the theme is not the only thing lightening the shell");
+        checkTheShellFollowsTheThemeStyleSheet(themeFill);
+    }
+
     // A see-through theme background is no colour to draw cards in
     void test_aTransparentThemeBackgroundLeavesTheShellItsOwnColours()
     {
         setAppearance(enums::Appearance::light);
         mpPreferences->setStyleSheet(qsl("QWidget { background-color: transparent; }"));
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
+        QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
+    }
+
+    // ...and nor is a gradient, which Qt copies into Base as well
+    void test_aGradientThemeBackgroundLeavesTheShellItsOwnColours()
+    {
+        setAppearance(enums::Appearance::light);
+        mpPreferences->setStyleSheet(qsl("QWidget { background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #181818, stop: 1 #303030); }"));
         QCoreApplication::processEvents();
         mpPreferences->grab();
         QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
@@ -374,7 +619,8 @@ private slots:
         const auto readable = [](QWidget* pWidget) {
             const QString styleSheet = pWidget->styleSheet();
             const QColor ink = colourFrom(styleSheet, qsl("color"));
-            const QColor fill = colourFrom(styleSheet, qsl("background"));
+            // The background is a translucent wash, so what the ink is read against is that wash over the card
+            const QColor fill = washOver(uiDesign::themeTokens().card, declarationValue(styleSheet, qsl("background")));
             if (!ink.isValid() || !fill.isValid()) {
                 return qsl("%1 is styled '%2', which does not say both what colour it is drawn in and what it is drawn on").arg(pWidget->objectName(), styleSheet);
             }
@@ -409,6 +655,206 @@ private slots:
         for (QWidget* pQuiet : quiet) {
             QVERIFY2(pQuiet->styleSheet().isEmpty(), qPrintable(qsl("%1 is warning about nothing, yet a restyle gave it '%2'").arg(pQuiet->objectName(), pQuiet->styleSheet())));
         }
+    }
+
+    void test_aPagesFieldsAreDrawnFromTheSharedInputRecipe()
+    {
+        setAppearance(enums::Appearance::dark);
+        auto* pField = mpPreferences->lineEdit_logFileFolder;
+        QVERIFY2(pField, "the log folder field this case reads is not there any more");
+        QVERIFY2(pField->height() >= uiDesign::scmInputHeight,
+                 qPrintable(qsl("a field on a page is %1px tall, against the %2px the shared recipe asks for").arg(QString::number(pField->height()), QString::number(uiDesign::scmInputHeight))));
+
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        // Inside the border and padding, before the text: the field holds a temporary
+        // path, so a point under the words lands on a descender or not run to run
+        const QColor fill = pixelOf(pField, QPoint(uiDesign::scmInputBorderWidth + 2, pField->height() / 2));
+        QVERIFY2(TestPixels::distance(fill, tokens.field) < TestPixels::distance(fill, tokens.card),
+                 qPrintable(qsl("a field is painted %1, nearer the card's %2 than the field surface's %3").arg(fill.name(), tokens.card.name(), tokens.field.name())));
+    }
+
+    // Qt's stylesheet parser takes only pt and px for font-size and silently drops a
+    // percentage, so the resolved font is the only proof a rule applied
+    void test_theShellsHeadingsAreSetAtTheStepsTheScaleNames()
+    {
+        auto* pTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"));
+        QVERIFY2(pTitle, "the dialog has no 'settingsPageTitle'");
+        QCOMPARE(pTitle->font().pointSize(), uiDesign::typeSize(uiDesign::TypeStep::Display));
+
+        auto* pWordmark = mpPreferences->findChild<QLabel*>(qsl("settingsWordmark"));
+        QVERIFY2(pWordmark, "the dialog has no 'settingsWordmark'");
+        QCOMPARE(pWordmark->font().pointSize(), uiDesign::typeSize(uiDesign::TypeStep::Title));
+
+        // A card's words carry no size of their own, so the card's font is the body step
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_theme"));
+        QVERIFY2(pCard, "the Appearance card this case measures the body size against is not there any more");
+        QCOMPARE(pCard->font().pointSize(), uiDesign::typeSize(uiDesign::TypeStep::Body));
+        QVERIFY2(pTitle->font().pointSize() > pWordmark->font().pointSize() && pWordmark->font().pointSize() > pCard->font().pointSize(),
+                 qPrintable(qsl("the page title, the wordmark and a card's words are %1/%2/%3pt - the headings are not standing over the page")
+                                    .arg(QString::number(pTitle->font().pointSize()), QString::number(pWordmark->font().pointSize()), QString::number(pCard->font().pointSize()))));
+    }
+
+    // The page-scoped field rules must not reach the card the fields sit on
+    void test_aCardIsStillPaintedAsACard()
+    {
+        setAppearance(enums::Appearance::dark);
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_theme"));
+        QVERIFY2(pCard, "the Appearance card this case reads its colours off is not there any more");
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const QColor fill = pixelOf(pCard, QPoint(pCard->width() / 2, pCard->height() - 4));
+        // Exact rather than nearest-of-two, which would pass a card left in whatever
+        // the platform paints a group box
+        QVERIFY2(fill.rgb() == tokens.card.rgb(), qPrintable(qsl("a card is painted %1 rather than the card tone's %2").arg(fill.name(), tokens.card.name())));
+    }
+
+    // Named on the shell, the rules would also draw the search box and the sidebar's editors
+    void test_theInputRulesReachNothingOutsideThePages()
+    {
+        auto* pStack = mpPreferences->findChild<QStackedWidget*>(qsl("settingsStack"));
+        auto* pSearchField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        QVERIFY2(pStack && pSearchField, "the stack and the search field are the two things this case is about");
+        QVERIFY2(!pStack->isAncestorOf(pSearchField), "the search field is inside the stack, so the rules scoped to the pages now draw it too");
+
+        const QStringList inputTypes{qsl("QLineEdit"), qsl("QPlainTextEdit"), qsl("QTextEdit"), qsl("QComboBox"), qsl("QAbstractSpinBox")};
+        int scopedRules = 0;
+        for (const QString& selector : selectorsIn(shell()->styleSheet())) {
+            const bool namesAField = std::any_of(inputTypes.cbegin(), inputTypes.cend(), [&selector](const QString& type) {
+                return selector.contains(type);
+            });
+            if (!namesAField) {
+                continue;
+            }
+            QVERIFY2(selector.startsWith(qsl("#settingsStack ")), qPrintable(qsl("\"%1\" draws a field from outside the stack of pages").arg(selector)));
+            ++scopedRules;
+        }
+        QVERIFY2(scopedRules > 0, "the shell stylesheet draws no fields at all, so nothing here was checked");
+
+        QVERIFY2(shell()->styleSheet().contains(qsl("#settingsSearchField { border: 1px solid")), "the search field lost the rule that draws it");
+        QVERIFY2(shell()->styleSheet().contains(qsl("border-radius: %1px; padding-left").arg(QString::number(uiDesign::scmRadiusProminentInput))),
+                 "the search field is no longer drawn with the prominent input's corner");
+    }
+
+    // Read off what the rules paint, not their text: a selector list says nothing
+    // about which controls a sheet actually reaches
+    void test_theInputRulesNameNothingButFields()
+    {
+        QWidget stack;
+        stack.setObjectName(qsl("settingsStack"));
+        auto* pLayout = new QVBoxLayout(&stack);
+        auto* pCheck = new QCheckBox(qsl("a choice"), &stack);
+        auto* pRadio = new QRadioButton(qsl("one of several"), &stack);
+        auto* pBar = new QScrollBar(Qt::Vertical, &stack);
+        auto* pField = new QLineEdit(qsl("typed in"), &stack);
+        pLayout->addWidget(pCheck);
+        pLayout->addWidget(pRadio);
+        pLayout->addWidget(pBar);
+        pLayout->addWidget(pField);
+        // Fixed sizes: the field rule's min-height would grow a control and change
+        // the grab's size whether or not anything repainted it
+        pCheck->setFixedSize(180, 24);
+        pRadio->setFixedSize(180, 24);
+        pBar->setFixedSize(16, 90);
+        pField->setFixedSize(180, 30);
+        stack.resize(260, 220);
+        stack.show();
+        QVERIFY2(QTest::qWaitForWindowExposed(&stack), "the throwaway stack was never put on screen, so there is nothing here to grab");
+
+        const QImage bareCheck = pCheck->grab().toImage();
+        const QImage bareRadio = pRadio->grab().toImage();
+        const QImage bareBar = pBar->grab().toImage();
+        const QImage bareField = pField->grab().toImage();
+
+        stack.setStyleSheet(uiDesign::inputStyleSheet(uiDesign::themeTokens(), qsl("#settingsStack")));
+        QCoreApplication::processEvents();
+        QTest::qWait(50);
+
+        QVERIFY2(pField->grab().toImage() != bareField, "the input rules left the field exactly as the platform drew it, so this case is reading a sheet that reaches nothing");
+        QVERIFY2(pCheck->grab().toImage() == bareCheck, "the input rules redrew a check box, which is not a field and is drawn by the card's own rules");
+        QVERIFY2(pRadio->grab().toImage() == bareRadio, "the input rules redrew a radio button, which is not a field and is drawn by the card's own rules");
+        QVERIFY2(pBar->grab().toImage() == bareBar, "the input rules redrew a scroll bar, which is chrome and is drawn by the shared scroll bar recipe");
+    }
+
+    // The dropped-down list is a window of its own, so the rule has to reach it
+    // across that boundary from a sheet scoped to the stack
+    void test_aComboBoxPopupIsTheFieldOpenedUp()
+    {
+        setAppearance(enums::Appearance::dark);
+        auto* pCombo = mpPreferences->comboBox_appearance;
+        // Shown: a list is polished against the stylesheets over it when dropped down,
+        // and an unshown one keeps the palette it was made with
+        pCombo->showPopup();
+        QCoreApplication::processEvents();
+        QAbstractItemView* pList = pCombo->view();
+        QVERIFY2(pList, "the appearance combo box has no list to drop down");
+
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        // Exact rather than nearest-of-two: unstyled, the list is the platform's base
+        // colour, a few levels off the field, and would pass
+        const QColor fill = pixelOf(pList->viewport(), QPoint(pList->viewport()->width() / 2, 4));
+        pCombo->hidePopup();
+        QVERIFY2(fill.rgb() == tokens.field.rgb(),
+                 qPrintable(qsl("the popup list is painted %1 rather than the field surface's %2 - the rule scoped to the stack did not reach it").arg(fill.name(), tokens.field.name())));
+    }
+
+    // The menu hangs off the dialog, not the shell, so the shell's sheet never reaches it
+    void test_theMapProfilesMenuIsDrawnFromTheDesign()
+    {
+        setAppearance(enums::Appearance::dark);
+        QMenu* pMenu = mpPreferences->pushButton_chooseProfiles->menu();
+        QVERIFY2(pMenu, "the choose-profiles button carries no menu, so there is nothing here to draw");
+
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const QString sheet = pMenu->styleSheet();
+        QVERIFY2(sheet.contains(qsl("QMenu")) && sheet.contains(tokens.card.name()),
+                 qPrintable(qsl("the map profiles menu is not drawn on the design's card surface (%1): its sheet is \"%2\"").arg(tokens.card.name(), sheet.left(120))));
+        QVERIFY2(pMenu->testAttribute(Qt::WA_TranslucentBackground), "the map profiles menu's window was never asked to be see-through, so its corner is opaque");
+    }
+
+    // The popup's window is filled before the list is drawn, so a radius on the list
+    // alone leaves the window's square corners showing; hence a grab that keeps alpha
+    void test_aComboBoxPopupIsOpenAtTheCorner()
+    {
+        setAppearance(enums::Appearance::dark);
+        auto* pCombo = mpPreferences->comboBox_appearance;
+        pCombo->showPopup();
+        QCoreApplication::processEvents();
+        QAbstractItemView* pList = pCombo->view();
+        QVERIFY2(pList, "the appearance combo box has no list to drop down");
+        QWidget* pPopup = pList->window();
+        QVERIFY2(pPopup && pPopup != mpPreferences, "the list dropped down inside the dialog rather than in a window of its own");
+        QVERIFY2(pPopup->testAttribute(Qt::WA_TranslucentBackground), "the popup's window was never asked to be see-through, so it is opaque behind whatever corner the list is given");
+
+        const QImage shot = pPopup->grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        const qreal ratio = shot.devicePixelRatio();
+        // Named off the geometry, not guessed: the window is taller than the list it holds
+        const QPoint onTheFrame(shot.width() / 2, qRound(pList->geometry().top() * ratio));
+        QWidget* pViewport = pList->viewport();
+        const QPoint inTheList = pViewport->mapTo(pPopup, QPoint(pViewport->width() / 2, 4)) * ratio;
+        pCombo->hidePopup();
+
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const QColor corner = QColor::fromRgba(shot.pixel(0, 0));
+        const QColor frame = QColor::fromRgba(shot.pixel(onTheFrame));
+        const QColor list = QColor::fromRgba(shot.pixel(inTheList));
+        QVERIFY2(corner.alpha() == 0, qPrintable(qsl("the popup's corner is painted %1 rather than cut away, so the list's radius has a square window behind it").arg(corner.name(QColor::HexArgb))));
+        QVERIFY2(frame.alpha() == 255 && frame.rgb() == tokens.border.rgb(),
+                 qPrintable(qsl("the top of the popup's frame is %1 rather than the hairline's %2 - the frame the corner is cut out of is not there")
+                                    .arg(frame.name(QColor::HexArgb), tokens.border.name())));
+        QVERIFY2(list.alpha() == 255 && list.rgb() == tokens.field.rgb(),
+                 qPrintable(qsl("the popup's first row is %1 rather than the field surface's %2 - the window was opened up and took the list with it")
+                                    .arg(list.name(QColor::HexArgb), tokens.field.name())));
+
+        // An appearance change swaps the style, which re-resolves every palette after
+        // the shell restyled, so the popup reasserts on show. Offscreen nothing
+        // re-resolves, so the wipe is made here.
+        pPopup->setPalette(QPalette());
+        pCombo->showPopup();
+        QCoreApplication::processEvents();
+        const QColor cornerAgain = QColor::fromRgba(pPopup->grab().toImage().convertToFormat(QImage::Format_ARGB32).pixel(0, 0));
+        pCombo->hidePopup();
+        QVERIFY2(cornerAgain.alpha() == 0,
+                 qPrintable(qsl("a palette handed back to the popup closed its corner again, painting it %1 - nothing says the frame is nothing at the one moment left, which is the popup being shown")
+                                    .arg(cornerAgain.name(QColor::HexArgb))));
     }
 };
 

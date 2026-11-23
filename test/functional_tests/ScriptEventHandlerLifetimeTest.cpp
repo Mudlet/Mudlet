@@ -18,10 +18,12 @@
  ***************************************************************************/
 
 #include <QFileInfo>
+#include <QLineEdit>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "ChipRow.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -45,10 +47,9 @@ using namespace std::chrono_literals;
 
 // Run with: ctest -R ScriptEventHandlerLifetimeTest -V
 //
-// These pin down the noted "Add User Event" item being dropped whenever the "Registered
-// Events" list is torn down, so "+" cannot reach a freed item (#9835). For why the note
-// outlives the items at all, see the comment on the
-// slot_scriptMainAreaClearHandlerSelection() call in dlgTriggerEditor::slot_scriptsSelected().
+// One script's events must never land on another, whatever the editor was in the
+// middle of when the user moved between them (#9835: "+" renamed a freed row, or
+// one of the next script's), and a name half typed follows nothing.
 class ScriptEventHandlerLifetimeTest : public QObject
 {
     Q_OBJECT
@@ -85,9 +86,28 @@ private:
         }
     }
 
-    QListWidget* handlerList() const { return mpEditor->mpScriptsMainArea->listWidget_script_registered_event_handlers; }
+    uiDesign::ChipRow* eventRow() const { return mpEditor->mpChipRow_scriptEvents; }
 
-    QLineEdit* handlerEntry() const { return mpEditor->mpScriptsMainArea->lineEdit_script_event_handler_entry; }
+    // Null while closed: the field stays in the row, hidden, between names
+    QLineEdit* eventField() const
+    {
+        QLineEdit* pField = eventRow()->findChild<QLineEdit*>(qsl("editorChipEditor"));
+        return pField && !pField->isHidden() ? pField : nullptr;
+    }
+
+    void addEvent(const QString& name)
+    {
+        eventRow()->beginAdd();
+        QCoreApplication::processEvents();
+        QLineEdit* pField = eventField();
+        if (!pField) {
+            QTest::qFail("the row did not open its field", __FILE__, __LINE__);
+            return;
+        }
+        pField->setText(name);
+        QTest::keyClick(pField, Qt::Key_Return);
+        QCoreApplication::processEvents();
+    }
 
     QStringList savedHandlersOf(QTreeWidgetItem* pTreeItem) const
     {
@@ -111,11 +131,10 @@ private:
         }
         mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(name);
         for (const QString& handler : handlers) {
-            handlerEntry()->setText(handler);
-            mpEditor->slot_scriptMainAreaAddHandler();
+            addEvent(handler);
         }
-        if (handlerList()->count() != handlers.count()) {
-            QTest::qFail("the handlers did not all reach the Registered Events list", __FILE__, __LINE__);
+        if (eventRow()->count() != handlers.count()) {
+            QTest::qFail("the events did not all reach the row of chips", __FILE__, __LINE__);
             return nullptr;
         }
         mpEditor->slot_saveSelectedItem();
@@ -212,31 +231,20 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    void testSwitchingScriptsDropsTheNotedHandler()
+    void testSwitchingScriptsKeepsEachScriptsOwnEvents()
     {
         QTreeWidgetItem* pScriptA = addSavedScript(qsl("ScriptA"), {qsl("myTestEvent")});
         QTreeWidgetItem* pScriptB = addSavedScript(qsl("ScriptB"), {});
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScriptA);
         QTest::qWait(50ms);
-        QCOMPARE(handlerList()->count(), 1);
-
-        // same signal path as a real click on the entry
-        handlerList()->setCurrentRow(0);
-        QTest::qWait(50ms);
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, handlerList()->item(0));
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, true);
-        QCOMPARE(handlerEntry()->text(), qsl("myTestEvent"));
+        QCOMPARE(eventRow()->items(), QStringList{qsl("myTestEvent")});
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScriptB);
         QTest::qWait(50ms);
+        QCOMPARE(eventRow()->count(), 0);
 
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, nullptr);
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, false);
-        QCOMPARE(handlerEntry()->text(), QString());
-
-        handlerEntry()->setText(qsl("otherEvent"));
-        mpEditor->slot_scriptMainAreaAddHandler();
+        addEvent(qsl("otherEvent"));
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
 
@@ -247,39 +255,35 @@ private slots:
     }
 
     // One click on a tree entry emits itemSelectionChanged and then itemClicked, so
-    // slot_scriptsSelected() runs twice and the second run, on the already-current item,
-    // is an easy-to-miss second teardown. The replacement item can land on the freed one,
-    // in which case "+" silently renames it instead of crashing.
-    void testReselectingTheSameScriptDropsTheNotedHandler()
+    // slot_scriptsSelected() would run twice; the itemClicked wiring drops same-row emissions
+    void testReselectingTheSameScriptLeavesItsEventsAlone()
     {
         QTreeWidgetItem* pScript = addSavedScript(qsl("SoloScript"), {qsl("myTestEvent")});
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScript);
         QTest::qWait(50ms);
-        QCOMPARE(handlerList()->count(), 1);
+        QCOMPARE(eventRow()->items(), QStringList{qsl("myTestEvent")});
 
-        handlerList()->setCurrentRow(0);
-        QTest::qWait(50ms);
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, handlerList()->item(0));
+        // A rebuilt row shows the same words, so the chip widget and itemsChanged
+        // are what tell a rebuild apart
+        QWidget* pChipBefore = eventRow()->chipAt(0);
+        QVERIFY2(pChipBefore != nullptr, "the row shows no chip for the event the script handles");
+        QSignalSpy rebuilds(eventRow(), &uiDesign::ChipRow::itemsChanged);
 
         emit mpEditor->treeWidget_scripts->itemClicked(pScript, 0);
         QTest::qWait(50ms);
 
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, nullptr);
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, false);
+        QCOMPARE(eventRow()->items(), QStringList{qsl("myTestEvent")});
+        QVERIFY2(eventRow()->chipAt(0) == pChipBefore, "choosing the same script again handed back a different chip, so the row was torn down and built again under the user");
+        QVERIFY2(rebuilds.isEmpty(), qPrintable(qsl("choosing the same script again changed the row's items %1 time(s)").arg(rebuilds.count())));
 
-        handlerEntry()->setText(qsl("secondEvent"));
-        mpEditor->slot_scriptMainAreaAddHandler();
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
-
-        QCOMPARE(savedHandlersOf(pScript), (QStringList{qsl("myTestEvent"), qsl("secondEvent")}));
+        QCOMPARE(savedHandlersOf(pScript), QStringList{qsl("myTestEvent")});
 
         removeScripts({pScript});
     }
 
-    // Dropping the note takes the "Add User Event" text with it, so a half-typed name
-    // cannot follow the user to the next script and land on that one instead.
     void testTypedButUnaddedTextDoesNotFollowToTheNextScript()
     {
         QTreeWidgetItem* pScriptA = addSavedScript(qsl("TypedTextA"), {});
@@ -287,13 +291,16 @@ private slots:
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScriptA);
         QTest::qWait(50ms);
-        handlerEntry()->setText(qsl("neverAddedEvent"));
+        eventRow()->beginAdd();
+        QCoreApplication::processEvents();
+        QVERIFY2(eventField() != nullptr, "the row did not open its field");
+        eventField()->setText(qsl("neverAddedEvent"));
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScriptB);
         QTest::qWait(50ms);
-        QCOMPARE(handlerEntry()->text(), QString());
+        QVERIFY2(eventField() == nullptr, "the field is still open on the next script, holding a name typed for the last one");
+        QCOMPARE(eventRow()->count(), 0);
 
-        mpEditor->slot_scriptMainAreaAddHandler();
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
 
@@ -304,28 +311,23 @@ private slots:
     }
 
     // addScript() points mpCurrentScriptItem at the new script before selecting it, so
-    // that selection skips the save as well while still tearing the list down.
-    void testAddingAScriptDropsTheNotedHandler()
+    // that selection skips the save as well while still emptying the row
+    void testAddingAScriptStartsWithNoEvents()
     {
         QTreeWidgetItem* pScript = addSavedScript(qsl("BeforeNewScript"), {qsl("myTestEvent")});
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScript);
         QTest::qWait(50ms);
-        handlerList()->setCurrentRow(0);
-        QTest::qWait(50ms);
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, handlerList()->item(0));
+        QCOMPARE(eventRow()->count(), 1);
 
         mpEditor->addScript(false);
         QTest::qWait(50ms);
         QTreeWidgetItem* pNewScript = mpEditor->mpCurrentScriptItem;
         QVERIFY(pNewScript != pScript);
-
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, nullptr);
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, false);
+        QCOMPARE(eventRow()->count(), 0);
 
         mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("AfterNewScript"));
-        handlerEntry()->setText(qsl("brandNewEvent"));
-        mpEditor->slot_scriptMainAreaAddHandler();
+        addEvent(qsl("brandNewEvent"));
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
 
@@ -335,19 +337,23 @@ private slots:
         removeScripts({pScript, pNewScript});
     }
 
-    // Nothing tears the list down between selecting the entry and pressing "+", so the
-    // note has to survive here - guards against dropping it too eagerly.
-    void testRenamingASelectedHandlerStillWorks()
+    void testRenamingAnEventStillWorks()
     {
         QTreeWidgetItem* pScript = addSavedScript(qsl("RenameScript"), {qsl("firstEvent")});
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScript);
         QTest::qWait(50ms);
-        handlerList()->setCurrentRow(0);
-        QTest::qWait(50ms);
+        QWidget* pChip = eventRow()->chipAt(0);
+        QVERIFY2(pChip != nullptr, "the script's one event is not showing as a chip");
 
-        handlerEntry()->setText(qsl("renamedEvent"));
-        mpEditor->slot_scriptMainAreaAddHandler();
+        QTest::keyClick(pChip, Qt::Key_F2);
+        QCoreApplication::processEvents();
+        QVERIFY2(eventField() != nullptr, "F2 on a chip did not open the field in its place");
+        eventField()->setText(qsl("renamedEvent"));
+        QTest::keyClick(eventField(), Qt::Key_Return);
+        QCoreApplication::processEvents();
+
+        QCOMPARE(eventRow()->items(), QStringList{qsl("renamedEvent")});
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
 
@@ -356,25 +362,23 @@ private slots:
         removeScripts({pScript});
     }
 
-    // The "-" button takes the row out of the list widget, which hands its
-    // ownership over, so this also holds the leak checker over that path.
-    void testDeletingAHandlerReleasesIt()
+    // The cross frees the chip widget, so this also holds the leak checker over that path
+    void testDeletingAnEventReleasesIt()
     {
         QTreeWidgetItem* pScript = addSavedScript(qsl("DeleteScript"), {qsl("firstEvent"), qsl("secondEvent")});
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScript);
         QTest::qWait(50ms);
-        QCOMPARE(handlerList()->count(), 2);
+        QCOMPARE(eventRow()->count(), 2);
 
-        handlerList()->setCurrentRow(0);
-        QTest::qWait(50ms);
-        mpEditor->slot_scriptMainAreaDeleteHandler();
+        QWidget* pChip = eventRow()->chipAt(0);
+        QVERIFY2(pChip != nullptr, "the first event is not showing as a chip");
+        QToolButton* pCross = pChip->findChild<QToolButton*>(qsl("editorChipRemove"));
+        QVERIFY2(pCross != nullptr, "a chip has no cross to take it away with");
+        pCross->click();
         QTest::qWait(50ms);
 
-        QCOMPARE(handlerList()->count(), 1);
-        QCOMPARE(handlerList()->item(0)->text(), qsl("secondEvent"));
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, nullptr);
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, false);
+        QCOMPARE(eventRow()->items(), QStringList{qsl("secondEvent")});
 
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
@@ -383,10 +387,7 @@ private slots:
         removeScripts({pScript});
     }
 
-    // slot_itemSelectedInSearchResults() notes the item by hand rather than through the
-    // list widget's selection, and only after every teardown of the list - so that note
-    // has to survive, and the next script selection has to drop it.
-    void testSearchResultNotesALiveHandler()
+    void testSearchResultPointsAtTheEvent()
     {
         QTreeWidgetItem* pScriptA = addSavedScript(qsl("SearchScript"), {qsl("searchableEvent")});
         QTreeWidgetItem* pScriptB = addSavedScript(qsl("OtherScript"), {});
@@ -405,18 +406,16 @@ private slots:
         QTest::qWait(50ms);
 
         QCOMPARE(mpEditor->mpCurrentScriptItem, pScriptA);
-        QCOMPARE(handlerList()->count(), 1);
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, handlerList()->item(0));
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, true);
-        QCOMPARE(handlerEntry()->text(), qsl("searchableEvent"));
+        QCOMPARE(eventRow()->items(), QStringList{qsl("searchableEvent")});
+        // focusWidget(), not hasFocus(): hasFocus() also needs the window active,
+        // which a headless run cannot promise
+        QCOMPARE(eventRow()->focusWidget(), eventRow()->chipAt(0));
 
         mpEditor->treeWidget_scripts->setCurrentItem(pScriptB);
         QTest::qWait(50ms);
-        QCOMPARE(mpEditor->mpScriptsMainAreaEditHandlerItem, nullptr);
-        QCOMPARE(mpEditor->mIsScriptsMainAreaEditHandler, false);
+        QCOMPARE(eventRow()->count(), 0);
 
-        handlerEntry()->setText(qsl("afterSearchEvent"));
-        mpEditor->slot_scriptMainAreaAddHandler();
+        addEvent(qsl("afterSearchEvent"));
         mpEditor->slot_saveSelectedItem();
         QTest::qWait(50ms);
 

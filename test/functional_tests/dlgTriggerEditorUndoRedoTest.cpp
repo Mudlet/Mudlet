@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QFileInfo>
+#include <QRadioButton>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -2825,6 +2826,212 @@ private slots:
              "correcting the command must clear the loop error flag");
 
     cleanupAll(mItemTypes[2]);
+  }
+
+  // The row widgets are a pool that is never reordered, so a move or delete
+  // copies each row's content, and colour captions and spacer counts with it.
+  void testPatternRowMoveDeleteAndMatchMode() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    const int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->showPatternItems(5);
+    QVERIFY(mpEditor->mTriggerPatternEdit.size() >= 5);
+
+    // Its text is generated rather than typed, and its row carries two captions
+    const QString colorPattern =
+        TTrigger::createColorPatternText(1, TTrigger::scmIgnored);
+
+    // Top down: every content change collapses the rows under the last one that
+    // holds something
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("alpha"));
+    mpEditor->mTriggerPatternEdit[1]->comboBox_patternType->setCurrentIndex(
+        REGEX_COLOR_PATTERN);
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        colorPattern);
+    mpEditor->mTriggerPatternEdit[2]->comboBox_patternType->setCurrentIndex(
+        REGEX_LINE_SPACER);
+    mpEditor->mTriggerPatternEdit[2]->spinBox_lineSpacer->setValue(3);
+    mpEditor->mTriggerPatternEdit[3]->comboBox_patternType->setCurrentIndex(
+        REGEX_PROMPT);
+    mpEditor->mTriggerPatternEdit[4]->singleLineTextEdit_pattern->setPlainText(
+        qsl("beta"));
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({qsl("alpha"), colorPattern, qsl("3"), QString(),
+                          qsl("beta")}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_SUBSTRING, REGEX_COLOR_PATTERN,
+                         REGEX_LINE_SPACER, REGEX_PROMPT, REGEX_SUBSTRING}));
+
+    // The colour captions are read off the pattern text only on load, so they
+    // are right after a move only if the move carried them
+    const QString colorForeground =
+        mpEditor->mTriggerPatternEdit[1]->pushButton_fgColor->text();
+    const QString colorBackground =
+        mpEditor->mTriggerPatternEdit[1]->pushButton_bgColor->text();
+    QVERIFY(!colorForeground.isEmpty());
+
+    mpEditor->deletePatternRow(0);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({colorPattern, qsl("3"), QString(), qsl("beta")}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_COLOR_PATTERN, REGEX_LINE_SPACER, REGEX_PROMPT,
+                         REGEX_SUBSTRING}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_bgColor->text(),
+             colorBackground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->spinBox_lineSpacer->value(), 3);
+
+    mpEditor->movePatternRowContent(3, 0);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({qsl("beta"), colorPattern, qsl("3"), QString()}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_SUBSTRING, REGEX_COLOR_PATTERN,
+                         REGEX_LINE_SPACER, REGEX_PROMPT}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->pushButton_bgColor->text(),
+             colorBackground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[2]->spinBox_lineSpacer->value(), 3);
+
+    mpEditor->movePatternRowContent(0, 2);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({colorPattern, qsl("3"), qsl("beta"), QString()}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_COLOR_PATTERN, REGEX_LINE_SPACER,
+                         REGEX_SUBSTRING, REGEX_PROMPT}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->spinBox_lineSpacer->value(), 3);
+
+    const int lastVisible = mpEditor->lastVisiblePatternRow();
+    QVERIFY(lastVisible < mpEditor->mTriggerPatternEdit.size() - 1);
+    mpEditor->movePatternRowContent(0, lastVisible + 1);
+    QCOMPARE(
+        mpEditor->mTriggerPatternEdit[0]->comboBox_patternType->currentIndex(),
+        REGEX_COLOR_PATTERN);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[lastVisible + 1]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    // The radios are a view of spinBox_lineMargin, which save and load read; OR
+    // mode is the spin box's special first value
+    QVERIFY(mpEditor->mpRadioButton_matchAll != nullptr);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->maximum(),
+             mpEditor->mpSpinBox_matchWithinLines->maximum());
+
+    mpEditor->mpRadioButton_matchAll->setChecked(true);
+    mpEditor->mpSpinBox_matchWithinLines->setValue(7);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 7);
+
+    // Past QSpinBox's default maximum of 99, which a hidden control left at the
+    // default would clamp to
+    mpEditor->mpSpinBox_matchWithinLines->setValue(500);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 500);
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 500);
+
+    mpEditor->mpRadioButton_matchAny->setChecked(true);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), -1);
+    QVERIFY(!mpEditor->mpRadioButton_matchAll->isChecked());
+
+    // Spin box to radios is the path a load or an undo takes
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(4);
+    QVERIFY(mpEditor->mpRadioButton_matchAll->isChecked());
+    QVERIFY(!mpEditor->mpRadioButton_matchAny->isChecked());
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 4);
+
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
+    QVERIFY(mpEditor->mpRadioButton_matchAny->isChecked());
+    QVERIFY(!mpEditor->mpRadioButton_matchAll->isChecked());
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 0);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testPatternRowFloorIsOneRow() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    const int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    QVERIFY(mpEditor->mpLabel_matchModeHint != nullptr);
+    QVERIFY(!mpEditor->mpWidget_matchModeRows->isEnabled());
+    // isHidden(), not isVisible(): the form may not be on screen
+    QVERIFY(!mpEditor->mpLabel_matchModeHint->isHidden());
+
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("alpha"));
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+
+    QTest::keyClick(mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern,
+                    Qt::Key_Return);
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        qsl("beta"));
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+    // Any/All needs two patterns, so the second one enables the radios and hides the hint
+    QVERIFY(mpEditor->mpWidget_matchModeRows->isEnabled());
+    QVERIFY(mpEditor->mpLabel_matchModeHint->isHidden());
+
+    mpEditor->saveTrigger();
+    QCOMPARE(pT->getPatternsList(), QStringList({qsl("alpha"), qsl("beta")}));
+
+    mpEditor->slot_triggerSelected(trigger);
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+
+    mpEditor->deletePatternRow(1);
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    mpEditor->deletePatternRow(0);
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    cleanupAll(mItemTypes[0]);
   }
 };
 

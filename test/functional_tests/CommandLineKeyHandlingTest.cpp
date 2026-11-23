@@ -63,6 +63,13 @@
 
 using namespace std::chrono_literals;
 
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
+
 class CommandLineKeyHandlingTest : public QObject
 {
     Q_OBJECT
@@ -103,6 +110,13 @@ private:
     }
 
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
+
+    static void addAutoClearRows()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
 
     // Real macOS arrow keys arrive with the keypad modifier set, and TCommandLine's
     // Up/Down handlers only recognise them there when it is present, so a synthesised
@@ -412,6 +426,23 @@ private slots:
         QVERIFY2(waitForServerToReceive("east"), "the second of the two lines never reached the game");
     }
 
+    // An action that resets itself on the first of several lines leaves the rest to go to the game
+    void test_linesAfterAnActionResetsItselfGoToTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("cmdLineActionSaw = ''")));
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) cmdLineActionSaw = text resetCmdLineAction('%1') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("to the action"));
+        press(pCommandLine, Qt::Key_Return, Qt::ShiftModifier);
+        type(pCommandLine, qsl("to the game"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("cmdLineActionSaw"), qsl("to the action"));
+        QVERIFY2(waitForServerToReceive("to the game"), qPrintable(qsl("the game never received the second line - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+    }
+
     // The preference decides what is left in the box afterwards: cleared, or
     // kept and selected so the next thing typed replaces it.
     void test_autoClearPreferenceDecidesWhatIsLeftBehind()
@@ -430,6 +461,106 @@ private slots:
         type(pCleared, qsl("cleared"));
         press(pCleared, Qt::Key_Return);
         QCOMPARE(pCleared->toPlainText(), QString());
+    }
+
+    // An alias that fills the line in for the player, like "t bob" writing
+    // "tell bob ", must not have that cleared, or selected for the next key
+    // to replace.
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data() { addAutoClearRows(); }
+
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specPrefillAlias = tempAlias([[^specPrefill (\\w+)$]], [[printCmdLine('%1', 'tell ' .. matches[2] .. ' ')]])").arg(mLineName)));
+        const auto killPrefillAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specPrefillAlias)"));
+        });
+
+        type(pCommandLine, qsl("specPrefill bob"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob "));
+        QCOMPARE(selection(pCommandLine), QString());
+        type(pCommandLine, qsl("hi"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob hi"));
+    }
+
+    // Writing back the very text that was sent still counts as the script's
+    void test_aCommandAnAliasWritesBackIsLeftAsWritten()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specStickyAlias = tempAlias([[^specSticky$]], [[printCmdLine('%1', 'specSticky')]])").arg(mLineName)));
+        const auto killStickyAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specStickyAlias)"));
+        });
+
+        type(pCommandLine, qsl("specSticky"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("specSticky"));
+    }
+
+    // A setCmdLineAction() field that writes to its line, as packages' settings
+    // fields do, is still cleared or selected for the next value to replace
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected_data() { addAutoClearRows(); }
+
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        const QString expected = autoClear ? QString() : qsl("250");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
+    }
+
+    // As does a one-shot field whose action resets itself before writing its value back
+    void test_anActionFieldThatResetsItselfKeepsItsValueSelected()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = false;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) resetCmdLineAction('%1') printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("250"));
+        QCOMPARE(selection(pCommandLine), qsl("250"));
+    }
+
+    // An alias that leaves the line alone has it cleared or selected as usual
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect_data() { addAutoClearRows(); }
+
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specQuietAlias = tempAlias([[^specQuiet$]], [[specQuietSaw = getCmdLine('%1')]])").arg(mLineName)));
+        const auto killQuietAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specQuietAlias)"));
+        });
+
+        type(pCommandLine, qsl("specQuiet"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("specQuietSaw"), qsl("specQuiet"));
+        const QString expected = autoClear ? QString() : qsl("specQuiet");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
     }
 
     // Up walks back through what was sent, Down comes forward again, and the
@@ -945,6 +1076,55 @@ private slots:
         QCOMPARE(pLayer->maximumHeight(), oneRow);
     }
 
+    // A completion long enough to wrap needs the line to grow as typing would
+    void test_tabCompletionThatWrapsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto cleanUp = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLineSuggestions('main')"));
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('main', 'qzxwrap' .. string.rep('a', 600))")));
+
+        pMain->setFocus();
+        type(pMain, qsl("qzxwr"));
+        press(pMain, Qt::Key_Tab);
+        qApp->processEvents();
+
+        QVERIFY(pMain->toPlainText().size() > 600);
+        const int completedHeight = pLayer->maximumHeight();
+        QVERIFY2(completedHeight > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(completedHeight).arg(oneRow)));
+    }
+
+    // The context menu's Paste, a middle-click and a drop bypass the key handler,
+    // so the line has to grow for a pasted block of rows by itself
+    void test_pastingSeveralRowsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QGuiApplication::clipboard()->setText(qsl("row one\nrow two\nrow three"));
+        pMain->paste();
+        qApp->processEvents();
+
+        QCOMPARE(pMain->document()->blockCount(), 3);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("three pasted rows left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+    }
+
     // Escape leaves completion mode, and selects the line so the next thing
     // typed replaces it.
     void test_escapeSelectsTheWholeLine()
@@ -1425,20 +1605,23 @@ private slots:
     {
         QTest::addColumn<Host::CaretShortcut>("shortcut");
         QTest::addColumn<Qt::Key>("key");
-        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6;
-        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab;
+        QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
+        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6 << Qt::KeyboardModifiers();
+        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab << Qt::KeyboardModifiers();
+        QTest::newRow("Ctrl+Tab") << Host::CaretShortcut::CtrlTab << Qt::Key_Tab << Qt::KeyboardModifiers(controlKey);
     }
 
     void test_theChosenCaretKeyTurnsCaretModeOn()
     {
         QFETCH(Host::CaretShortcut, shortcut);
         QFETCH(Qt::Key, key);
+        QFETCH(Qt::KeyboardModifiers, modifiers);
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         QVERIFY(!mpHost->caretEnabled());
 
-        // with no caret key chosen the press is the command line's own
-        press(pCommandLine, key);
+        // with no caret key chosen the press leaves caret mode alone
+        press(pCommandLine, key, modifiers);
         QVERIFY2(!mpHost->caretEnabled(), "caret mode came on with no caret key chosen");
 
         mpHost->mCaretShortcut = shortcut;
@@ -1451,9 +1634,93 @@ private slots:
             QTest::qWait(80ms);
         });
 
-        press(pCommandLine, key);
+        QKeyEvent override(QEvent::ShortcutOverride, key, modifiers);
+        QVERIFY2(pCommandLine->claimsShortcutOverride(&override), "the chosen caret key was left to the application's shortcuts");
+
+        press(pCommandLine, key, modifiers);
 
         QVERIFY2(mpHost->caretEnabled(), "the chosen caret key did not turn caret mode on");
+    }
+
+    // Ctrl+Tab is "next profile" by default, so Tab as the caret key must leave it alone
+    void test_tabAsTheCaretKeyLeavesCtrlTabToTheApplication()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
+        QVERIFY2(!pCommandLine->claimsShortcutOverride(&override), "Tab as the caret key claimed Ctrl+Tab from the profile-switching shortcut");
+
+        press(pCommandLine, Qt::Key_Tab, controlKey);
+
+        QVERIFY2(!mpHost->caretEnabled(), "Ctrl+Tab turned caret mode on when Tab is the caret key");
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutTurnsCaretModeOn()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode on");
+#endif
+    }
+
+    // A plain Tab from macOS carries the same native key code, but its press does follow, so it must not be posted another
+    void test_plainTabAsTheCaretKeyIsPressedOnceOnMacOS()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS posts a key press for a claimed Tab");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+        const quint64 handOffsBefore = mpHost->mKeyboardHandOffs;
+
+        // As QNSView's keyDown sends it: the override, then the press
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+        QKeyEvent press(QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        QApplication::sendEvent(pCommandLine, &press);
+        QCoreApplication::processEvents();
+
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(mpHost->mKeyboardHandOffs, handOffsBefore + 1);
+#endif
     }
 };
 

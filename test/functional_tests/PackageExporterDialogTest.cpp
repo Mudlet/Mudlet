@@ -32,6 +32,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTextEdit>
@@ -65,6 +66,7 @@
 #include "ctelnet.h"
 #include "dlgPackageExporter.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -804,6 +806,46 @@ private slots:
         QVERIFY2(exportButton()->isEnabled(), "the Export button stayed disabled after the package was named");
     }
 
+    // The name is the staging folder the export wipes first, so "../<folder>" would wipe a folder beside it
+    void test_exportRefusesANameThatStepsOutOfItsStagingFolder()
+    {
+        // A private temporary directory, so a regression that lets ".." through wipes only that
+        QTemporaryDir privateTemp;
+        QVERIFY(privateTemp.isValid());
+        const QList<const char*> tempVariables{"TMPDIR", "TMP", "TEMP"};
+        QList<std::pair<bool, QByteArray>> savedTemp;
+        for (const char* variable : tempVariables) {
+            savedTemp.append({qEnvironmentVariableIsSet(variable), qgetenv(variable)});
+            qputenv(variable, QFile::encodeName(privateTemp.path()));
+        }
+        const auto restoreTemp = qScopeGuard([&tempVariables, &savedTemp]() {
+            for (qsizetype i = 0; i < tempVariables.size(); ++i) {
+                savedTemp.at(i).first ? qputenv(tempVariables.at(i), savedTemp.at(i).second) : qunsetenv(tempVariables.at(i));
+            }
+        });
+        QCOMPARE(QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).canonicalPath(), QDir(privateTemp.path()).canonicalPath());
+
+        const QString outsideName = packageNamed(qsl("exporter-outside-staging"));
+        const QString outsideDir = qsl("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation), outsideName);
+        QVERIFY(QDir().mkpath(outsideDir));
+        const QString keptFile = qsl("%1/keep.txt").arg(outsideDir);
+        QFile keep(keptFile);
+        QVERIFY(keep.open(QIODevice::WriteOnly));
+        keep.close();
+
+        makeTrigger(qsl("exporter traversal trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter traversal trigger")));
+
+        for (const QString& badName : {qsl("../%1").arg(outsideName), qsl(".."), qsl("."), qsl(". .."), qsl("sub\\name")}) {
+            nameField()->setText(badName);
+            mpExporter->slot_exportPackage();
+            QVERIFY(waitForExportToSettle());
+            QVERIFY2(infoLabel()->text().contains(qsl("The name cannot be")), qPrintable(qsl("\"%1\" was not refused, the label held: \"%2\"").arg(badName, infoLabel()->text())));
+        }
+        QVERIFY2(QFileInfo::exists(keptFile), "exporting under a name that steps out of the staging folder wiped a folder outside it");
+    }
+
     // Names come off the property, as an unnamed combo box is announced by its current
     // item; descriptions off the accessible interface, where a placeholder stands in
     void test_theUnlabelledFieldsAreNamedForAScreenReader_8227()
@@ -827,6 +869,16 @@ private slots:
         QVERIFY2(nameField()->accessibleName() != packageName, "the module name field is still announced as the package name");
         QVERIFY2(pLocation->accessibleName() != packageLocation, "the module location field is still announced as the package's");
         QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
+    }
+
+    // Neither view is a label's buddy, so its accessibleName is all a screen reader has to announce
+    void test_theExportTreeAndFileListAreNamedForAScreenReader()
+    {
+        openExporter();
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{tree(), addedFiles()}) {
+            QVERIFY(pWidget);
+            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pWidget->objectName())));
+        }
     }
 
     // An empty package would install as nothing at all, so the export stops
@@ -1147,8 +1199,8 @@ private slots:
     }
 
     // Choosing an installed package fills the form from what that package
-    // declared and checks the items belonging to it - but not its master
-    // folder, which would only add a level of nesting to the new package.
+    // declared and checks the items belonging to it. Its master folder reads as its
+    // contents yet is left out of the file, where it would only add a level of nesting.
     void test_choosingAnInstalledPackageFillsTheFormAndChecksItsItems()
     {
         const QString existingPackage = qsl("exporter-existing");
@@ -1189,8 +1241,14 @@ private slots:
         QVERIFY(masterItem);
         QCOMPARE(masterItem->childCount(), 1);
         QCOMPARE(masterItem->child(0)->checkState(0), Qt::Checked);
-        QCOMPARE(masterItem->checkState(0), Qt::Unchecked);
+        QCOMPARE(masterItem->checkState(0), Qt::Checked);
         QCOMPARE(itemNamed(triggersTop(), qsl("exporter outsider"))->checkState(0), Qt::Unchecked);
+
+        // the package's own .mudlet folder is metadata the export writes afresh, not a file to ship
+        for (int row = 0; row < addedFiles()->count(); ++row) {
+            const QString shipped = addedFiles()->item(row)->text();
+            QVERIFY2(!shipped.endsWith(qsl("/.mudlet")), qPrintable(qsl("the installed package's own metadata folder was listed as a file to ship: %1").arg(shipped)));
+        }
 
         // the icon the package declared is carried into whatever is exported next
         const QString rebuiltName = packageNamed(qsl("exporter-rebuilt"));
@@ -1200,6 +1258,41 @@ private slots:
         QVERIFY2(installed, qPrintable(reason));
         QCOMPARE(mpHost->mPackageInfo.value(rebuiltName).value(qsl("icon")), qsl("badge.png"));
         QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/Icon/badge.png").arg(profileHome(), rebuiltName)), "the icon file did not survive the round trip");
+    }
+
+    // The dropdown offers installed modules as well, whose details are kept apart from packages'
+    void test_choosingAnInstalledModuleFillsTheFormFromItsDetails()
+    {
+        const QString existingModule = qsl("exporter-existing-module");
+        auto* member = makeTrigger(qsl("exporter module member"), nullptr);
+        member->mPackageName = existingModule;
+
+        mpHost->mInstalledModules[existingModule] = QStringList{qsl("%1/%2.mpackage").arg(mExportDir, existingModule), qsl("0")};
+        mpHost->mModuleInfo[existingModule] = QMap<QString, QString>{{qsl("mpackage"), existingModule},
+                                                                     {qsl("author"), qsl("The Module Author")},
+                                                                     {qsl("title"), qsl("The module summary")},
+                                                                     {qsl("version"), qsl("2.1")},
+                                                                     {qsl("helpURL"), qsl("https://example.org/module")},
+                                                                     {qsl("dependencies"), qsl("some-dependency")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingModule);
+        QVERIFY2(index > 0, "the installed module was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+
+        QCOMPARE(nameField()->text(), existingModule);
+        QCOMPARE(lineEditNamed(qsl("lineEdit_author"))->text(), qsl("The Module Author"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_title"))->text(), qsl("The module summary"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_version"))->text(), qsl("2.1"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_helpUrl"))->text(), qsl("https://example.org/module"));
+        auto* dependencies = comboNamed(qsl("comboBox_dependencies"));
+        QCOMPARE(dependencies->count(), 1);
+        QCOMPARE(dependencies->itemText(0), qsl("some-dependency"));
+        QCOMPARE(itemNamed(triggersTop(), qsl("exporter module member"))->checkState(0), Qt::Checked);
+
+        mpHost->mInstalledModules.remove(existingModule);
+        mpHost->mModuleInfo.remove(existingModule);
     }
 
     // The dialog is not modal, so the editor or a script can delete an item it
@@ -1546,8 +1639,8 @@ private slots:
     }
 
     // The icon of the package being updated is drawn as a pixmap in a label
-    // rather than as a stylesheet border image, and the label is shown only
-    // when there is an icon to put in it.
+    // rather than as a stylesheet border image. The label is always on show, so a
+    // package without an icon must not leave the last package's picture in it.
     void test_theIconPreviewIsShownOnlyForAPackageThatHasOne_5028()
     {
         const QString withIcon = qsl("exporter-with-icon");
@@ -1571,9 +1664,14 @@ private slots:
         packageList->setCurrentIndex(withIconIndex);
         QVERIFY2(!iconLabel->isHidden(), "the icon of the package being updated was not shown");
         QVERIFY2(!iconLabel->pixmap().isNull(), "the icon label was left with nothing to draw");
+        const QImage shown = iconLabel->pixmap().toImage();
+        QVERIFY2(shown.pixel(shown.width() / 2, shown.height() / 2) == qRgb(255, 0, 255), "the icon label does not show the package's own icon");
+        QVERIFY2(!buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the icon of the package being updated cannot be removed");
 
         packageList->setCurrentIndex(withoutIconIndex);
-        QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+        const QImage left = iconLabel->pixmap().toImage();
+        QVERIFY2(left.isNull() || left.pixel(left.width() / 2, left.height() / 2) != qRgb(255, 0, 255), "the icon label was left showing the previous package's icon");
+        QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the remove button was left showing for a package that has no icon");
     }
 
     // Dropping an image onto the icon area sets the icon the file picker would,
@@ -1600,13 +1698,17 @@ private slots:
         for (auto* child : iconArea->findChildren<QWidget*>()) {
             QVERIFY2(!child->acceptDrops(), qPrintable(qsl("%1 would keep drops from the icon area").arg(child->objectName())));
         }
-        QVERIFY(iconLabel->isHidden());
+        // The icon box shows a placeholder until an icon is chosen, and only a chosen icon can be removed
+        QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the package already had an icon before anything was dropped");
         const QPoint centre = iconArea->rect().center();
-        const QColor highlight = iconArea->palette().highlight().color();
+        // The icon box, where the picture lands, takes the accent while an image it would take is over the area
+        const QColor highlight = uiDesign::themeTokens().accent;
         auto highlighted = [&]() {
-            const QImage image = iconArea->grab().toImage();
+            const QImage image = iconLabel->grab().toImage();
+            // The dashed edge is drawn antialiased, so its pixels are the accent at part strength
             for (int x = 0; x < image.width(); ++x) {
-                if (image.pixelColor(x, 0) == highlight) {
+                const QColor pixel = image.pixelColor(x, 0);
+                if (pixel.alpha() > 128 && qAbs(pixel.red() - highlight.red()) <= 3 && qAbs(pixel.green() - highlight.green()) <= 3 && qAbs(pixel.blue() - highlight.blue()) <= 3) {
                     return true;
                 }
             }
@@ -1647,7 +1749,7 @@ private slots:
         QApplication::sendEvent(iconArea, &vanishingDrop);
         QVERIFY2(!vanishingDrop.isAccepted(), "a drop of an image that had gone was reported as taken");
         QVERIFY2(!highlighted(), "the icon area stayed marked after a refused drop");
-        QVERIFY2(iconLabel->isHidden(), "a refused drop set the icon");
+        QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "a refused drop set the icon");
 
         QMimeData mimeData;
         mimeData.setUrls({QUrl::fromLocalFile(iconPath)});
@@ -1718,14 +1820,18 @@ private slots:
         QVERIFY2(QFileInfo::exists(stagedDescriptionImage(existingPackage, qsl("shot.png"))), "the image the description already used was left out");
     }
 
-    // Going back to the first dropdown entry keeps the description, so it has to
-    // keep the images that description uses as well
-    void test_theFirstEntryKeepsTheDescriptionImagesOfThePackageBefore_5254()
+    // The first dropdown entry starts over, description included, so nothing of the
+    // package before may reach the next export. The stray file is what shows it: the
+    // export prunes unused description images whichever package they came from
+    void test_theFirstEntryLeavesThePackageBeforeOutOfTheExport_5254()
     {
         const QString existingPackage = packageNamed(qsl("exporter-backtofirst"));
         const QString dataDirectory = qsl("%1/%2/.mudlet").arg(profileHome(), existingPackage);
         QVERIFY(QDir().mkpath(qsl("%1/description_images").arg(dataDirectory)));
         QVERIFY(writeImage(qsl("%1/description_images/shot.png").arg(dataDirectory)));
+        QFile stray(qsl("%1/stray.txt").arg(dataDirectory));
+        QVERIFY(stray.open(QIODevice::WriteOnly));
+        stray.close();
 
         auto* member = makeTrigger(qsl("exporter backtofirst member"), nullptr);
         member->mPackageName = existingPackage;
@@ -1743,7 +1849,8 @@ private slots:
         const QString newPackage = packageNamed(qsl("exporter-backtofirst-copy"));
         QVERIFY2(runExport(newPackage), "the export never finished");
         QVERIFY2(QFileInfo::exists(packagePath(newPackage)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
-        QVERIFY2(QFileInfo::exists(stagedDescriptionImage(newPackage, qsl("shot.png"))), "the image the kept description uses was left out");
+        QVERIFY2(!QFileInfo::exists(stagedDescriptionImage(newPackage, qsl("shot.png"))), "an image of the package before came along after starting over");
+        QVERIFY2(!QFileInfo::exists(qsl("%1/.mudlet/stray.txt").arg(stagingPath(newPackage))), "the package before's data came along after starting over");
     }
 
     // The zip's finished handler dies with the dialog, so the dialog's destructor

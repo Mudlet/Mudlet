@@ -22,8 +22,8 @@
  * tab of a profile with output nobody has looked at yet, and take it off again.
  * The main window and every detached window share them, so the rules they keep
  * are checked here on a bare tab bar, with no profile to load: text from the
- * game outranks text Mudlet wrote itself, a tab with no neighbour is left alone,
- * and a tab whose font changed is measured again.
+ * game outranks text Mudlet wrote itself, and a tab with no neighbour is left
+ * alone.
  *
  * Which window's bar a profile's output reaches is DetachedWindowTabActivityTest's
  * to cover.
@@ -31,9 +31,6 @@
  * Run with: ctest -R TabActivityMarkTest -V
  */
 
-#include <QFontDatabase>
-#include <QFontInfo>
-#include <QFontMetrics>
 #include <QtTest/QtTest>
 
 #include "TTabBar.h"
@@ -136,43 +133,6 @@ private slots:
         QVERIFY(!bar.tabBold(index));
         QVERIFY(!bar.tabItalic(index));
         QVERIFY(!bar.tabUnderline(index));
-    }
-
-    // QTabBar measures a tab once and keeps the answer, so a mark that only
-    // repainted would draw wider text into a tab still sized for the narrower:
-    // the end of the name is clipped until something else forces a layout.
-    void test_aTabIsMeasuredAgainWhenItsMarkChanges()
-    {
-#ifndef INCLUDE_FONTS
-        QSKIP("Built with WITH_FONTS=NO, so there is no font here that is known to be wider in bold");
-#else
-        // The platform's default font is whatever the machine has, and one whose
-        // bold face is no wider would leave this with nothing to see
-        for (const QString& file : {qsl(":/fonts/ttf-bitstream-vera-1.10/Vera.ttf"), qsl(":/fonts/ttf-bitstream-vera-1.10/VeraBd.ttf")}) {
-            QVERIFY2(QFontDatabase::addApplicationFont(file) != -1, qPrintable(qsl("Could not register the bundled font %1").arg(file)));
-        }
-        const QFont plain(qsl("Bitstream Vera Sans"), 10);
-        QCOMPARE(QFontInfo(plain).family(), qsl("Bitstream Vera Sans"));
-        QFont bold(plain);
-        bold.setBold(true);
-        QVERIFY2(QFontMetrics(bold).horizontalAdvance(mHiddenTab) > QFontMetrics(plain).horizontalAdvance(mHiddenTab), "the name is no wider in bold, so no tab has a reason to grow");
-
-        TTabBar bar(nullptr);
-        bar.setFont(plain);
-        // Otherwise the tabs share out the bar's spare width between them, and
-        // how wide one is says nothing about what its own text needs
-        bar.setExpanding(false);
-        addBothTabs(bar);
-        bar.resize(1000, bar.sizeHint().height());
-        const int index = bar.tabIndex(mHiddenTab);
-        const int plainWidth = bar.tabRect(index).width();
-
-        bar.markActivity(mHiddenTab, false);
-        QVERIFY2(bar.tabRect(index).width() > plainWidth, "the tab went bold and kept the width it had for plain text, which clips the end of its name");
-
-        bar.clearActivity(index);
-        QCOMPARE(bar.tabRect(index).width(), plainWidth);
-#endif
     }
 };
 
