@@ -871,6 +871,16 @@ private slots:
         QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
     }
 
+    // Neither view is a label's buddy, so its accessibleName is all a screen reader has to announce
+    void test_theExportTreeAndFileListAreNamedForAScreenReader()
+    {
+        openExporter();
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{tree(), addedFiles()}) {
+            QVERIFY(pWidget);
+            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pWidget->objectName())));
+        }
+    }
+
     // An empty package would install as nothing at all, so the export stops
     // before it writes anything rather than shipping one.
     void test_exportRefusesWhenNothingIsSelected()
