@@ -106,6 +106,22 @@ describe("Tests the properties a map gives its areas", function()
       assert.is_true((getAreaFieldValue(other, "noMagic")))
     end)
 
+    it("reads back exactly the numbers it keeps, the largest whole ones and the smallest ranges included", function()
+      for _, number in ipairs({9007199254740991, -9007199254740991, 0.1, 1 / 3, 1e300, 12.5}) do
+        assert.is_true(setAreaFieldValue(zone, "population", number))
+        assert.are.equal(number, (getAreaFieldValue(zone, "population")))
+      end
+      setAreaFieldValue(zone, "population", 9007199254740991)
+      assert.are.equal("9007199254740991", getAreaUserData(zone, "population"))
+      setAreaFieldValue(zone, "population", 0.1)
+      assert.are.equal("0.1", getAreaUserData(zone, "population"))
+
+      for _, range in ipairs({{1e-8, 1e-7}, {-1e-8, 1e300}, {-5, 5}, {0.1, 0.2}}) do
+        assert.is_true(setAreaFieldValue(zone, "levelRange", range))
+        assert.are.same(range, (getAreaFieldValue(zone, "levelRange")))
+      end
+    end)
+
     it("refuses a value that does not fit the field's type", function()
       local refusals = {
         {"notes", 5},
