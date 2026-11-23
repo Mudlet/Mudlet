@@ -53,8 +53,8 @@ bool editedInUserDataTable(const QString& key)
 // Set on a value cell that shows the placeholder because the selected rooms do not agree on that key
 constexpr int scmMixedValueRole = Qt::UserRole;
 
-// Opens a cell showing the placeholder with an empty editor, and leaves the cell undecided when nothing was typed,
-// so that only an actual edit replaces the rooms' differing values
+// Opens a cell showing the placeholder with an empty editor, and leaves the cell undecided when nothing was typed or
+// it was emptied again, so that only a new value replaces the rooms' differing ones, as on the description field
 class UserDataValueDelegate : public QStyledItemDelegate
 {
 public:
@@ -85,6 +85,9 @@ public:
         auto* lineEdit = qobject_cast<QLineEdit*>(editor);
         // Nothing typed, nothing to write back
         if (lineEdit && !lineEdit->isModified()) {
+            return;
+        }
+        if (lineEdit && index.data(scmMixedValueRole).toBool() && lineEdit->text().isEmpty()) {
             return;
         }
         QStyledItemDelegate::setModelData(editor, model, index);

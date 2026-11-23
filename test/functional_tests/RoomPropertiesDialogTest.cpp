@@ -1395,7 +1395,8 @@ private slots:
         QCOMPARE(mEmitted.userDataEmitCount, 0);
     }
 
-    void aMixedValueClearedInItsEditorIsWrittenEmpty()
+    // As on the description field: emptied again, the mixed cell is back to its placeholder and the rooms keep theirs
+    void aMixedValueTypedInAndEmptiedAgainChangesNothing()
     {
         buildMap();
         room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
@@ -1409,7 +1410,8 @@ private slots:
         commitUserDataValueEditor(pEditor);
         pDlg->accept();
 
-        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), QString()}}));
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
     }
 
     // A line edit holds 32767 characters unless told otherwise, and would cut a longer value it is opened on
