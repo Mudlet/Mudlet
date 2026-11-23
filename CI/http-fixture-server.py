@@ -17,6 +17,14 @@ path, request headers and body it received back in the response body, which is
 what lets a spec prove that what Mudlet put on the wire is what the caller
 asked for. HEAD is the one exception: it keeps serving files from disk.
 
+Requests below ``/redirect/`` are redirected, whatever their verb except HEAD:
+``/redirect/307/echo`` answers 307 pointing at ``/echo``, and targets can nest to
+make a chain. ``/redirect/loop`` redirects to itself.
+
+Requests to ``/hangup`` get no response at all, whatever their verb except HEAD:
+the connection just closes. A closed port would show the same failure, but
+Windows retries the connect for seconds before giving up on one.
+
 An OS-assigned (ephemeral) port is used rather than a fixed one: Mudlet CI may
 run several jobs on the same machine, and a hard-coded port would risk
 collisions there. The chosen port is written to the file named by the
@@ -34,6 +42,10 @@ FIXTURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "http-fi
 ECHO_PATH = "/echo"
 
 MEDIA_PATH = "/media/"
+
+REDIRECT_PATH = "/redirect/"
+
+HANGUP_PATH = "/hangup"
 
 # Long enough that a spec which starts playback still has it running when it
 # asks what is playing, and that one which expects no playback would have seen
@@ -70,6 +82,12 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        if self.path == HANGUP_PATH:
+            self.hang_up()
+            return
+        if self.redirect_requested():
+            self.redirect()
+            return
         if self.echo_requested():
             self.echo()
             return
@@ -106,16 +124,42 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def echo_requested(self):
         return self.path == ECHO_PATH or self.path.startswith(ECHO_PATH + "/") or self.path.startswith(ECHO_PATH + "?")
 
-    def echo(self):
-        if not self.echo_requested():
-            self.send_error(404, "Not Found", "only %s answers this method" % ECHO_PATH)
-            return
-
+    def read_body(self):
         try:
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             length = 0
-        body = self.rfile.read(length) if length > 0 else b""
+        return self.rfile.read(length) if length > 0 else b""
+
+    def redirect_requested(self):
+        return self.path.startswith(REDIRECT_PATH)
+
+    def redirect(self):
+        # Closing with an upload still unread would reset the connection under the client
+        self.read_body()
+        code, _, target = self.path[len(REDIRECT_PATH):].partition("/")
+        looping = code == "loop"
+        self.send_response(302 if looping else int(code))
+        self.send_header("Location", self.path if looping else "/" + target)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def hang_up(self):
+        self.read_body()
+        self.close_connection = True
+
+    def echo(self):
+        if self.path == HANGUP_PATH:
+            self.hang_up()
+            return
+        if self.redirect_requested():
+            self.redirect()
+            return
+        if not self.echo_requested():
+            self.send_error(404, "Not Found", "only %s answers this method" % ECHO_PATH)
+            return
+
+        body = self.read_body()
 
         lines = ["method=%s" % self.command, "path=%s" % self.path]
         for name, value in self.headers.items():

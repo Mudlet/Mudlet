@@ -1459,6 +1459,26 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
     return true;
 }
 
+bool THeadlessSession::setGameScreenSize(const int columns, const int rows)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
+        //: Error from a frontend with no window given a screen size that cannot be sent to the game; %1 is the number of columns asked for, %2 the number of rows
+        mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(columns).arg(rows);
+        return false;
+    }
+    // As setScreenSize() tells it, as wide as the GUI's main console at the least
+    const QSize size(std::max(40, columns), rows);
+    if (mpHost->mGameScreenSize == size) {
+        return true;
+    }
+    mpHost->mGameScreenSize = size;
+    mpHost->updateDisplayDimensions();
+    return true;
+}
+
 bool THeadlessSession::setDebugConsoleShown(const bool shown)
 {
     if (refused()) {
