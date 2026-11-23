@@ -711,6 +711,70 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("playSoundFile refuses an MP3 that turns from stereo to mono, which crashes Qt's FFmpeg backend", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- Silent 128 kbps MPEG-1 layer III frames, about 40 to a second, cycling through the given channel modes, at
+    -- 44.1 kHz or, given rate 1, 48 kHz
+    local function frames(modes, count, rate)
+      rate = rate or 0
+      local out = {}
+      for i = 1, count do
+        out[i] = string.char(0xFF, 0xFB, 0x90 + rate * 4, modes[(i - 1) % #modes + 1] * 64) .. string.rep("\0", rate == 0 and 413 or 380)
+      end
+      return table.concat(out)
+    end
+    local stereo, jointStereo, mono = 0, 1, 3
+    local tagged = frames({stereo}, 80)
+    -- a frame header inside the last frame's data, which no frame follows, then an ID3v1 tag
+    tagged = tagged:sub(1, -21) .. string.char(0xFF, 0xFB, 0x90, mono * 64) .. string.rep("\0", 16) .. "TAG" .. string.rep("\0", 125)
+    local files = {
+      ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
+      ["busted-turns-mono-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 40, 1),
+      ["busted-turns-mono-last.mp3"] = frames({stereo}, 40) .. frames({mono}, 1),
+      ["busted-turns-mono-last-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 1, 1),
+      -- playback can start in the stereo part
+      ["busted-mono-stereo-mono.mp3"] = frames({mono}, 20) .. frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-a.mp3"] = frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-b.mp3"] = frames({stereo}, 40),
+      ["busted-turns-stereo.mp3"] = frames({mono}, 40) .. frames({stereo}, 40),
+      ["busted-stereo-tagged.mp3"] = tagged,
+    }
+    lfs.mkdir(mediaDirectory)
+    for name, contents in pairs(files) do
+      local path = mediaDirectory .. "/" .. name
+      local handle = io.open(path, "wb")
+      handle:write(contents)
+      handle:close()
+      onCleanup(function() os.remove(path) end)
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    for _, name in ipairs({"busted-turns-mono.mp3", "busted-turns-mono-48k.mp3", "busted-turns-mono-last.mp3", "busted-turns-mono-last-48k.mp3",
+                          "busted-mono-stereo-mono.mp3"}) do
+      playSoundFile({name = name})
+    end
+    -- past the first second, where the mono frames would reach the resampler
+    pumpEvents(2000)
+    assert.equals(0, #started)
+
+    for i, name in ipairs({"busted-turns-stereo.mp3", "busted-stereo-tagged.mp3"}) do
+      playSoundFile({name = name})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals(i, #started)
+      assert.equals(name, started[i].file)
+    end
+
+    -- a wildcard passes over a refused match to one that plays
+    for i = 3, 6 do
+      playSoundFile({name = "busted-wildcard-*.mp3"})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals("busted-wildcard-b.mp3", started[i].file)
+    end
+  end)
+
   it("playSoundFile plays a file given in the ordered argument form", function()
     if mediaPlaybackUnavailable() then
       return
@@ -5187,10 +5251,16 @@ describe("Tests the text-to-speech Lua API", function()
 describe("FFmpeg's hardware device types", function()
   local variables = {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}
 
-  it("are named on Linux only, unless already set, so Qt does not try each one when the first sound plays", function()
+  it("are named on Linux and Windows, unless already set, so Qt does not try each one when the first sound plays", function()
     local named = "vaapi,vdpau,qsv,drm"
+    if getOS() == "windows" then
+      for _, variable in ipairs(variables) do
+        assert.equals("d3d11va,dxva2", os.getenv(variable))
+      end
+      return
+    end
     if getOS() ~= "linux" then
-      -- Qt's own list there holds the platform's decoders, such as D3D11 and VideoToolbox
+      -- Qt's own list there holds the platform's decoders, such as VideoToolbox
       for _, variable in ipairs(variables) do
         assert.are_not.equals(named, os.getenv(variable))
         assert.are_not.equals("cuda," .. named, os.getenv(variable))
