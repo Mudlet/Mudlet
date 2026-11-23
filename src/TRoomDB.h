@@ -25,8 +25,11 @@
 
 
 #include <QHash>
+#include <QList>
 #include <QMap>
 #include <QString>
+
+#include <optional>
 
 #include "utils.h"
 
@@ -66,6 +69,15 @@ public:
     bool addArea(int id, QString name);
     bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
+
+    enum class AreaParentResult { Changed, Unchanged, NoSuchArea, NoSuchParent, OwnParent, ParentInside, DefaultAreaAsParent };
+    // Nests an area in another, or puts it back at the top level for std::nullopt; raises sysAreaParentChanged
+    // on a change. Either area may so far have only a name
+    AreaParentResult setAreaParent(int areaId, std::optional<int> parentId);
+    // std::nullopt at the top level, and for a parent that no longer exists
+    std::optional<int> getAreaParent(int areaId) const;
+    // Sorted by ID; with recursive, each child is followed by its own subtree. std::nullopt lists the top level
+    QList<int> getAreaChildren(std::optional<int> areaId, bool recursive) const;
     const QList<TRoom*> getRoomPtrList() const;
     const QList<TArea*> getAreaPtrList() const;
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
@@ -80,6 +92,12 @@ public:
     // full copy of every area name just to scan it once.
     bool hasAreaName(const QString& name) const;
     QString unusedUnnamedAreaName() const;
+    // Gives the children of an area about to go to that area's own parent; returns them, sorted by ID
+    QList<int> reparentChildrenOf(int areaId);
+    // Sets isZone from whether any area is nested in this one; nothing for an area that so far only has a name
+    void updateIsZone(int areaId);
+    // After a whole map is read in: isZone follows from the zoneAreaRefs, so it is worked out rather than trusted
+    void updateAllIsZone();
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
@@ -123,6 +141,12 @@ private:
     void deleteDisplacedArea(int, TArea*);
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
+    // Appends areaId and everything nested in it to subtree, skipping areas already in listed
+    void appendAreaSubtree(int areaId, QList<int>& subtree, QSet<int>& listed) const;
+    // After an area is gone: its parent may have lost its last child, and each of its children moved up a level
+    void afterAreaRemoved(int areaId, std::optional<int> parentId, const QList<int>& movedChildren);
+    // Static, as a handler may delete the database that raised it
+    static void raiseAreaParentChanged(TMap*, int areaId, std::optional<int> oldParentId, std::optional<int> newParentId);
 
     QHash<int, TRoom*> rooms;
     QMultiHash<int, int> entranceMap; // key is exit target, value is exit source

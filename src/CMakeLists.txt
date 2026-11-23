@@ -124,6 +124,7 @@ set(mudlet_SRCS
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaFields.cpp
     TAreaGraph.cpp
     TAreaGridIndex.cpp
     TAreaLodExitIndex.cpp
@@ -459,6 +460,7 @@ set(mudlet_HDRS
     TAlias.h
     TAppFrontend.h
     TArea.h
+    TAreaFields.h
     TAreaGraph.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h
