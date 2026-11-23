@@ -178,6 +178,7 @@ class Host : public QObject
     friend class TelnetLatePasswordTest;
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
+    friend class ConnectionDialogOpenProfileTest;
     friend class HeadlessSessionTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
@@ -237,11 +238,34 @@ public:
         }
         mPass = QString(password.constData(), password.size());
         mPassGiven = true;
+        mPassFilledInByDialog.clear();
     }
-    // A password still being fetched from the keychain counts: the auto-login is timer based, so
-    // the password step has to be armed before the read that answers it comes back, or there is
-    // no prompt left for a late answer to be typed at.
-    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
+    // One the player typed for this profile while it is open, which the stored one does not replace either; an
+    // empty one is the player's choice of none
+    void setPassTypedByPlayer(const QString& password)
+    {
+        mPass = password;
+        mPassGiven = true;
+        mPassFilledInByDialog.clear();
+    }
+    // One the connection dialog read from the store while this profile is open, which can be an older copy than the
+    // profile holds or is still looking up, so it only stands in for none: held back while a lookup is pending, for
+    // when that brings none
+    void setPassFilledInByDialog(const QString& password)
+    {
+        if (!mPass.isEmpty()) {
+            return;
+        }
+        if (mSecuredPasswordPending) {
+            mPassFilledInByDialog = password;
+            return;
+        }
+        mPass = password;
+    }
+    // A password still being fetched from the keychain counts, unless the player erased it in the connection dialog: the
+    // auto-login is timer based, so the password step has to be armed before the read that answers it comes back,
+    // or there is no prompt left for a late answer to be typed at.
+    bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || (mSecuredPasswordPending && !mPassGiven)); }
     // At the auto-login's password step, by when the connection dialog has handed over any password typed into it
     void reportUnreadableSavedPassword();
     // True once the user has sent any command to the game on the current connection. It gates whether
@@ -1698,6 +1722,7 @@ private:
     QString mPass;
     bool mPassGiven = false;
     bool mSecuredPasswordPending = false;
+    QString mPassFilledInByDialog;
     // The store refused the saved password, as against having none or not being there at all
     bool mSecuredPasswordUnreadable = false;
 

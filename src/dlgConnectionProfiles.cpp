@@ -875,7 +875,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     const QString profileName = pItem->data(csmNameRole).toString();
     // An open profile read this when it loaded, and would otherwise sign in with the old password until reopened
     if (Host* pHost = HostManager::self()->getHost(profileName)) {
-        pHost->setPass(pass);
+        pHost->setPassTypedByPlayer(pass);
     }
 
     if (MudletApp::storingPasswordsSecurely()) {
@@ -2762,6 +2762,18 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     // Check if the host already exists before calling mudlet::loadProfile()
     Host* pHostBeforeLoad = HostManager::self()->getHost(profile_name);
     bool hostExistedBefore = (pHostBeforeLoad != nullptr);
+
+    if (pHostBeforeLoad) {
+        // An open profile read these as it loaded, and its automatic login takes them from it at each connection
+        pHostBeforeLoad->setLogin(login_entry->text().trimmed());
+        const QString password = character_password_entry->text();
+        if (character_password_entry->isModified()) {
+            pHostBeforeLoad->setPassTypedByPlayer(password);
+        } else if (!password.isEmpty()) {
+            // Filled in from the store, not typed; one the dialog left empty may only mean the store could not be read here
+            pHostBeforeLoad->setPassFilledInByDialog(password);
+        }
+    }
 
     Host* pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
 

@@ -6650,7 +6650,7 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
 void Host::reportUnreadableSavedPassword()
 {
     // Once per load, as a reconnect has no more of a password than the first connection had
-    if (!mSecuredPasswordUnreadable || mLogin.isEmpty() || !mPass.isEmpty()) {
+    if (!mSecuredPasswordUnreadable || mLogin.isEmpty() || !mPass.isEmpty() || mPassGiven) {
         return;
     }
     mSecuredPasswordUnreadable = false;
@@ -6673,8 +6673,9 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     mSecuredPasswordPending = !success && timedOut;
 
     if (success && !password.isEmpty()) {
+        mPassFilledInByDialog.clear();
         // A later answer replaces an earlier one, as the keychain's does the encrypted file's at a deadline,
-        // but not one given for the run
+        // but not one given for the run or typed in the connection dialog
         if (!mPassGiven) {
             setPass(password);
         }
@@ -6684,8 +6685,15 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
         mTelnet.sendOutstandingAutoLoginPassword();
         QString passwordCopy = password; // Make a copy for secure clearing
         SecureStringUtils::secureStringClear(passwordCopy);
-    } else if (!success && !errorMessage.isEmpty()) {
-        qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+    } else {
+        if (!success && !errorMessage.isEmpty()) {
+            qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+        }
+        if (!mSecuredPasswordPending && !mPassFilledInByDialog.isEmpty()) {
+            setPassFilledInByDialog(mPassFilledInByDialog);
+            mPassFilledInByDialog.clear();
+            mTelnet.sendOutstandingAutoLoginPassword();
+        }
     }
     // A refused or empty keychain must not go on holding the hidden-input box back
     mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
