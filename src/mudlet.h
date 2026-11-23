@@ -274,10 +274,11 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
-    // For pHost rather than the active profile, as the script editor of a profile in the background needs
-    void showModuleManager(Host* pHost);
-    void showPackageManager(Host* pHost);
-    dlgPackageExporter* showPackageExporter(Host* pHost);
+    // For pHost rather than the active profile, as the script editor of a profile in the background needs; closing
+    // one hands focus back to pOpener while it is there, rather than bringing pHost's profile to the front
+    void showModuleManager(Host* pHost, QWidget* pOpener = nullptr);
+    void showPackageManager(Host* pHost, QWidget* pOpener = nullptr);
+    dlgPackageExporter* showPackageExporter(Host* pHost, QWidget* pOpener = nullptr);
     void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
@@ -519,11 +520,13 @@ public slots:
     void slot_showUiTour();
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
+    // Back to pOpener if it is still there, else to the profile
+    static void restoreFocusAfterTool(const QString& profileName, const QPointer<QWidget>& pOpener);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
-    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
-    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager);
-    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter);
+    void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager, QWidget* pOpener = nullptr);
+    void setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager, QWidget* pOpener = nullptr);
+    void setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter, QWidget* pOpener = nullptr);
     void setupPreferencesFocusRestoration(dlgProfilePreferences* pPreferences);
     void slot_showTimerDialog();
     void slot_showTabContextMenu(const QPoint& position);

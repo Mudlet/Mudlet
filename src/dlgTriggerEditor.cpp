@@ -1216,21 +1216,21 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     mpPackageExporterAction = new QAction(tr("Package Exporter"), this);
     connect(mpPackageExporterAction, &QAction::triggered, this, [this]() {
-        if (auto* pDialog = mudlet::self()->showPackageExporter(mpHost)) {
+        if (auto* pDialog = mudlet::self()->showPackageExporter(mpHost, this)) {
             widgetutils::positionDialogOnParentScreen(pDialog, this);
         }
     });
 
     mpPackageManagerAction = new QAction(tr("Package Manager"), this);
     connect(mpPackageManagerAction, &QAction::triggered, this, [this]() {
-        mudlet::self()->showPackageManager(mpHost);
+        mudlet::self()->showPackageManager(mpHost, this);
         if (auto* pDialog = HostDialogs::of(mpHost).mpPackageManager.data()) {
             widgetutils::positionDialogOnParentScreen(pDialog, this);
         }
     });
     mpModuleManagerAction = new QAction(tr("Module Manager"), this);
     connect(mpModuleManagerAction, &QAction::triggered, this, [this]() {
-        mudlet::self()->showModuleManager(mpHost);
+        mudlet::self()->showModuleManager(mpHost, this);
         if (auto* pDialog = HostDialogs::of(mpHost).mpModuleManager.data()) {
             widgetutils::positionDialogOnParentScreen(pDialog, this);
         }

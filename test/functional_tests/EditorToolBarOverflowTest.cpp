@@ -564,6 +564,9 @@ private slots:
         pManager->close();
         pModules->close();
         exporters.first()->close();
+        // Closing them hands focus back to the editor, a moment later; the profile in front stays the one the player chose
+        QTest::qWait(200);
+        QCOMPARE(mudlet::self()->getActiveHost(), pOtherHost);
         mudlet::self()->activateProfile(pEditorHost);
     }
 };

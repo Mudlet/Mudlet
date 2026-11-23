@@ -2808,7 +2808,7 @@ void mudlet::slot_moduleManager()
     showModuleManager(getActiveHost());
 }
 
-void mudlet::showModuleManager(Host* pH)
+void mudlet::showModuleManager(Host* pH, QWidget* pOpener)
 {
     if (!pH) {
         return;
@@ -2817,10 +2817,9 @@ void mudlet::showModuleManager(Host* pH)
     if (!moduleManager) {
         moduleManager = new dlgModuleManager(this, pH);
         HostDialogs::of(pH).mpModuleManager = moduleManager;
-
-        // Set up focus restoration for when this module manager is closed
-        setupModuleManagerFocusRestoration(moduleManager);
     }
+    // Where focus goes when it is closed, from wherever it was opened last
+    setupModuleManagerFocusRestoration(moduleManager, pOpener);
 
     moduleManager->raise();
     moduleManager->show();
@@ -2848,7 +2847,7 @@ void mudlet::slot_packageManager()
     showPackageManager(getActiveHost());
 }
 
-void mudlet::showPackageManager(Host* pH)
+void mudlet::showPackageManager(Host* pH, QWidget* pOpener)
 {
     if (!pH) {
         return;
@@ -2858,10 +2857,9 @@ void mudlet::showPackageManager(Host* pH)
     if (!packageManager) {
         packageManager = new dlgPackageManager(this, pH);
         HostDialogs::of(pH).mpPackageManager = packageManager;
-
-        // Set up focus restoration for when this package manager is closed
-        setupPackageManagerFocusRestoration(packageManager);
     }
+    // Where focus goes when it is closed, from wherever it was opened last
+    setupPackageManagerFocusRestoration(packageManager, pOpener);
 
     packageManager->raise();
     packageManager->showNormal();
@@ -2878,7 +2876,7 @@ void mudlet::slot_packageExporter()
     showPackageExporter(getActiveHost());
 }
 
-dlgPackageExporter* mudlet::showPackageExporter(Host* pH)
+dlgPackageExporter* mudlet::showPackageExporter(Host* pH, QWidget* pOpener)
 {
     if (!pH) {
         return nullptr;
@@ -2887,7 +2885,7 @@ dlgPackageExporter* mudlet::showPackageExporter(Host* pH)
     d->setAttribute(Qt::WA_DeleteOnClose);
 
     // Set up focus restoration for when this package exporter is closed
-    setupPackageExporterFocusRestoration(d);
+    setupPackageExporterFocusRestoration(d, pOpener);
 
     d->show();
 
@@ -5651,6 +5649,20 @@ void mudlet::restoreProfileFocus(const QString& profileName)
     });
 }
 
+void mudlet::restoreFocusAfterTool(const QString& profileName, const QPointer<QWidget>& pOpener)
+{
+    if (!pOpener) {
+        restoreProfileFocus(profileName);
+        return;
+    }
+    // The same small delay, for the closing window to be out of the way
+    QTimer::singleShot(50ms, pOpener.data(), [pOpener]() {
+        QWidget* window = pOpener->window();
+        window->raise();
+        window->activateWindow();
+    });
+}
+
 void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow)
 {
     if (!pEditor) {
@@ -5702,7 +5714,7 @@ void mudlet::setupNotepadFocusRestoration(dlgNotepad* pNotepad)
     });
 }
 
-void mudlet::setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager)
+void mudlet::setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager, QWidget* pOpener)
 {
     if (!pPackageManager) {
         return;
@@ -5712,13 +5724,12 @@ void mudlet::setupPackageManagerFocusRestoration(dlgPackageManager* pPackageMana
     disconnect(pPackageManager, &dlgPackageManager::packageManagerClosing, nullptr, nullptr);
 
     // Connect to our custom packageManagerClosing signal which is emitted from closeEvent
-    connect(pPackageManager, &dlgPackageManager::packageManagerClosing, [](const QString& profileName) {
-        // Use the common focus restoration logic
-        restoreProfileFocus(profileName);
+    connect(pPackageManager, &dlgPackageManager::packageManagerClosing, pPackageManager, [opener = QPointer<QWidget>(pOpener)](const QString& profileName) {
+        restoreFocusAfterTool(profileName, opener);
     });
 }
 
-void mudlet::setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager)
+void mudlet::setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager, QWidget* pOpener)
 {
     if (!pModuleManager) {
         return;
@@ -5728,13 +5739,12 @@ void mudlet::setupModuleManagerFocusRestoration(dlgModuleManager* pModuleManager
     disconnect(pModuleManager, &dlgModuleManager::moduleManagerClosing, nullptr, nullptr);
 
     // Connect to our custom moduleManagerClosing signal which is emitted from closeEvent
-    connect(pModuleManager, &dlgModuleManager::moduleManagerClosing, [](const QString& profileName) {
-        // Use the common focus restoration logic
-        restoreProfileFocus(profileName);
+    connect(pModuleManager, &dlgModuleManager::moduleManagerClosing, pModuleManager, [opener = QPointer<QWidget>(pOpener)](const QString& profileName) {
+        restoreFocusAfterTool(profileName, opener);
     });
 }
 
-void mudlet::setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter)
+void mudlet::setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageExporter, QWidget* pOpener)
 {
     if (!pPackageExporter) {
         return;
@@ -5744,9 +5754,8 @@ void mudlet::setupPackageExporterFocusRestoration(dlgPackageExporter* pPackageEx
     disconnect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, nullptr, nullptr);
 
     // Connect to our custom packageExporterClosing signal which is emitted from closeEvent
-    connect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, [](const QString& profileName) {
-        // Use the common focus restoration logic
-        restoreProfileFocus(profileName);
+    connect(pPackageExporter, &dlgPackageExporter::packageExporterClosing, pPackageExporter, [opener = QPointer<QWidget>(pOpener)](const QString& profileName) {
+        restoreFocusAfterTool(profileName, opener);
     });
 }
 
