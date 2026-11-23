@@ -97,6 +97,15 @@ static void roomUserDataChanged(TMap& map, const TRoom& room, const bool drawn, 
     map.updatePlayerArea(room.getArea());
 }
 
+// The map's own room.ui_ keys (the room name font, and "Show room names") are read by every area's view
+static void mapUserDataChanged(TMap& map, const bool drawn, const char* fromWhere)
+{
+    map.setUnsaved(fromWhere);
+    if (drawn) {
+        map.updateArea(-1);
+    }
+}
+
 static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
 static const char* const csmPathfindingInExitWeightFilter = "a path cannot be found from inside an exit weight filter";
 
@@ -893,8 +902,9 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
     }
 
     if (!host.mpMap->mUserData.isEmpty()) {
+        const bool drawn = std::any_of(host.mpMap->mUserData.keyBegin(), host.mpMap->mUserData.keyEnd(), roomUserDataKeyDrawn);
         host.mpMap->mUserData.clear();
-        host.mpMap->setUnsaved(__func__);
+        mapUserDataChanged(*host.mpMap, drawn, __func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -916,7 +926,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     const bool removed = host.mpMap->mUserData.remove(key) > 0;
     if (removed) {
-        host.mpMap->setUnsaved(__func__);
+        mapUserDataChanged(*host.mpMap, roomUserDataKeyDrawn(key), __func__);
     }
     lua_pushboolean(L, removed);
     return 1;
@@ -1256,13 +1266,13 @@ int TLuaInterpreter::createMapper(lua_State* L)
         counter++;
     }
 
-    const int x = getVerifiedInt(L, __func__, counter, "mapper x-coordinate");
+    const int x = getVerifiedGeometry(L, __func__, counter, "mapper x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "mapper y-coordinate");
+    const int y = getVerifiedGeometry(L, __func__, counter, "mapper y-coordinate");
     counter++;
-    const int width = getVerifiedInt(L, __func__, counter, "mapper width");
+    const int width = getVerifiedGeometry(L, __func__, counter, "mapper width");
     counter++;
-    const int height = getVerifiedInt(L, __func__, counter, "mapper height");
+    const int height = getVerifiedGeometry(L, __func__, counter, "mapper height");
 
     QString windowName = "";
     if (hasParentWindow) {
@@ -2849,6 +2859,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
+        if (!host.mpMap->mpRoomDB->getRoom(host.mpMap->mRoomIdHash.value(host.getName(), -1))) {
+            return warnArgumentValue(L, __func__, qsl("the player does not have a valid roomID set, so there is no current room to walk from"), true);
+        }
         return warnArgumentValue(L, __func__, qsl("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
     host.startSpeedWalk();
@@ -3108,12 +3121,12 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 
     if (n > 1) {
         area = qsl("f");
-        x = getVerifiedInt(L, __func__, 1, "x-coordinate");
-        y = getVerifiedInt(L, __func__, 2, "y-coordinate");
+        x = getVerifiedGeometry(L, __func__, 1, "x-coordinate");
+        y = getVerifiedGeometry(L, __func__, 2, "y-coordinate");
     }
     if (n > 2) {
-        width = getVerifiedInt(L, __func__, 3, "width");
-        height = getVerifiedInt(L, __func__, 4, "height");
+        width = getVerifiedGeometry(L, __func__, 3, "width");
+        height = getVerifiedGeometry(L, __func__, 4, "height");
     }
 
     Host& host = getHostFromLua(L);
@@ -3227,6 +3240,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
     pR->calcRoomDimensions();
+    host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(pR->getArea());
 
     lua_pushboolean(L, true);
@@ -4341,7 +4355,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     const QString key{keyName};
 
     host.mpMap->mUserData[key] = value;
-    host.mpMap->setUnsaved(__func__);
+    mapUserDataChanged(*host.mpMap, roomUserDataKeyDrawn(key), __func__);
     lua_pushboolean(L, true);
     return 1;
 }

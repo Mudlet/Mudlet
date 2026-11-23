@@ -22,7 +22,9 @@
  * has to filter the same list the dialog shows with an empty box, under the
  * same names: a package installed without a config.lua has no details but is
  * still installed, and a package is installed under its sanitized name even
- * when its config.lua spelled it with a file ending.
+ * when its config.lua spelled it with a file ending. Both the installed packages
+ * and the repository's, searched or not, are listed alphabetically whatever
+ * their case.
  *
  * A spec cannot reach this: the dialog is C++ only, with no Lua way to open it.
  *
@@ -64,6 +66,8 @@ private:
     const QString mBarePackage = qsl("SearchBarePackage");
     // as one whose config.lua says "mpackage = [[SearchNamedPackage.mpackage]]" is installed
     const QString mNamedPackage = qsl("SearchNamedPackage");
+    // a case-sensitive sort would list it after both of the above
+    const QString mLowerCasePackage = qsl("searchLowerPackage");
 
     QStringList listedNames() const
     {
@@ -102,10 +106,11 @@ private slots:
         // With no repository index on disk the dialog downloads one each time it opens
         QFile index(MudletApp::getMudletPath(enums::profileHomePath, mProfileName + QDir::separator() + qsl("mpkg.packages.json")));
         QVERIFY(index.open(QIODevice::WriteOnly));
-        QVERIFY(index.write(R"({"packages": []})") > 0);
+        // Unsorted and mixed case: a case-sensitive sort would list Beta and Zeta before alpha
+        QVERIFY(index.write(R"({"packages": [{"mpackage": "Zeta"}, {"mpackage": "alpha"}, {"mpackage": "Beta"}]})") > 0);
         index.close();
 
-        mpHost->mInstalledPackages << mBarePackage << mNamedPackage;
+        mpHost->mInstalledPackages << mBarePackage << mNamedPackage << mLowerCasePackage;
         mpHost->mPackageInfo.insert(mNamedPackage, {{qsl("mpackage"), qsl("%1.mpackage").arg(mNamedPackage)}, {qsl("title"), qsl("A titled package")}});
     }
 
@@ -153,6 +158,31 @@ private slots:
     {
         mpManager->lineEdit_searchBar->setText(qsl("titled"));
         QCOMPARE(listedNames(), QStringList{mNamedPackage});
+    }
+
+    void test_theRepositoryIsListedAlphabeticallyWhateverTheCase()
+    {
+        mpManager->pushButton_explore->click();
+        const QStringList alphabetical{qsl("alpha"), qsl("Beta"), qsl("Zeta")};
+        QCOMPARE(listedNames(), alphabetical);
+        mpManager->lineEdit_searchBar->setText(qsl("a"));
+        QCOMPARE(listedNames(), alphabetical);
+    }
+
+    void test_installedPackagesAreListedAlphabeticallyWhateverTheCase()
+    {
+        const QStringList alphabetical{mBarePackage, mLowerCasePackage, mNamedPackage};
+        // The profile's default packages are listed too
+        auto ours = [&] {
+            QStringList names = listedNames();
+            names.removeIf([&](const QString& name) {
+                return !alphabetical.contains(name);
+            });
+            return names;
+        };
+        QCOMPARE(ours(), alphabetical);
+        mpManager->lineEdit_searchBar->setText(qsl("search"));
+        QCOMPARE(ours(), alphabetical);
     }
 };
 
