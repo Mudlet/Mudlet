@@ -284,7 +284,7 @@ public:
     {
         // Plain text, empty for none
         QString tooltip;
-        // A click follows the first item; where menu is set, the GUI's right click lists the items, under menuTitle
+        // A click follows the first item, or on a local: link opens the menu; where menu is set, the GUI's right click lists the items, under menuTitle
         // if that is not empty
         bool menu = false;
         QString menuTitle;
@@ -313,13 +313,16 @@ public:
     // own ids, or of the main console for "main" or no name; nullopt too for a name windowLines() refuses
     std::optional<Link> windowLink(const QString& window, int id) const;
     // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
-    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link and a menu's greyed-out item
-    // run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
-    // otherwise its selection group is updated and its command or function runs before this returns, so an
-    // OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error, which
-    // errorString() gives. noSuchItem: item does not index link()'s items. unknown: an id the main console does
-    // not hold. refused: where submit() is; errorString() says why.
-    enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
+    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link, a local: note and a menu's
+    // greyed-out item run nothing (disabled), nor does a link the game's visibility settings have concealed
+    // (concealed); and otherwise its selection group is updated and its command or function runs before this
+    // returns, so an OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error,
+    // which errorString() gives. A local: link with a menu runs nothing without an item, as the GUI's click only
+    // opens the menu, and an item picked straight after leaves the selection that follow changed. A gmcp: link or
+    // item while GMCP is off for the connection, or with no connection, sends nothing and leaves the link as it was
+    // (gmcpOff). noSuchItem: item does not index link()'s items. unknown: an id the main console does not hold.
+    // refused: where submit() is; errorString() says why.
+    enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused, gmcpOff };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
     // The same for a link of that window, shown or hidden, as only the app knows what its pointer can reach;
     // unknown too for a name windowLines() refuses. What it changes of the link is windowTextChanged's to tell.
@@ -1233,6 +1236,16 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
     QString mErrorString;
+    // A local: link that followWindowLink() last followed without an item, which opened its menu and changed its
+    // selection: its console's notifier, as one made again under the name starts with no menu open, and the issue
+    // of its id, which another link takes once the store wraps
+    struct MenuOpen
+    {
+        QPointer<const QObject> console;
+        int link = 0;
+        qint64 issue = 0;
+    };
+    MenuOpen mLinkWithMenuOpen;
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
