@@ -36,6 +36,7 @@
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
+#include "TAreaFields.h"
 #include "TAreaGraph.h"
 #include "TConsoleFrontend.h"
 #include "TDebug.h"
@@ -3880,6 +3881,269 @@ int TLuaInterpreter::setAreaName(lua_State* L)
     }
     lua_pushboolean(L, result);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapAreaFields
+// Defines the properties the map's areas have, replacing those it had; the values areas hold stay in their user data
+int TLuaInterpreter::setMapAreaFields(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        errorArgumentType(L, __func__, 1, "fields", "table");
+        return lua_error(L);
+    }
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+
+    // The type of a field definition's entry, which is on the top of the stack
+    const auto entryType = [L](const char* name) {
+        lua_getfield(L, -1, name);
+        const int found = lua_type(L, -1);
+        lua_pop(L, 1);
+        return found;
+    };
+    QMap<QString, TAreaFields::Field> fields;
+    lua_pushnil(L);
+    while (lua_next(L, 1)) {
+        // Both the key and the definition are still on the stack whenever a definition is refused
+        const auto refuse = [L](const QString& message) {
+            lua_pop(L, 2);
+            return warnArgumentValue(L, "setMapAreaFields", message);
+        };
+        if (lua_type(L, -2) != LUA_TSTRING || !lua_istable(L, -1)) {
+            return refuse(qsl("fields must be a table of field definitions keyed by the field's key"));
+        }
+        TAreaFields::Field field;
+        field.key = QString::fromUtf8(lua_tostring(L, -2));
+        field.name = field.key;
+        std::optional<TAreaFields::Type> type;
+        if (entryType("type") == LUA_TSTRING) {
+            lua_getfield(L, -1, "type");
+            type = TAreaFields::typeFromName(QString::fromUtf8(lua_tostring(L, -1)));
+            lua_pop(L, 1);
+        }
+        if (!type) {
+            return refuse(qsl("field \"%1\": type must be one of text, number, range, yesno, choice").arg(field.key));
+        }
+        field.type = *type;
+        if (const int nameType = entryType("name"); nameType != LUA_TNIL) {
+            if (nameType != LUA_TSTRING) {
+                return refuse(qsl("field \"%1\": name must be a string").arg(field.key));
+            }
+            lua_getfield(L, -1, "name");
+            field.name = QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 1);
+        }
+        if (const int inheritType = entryType("inherit"); inheritType != LUA_TNIL) {
+            if (inheritType != LUA_TBOOLEAN) {
+                return refuse(qsl("field \"%1\": inherit must be true or false").arg(field.key));
+            }
+            lua_getfield(L, -1, "inherit");
+            field.inherit = lua_toboolean(L, -1);
+            lua_pop(L, 1);
+        }
+        if (const int choicesType = entryType("choices"); choicesType != LUA_TNIL) {
+            if (choicesType != LUA_TTABLE) {
+                return refuse(qsl("field \"%1\": choices must be a list of strings").arg(field.key));
+            }
+            lua_getfield(L, -1, "choices");
+            const int count = static_cast<int>(lua_objlen(L, -1));
+            bool allStrings = true;
+            for (int i = 1; i <= count && allStrings; ++i) {
+                lua_rawgeti(L, -1, i);
+                allStrings = lua_type(L, -1) == LUA_TSTRING;
+                if (allStrings) {
+                    field.choices << QString::fromUtf8(lua_tostring(L, -1));
+                }
+                lua_pop(L, 1);
+            }
+            lua_pop(L, 1);
+            if (!allStrings) {
+                return refuse(qsl("field \"%1\": choices must be a list of strings").arg(field.key));
+            }
+        }
+        if (const QString error = TAreaFields::definitionError(field); !error.isEmpty()) {
+            return refuse(error);
+        }
+        fields.insert(field.key, field);
+        lua_pop(L, 1);
+    }
+    TAreaFields::setFields(*host.mpMap, fields);
+    host.mpMap->setUnsaved(__func__);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapAreaFields
+int TLuaInterpreter::getMapAreaFields(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const QMap<QString, TAreaFields::Field> fields = TAreaFields::fields(*host.mpMap);
+    lua_createtable(L, 0, fields.size());
+    for (const TAreaFields::Field& field : fields) {
+        lua_createtable(L, 0, 4);
+        lua_pushstring(L, field.name.toUtf8().constData());
+        lua_setfield(L, -2, "name");
+        lua_pushstring(L, TAreaFields::typeName(field.type).toUtf8().constData());
+        lua_setfield(L, -2, "type");
+        lua_pushboolean(L, field.inherit);
+        lua_setfield(L, -2, "inherit");
+        if (field.type == TAreaFields::Type::Choice) {
+            lua_createtable(L, field.choices.size(), 0);
+            for (int i = 0; i < field.choices.size(); ++i) {
+                lua_pushstring(L, field.choices.at(i).toUtf8().constData());
+                lua_rawseti(L, -2, i + 1);
+            }
+            lua_setfield(L, -2, "choices");
+        }
+        lua_setfield(L, -2, field.key.toUtf8().constData());
+    }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaFieldValue
+// Sets an area's value for one of the map's fields, checked against the field's type; nil removes it
+int TLuaInterpreter::setAreaFieldValue(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const QString key = getVerifiedString(L, __func__, 2, "field key");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const QMap<QString, TAreaFields::Field> fields = TAreaFields::fields(*host.mpMap);
+    const auto itField = fields.constFind(key);
+    if (itField == fields.cend()) {
+        return warnArgumentValue(L, __func__, qsl("the map has no area field \"%1\"").arg(key));
+    }
+    const TAreaFields::Field& field = itField.value();
+    TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+
+    if (lua_isnoneornil(L, 3)) {
+        pA->mUserData.remove(key);
+        host.mpMap->setUnsaved(__func__);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    std::optional<QVariant> value;
+    switch (field.type) {
+    case TAreaFields::Type::Text:
+    case TAreaFields::Type::Choice:
+        if (lua_type(L, 3) == LUA_TSTRING) {
+            value = TAreaFields::parseValue(field, QString::fromUtf8(lua_tostring(L, 3)));
+        }
+        break;
+    case TAreaFields::Type::Number:
+        if (lua_type(L, 3) == LUA_TNUMBER && std::isfinite(lua_tonumber(L, 3))) {
+            value = QVariant(static_cast<double>(lua_tonumber(L, 3)));
+        }
+        break;
+    case TAreaFields::Type::Range:
+        if (lua_istable(L, 3)) {
+            lua_rawgeti(L, 3, 1);
+            lua_rawgeti(L, 3, 2);
+            if (lua_type(L, -2) == LUA_TNUMBER && lua_type(L, -1) == LUA_TNUMBER) {
+                const double lower = lua_tonumber(L, -2);
+                const double upper = lua_tonumber(L, -1);
+                if (std::isfinite(lower) && std::isfinite(upper) && lower <= upper) {
+                    value = QVariant(QVariantList{lower, upper});
+                }
+            }
+            lua_pop(L, 2);
+        }
+        break;
+    case TAreaFields::Type::YesNo:
+        if (lua_type(L, 3) == LUA_TBOOLEAN) {
+            value = QVariant(static_cast<bool>(lua_toboolean(L, 3)));
+        }
+        break;
+    }
+    if (!value) {
+        QString wanted;
+        switch (field.type) {
+        case TAreaFields::Type::Text:
+            wanted = qsl("a string");
+            break;
+        case TAreaFields::Type::Number:
+            wanted = qsl("a number");
+            break;
+        case TAreaFields::Type::Range:
+            wanted = qsl("a table of two numbers, the lower first");
+            break;
+        case TAreaFields::Type::YesNo:
+            wanted = qsl("true or false");
+            break;
+        case TAreaFields::Type::Choice:
+            wanted = qsl("one of %1").arg(field.choices.join(qsl(", ")));
+            break;
+        }
+        return warnArgumentValue(L, __func__, qsl("field \"%1\" is a %2, so its value must be %3").arg(key, TAreaFields::typeName(field.type), wanted));
+    }
+    pA->mUserData.insert(key, TAreaFields::formatValue(field, *value));
+    host.mpMap->setUnsaved(__func__);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaFieldValue
+// An area's value for one of the map's fields, and the area it comes from, which for an inherited field may be a
+// parent area; nil where no area along the way has one
+int TLuaInterpreter::getAreaFieldValue(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const QString key = getVerifiedString(L, __func__, 2, "field key");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    // An area that so far only has a name holds no values, but may inherit them
+    if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+    const QMap<QString, TAreaFields::Field> fields = TAreaFields::fields(*host.mpMap);
+    const auto itField = fields.constFind(key);
+    if (itField == fields.cend()) {
+        return warnArgumentValue(L, __func__, qsl("the map has no area field \"%1\"").arg(key));
+    }
+    const TAreaFields::Lookup found = TAreaFields::valueFor(*host.mpMap, areaId, itField.value());
+    if (!found.error.isEmpty()) {
+        return warnArgumentValue(L, __func__, found.error);
+    }
+    if (!found.value) {
+        lua_pushnil(L);
+        return 1;
+    }
+    const QVariant& value = *found.value;
+    switch (itField.value().type) {
+    case TAreaFields::Type::Text:
+    case TAreaFields::Type::Choice:
+        lua_pushstring(L, value.toString().toUtf8().constData());
+        break;
+    case TAreaFields::Type::Number:
+        lua_pushnumber(L, value.toDouble());
+        break;
+    case TAreaFields::Type::Range: {
+        const QVariantList bounds = value.toList();
+        lua_createtable(L, 2, 0);
+        lua_pushnumber(L, bounds.value(0).toDouble());
+        lua_rawseti(L, -2, 1);
+        lua_pushnumber(L, bounds.value(1).toDouble());
+        lua_rawseti(L, -2, 2);
+        break;
+    }
+    case TAreaFields::Type::YesNo:
+        lua_pushboolean(L, value.toBool());
+        break;
+    }
+    lua_pushnumber(L, found.areaId);
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaUserData
