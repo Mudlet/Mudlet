@@ -1412,6 +1412,35 @@ private slots:
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), QString()}}));
     }
 
+    // A line edit holds 32767 characters unless told otherwise, and would cut a longer value it is opened on
+    void aLongValueOpenedInItsEditorIsKeptWhole()
+    {
+        buildMap();
+        const QString longValue(40000, QLatin1Char('a'));
+        room(scmFirstRoom)->userData = {{qsl("notes"), longValue}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QCOMPARE(pEditor->text().size(), longValue.size());
+        commitUserDataValueEditor(pEditor);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text().size(), longValue.size());
+
+        // The closed editor is only deleted later, and would otherwise be found again
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        pEditor->end(false);
+        QTest::keyClicks(pEditor, qsl("b"));
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+        // Sizes rather than the values, which a failure would print in full
+        QVERIFY(mEmitted.userDataChanges.contains(qsl("notes")));
+        const QString saved = mEmitted.userDataChanges.value(qsl("notes")).value_or(QString());
+        QCOMPARE(saved.size(), longValue.size() + 1);
+        QVERIFY(saved.endsWith(qsl("ab")));
+    }
+
     // The dialog opens on the name, so a name typed straight away and Enter rename the room
     void typingANameAndPressingEnterRenamesTheRoom()
     {

@@ -35,6 +35,8 @@
 #include <QPainter>
 #include <QStyledItemDelegate>
 
+#include <limits>
+
 namespace {
 // The map draws from these keys itself, and the dialog edits the border ones elsewhere, so the table neither shows
 // nor writes them
@@ -58,6 +60,16 @@ class UserDataValueDelegate : public QStyledItemDelegate
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        QWidget* editor = QStyledItemDelegate::createEditor(parent, option, index);
+        // A line edit holds 32767 characters by default and cuts a longer value it is opened on
+        if (auto* lineEdit = qobject_cast<QLineEdit*>(editor)) {
+            lineEdit->setMaxLength(std::numeric_limits<int>::max());
+        }
+        return editor;
+    }
+
     void setEditorData(QWidget* editor, const QModelIndex& index) const override
     {
         auto* lineEdit = qobject_cast<QLineEdit*>(editor);
@@ -71,8 +83,8 @@ public:
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override
     {
         auto* lineEdit = qobject_cast<QLineEdit*>(editor);
-        // isModified(), not an empty text: an empty value is a value, and typing one is a decision
-        if (lineEdit && index.data(scmMixedValueRole).toBool() && !lineEdit->isModified()) {
+        // Nothing typed, nothing to write back
+        if (lineEdit && !lineEdit->isModified()) {
             return;
         }
         QStyledItemDelegate::setModelData(editor, model, index);
