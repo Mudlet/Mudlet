@@ -1421,6 +1421,10 @@ public:
     // shortcuts options visually impaired players have to switch between the input line and the main window
     enum class CaretShortcut { None, Tab, CtrlTab, F6 };
     Q_ENUM(CaretShortcut)
+    // The combination a Mudlet shortcut would hold to clash with this choice (Meta+Tab for Ctrl+Tab on macOS); empty for None
+    static QKeyCombination caretShortcutCombination(CaretShortcut);
+    // Whether a key with these modifiers is the one the given choice toggles caret mode with
+    static bool caretShortcutMatches(CaretShortcut, QKeyCombination);
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
     // Bumped each time TMainConsole::focusActiveCommandLine() or caret mode takes the keyboard, so that function's

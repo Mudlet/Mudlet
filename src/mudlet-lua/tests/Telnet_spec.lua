@@ -1046,6 +1046,45 @@ describe("Tests MSDP subnegotiation handling", function()
     end)
 end)
 
+describe("Tests MSSP subnegotiation handling", function()
+  local VAR, VAL = "<01>", "<02>"
+
+  local function feedMssp(payload)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSSP>" .. payload .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  teardown(function()
+    mssp.MSSPDESC = nil
+    mssp.MSSPESC = nil
+    mssp.MSSPNAME = nil
+    mssp.MSSPEND = nil
+    mssp.MSSPLEAD = nil
+  end)
+
+  it("keeps an escape character as the byte the game sent", function()
+    feedMssp(VAR .. "MSSPESC" .. VAL .. "a<ESC>b")
+    assert.equals("a\27b", mssp.MSSPESC)
+  end)
+
+  it("drops the line break that ends a value", function()
+    feedMssp(VAR .. "MSSPNAME" .. VAL .. "Test Realm<CR><LF>" .. VAR .. "MSSPEND" .. VAL .. "one<CR><LF>two<CR><LF>")
+    assert.equals("Test Realm", mssp.MSSPNAME)
+    assert.equals("one\ntwo", mssp.MSSPEND)
+  end)
+
+  it("drops the line break ahead of a value", function()
+    feedMssp(VAR .. "MSSPLEAD" .. VAL .. "<CR><LF>Test Realm")
+    assert.equals("Test Realm", mssp.MSSPLEAD)
+  end)
+
+  it("still reads the variables after a multi-line one", function()
+    feedMssp(VAR .. "MSSPDESC" .. VAL .. "one<CR><LF>two" .. VAR .. "MSSPNAME" .. VAL .. "Test Realm")
+    assert.equals("one\ntwo", mssp.MSSPDESC)
+    assert.equals("Test Realm", mssp.MSSPNAME)
+  end)
+end)
+
 describe("Tests GMCP decode failures", function()
   it("raises no events for a GMCP message whose JSON cannot be decoded", function()
     -- the decode-failure path is shared with MSDP: no arrival events for a
@@ -1087,6 +1126,28 @@ describe("Tests how a GMCP message is split into name and data", function()
     assert.is_nil(gmcp.Spec and gmcp.Spec.NewlineSplit)
     feed("<T_IAC><T_SB><O_GMCP>Spec.NewlineSplit\n{\"a\": 1}<T_IAC><T_SE>")
     assert.same({a = 1}, gmcp.Spec.NewlineSplit)
+  end)
+
+  it("takes a CRLF or a tab as the separator without keeping any of it in the name", function()
+    local fired = {}
+    local ids = {}
+    for _, name in ipairs({"CrlfSplit", "CrlfPing", "TabSplit"}) do
+      ids[#ids + 1] = registerAnonymousEventHandler("gmcp.Spec." .. name, function(event, key)
+        fired[name] = key
+      end)
+    end
+    finally(function()
+      for _, id in ipairs(ids) do
+        killAnonymousEventHandler(id)
+      end
+    end)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.CrlfSplit\r\n{\"a\": 1}<T_IAC><T_SE>")
+    feed("<T_IAC><T_SB><O_GMCP>Spec.CrlfPing\r\n<T_IAC><T_SE>")
+    feed("<T_IAC><T_SB><O_GMCP>Spec.TabSplit\t{\"b\": 2}<T_IAC><T_SE>")
+    assert.same({a = 1}, gmcp.Spec.CrlfSplit)
+    assert.same({}, gmcp.Spec.CrlfPing)
+    assert.same({b = 2}, gmcp.Spec.TabSplit)
+    assert.same({CrlfSplit = "gmcp.Spec.CrlfSplit", CrlfPing = "gmcp.Spec.CrlfPing", TabSplit = "gmcp.Spec.TabSplit"}, fired)
   end)
 
   it("reads a payload the game spread over several lines", function()
@@ -1862,6 +1923,73 @@ describe("Tests telnet option negotiation", function()
 
     assert.same({5, 3}, seen)
     assert.equals(3, channel102[5])
+  end)
+
+  -- _G because busted runs each spec in an environment of its own
+  it("starts a fresh channel102 table when a script has replaced it", function()
+    local saved = _G.channel102
+    local seen
+    local handler = registerAnonymousEventHandler("channel102Message", function(_, variable, value)
+      seen = {variable, value}
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      _G.channel102 = saved
+    end)
+
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    local function receiveAfterReplacingWith(replacement)
+      _G.channel102 = replacement
+      seen = nil
+      feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+      assert.same({[5] = 3}, _G.channel102)
+      assert.same({5, 3}, seen)
+    end
+    receiveAfterReplacingWith(nil)
+    receiveAfterReplacingWith("not a table")
+  end)
+
+  it("keeps the channel102 table a script holds and what is already in it", function()
+    local saved = _G.channel102
+    finally(function() _G.channel102 = saved end)
+
+    local held = {[9] = 1}
+    _G.channel102 = held
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+    assert.equals(held, _G.channel102)
+    assert.same({[9] = 1, [5] = 3}, held)
+  end)
+
+  it("starts a fresh atcp table when a script has replaced it", function()
+    local saved = _G.atcp
+    local raised
+    local id = registerAnonymousEventHandler("RoomBrief", function(_, value) raised = value end)
+    finally(function()
+      killAnonymousEventHandler(id)
+      _G.atcp = saved
+    end)
+
+    local function receiveAfterReplacingWith(replacement)
+      _G.atcp = replacement
+      raised = nil
+      feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+      assert.same({RoomBrief = "Spec cave"}, _G.atcp)
+      assert.equals("Spec cave", raised)
+    end
+    receiveAfterReplacingWith(nil)
+    receiveAfterReplacingWith("not a table")
+  end)
+
+  it("keeps the atcp table a script holds and what is already in it", function()
+    local saved = _G.atcp
+    finally(function() _G.atcp = saved end)
+
+    local held = {Existing = "kept"}
+    _G.atcp = held
+    feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+    assert.equals(held, _G.atcp)
+    assert.same({Existing = "kept", RoomBrief = "Spec cave"}, held)
   end)
 
   it("switches the MXP processor on for the rest of the connection", function()
