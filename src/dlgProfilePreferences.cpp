@@ -987,6 +987,12 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    mpLabel_caretKeyClash = new QLabel(pCard_keyboard);
+    mpLabel_caretKeyClash->setObjectName(qsl("settingsCaretKeyClash"));
+    mpLabel_caretKeyClash->setProperty("settingsControlDescription", true);
+    mpLabel_caretKeyClash->setWordWrap(true);
+    mpLabel_caretKeyClash->hide();
+    moveIntoCard(pCard_keyboard, {mpLabel_caretKeyClash});
     addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
 #if defined(Q_OS_MACOS)
     // The native menu bar takes no part in Alt key navigation
@@ -5326,8 +5332,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 // none remain. Duplicates are deliberately still accepted - taking away the
 // ability to set one would make rearranging shortcuts awkward - but Qt
 // disables ambiguous shortcuts, so the user has to be told about the clash.
+// The caret mode key's clash note is refreshed with it, from the same edits.
 void dlgProfilePreferences::updateShortcutConflictWarning()
 {
+    updateCaretKeyClashNote();
     ShortcutsManager* manager = mudlet::self()->mpShortcutsManager;
     QStringList keys;
     auto keysIterator = manager->iterator();
@@ -5515,6 +5523,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_shortcutsConflictWarning->hide();
     label_shortcutsConflictWarning->clear();
+    mpLabel_caretKeyClash->hide();
+    mpLabel_caretKeyClash->clear();
     // Drop the stale shortcut data as well, otherwise a later call to
     // updateShortcutConflictWarning() (e.g. from slot_setAppearance()) would
     // re-show the warning for the no longer active profile:
@@ -9833,10 +9843,42 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 }
 
-// Tells screen-reader users the hyperlink shortcuts when they pick a pane-switching key, so they need not
-// look them up in the wiki
+// The caret mode key wins over a Mudlet shortcut whose first press it takes while the input line or the main window
+// has the keyboard, so the shortcut stops working there. Read from the shortcuts as they are being edited, not as saved.
+void dlgProfilePreferences::updateCaretKeyClashNote()
+{
+    const auto choice = static_cast<Host::CaretShortcut>(qMax(0, comboBox_caretModeKey->currentIndex()));
+    const QKeySequence caretKey(Host::caretShortcutCombination(choice));
+    QStringList holders;
+    if (choice != Host::CaretShortcut::None) {
+        ShortcutsManager* manager = mudlet::self()->mpShortcutsManager;
+        auto keys = manager->iterator();
+        while (keys.hasNext()) {
+            const QString key = keys.next();
+            // The caret key takes a press with more modifiers too, and the first press of a sequence never gets past it
+            const QKeySequence sequence = currentShortcuts.value(key);
+            if (!sequence.isEmpty() && Host::caretShortcutMatches(choice, sequence[0])) {
+                holders.append(qsl("'%1' (%2)").arg(manager->getLabel(key), mudlet::keySequenceForProse(sequence)));
+            }
+        }
+    }
+    if (holders.isEmpty()) {
+        mpLabel_caretKeyClash->hide();
+        mpLabel_caretKeyClash->clear();
+        return;
+    }
+    //: Under the caret mode key in the accessibility settings when a press of it is also how one of Mudlet's shortcuts starts, which then stops working there. %1 is the shortcuts' names, each quoted and followed by its key in brackets, %2 the caret mode key, e.g. Ctrl+Tab (Control-Tab on macOS)
+    mpLabel_caretKeyClash->setText(
+            tr("%1 cannot be used while the input line or the main window has the keyboard: %2, the caret mode key, takes the press and moves between the input line and the main window instead.")
+                    .arg(holders.join(qsl(", ")), mudlet::keySequenceForProse(caretKey)));
+    mpLabel_caretKeyClash->show();
+}
+
+// Refreshes the clash note for everyone, then tells screen-reader users the hyperlink shortcuts and any clash when
+// they pick a pane-switching key, so they need not look them up in the wiki
 void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
 {
+    updateCaretKeyClashNote();
     if (index < 0 || !QAccessible::isActive()) {
         return;
     }
@@ -9856,6 +9898,9 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
         //: Screen-reader hint when the user picks any caret-mode pane-switching key other than Tab, explaining how to navigate, activate and open menus on hyperlinks, and jump to latest content. Do not translate the key names "Ctrl+]", "Ctrl+[", "Enter", "Space", "Menu", "Shift+F10", "Ctrl+End" or "Ctrl+Home".
         announcement = tr("In caret mode, use Ctrl+] for the next hyperlink and Ctrl+[ for the previous hyperlink. Press Enter or Space to activate the focused link, and the Menu key or "
                           "Shift+F10 to open its context menu. Press Ctrl+End to jump to the latest content or Ctrl+Home to jump to the start of the buffer.");
+    }
+    if (!mpLabel_caretKeyClash->isHidden()) {
+        announcement = qsl("%1 %2").arg(mpLabel_caretKeyClash->text(), announcement);
     }
     app->announce(announcement, QString(), true);
 }
