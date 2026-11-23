@@ -640,6 +640,8 @@ registerAnonymousEventHandler("mapModeChangeEvent", function(_, mode)
   headlessModes = headlessModes .. mode .. (getMapZoom() and not headlessWithin and "(mapper);" or ";")
 end)
 registerAnonymousEventHandler("mapOpenEvent", function() headlessModes = headlessModes .. "open;" end)
+headlessNewNameModes = ""
+registerAnonymousEventHandler("sysMapModeChanged", function(_, mode) headlessNewNameModes = headlessNewNameModes .. mode .. ";" end)
 headlessArea = addAreaName("Headless Mode Area")
 headlessView = createMapView(headlessArea)
 )lua")));
@@ -648,6 +650,7 @@ headlessView = createMapView(headlessArea)
         QVERIFY(session.setMapViewOnly(true));
         QVERIFY(session.mapViewOnly());
         QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;viewing;"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessNewNameModes"), qsl("editing;viewing;"));
         QCOMPARE(switched.count(), 1);
         QVERIFY(session.runLua(qsl("createMapView(headlessArea)")));
         QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;viewing;"));

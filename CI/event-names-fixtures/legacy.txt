@@ -1,0 +1,4 @@
+# Legacy list for bad.cpp and bad.lua: a line ending in "# BAD" must be reported
+sysFixtureKeptEvent  # also raised as sysFixtureKept
+sysFixtureTidied # BAD
+sysFixtureNeverRaised # BAD

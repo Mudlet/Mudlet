@@ -1991,12 +1991,12 @@ void T2DMap::slot_setPlayerLocation()
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
-        TEvent manualSetEvent{};
-        manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
-        manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
-        manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mpHost->raiseEvent(manualSetEvent);
+        TEvent locationSetEvent{};
+        locationSetEvent.mArgumentList.append(QLatin1String("sysMapLocationSet"));
+        locationSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        locationSetEvent.mArgumentList.append(QString::number(_newRoomId));
+        locationSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEventWithOldName(locationSetEvent);
         mpMap->updatePlayerArea(areaId);
     }
 }
@@ -2012,11 +2012,11 @@ void T2DMap::slot_toggleMapViewOnly()
         // state matches the local copy (so it gets saved with the profile):
         mpHost->mMapViewOnly = mMapViewOnly;
         TEvent mapModeEvent{};
-        mapModeEvent.mArgumentList.append(QLatin1String("mapModeChangeEvent"));
+        mapModeEvent.mArgumentList.append(QLatin1String("sysMapModeChanged"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mapModeEvent.mArgumentList.append(mMapViewOnly ? qsl("viewing") : qsl("editing"));
         mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapModeEvent);
+        mpHost->raiseEventWithOldName(mapModeEvent);
 
         update();
     }

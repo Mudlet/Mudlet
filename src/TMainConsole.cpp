@@ -1773,7 +1773,8 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
             const QDateTime now(QDateTime::currentDateTime());
 
-            if (mpHost->mpMap->restore(QString())) {
+            const bool loaded = mpHost->mpMap->restore(QString());
+            if (loaded) {
                 mpHost->mpMap->audit();
                 mpMapper->mp2dMap->init();
                 mpMapper->updateAreaComboBox();
@@ -1782,15 +1783,18 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             }
 
             mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
+            if (loaded) {
+                mpHost->mpMap->raiseMapLoaded();
+            }
         } else {
             mpMapper->updateAreaComboBox();
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
 
-        TEvent mapOpenEvent{};
-        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapOpenEvent);
+        TEvent mapOpenedEvent{};
+        mapOpenedEvent.mArgumentList.append(QLatin1String("sysMapWindowOpened"));
+        mapOpenedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEventWithOldName(mapOpenedEvent);
     } else if (!mpHost->mpMap->mapper()) {
         // Nothing draws the map: the widget removed above did, or a borrower of TMap::mpMapper never gave it back.
         mpHost->restoreOwnMapper();

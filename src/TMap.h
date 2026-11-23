@@ -134,6 +134,8 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
+    // Empties the map for deleteMap() and the Delete map button, then raises sysMapDeleted
+    void deleteMap();
     void refreshMapperColours();
     // Returns the new label's id, -1 for an unknown area, or scmUnreadableImageLabel for an image that cannot be read.
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
@@ -170,6 +172,8 @@ public:
     void refreshArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
+    // Last step of a load that succeeded, once the map views have caught up, so a handler's centerview() stays put
+    void raiseMapLoaded();
     void requestMapperShown();
     // For changes the Lua API makes to the map or to the mapper's settings:
     void announceAreaListChanged();

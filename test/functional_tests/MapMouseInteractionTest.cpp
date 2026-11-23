@@ -2775,32 +2775,55 @@ private slots:
     {
         buildMap();
         showMapper(true);
-        QVERIFY(runLua(qsl("manualLocationSetTo = nil\n"
-                           "registerAnonymousEventHandler('sysManualLocationSetEvent', function(_, roomId) manualLocationSetTo = roomId end)")));
+        QVERIFY(runLua(qsl("locationEvents = {}\n"
+                           "for _, name in ipairs({'sysManualLocationSetEvent', 'sysMapLocationSet'}) do\n"
+                           "  registerAnonymousEventHandler(name, function(event, roomId) locationEvents[#locationEvents + 1] = event .. ':' .. roomId end)\n"
+                           "end")));
         rightClickAt(pointUnitsFromCentre(1, 0));
         QVERIFY(pickContextMenuItem(qsl("Set player location")));
 
         QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kEastRoomId);
-        QVERIFY(runLua(qsl("assert(manualLocationSetTo == %1)").arg(kEastRoomId)));
+        QVERIFY2(runLua(qsl("assert(table.concat(locationEvents, ',') == 'sysManualLocationSetEvent:%1,sysMapLocationSet:%1')").arg(kEastRoomId)),
+                 "Set player location did not raise the old and then the new name once each, with the room");
+    }
+
+    void test_aPressOnTheMapRaisesBothNamesOfTheMousePressEvent()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("pressEvents = {}\n"
+                           "for _, name in ipairs({'sysMapWindowMousePressEvent', 'sysMapWindowMousePressed'}) do\n"
+                           "  registerAnonymousEventHandler(name, function(event) pressEvents[#pressEvents + 1] = event end)\n"
+                           "end")));
+
+        clickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(runLua(qsl("assert(table.concat(pressEvents, ',') == 'sysMapWindowMousePressEvent,sysMapWindowMousePressed')")),
+                 "a click on the map did not raise the old and then the new name of the press once each");
     }
 
     void test_theMenuSwitchesBetweenViewingAndEditing()
     {
         buildMap();
         showMapper(true);
-        QVERIFY(runLua(qsl("mapModeSeen = nil\n"
-                           "registerAnonymousEventHandler('mapModeChangeEvent', function(_, mode) mapModeSeen = mode end)")));
+        QVERIFY(runLua(qsl("modeEvents = {}\n"
+                           "for _, name in ipairs({'mapModeChangeEvent', 'sysMapModeChanged'}) do\n"
+                           "  registerAnonymousEventHandler(name, function(event, mode) modeEvents[#modeEvents + 1] = event .. ':' .. mode end)\n"
+                           "end")));
         rightClickAt(pointUnitsFromCentre(1, 0));
         QVERIFY(pickContextMenuItem(qsl("Switch to editing mode")));
         QVERIFY(!mp2dMap->mMapViewOnly);
         QVERIFY(!mpHost->mMapViewOnly);
-        QVERIFY(runLua(qsl("assert(mapModeSeen == 'editing')")));
+        QVERIFY2(runLua(qsl("assert(table.concat(modeEvents, ',') == 'mapModeChangeEvent:editing,sysMapModeChanged:editing')")),
+                 "switching to editing did not raise the old and then the new name once each, with the mode");
 
         rightClickAt(pointUnitsFromCentre(1, 0));
         QVERIFY(pickContextMenuItem(qsl("Switch to viewing mode")));
         QVERIFY(mp2dMap->mMapViewOnly);
         QVERIFY(mpHost->mMapViewOnly);
-        QVERIFY(runLua(qsl("assert(mapModeSeen == 'viewing')")));
+        QVERIFY2(runLua(qsl("assert(table.concat(modeEvents, ',') == "
+                            "'mapModeChangeEvent:editing,sysMapModeChanged:editing,mapModeChangeEvent:viewing,sysMapModeChanged:viewing')")),
+                 "switching to viewing did not raise the old and then the new name once each, with the mode");
     }
 
     void test_rightClickingOneOfSeveralSelectedRoomsOffersTheGroupItems()

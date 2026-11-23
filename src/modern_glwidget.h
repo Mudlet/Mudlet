@@ -448,7 +448,7 @@ private:
     bool mRoomsMoved = false;
     // A click that did not pick its room on the press does so on the release, unless it became a drag
     bool mClickPending = false;
-    // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
+    // The button of a press whose sysMapWindowMousePressed waits for its selection to settle, on the release or the drag
     Qt::MouseButton mPressEventButton = Qt::NoButton;
     // Only focus reached from the keyboard, not by a click, gives the view the keys it navigates with
     bool mKeysNavigate = false;

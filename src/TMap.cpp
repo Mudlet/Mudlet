@@ -292,6 +292,21 @@ void TMap::mapClear()
     emit signal_mapCleared();
 }
 
+void TMap::deleteMap()
+{
+    mapClear();
+    updateArea(-1);
+
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysMapDeleted"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(event);
+}
+
 void TMap::clearRoutes()
 {
     mTargetID = 0;
@@ -3276,13 +3291,17 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // direct importation of a local copy of a map file.
         parsingWasSuccessful = readXmlMapFile(readFile);
         readFile.close();
+        // The binary branch's loadMapFile() raises it itself
+        if (parsingWasSuccessful) {
+            raiseMapLoaded();
+        }
     }
 
     if (parsingWasSuccessful) {
-        TEvent mapDownloadEvent{};
-        mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
-        mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        pHost->raiseEvent(mapDownloadEvent);
+        TEvent mapDownloadedEvent{};
+        mapDownloadedEvent.mArgumentList.append(qsl("sysMapDownloaded"));
+        mapDownloadedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        pHost->raiseEventWithOldName(mapDownloadedEvent);
     } else {
         // Failure in parse file...
         const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
@@ -3803,8 +3822,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     return {true, QString()};
 }
 
-// readJsonMapFile() is also how restore() loads a JSON file, whose caller files
-// the report; an import on its own has to audit the map and file one itself
+// readJsonMapFile() is also how restore() loads a JSON file, whose caller does
+// the rest; an import on its own has to audit and show the map and file a report
 std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
 {
     //: Title of a report in the map error log file, holding anything left over from before a JSON map import.
@@ -3816,6 +3835,11 @@ std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
     }
     //: Title of a report in the map error log file. %1 is the JSON map file, %2 the date and time the import started.
     pushErrorMessagesToFile(tr(R"(Importing JSON map "%1" at %2 report)").arg(source, now.toString(Qt::ISODate)), true);
+    if (result.first) {
+        announceMapLoaded(true);
+        requestMapperShown();
+        raiseMapLoaded();
+    }
     return result;
 }
 
@@ -4252,6 +4276,18 @@ void TMap::announceMapLoaded(const bool showPlayerArea)
 {
     ++mRevision;
     emit signal_mapLoaded(showPlayerArea);
+}
+
+void TMap::raiseMapLoaded()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysMapLoaded"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(event);
 }
 
 void TMap::requestMapperShown()

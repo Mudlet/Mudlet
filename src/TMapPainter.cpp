@@ -3480,10 +3480,10 @@ void TMapPainter::startSpeedWalk(Host* pHost, TMap* pMap, const int fromRoomId, 
 
 void TMapPainter::raiseMousePressEvent(Host* pHost)
 {
-    TEvent sysMapWindowMousePressEvent{};
-    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
-    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    pHost->raiseEvent(sysMapWindowMousePressEvent);
+    TEvent mousePressedEvent{};
+    mousePressedEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressed"));
+    mousePressedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEventWithOldName(mousePressedEvent);
 }
 
 std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels, QObject* saveOwner)
