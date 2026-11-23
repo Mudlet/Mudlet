@@ -1312,6 +1312,9 @@ public:
     QColor mUpperLevelColor{scmDefaultUpperLevelColor};
     static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomBorderColor{scmDefaultRoomBorderColor};
+    // For rooms whose environment has no colour of its own; unset, it is mRed_2, as those rooms were before it existed
+    QColor mMapperDefaultRoomColor;
+    QColor mapperDefaultRoomColor() const { return mMapperDefaultRoomColor.isValid() ? mMapperDefaultRoomColor : mRed_2; }
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
