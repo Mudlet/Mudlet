@@ -68,6 +68,7 @@
 #include <QStringDecoder>
 #include <QtGlobal>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <memory>
@@ -5287,14 +5288,14 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         msg = normalisedMsg;
     }
 
-    const qsizetype firstNewline = msg.indexOf('\n');
-    const qsizetype firstSpace = msg.indexOf(' ');
-
-    // if we see a space before a newline, or no newlines at all,
-    // then that's the separator for message and data
-    const qsizetype separator = Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1) ? firstSpace : firstNewline;
-    QString packageMessage = fromUtf8KeepingBom(separator == -1 ? msg : msg.first(separator));
-    QByteArray data = separator == -1 ? QByteArray() : msg.sliced(separator + 1).toByteArray();
+    // A package name holds no whitespace; a CR left on the name of "Package\r\n{...}"
+    // would file the data under a name no script asks for
+    const auto separatorAt = std::ranges::find_if(msg, [](const char ch) {
+        return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+    });
+    const qsizetype nameLength = separatorAt - msg.begin();
+    QString packageMessage = fromUtf8KeepingBom(msg.first(nameLength));
+    QByteArray data = separatorAt == msg.end() ? QByteArray() : msg.sliced(nameLength + 1).toByteArray();
 
     if (onlyWhitespace(data)) { // Example: Core.Ping
         QString emptyObject = qsl("{}");
@@ -5308,7 +5309,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         return;
     }
 
-    // The package name holds neither separator, so these match it exactly when they would the whole message
+    // The package name holds no separator, so these match it exactly when they would the whole message
     bool serverDeclinedBaseUi = false;
     if (packageMessage.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
