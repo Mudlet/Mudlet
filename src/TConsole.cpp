@@ -737,7 +737,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+    }
 
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
         // No command line here to take the key and copy for the panes, as the main console's does
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         mLowerPane->setFocusPolicy(Qt::ClickFocus);
@@ -756,6 +758,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
+        // Ctrl+F leads here from a command line, so Escape leads back to it without reaching for the mouse
+        auto* pShortcut_leaveSearch = new QShortcut(QKeySequence(Qt::Key_Escape), mpBufferSearchBox);
+        pShortcut_leaveSearch->setContext(Qt::WidgetShortcut);
+        connect(pShortcut_leaveSearch, &QShortcut::activated, this, [this]() {
+            static_cast<TMainConsole*>(this)->focusActiveCommandLine();
+        });
         layoutButtonLayer->addWidget(mpBufferSearchUp);
         layoutButtonLayer->addWidget(mpBufferSearchDown);
         layoutButtonLayer->addWidget(timeStampButton);
@@ -893,6 +901,14 @@ TConsole::~TConsole()
         // handler looks consoles up by name, which would reach this one half destroyed.
         if (auto pMainConsole = mpHost->mainConsoleView()) {
             pMainConsole->forgetSubConsole(this);
+        }
+    }
+
+    // Only the main console's layout (and the debug console's find bar) adopts these, and a
+    // parentless widget stays reachable through QApplication, so nothing would ever free them
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop}) {
+        if (pWidget && !pWidget->parent()) {
+            delete pWidget;
         }
     }
 
@@ -1512,7 +1528,8 @@ bool TConsole::showLowerPane()
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+    // Ctrl+Enter only clears the main console's split, so elsewhere the hint misleads and uses up a showing
+    if (lowerAppears && mType == MainConsole && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
         const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
