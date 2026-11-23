@@ -190,6 +190,53 @@ describe("connectToServer validates its arguments without connecting", function(
   end)
 end)
 
+describe("a connection attempt after disconnect() found nothing to disconnect", function()
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    for _ = 1, math.ceil(timeoutMs / 20) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(20)
+    end
+    return predicate()
+  end
+
+  local function linesSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  it("still reports the attempt failing", function()
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000))
+    -- Finds no connection to end, so the flags it sets are never cleared by a disconnection
+    disconnect()
+
+    local failed = false
+    local handler = registerAnonymousEventHandler("sysDisconnectionEvent", function() failed = true end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      -- Calls off any automatic retry the failure scheduled
+      disconnect()
+    end)
+
+    local mark = getLastLineNumber("main")
+    -- Nothing listens on port 1, so the connection is refused straight away
+    connectToServer("127.0.0.1", 1)
+    assert.is_true(waitUntil(function() return failed or connected() end, 10000), "the connection attempt never ended")
+    if connected() then
+      pending("something accepted a connection on 127.0.0.1:1, so the refusal could not be tested")
+      return
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(mark), "Unable to connect") end, 2000),
+                   "the refused connection was not reported, saw: " .. linesSince(mark))
+  end)
+end)
+
 describe("getConnectionInfo returns a host/port/connected triple", function()
   it("returns a string, a number and a boolean", function()
     local host, port, connected = getConnectionInfo()
@@ -3842,6 +3889,30 @@ describe("sending protocol data to a game server that has not negotiated", funct
     local atcp, atcpErr = sendATCP("Core.Hello")
     assert.is_nil(atcp)
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
+  end)
+
+  it("still names a disconnect the user's when a sysDisconnectionEvent handler reconnects", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local reconnected = false
+    local handler
+    handler = registerAnonymousEventHandler("sysDisconnectionEvent", function()
+      killAnonymousEventHandler(handler)
+      reconnected = true
+      reconnect()
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local mark = getLastLineNumber("main")
+    disconnect()
+    assert.is_true(waitUntil(function() return reconnected end, 5000), "sysDisconnectionEvent never fired")
+    local function linesSince()
+      return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(), "User Disconnected") end, 2000),
+                   "the disconnect was not reported as the user's, saw: " .. linesSince())
   end)
 end)
 

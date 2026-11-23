@@ -842,6 +842,11 @@ void cTelnet::connectIt(const QString& address, int port)
     // After the aborts above, which report the connection they end: an attempt that never
     // connects must not be timed from one that did, which could set off an automatic reconnect
     mConnectionTimer.invalidate();
+    // A Disconnect with no connection to end - offline, waiting to retry, or mid name lookup - is
+    // never cleared by a disconnection, and would pass this attempt's failure off as the user's doing
+    mDontReconnect = false;
+    mDisconnectRequested = false;
+    ++mConnectAttempts;
 
     // mpHost is a QPointer and can in principle be cleared if the Host is
     // destroyed mid-connect; slot authors must null-check before dereferencing.
@@ -1097,12 +1102,16 @@ void cTelnet::handleFailedConnection()
 
     emit signal_disconnected(mpHost);
 
+    // Taken first, as a handler that reconnects clears it for its own attempt
+    const bool calledOff = mDontReconnect;
+    const quint64 attemptsBefore = mConnectAttempts;
     TEvent event{};
     event.mArgumentList.append(qsl("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    const bool retry = mAutoReconnect && !mDontReconnect;
+    const bool redialled = mConnectAttempts != attemptsBefore;
+    const bool retry = mAutoReconnect && !calledOff && !mDontReconnect && !redialled;
     mDontReconnect = false;
     if (!retry) {
         return;
@@ -1584,9 +1593,14 @@ void cTelnet::finishDisconnection()
 
     // Double-check Host is still valid before raising event
     if (mpHost && !mpHost->isClosingDown()) {
+        // A handler that reconnects clears this for its own attempt, but the end being reported was still the user's
+        const bool calledOff = mDontReconnect;
         event.mArgumentList.append(qsl("sysDisconnectionEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
+        if (calledOff) {
+            mDontReconnect = true;
+        }
     }
 
     QTime timeDiff(0, 0, 0, 0);
