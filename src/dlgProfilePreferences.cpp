@@ -508,9 +508,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     //: Tooltip for text analyzer option
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable context menu to analyze UTF-16/UTF-8 encoding of selected text. "
                                                "Useful for identifying multi-byte characters.</p>"));
-    //: Tooltip for show icons on menus option
-    checkBox_showIconsOnMenus->setToolTip(tr("<p>Control menu icon display: on, off, or auto (system default). "
-                                             "May require restart.</p>"));
     lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
     lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
     connect(lineEdit_mmcpChatName, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_mmcpChatNameChanged);
@@ -921,7 +918,8 @@ void dlgProfilePreferences::buildShell()
     reflowPrivacyCards();
 
     auto* pCard_systemIntegration = createCard(qsl("card_systemIntegration"));
-    moveIntoCard(pCard_systemIntegration, {telnetHandlerEnabled, checkBox_showIconsOnMenus});
+    moveIntoCard(pCard_systemIntegration, {telnetHandlerEnabled});
+    pCard_systemIntegration->layout()->addWidget(makeFlowRow(pCard_systemIntegration, qsl("settingsGeneralRow_showIconsOnMenus"), {label_showIconsOnMenus, comboBox_showIconsOnMenus}));
     buildMigrationBanner();
     QList<QWidget*> generalCards{groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration};
 #ifdef INCLUDE_MCPSERVER
@@ -1364,6 +1362,7 @@ void dlgProfilePreferences::retranslateShell()
                                         "To change those, including the accessibility options, open Settings from a loaded profile."));
     updateNoProfileNotice();
 
+    retranslateShowIconsOnMenus();
     retranslateTriggerMatchPoolControls();
     setSearchKeywords();
 
@@ -1375,6 +1374,37 @@ void dlgProfilePreferences::retranslateShell()
             mpLabel_pageTitle->setText(tr("%1 › %2").arg(pCurrent->text(), mSubpageTitles.value(mCurrentSubpage)));
         }
     }
+}
+
+// Built here rather than listed in the .ui file so each entry carries the state it stands for, whatever its place
+void dlgProfilePreferences::retranslateShowIconsOnMenus()
+{
+    //: Entry of the "Show icons on menus" dropdown on the General settings page, and the default: menus show icons if the computer's own setting has them
+    const QString followTheSystem = tr("Follow the system");
+    // The .ui file's context, so these two are the strings its visibility dropdowns already have translated
+    //: Entry of a dropdown on the settings: the menu bar or toolbar is always shown, menus always show icons, commands are always echoed
+    const QString always = QCoreApplication::translate("profile_preferences", "Always");
+    //: Entry of a dropdown on the settings: the menu bar or toolbar is never shown, menus never show icons, commands are never echoed
+    const QString never = QCoreApplication::translate("profile_preferences", "Never");
+    const QList<std::pair<Qt::CheckState, QString>> choices{{Qt::PartiallyChecked, followTheSystem}, {Qt::Checked, always}, {Qt::Unchecked, never}};
+    for (const auto& [state, text] : choices) {
+        const QVariant data = QVariant::fromValue(state);
+        if (const int index = comboBox_showIconsOnMenus->findData(data); index >= 0) {
+            comboBox_showIconsOnMenus->setItemText(index, text);
+        } else {
+            comboBox_showIconsOnMenus->addItem(text, data);
+        }
+    }
+
+    //: Tooltip and screen reader description of the "Show icons on menus" dropdown on the General settings page; %1, %2 and %3 are its entries "Follow the system", "Always" and "Never"
+    const QString whatEachDoes = tr("%1: menus show icons if your computer's own setting has them. %2: every menu shows them. %3: no menu does.");
+    //: Second part of the tooltip and screen reader description of the "Show icons on menus" dropdown on the General settings page; %1 is its entry "Always"
+    const QString onMacOS = tr("On macOS 27 and later the system hides the icons in the menu bar's menus, so there they show only with %1.");
+    const auto bold = [](const QString& entry) {
+        return qsl("<b>%1</b>").arg(entry.toHtmlEscaped());
+    };
+    comboBox_showIconsOnMenus->setToolTip(qsl("<p>%1</p><p>%2</p>").arg(whatEachDoes.toHtmlEscaped().arg(bold(followTheSystem), bold(always), bold(never)), onMacOS.toHtmlEscaped().arg(bold(always))));
+    comboBox_showIconsOnMenus->setAccessibleDescription(qsl("%1 %2").arg(whatEachDoes.arg(followTheSystem, always, never), onMacOS.arg(always)));
 }
 
 void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
@@ -4303,7 +4333,7 @@ void dlgProfilePreferences::populateApplicationSettings()
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
     checkBox_reportMapIssuesOnScreen->setChecked(TMap::smShowMapAuditErrors);
-    checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
+    comboBox_showIconsOnMenus->setCurrentIndex(comboBox_showIconsOnMenus->findData(QVariant::fromValue(pMudlet->mShowIconsOnMenuCheckedState)));
     mpCheckBox_greyscaleIcons->setChecked(!pMudlet->colouredIcons());
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
@@ -7743,8 +7773,8 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(checkBox_reportMapIssuesOnScreen)) {
         pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     }
-    if (mSnapshot.dirty(checkBox_showIconsOnMenus)) {
-        pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+    if (mSnapshot.dirty(comboBox_showIconsOnMenus)) {
+        pMudlet->setShowIconsOnMenu(comboBox_showIconsOnMenus->currentData().value<Qt::CheckState>());
     }
     if (mSnapshot.dirty(mpCheckBox_greyscaleIcons)) {
         pMudlet->setColouredIcons(!mpCheckBox_greyscaleIcons->isChecked());
@@ -9315,8 +9345,8 @@ void dlgProfilePreferences::slot_changeToolBarVisibility(const enums::controlsVi
 
 void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState state)
 {
-    if (checkBox_showIconsOnMenus->checkState() != state) {
-        checkBox_showIconsOnMenus->setCheckState(state);
+    if (const int index = comboBox_showIconsOnMenus->findData(QVariant::fromValue(state)); index != comboBox_showIconsOnMenus->currentIndex()) {
+        comboBox_showIconsOnMenus->setCurrentIndex(index);
     }
 }
 

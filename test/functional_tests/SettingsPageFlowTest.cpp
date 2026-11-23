@@ -745,6 +745,15 @@ private slots:
                                        mpPreferences->lineEdit_logFileFolder);
     }
 
+    // The menu icons dropdown beside its label while both fit, under it once they do not, neither held to a width
+    void test_theShowIconsOnMenusRowBreaksAfterTheLastControlThatFits()
+    {
+        QVERIFY2(openPreferences(qsl("general")), "the settings dialog never appeared");
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_systemIntegration"));
+        QVERIFY2(pCard, "the General page has no System integration card");
+        verifyRowBreaksAfterItsLastFit(pCard, qsl("settingsGeneralRow_showIconsOnMenus"), {mpPreferences->label_showIconsOnMenus, mpPreferences->comboBox_showIconsOnMenus});
+    }
+
     void test_theSavingCheckBoxesStackWhole()
     {
         QVERIFY2(openPreferences(qsl("general")), "the settings dialog never appeared");

@@ -411,17 +411,11 @@ public:
     // does use them - use this flag to determine whether we should apply our
     // icons to override some of them:
     bool mShowIconsOnDialogs = true;
-    // This is the state for the tri-state control on the preferences and
-    // means:
-    // Qt::PartiallyChecked = use the previous state set on application start
-    //    (set AA_DontShowIconsInMenus to inverse of mShowIconsOnMenuOriginally)
-    // Qt::Unchecked = icons are not used on menus (set AA_DontShowIconsInMenus
-    //    to false ourselves)
-    // Qt::Checked = icons are used on menus (set AA_DontShowIconsInMenus to
-    //    true ourselves)
+    // The "Show icons on menus" setting, kept in Mudlet.ini as its number. Qt::AA_DontShowIconsInMenus is the negative:
+    // PartiallyChecked (1) "Follow the system" sets it to !mShowIconsOnMenuOriginally, Unchecked (0) "Never" to true,
+    // Checked (2) "Always" to false
     Qt::CheckState mShowIconsOnMenuCheckedState = Qt::PartiallyChecked;
-    // Value of QCoreApplication::testAttribute(Qt::AA_DontShowIconsInMenus) on
-    // startup which the user may leave as is or force on or off:
+    // Whether menus showed icons at startup, before the setting was applied: !AA_DontShowIconsInMenus as Qt set it
     bool mShowIconsOnMenuOriginally = true;
     // Whether Mudlet was the active application at the last state change, so
     // sysApplicationFocusChangeEvent is raised on a change of that and not on

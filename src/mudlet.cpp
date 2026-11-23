@@ -4882,7 +4882,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // In the near future the user's locale preferences will need to be read
     // as soon as possible as well!
 
-    mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+    // A number that is none of the three states would leave the settings' dropdown with no entry chosen
+    const int showIconsInMenus = settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt();
+    mShowIconsOnMenuCheckedState = (showIconsInMenus == Qt::Unchecked || showIconsInMenus == Qt::Checked) ? static_cast<Qt::CheckState>(showIconsInMenus) : Qt::PartiallyChecked;
 
     // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
     auto oldDarkTheme = settings.value(qsl("darkTheme"), QVariant(false)).toBool();

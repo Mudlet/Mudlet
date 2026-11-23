@@ -42,6 +42,7 @@
 #include <QKeySequenceEdit>
 #include <QLabel>
 #include <QLineEdit>
+#include <QScopeGuard>
 #include <QScrollArea>
 #include <QSignalSpy>
 #include <QSpinBox>
@@ -131,6 +132,26 @@ private:
                      QString::number(mpPreferences->comboBox_dictionary->count()),
                      QString::number(mpPreferences->comboBox_mapFileSaveFormatVersion->count()),
                      QString::number(mpPreferences->comboBox_mapHistory->count()));
+    }
+
+    // The "Show icons on menus" entries in the order they are offered, each with the state Mudlet.ini keeps for it
+    static QList<std::pair<Qt::CheckState, QString>> showIconsOnMenusChoices()
+    {
+        return {{Qt::PartiallyChecked, qsl("Follow the system")}, {Qt::Checked, qsl("Always")}, {Qt::Unchecked, qsl("Never")}};
+    }
+
+    static QString saidAs(const QString& text, const QVariant& state)
+    {
+        return qsl("\"%1\" = %2").arg(text, state.isValid() ? QString::number(static_cast<int>(state.value<Qt::CheckState>())) : qsl("no state"));
+    }
+
+    static QStringList offeredEntries(const QComboBox* pChoice)
+    {
+        QStringList offered;
+        for (int index = 0, total = pChoice->count(); index < total; ++index) {
+            offered << saidAs(pChoice->itemText(index), pChoice->itemData(index));
+        }
+        return offered;
     }
 
     static void verifyNoProfileNoticeIs(const dlgProfilePreferences* pDialog, const bool shown)
@@ -264,6 +285,99 @@ private slots:
 
         QVERIFY2(applied, "the debounce never wrote the settings back");
         QCOMPARE(stored, enums::MenuBarAltKeyNavigation::Always);
+    }
+
+    // Each entry carries the state it stands for, so its place in the list says nothing about what is stored
+    void test_theShowIconsOnMenusDropdownOffersEachStateOnce()
+    {
+        openPreferences(mpPreferences, nullptr);
+        QComboBox* pChoice = mpPreferences->comboBox_showIconsOnMenus;
+        QVERIFY2(pChoice->isEnabled(), "showing icons on menus is not a profile setting and must stay usable");
+
+        QStringList wanted;
+        for (const auto& [state, text] : showIconsOnMenusChoices()) {
+            wanted << saidAs(text, QVariant::fromValue(state));
+        }
+        QCOMPARE(offeredEntries(pChoice), wanted);
+    }
+
+    // What Mudlet.ini holds is read into mShowIconsOnMenuCheckedState at startup, and the dialog opens on its entry
+    void test_theShowIconsOnMenusDropdownOpensOnTheStoredState()
+    {
+        mudlet* pMudlet = mudlet::self();
+        const Qt::CheckState wasState = pMudlet->mShowIconsOnMenuCheckedState;
+        auto restore = qScopeGuard([wasState]() {
+            mudlet::self()->mShowIconsOnMenuCheckedState = wasState;
+        });
+
+        QStringList misses;
+        for (const auto& [state, text] : showIconsOnMenusChoices()) {
+            pMudlet->mShowIconsOnMenuCheckedState = state;
+            openPreferences(mpPreferences, nullptr);
+            if (const QString shown = mpPreferences->comboBox_showIconsOnMenus->currentText(); shown != text) {
+                misses << qsl("stored as %1, it opens on \"%2\" rather than \"%3\"").arg(QString::number(static_cast<int>(state)), shown, text);
+            }
+            delete mpPreferences;
+            mpPreferences = nullptr;
+        }
+        QVERIFY2(misses.isEmpty(), qPrintable(misses.join(qsl("; "))));
+    }
+
+    // Picked by its words, as a player picks it, so an entry carrying another entry's state is caught. A second
+    // dialog follows through signal_showIconsOnMenusChanged.
+    void test_choosingAShowIconsOnMenusEntryStoresItsState()
+    {
+        mudlet* pMudlet = mudlet::self();
+        const Qt::CheckState wasState = pMudlet->mShowIconsOnMenuCheckedState;
+        auto restore = qScopeGuard([wasState]() {
+            mudlet::self()->setShowIconsOnMenu(wasState);
+        });
+        pMudlet->setShowIconsOnMenu(Qt::PartiallyChecked);
+        openPreferences(mpPreferences, mpHost);
+        openPreferences(mpSecondPreferences, nullptr);
+        QComboBox* pChoice = mpPreferences->comboBox_showIconsOnMenus;
+
+        QStringList misses;
+        // Starting at the default, so each pick is a change
+        for (const auto& [state, text] : {std::pair{Qt::Checked, qsl("Always")}, std::pair{Qt::Unchecked, qsl("Never")}, std::pair{Qt::PartiallyChecked, qsl("Follow the system")}}) {
+            const int index = pChoice->findText(text);
+            QVERIFY2(index >= 0, qPrintable(qsl("there is no \"%1\" to choose").arg(text)));
+            QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+            pChoice->setCurrentIndex(index);
+            QVERIFY2(TestSettings::waitForApply(applySpy), qPrintable(qsl("the debounce never wrote \"%1\" back").arg(text)));
+            if (pMudlet->mShowIconsOnMenuCheckedState != state) {
+                misses << qsl("choosing \"%1\" stored %2 rather than %3").arg(text, QString::number(static_cast<int>(pMudlet->mShowIconsOnMenuCheckedState)), QString::number(static_cast<int>(state)));
+            }
+            if (const QString followed = mpSecondPreferences->comboBox_showIconsOnMenus->currentText(); followed != text) {
+                misses << qsl("choosing \"%1\" left the other dialog on \"%2\"").arg(text, followed);
+            }
+        }
+        QVERIFY2(misses.isEmpty(), qPrintable(misses.join(qsl("; "))));
+    }
+
+    // The entries are made in code, so a language change has to reword them rather than add three more
+    void test_aLanguageChangeRewordsTheShowIconsOnMenusEntries()
+    {
+        openPreferences(mpPreferences, nullptr);
+        QComboBox* pChoice = mpPreferences->comboBox_showIconsOnMenus;
+        const int chosen = pChoice->currentIndex();
+
+        TestSettings::BracketingTranslator translator;
+        QCoreApplication::installTranslator(&translator);
+        mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
+        // Read before the translator goes, so a failure cannot leave it installed
+        const QStringList offered = offeredEntries(pChoice);
+        const int chosenAfter = pChoice->currentIndex();
+        const QString toolTip = pChoice->toolTip();
+        QCoreApplication::removeTranslator(&translator);
+
+        QStringList wanted;
+        for (const auto& [state, text] : showIconsOnMenusChoices()) {
+            wanted << saidAs(qsl("[%1]").arg(text), QVariant::fromValue(state));
+        }
+        QCOMPARE(offered, wanted);
+        QCOMPARE(chosenAfter, chosen);
+        QVERIFY2(toolTip.contains(qsl("<b>[Always]</b>")), qPrintable(qsl("the tooltip does not name the entries in the new language: %1").arg(toolTip)));
     }
 
     // The notice is also the dialog's description, which has to follow it into
