@@ -50,6 +50,7 @@
 #include <QRadialGradient>
 #include <QSettings>
 #include <QSetIterator>
+#include <QVarLengthArray>
 #include <QVector3D>
 
 #include <algorithm>
@@ -124,18 +125,33 @@ bool TMapPainter::directionalExitLinesEnabled()
     return !settings || settings->value(qsl("directionalExitLines"), true).toBool();
 }
 
+// The compass exits of to that lead back to from, the reverse of direction first
+static QVarLengthArray<int, 8> exitsLeadingBack(const TRoom& from, const int direction, const TRoom& to)
+{
+    QVarLengthArray<int, 8> exits;
+    const int reverse = TMap::scmReverseDirections.value(direction);
+    if (reverse && to.getExit(reverse) == from.getId()) {
+        exits.append(reverse);
+    }
+    for (int back = DIR_NORTH; back <= DIR_SOUTHWEST; ++back) {
+        if (back != reverse && to.getExit(back) == from.getId()) {
+            exits.append(back);
+        }
+    }
+    return exits;
+}
+
 int TMapPainter::wayBack(const TRoom& room, const ExitToPaint& exit)
 {
     if (!exit.destination) {
         return 0;
     }
-    const int reverse = TMap::scmReverseDirections.value(exit.direction);
-    if (reverse && exit.destination->getExit(reverse) == room.getId()) {
-        return reverse;
-    }
-    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
-        if (exit.destination->getExit(direction) == room.getId()) {
-            return direction;
+    // Only an exit back that takes this one as its own way back pairs with it: with two exits into the same room, the
+    // way back belongs to one of them, and the other would otherwise lose its line under that one's custom line
+    for (const int back : exitsLeadingBack(room, exit.direction, *exit.destination)) {
+        const QVarLengthArray<int, 8> ownWaysBack = exitsLeadingBack(*exit.destination, back, room);
+        if (!ownWaysBack.isEmpty() && ownWaysBack.first() == exit.direction) {
+            return back;
         }
     }
     return 0;
