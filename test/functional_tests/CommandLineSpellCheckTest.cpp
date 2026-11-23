@@ -26,9 +26,10 @@
 // it: what a word looks like and what a right-click offers are only visible
 // from the widget.
 //
-// Every word checked here is made up, so no system dictionary can know it -
-// the test binaries do not find Mudlet's bundled ones, and a machine that has
-// one installed must not change the outcome.
+// Most words checked here are made up, so no system dictionary can know them
+// and which one is installed cannot change the outcome. The few that are
+// common English words, or near misses of one, rely on the profile's English
+// dictionary, which init() requires to be there, knowing "look".
 
 #include <QMenu>
 #include <QMouseEvent>
@@ -483,6 +484,65 @@ private slots:
         QVERIFY2(pMenu, "right-clicking the command line opened no menu");
         QVERIFY2(!findAction(pMenu, TCommandLine::tr("Add to user dictionary")), qPrintable(actionTexts(pMenu).join(qsl(" | "))));
         closeMenu(pMenu);
+    }
+
+    // A word the line does not underline is not one to correct, so it gets the standard menu alone
+    void test_rightClickingAWordSpeltRightOffersNoSpellings()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        // too short to be checked, so its menu is the standard one
+        enterText(pCommandLine, qsl("qz look"));
+        QVERIFY(unmarked(pCommandLine, qsl("look")));
+        QMenu* pStandardMenu = rightClick(pCommandLine, qsl("qz"));
+        QVERIFY2(pStandardMenu, "right-clicking the command line opened no menu");
+        const QStringList standardEntries = actionTexts(pStandardMenu);
+        closeMenu(pStandardMenu);
+
+        QMenu* pMenu = rightClick(pCommandLine, qsl("look"));
+        QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+        const QStringList entries = actionTexts(pMenu);
+        closeMenu(pMenu);
+        QCOMPARE(entries, standardEntries);
+    }
+
+    // The system dictionary's own suggestions are what the menu is for
+    void test_rightClickingANearMissOffersTheRealWord()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("lokk qzxother"));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("lokk")));
+
+        QMenu* pMenu = rightClick(pCommandLine, qsl("lokk"));
+        QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+        const QStringList entries = actionTexts(pMenu);
+        closeMenu(pMenu);
+        QVERIFY2(entries.contains(qsl("look")), qPrintable(entries.join(qsl(" | "))));
+        QVERIFY2(!entries.contains(TCommandLine::tr("no suggestions (system)")), qPrintable(entries.join(qsl(" | "))));
+    }
+
+    // Nothing is underlined without a dictionary, so nothing is offered either
+    void test_rightClickingWithNoDictionaryOffersNoSpellings()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        enterText(pCommandLine, qsl("qzxnodict"));
+        // nothing may return early before the profile's dictionary is put back, or every later init() fails
+        const QString dictionary = mpHost->getSpellDic();
+        mpHost->setSpellDic(qsl("qq_QZX"));
+        const bool dictionaryLoaded = mpHost->spellChecker().systemHandle();
+
+        QMenu* pMenu = rightClick(pCommandLine, qsl("qzxnodict"));
+        const QString texts = pMenu ? actionTexts(pMenu).join(qsl(" | ")) : QString();
+        if (pMenu) {
+            closeMenu(pMenu);
+        }
+        mpHost->setSpellDic(dictionary);
+        QVERIFY(!dictionaryLoaded);
+        QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+        QVERIFY2(!texts.contains(TCommandLine::tr("Add to user dictionary")) && !texts.contains(TCommandLine::tr("no suggestions (system)")), qPrintable(texts));
+        QVERIFY(mpHost->spellChecker().systemHandle());
     }
 
     // Scripts add their own entries to the menu, which raise the event they
