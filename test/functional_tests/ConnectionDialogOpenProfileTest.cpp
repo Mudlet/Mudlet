@@ -24,7 +24,9 @@
  *  - the dialog takes itself off screen before the load starts, rather than
  *    sitting there through it collecting further clicks (PR #5313, issue #5303);
  *  - asking again for the profile that is already open reconnects it instead of
- *    loading it a second time (PR #7778, issue #7698).
+ *    loading it a second time (PR #7778, issue #7698);
+ *  - a password changed for the open profile is the one it signs in with next,
+ *    rather than waiting on disk until it is next opened.
  *
  * Run with: ctest -R ConnectionDialogOpenProfileTest -V
  */
@@ -206,6 +208,28 @@ private slots:
         QVERIFY2(HostManager::self()->getHost(mProfileName), "The profile never loaded, so nothing was measured");
         QVERIFY2(mDialogAliveDuringTheLoad, "The dialog was already gone when the profile loaded, so its visibility was never measured");
         QVERIFY2(!mDialogOnScreenDuringTheLoad, "The dialog was still on screen while the profile loaded");
+    }
+
+    void test_aPasswordChangedForTheOpenProfileReachesIt()
+    {
+        QVERIFY2(openTheTestProfile(), "The test profile could not be opened, so there is nothing for the dialog to change");
+        QVERIFY2(reopenDialog(), "No dialog to test against");
+        QVERIFY(selectTestProfile());
+        auto* pHost = HostManager::self()->getHost(mProfileName);
+        QVERIFY(pHost);
+        // the saved password is filled in on the next turn of the event loop, over anything typed before then
+        QTest::qWait(100ms);
+
+        dialog()->character_password_entry->selectAll();
+        // spaces at either end are part of the password, as the saved copy keeps them
+        QTest::keyClicks(dialog()->character_password_entry, qsl(" sesame "));
+        // the dialog waits for typing to pause before it saves
+        QVERIFY2(QTest::qWaitFor(
+                         [pHost]() {
+                             return pHost->getPass() == qsl(" sesame ");
+                         },
+                         5s),
+                 "The open profile is still using its old password");
     }
 
     // With the profile open, the dialog has to leave it alone and just
