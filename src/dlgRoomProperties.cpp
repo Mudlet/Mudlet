@@ -846,6 +846,7 @@ void dlgRoomProperties::initGeneral()
     //: Placeholder of Configure room's game ID field, which is disabled when several rooms are being configured, as a game ID belongs to one room
     lineEdit_hash->setPlaceholderText(single ? QString() : tr("Only for a single room"));
     label_hashWarning->hide();
+    label_userDataWarning->hide();
 
     QSet<int> roomAreas;
     for (const TRoom* room : std::as_const(rooms)) {
@@ -1025,10 +1026,48 @@ void dlgRoomProperties::slot_removeUserData()
     for (const int row : std::as_const(rows)) {
         tableWidget_userData->removeRow(row);
     }
+    updateUserDataKeyWarning();
+}
+
+void dlgRoomProperties::updateUserDataKeyWarning()
+{
+    QStringList fieldKeys;
+    bool mapKey = false;
+    for (int row = 0; row < tableWidget_userData->rowCount(); ++row) {
+        const QTableWidgetItem* keyItem = tableWidget_userData->item(row, 0);
+        // Only an added row's key can be typed; one listed from the rooms is shown only if the table edits it
+        if (!keyItem || !keyItem->flags().testFlag(Qt::ItemIsEditable)) {
+            continue;
+        }
+        const QString key = keyItem->text();
+        if (key.trimmed().isEmpty() || editedInUserDataTable(key)) {
+            continue;
+        }
+        if (key.startsWith(scmMudletOwnedUserDataPrefix)) {
+            mapKey = true;
+        } else if (!fieldKeys.contains(key)) {
+            fieldKeys << key;
+        }
+    }
+    QStringList warnings;
+    for (const QString& key : std::as_const(fieldKeys)) {
+        //: Warning under the table on Configure room's User data tab; %1 is a key typed into a new row, such as "description", which has a field of its own on the General tab
+        warnings << tr("\"%1\" is edited on the General tab, so this row will not be saved.").arg(key);
+    }
+    if (mapKey) {
+        //: Warning under the table on Configure room's User data tab, when a key typed into a new row starts with room.ui_, which the map keeps for itself; do not translate room.ui_
+        warnings << tr("Keys starting with room.ui_ belong to the map, so such a row will not be saved.");
+    }
+    label_userDataWarning->setText(warnings.join(QLatin1Char(' ')));
+    label_userDataWarning->setVisible(!warnings.isEmpty());
 }
 
 void dlgRoomProperties::slot_userDataItemChanged(QTableWidgetItem* item)
 {
+    if (item && item->column() == 0) {
+        updateUserDataKeyWarning();
+        return;
+    }
     if (!item || item->column() != 1 || !item->data(scmMixedValueRole).toBool()) {
         return;
     }

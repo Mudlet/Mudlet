@@ -639,6 +639,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QLabel" name="label_userDataWarning">
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_userDataButtons">
          <item>
           <widget class="QPushButton" name="pushButton_addUserData">

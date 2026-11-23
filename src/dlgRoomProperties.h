@@ -92,6 +92,8 @@ private:
     void initUserData();
     void addUserDataRow(const QString& key, const std::optional<QString>& value, const bool keyEditable);
     QMap<QString, std::optional<QString>> userDataChanges() const;
+    // Says which keys typed into added rows are kept elsewhere and so will not be saved from the table
+    void updateUserDataKeyWarning();
     TRoom* liveRoom(const int) const;
     QSet<int> liveRoomIds() const;
 
