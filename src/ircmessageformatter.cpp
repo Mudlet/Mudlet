@@ -244,15 +244,16 @@ QString IrcMessageFormatter::formatMotdMessage(IrcMotdMessage* message, bool isF
 
 QString IrcMessageFormatter::formatNamesMessage(IrcNamesMessage* message, bool isForLua)
 {
-    const QString count = QString::number(message->names().count());
     const QString channel = nameFor(message->channel(), isForLua);
     if (isForLua) {
+        const QString count = QString::number(message->names().count());
         // lua actually needs the names for parsing, since getting a names
         // list from the UI userModel alone would be limiting to the IRC commands.
         const QString nameList = message->names().join(" ");
         return QObject::tr("! %1 has %2 users: %3").arg(channel, count, nameList);
     }
-    return QObject::tr("! %1 has %2 users").arg(channel, count);
+    //: Shown in the IRC window when the server lists a channel's users, on joining it or after /NAMES. %1 is the channel, %n how many users are in it.
+    return QObject::tr("! %1 has %n users", nullptr, message->names().count()).arg(channel);
 }
 
 QString IrcMessageFormatter::formatNickMessage(IrcNickMessage* message, bool isForLua)
@@ -432,11 +433,17 @@ QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool i
         return QObject::tr("[TOPIC] %1").arg(topic);
     }
 
+    const QString nick = nameFor(message->nick(), isForLua);
     if (message->topic().isEmpty()) {
-        return QObject::tr("! %2 cleared topic").arg(nameFor(message->nick(), isForLua));
+        return QObject::tr("! %2 cleared topic").arg(nick);
     }
 
-    return QObject::tr("! %2 changed topic").arg(nameFor(message->nick(), isForLua));
+    // scripts are given the line they always were
+    if (isForLua) {
+        return QObject::tr("! %2 changed topic").arg(nick);
+    }
+    //: Shown in the IRC client when someone sets a channel's topic. %1 is their nickname, %2 the new topic.
+    return QObject::tr("! %1 changed topic to: %2").arg(nick, IrcTextFormat().toHtml(message->topic()));
 }
 
 QString IrcMessageFormatter::formatUnknownMessage(IrcMessage* message, bool isForLua)
