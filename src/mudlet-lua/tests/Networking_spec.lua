@@ -190,6 +190,53 @@ describe("connectToServer validates its arguments without connecting", function(
   end)
 end)
 
+describe("a connection attempt after disconnect() found nothing to disconnect", function()
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    for _ = 1, math.ceil(timeoutMs / 20) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(20)
+    end
+    return predicate()
+  end
+
+  local function linesSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  it("still reports the attempt failing", function()
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000))
+    -- Finds no connection to end, so the flags it sets are never cleared by a disconnection
+    disconnect()
+
+    local failed = false
+    local handler = registerAnonymousEventHandler("sysDisconnectionEvent", function() failed = true end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      -- Calls off any automatic retry the failure scheduled
+      disconnect()
+    end)
+
+    local mark = getLastLineNumber("main")
+    -- Nothing listens on port 1, so the connection is refused straight away
+    connectToServer("127.0.0.1", 1)
+    assert.is_true(waitUntil(function() return failed or connected() end, 10000), "the connection attempt never ended")
+    if connected() then
+      pending("something accepted a connection on 127.0.0.1:1, so the refusal could not be tested")
+      return
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(mark), "Unable to connect") end, 2000),
+                   "the refused connection was not reported, saw: " .. linesSince(mark))
+  end)
+end)
+
 describe("getConnectionInfo returns a host/port/connected triple", function()
   it("returns a string, a number and a boolean", function()
     local host, port, connected = getConnectionInfo()
@@ -874,6 +921,290 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals("REPORT", method)
       assertFixtureResponse(response)
       assert.is_true(contains(body, "only /echo answers this method"), body)
+    end)
+  end)
+
+  describe("request ids", function()
+    local downloadTarget = getMudletHomeDir() .. "/busted-http-request-id.txt"
+    local unwritableTarget = getMudletHomeDir() .. "/busted-no-such-directory/request-id.txt"
+
+    local function lastArgument(...)
+      return (select(-1, ...))
+    end
+
+    local cases = {
+      {"sysGetHttpDone", function() return getHTTP(fixtureUrl("/fixture.txt")) end},
+      {"sysGetHttpError", function() return getHTTP(fixtureUrl("/no-such-fixture.txt")) end},
+      {"sysPostHttpDone", function() return postHTTP("payload", fixtureUrl("/echo")) end},
+      {"sysPostHttpError", function() return postHTTP("payload", fixtureUrl("/fixture.txt")) end},
+      {"sysPutHttpDone", function() return putHTTP("payload", fixtureUrl("/echo")) end},
+      {"sysPutHttpError", function() return putHTTP("payload", fixtureUrl("/fixture.txt")) end},
+      {"sysDeleteHttpDone", function() return deleteHTTP(fixtureUrl("/echo")) end},
+      {"sysDeleteHttpError", function() return deleteHTTP(fixtureUrl("/fixture.txt")) end},
+      {"sysCustomHttpDone", function() return customHTTP("REPORT", "payload", fixtureUrl("/echo")) end},
+      {"sysCustomHttpError", function() return customHTTP("REPORT", "payload", fixtureUrl("/fixture.txt")) end},
+      {"sysDownloadDone", function() return downloadFile(downloadTarget, fixtureUrl("/fixture.txt")) end},
+      {"sysDownloadError", function() return downloadFile(downloadTarget, fixtureUrl("/no-such-fixture.txt")) end},
+      {"sysDownloadError", function() return downloadFile(unwritableTarget, fixtureUrl("/fixture.txt")) end, "when the file cannot be written"},
+    }
+
+    for _, case in ipairs(cases) do
+      local eventName, request, detail = case[1], case[2], case[3]
+      it("returns an id that " .. eventName .. " carries as its last argument " .. (detail or ""), function()
+        if noFixtureServer() then
+          return
+        end
+        finally(function() os.remove(downloadTarget) end)
+        local queued, actualUrl, id = request()
+        assert.is_true(queued)
+        assert.is_string(actualUrl)
+        assert.is_number(id)
+
+        local eventArguments = {waitForEvent(eventName, 2000)}
+        assert.equals(eventName, eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+    end
+
+    it("tells apart two requests for the same url", function()
+      if noFixtureServer() then
+        return
+      end
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysGetHttpDone", function(_, _, _, _, id)
+        seen[id] = true
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local _, _, firstId = getHTTP(fixtureUrl("/fixture.txt"))
+      local _, _, secondId = getHTTP(fixtureUrl("/fixture.txt"))
+      assert.is_number(firstId)
+      assert.is_number(secondId)
+      assert.are_not.equal(firstId, secondId)
+
+      for _ = 1, 2 do
+        if not (seen[firstId] and seen[secondId]) then
+          waitForEvent("sysGetHttpDone", 2000)
+        end
+      end
+      assert.is_true(seen[firstId])
+      assert.is_true(seen[secondId])
+    end)
+
+    it("carries the id through sysDownloadFileProgress as its last argument", function()
+      if noFixtureServer() then
+        return
+      end
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, _, _, _, id)
+        if id then
+          seen[id] = true
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        os.remove(downloadTarget)
+      end)
+
+      local _, _, id = downloadFile(downloadTarget, fixtureUrl("/fixture.txt"))
+      assert.equals("sysDownloadDone", (waitForEvent("sysDownloadDone", 2000)))
+      assert.is_true(seen[id])
+    end)
+
+    it("hands out positive whole numbers that only go up, across every function", function()
+      if noFixtureServer() then
+        return
+      end
+      finally(function() os.remove(downloadTarget) end)
+      local previous = 0
+      for _, case in ipairs(cases) do
+        local _, _, id = case[2]()
+        assert.is_number(id)
+        assert.equals(math.floor(id), id)
+        assert.is_true(id > previous, case[1])
+        previous = id
+        assert.equals(case[1], (waitForEvent(case[1], 2000)))
+      end
+    end)
+
+    it("returns no id from any function when the request is refused", function()
+      local noSuchFile = getMudletHomeDir() .. "/busted-no-such-upload.txt"
+      local refused = {
+        getHTTP = function() return getHTTP("") end,
+        postHTTP = function() return postHTTP("payload", "") end,
+        putHTTP = function() return putHTTP("payload", "") end,
+        deleteHTTP = function() return deleteHTTP("") end,
+        customHTTP = function() return customHTTP("REPORT", "payload", "") end,
+        downloadFile = function() return downloadFile(downloadTarget, "") end,
+        ["getHTTP with a refused scheme"] = function() return getHTTP("ftp://localhost/file.txt") end,
+        ["downloadFile with a refused scheme"] = function() return downloadFile(downloadTarget, "ftp://localhost/file.txt") end,
+        ["postHTTP with a missing upload"] = function() return postHTTP("payload", "http://localhost/", {}, noSuchFile) end,
+      }
+      for name, request in pairs(refused) do
+        local results = {n = 0}
+        local function capture(...)
+          results.n = select("#", ...)
+          results[1], results[2] = ...
+        end
+        capture(request())
+        assert.equals(2, results.n, name)
+        assert.is_nil(results[1], name)
+        assert.is_string(results[2], name)
+      end
+    end)
+
+    describe("when no server answers", function()
+      local unanswered = {
+        {"sysGetHttpError", function(url) return getHTTP(url) end},
+        {"sysPostHttpError", function(url) return postHTTP("payload", url) end},
+        {"sysPutHttpError", function(url) return putHTTP("payload", url) end},
+        {"sysDeleteHttpError", function(url) return deleteHTTP(url) end},
+        {"sysCustomHttpError", function(url) return customHTTP("REPORT", "payload", url) end},
+        {"sysDownloadError", function(url) return downloadFile(downloadTarget, url) end},
+      }
+
+      for _, case in ipairs(unanswered) do
+        local eventName, request = case[1], case[2]
+        it("still reaches " .. eventName, function()
+          if noFixtureServer() then
+            return
+          end
+          finally(function() os.remove(downloadTarget) end)
+          local _, _, id = request(fixtureUrl("/hangup"))
+          local eventArguments = {waitForEvent(eventName, 2000)}
+          assert.equals(eventName, eventArguments[1])
+          assert.equals(id, lastArgument(unpack(eventArguments)))
+        end)
+      end
+    end)
+
+    describe("with a local file url", function()
+      local source = getMudletHomeDir() .. "/busted-http-request-id-source.txt"
+
+      local function asFileUrl(path)
+        return "file://" .. (path:sub(1, 1) == "/" and "" or "/") .. path
+      end
+
+      it("reaches sysDownloadDone", function()
+        writeFile(source, "local contents")
+        finally(function()
+          os.remove(source)
+          os.remove(downloadTarget)
+        end)
+        local _, _, id = downloadFile(downloadTarget, asFileUrl(source))
+        local eventArguments = {waitForEvent("sysDownloadDone", 2000)}
+        assert.equals("sysDownloadDone", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("reaches sysDownloadError when the file is missing", function()
+        local _, _, id = downloadFile(downloadTarget, asFileUrl(source .. "-missing"))
+        local eventArguments = {waitForEvent("sysDownloadError", 2000)}
+        assert.equals("sysDownloadError", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+    end)
+
+    describe("across a redirect", function()
+      it("matches a response whose url no longer matches the one requested", function()
+        if noFixtureServer() then
+          return
+        end
+        local requested = fixtureUrl("/redirect/302/echo")
+        local _, returnedUrl, id = getHTTP(requested)
+        assert.equals(requested, returnedUrl)
+
+        local eventArguments = {waitForEvent("sysGetHttpDone", 2000)}
+        assert.equals("sysGetHttpDone", eventArguments[1])
+        assert.equals(fixtureUrl("/echo"), eventArguments[2])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("survives a chain of redirects", function()
+        if noFixtureServer() then
+          return
+        end
+        local _, _, id = getHTTP(fixtureUrl("/redirect/302/redirect/301/redirect/307/echo"))
+        local eventArguments = {waitForEvent("sysGetHttpDone", 2000)}
+        assert.equals(fixtureUrl("/echo"), eventArguments[2])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("reaches the event of the verb that finished, not the one that was asked for", function()
+        if noFixtureServer() then
+          return
+        end
+        local verbCases = {
+          {"sysGetHttpDone", "GET", function() return postHTTP("payload", fixtureUrl("/redirect/302/echo")) end},
+          {"sysGetHttpDone", "GET", function() return postHTTP("payload", fixtureUrl("/redirect/303/echo")) end},
+          {"sysPostHttpDone", "POST", function() return postHTTP("payload", fixtureUrl("/redirect/307/echo")) end},
+          {"sysPutHttpDone", "PUT", function() return putHTTP("payload", fixtureUrl("/redirect/307/echo")) end},
+          {"sysDeleteHttpDone", "DELETE", function() return deleteHTTP(fixtureUrl("/redirect/307/echo")) end},
+          {"sysCustomHttpDone", "REPORT", function() return customHTTP("REPORT", "payload", fixtureUrl("/redirect/307/echo")) end},
+        }
+        for _, case in ipairs(verbCases) do
+          local eventName, method, request = case[1], case[2], case[3]
+          local _, _, id = request()
+          local eventArguments = {waitForEvent(eventName, 2000)}
+          assert.equals(eventName, eventArguments[1])
+          assert.is_true(contains(eventArguments[3], "method=" .. method), eventArguments[3])
+          assert.equals(id, lastArgument(unpack(eventArguments)))
+        end
+      end)
+
+      it("reaches the error event when the redirect leads nowhere", function()
+        if noFixtureServer() then
+          return
+        end
+        local nowhere = {
+          {"sysGetHttpError", function(url) return getHTTP(url) end},
+          {"sysPostHttpError", function(url) return postHTTP("payload", url) end},
+          {"sysPutHttpError", function(url) return putHTTP("payload", url) end},
+          {"sysDeleteHttpError", function(url) return deleteHTTP(url) end},
+          {"sysCustomHttpError", function(url) return customHTTP("REPORT", "payload", url) end},
+        }
+        for _, case in ipairs(nowhere) do
+          local eventName, request = case[1], case[2]
+          local _, _, id = request(fixtureUrl("/redirect/307/no-such-fixture.txt"))
+          local eventArguments = {waitForEvent(eventName, 2000)}
+          assert.equals(eventName, eventArguments[1])
+          assert.equals(fixtureUrl("/no-such-fixture.txt"), eventArguments[3])
+          assert.equals(id, lastArgument(unpack(eventArguments)))
+        end
+      end)
+
+      it("reaches the error event when the redirects never end", function()
+        if noFixtureServer() then
+          return
+        end
+        local _, _, id = getHTTP(fixtureUrl("/redirect/loop"))
+        local eventArguments = {waitForEvent("sysGetHttpError", 5000)}
+        assert.equals("sysGetHttpError", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("keeps the id on a download and its progress", function()
+        if noFixtureServer() then
+          return
+        end
+        local seen = {}
+        local handler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, _, _, _, progressId)
+          if progressId then
+            seen[progressId] = true
+          end
+        end)
+        finally(function()
+          killAnonymousEventHandler(handler)
+          os.remove(downloadTarget)
+        end)
+
+        local _, _, id = downloadFile(downloadTarget, fixtureUrl("/redirect/302/fixture.txt"))
+        local eventArguments = {waitForEvent("sysDownloadDone", 2000)}
+        assert.equals("sysDownloadDone", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+        assert.equals(fixtureBody, readFile(downloadTarget))
+        assert.is_true(seen[id])
+      end)
     end)
   end)
 end)
@@ -3558,6 +3889,30 @@ describe("sending protocol data to a game server that has not negotiated", funct
     local atcp, atcpErr = sendATCP("Core.Hello")
     assert.is_nil(atcp)
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
+  end)
+
+  it("still names a disconnect the user's when a sysDisconnectionEvent handler reconnects", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local reconnected = false
+    local handler
+    handler = registerAnonymousEventHandler("sysDisconnectionEvent", function()
+      killAnonymousEventHandler(handler)
+      reconnected = true
+      reconnect()
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local mark = getLastLineNumber("main")
+    disconnect()
+    assert.is_true(waitUntil(function() return reconnected end, 5000), "sysDisconnectionEvent never fired")
+    local function linesSince()
+      return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(), "User Disconnected") end, 2000),
+                   "the disconnect was not reported as the user's, saw: " .. linesSince())
   end)
 end)
 
