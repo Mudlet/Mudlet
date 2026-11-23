@@ -1056,7 +1056,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
     // QMainWindow::restoreState() resizes windows part way through rearranging the docks, and a
     // handler that docks, floats, shows or hides one then leaves freed items in Qt's dock layout
-    if (mudlet* const app = mudlet::self(); app && app->layoutLoading()) {
+    if (mudlet* const app = mudlet::self(); app && app->restoringLayout()) {
         app->callAfterLayoutRestore(this, [this, x, y]() {
             raiseResizeEvents(x, y);
         });
@@ -1067,16 +1067,13 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
 void TConsole::raiseResizeEvents(const int overallWidth, const int overallHeight)
 {
-    TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-    const QString func = "handleWindowResizeEvent";
-    const QString n = "WindowResizeEvent";
-    pLua->call(func, n);
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
 
     if (mType & MainConsole) {
         raiseMudletSysWindowResizeEvent(overallWidth, overallHeight);
     }
     //create the sysUserWindowResize Event for automatic resizing with Geyser
-    if (mType & (UserWindow)) {
+    if (mType & UserWindow) {
         TEvent mudletEvent{};
         mudletEvent.mArgumentList.append(QLatin1String("sysUserWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(overallWidth));

@@ -127,6 +127,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <utility>
 #include <QStyle>
 
 #if defined(Q_OS_WINDOWS)
@@ -4231,6 +4232,7 @@ bool mudlet::loadWindowLayout()
             ifs >> layoutData;
             layoutFile.close();
 
+            mRestoringLayout = true;
             const bool rv = restoreState(layoutData);
 
             if (rv) {
@@ -4243,9 +4245,9 @@ bool mudlet::loadWindowLayout()
                     }
                 }
             }
-            // Before the flag drops, so a handler run from here is still refused a nested load or a save
-            while (!mCallsAfterLayoutRestore.isEmpty()) {
-                const auto [context, callback] = mCallsAfterLayoutRestore.takeFirst();
+            mRestoringLayout = false;
+            // Before mIsLoadingLayout drops, so a handler run from here is still refused a nested load or a save
+            for (const auto& [context, callback] : std::exchange(mCallsAfterLayoutRestore, {})) {
                 if (context) {
                     callback();
                 }

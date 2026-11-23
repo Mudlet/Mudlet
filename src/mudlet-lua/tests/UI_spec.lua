@@ -8637,7 +8637,7 @@ describe("Main window size and saved layout", function()
     end)
 
     it("a resize handler the load runs finds every window already where the layout puts it", function()
-      -- a handler run part way through Qt's restore, that docked or floated a window, corrupted its dock layout
+      -- a handler that docks or floats a window part way through Qt's restore corrupts its dock layout
       local first, second = "layoutRestoredA", "layoutRestoredB"
       local handler
       finally(function()

@@ -207,7 +207,8 @@ public:
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
     bool layoutLoading() const override { return mIsLoadingLayout; }
-    // Runs callback once Qt has finished restoring the layout being loaded, unless context is gone by then
+    bool restoringLayout() const { return mRestoringLayout; }
+    // While restoringLayout(), holds callback until Qt has finished, and drops it if context is gone by then
     void callAfterLayoutRestore(QObject* context, std::function<void()> callback);
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
@@ -385,6 +386,7 @@ public:
     int mEditorTreeWidgetIconSize = 0;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
+    bool mRestoringLayout = false;
     QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
