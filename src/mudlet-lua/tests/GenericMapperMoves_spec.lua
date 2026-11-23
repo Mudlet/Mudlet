@@ -659,6 +659,42 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
     assert.equals(1, #sent)
   end)
 
+  it("forgets a paused walk's destination once a resume finds the character already there", function()
+    stub(map, "find_me")
+    finally(function() map.find_me:revert() end)
+    map.speedwalk(rooms[3])
+    map.pauseSpeedwalk()
+    -- walked the rest of the way by hand
+    map.set("currentRoom", rooms[3])
+    map.resumeSpeedwalk()
+    local live = liveTimers()
+    live[#live].fn()
+    assert.stub(map.echo).was_called_with("You are already in that room.")
+
+    map.set("currentRoom", rooms[1])
+    local before = #timers
+    map.resumeSpeedwalk()
+    assert.stub(map.echo).was_called_with("Not currently speedwalking.")
+    assert.equals(before, #timers, "a resume with no walk left should not set off towards the old destination")
+    assert.equals(1, #sent)
+  end)
+
+  it("stops a paused walk whose directions a route not found has emptied", function()
+    stub(map, "find_me")
+    finally(function() map.find_me:revert() end)
+    map.speedwalk(rooms[3])
+    map.pauseSpeedwalk()
+    getPath(rooms[1], makeRoom("Walk island", 5))
+    assert.equals(0, #speedWalkDir, "the failed lookup should have emptied speedWalkDir")
+    map.stopSpeedwalk()
+    assert.stub(map.echo).was_called_with("Speedwalking stopped.")
+
+    local before = #timers
+    map.resumeSpeedwalk()
+    assert.equals(before, #timers, "a stopped walk should not resume")
+    assert.equals(1, #sent)
+  end)
+
   it("picks a time from the range when given a second number", function()
     map.speedwalk(rooms[3])
     for _ = 1, 20 do

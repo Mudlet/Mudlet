@@ -4409,6 +4409,10 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     walkPath = speedWalkPath
     walkDirs = speedWalkDir
     if #speedWalkPath == 0 then
+        -- a resumed walk that has nowhere left to go is over; a hold ending here ends its walk itself
+        if not walking then
+            walk_destination = nil
+        end
         if tonumber(roomID) == map.currentRoom then
             map.echo("You are already in that room.")
         else
@@ -4505,10 +4509,11 @@ function map.resumeSpeedwalk(delay)
     end
 end
 
+-- A paused walk is one too, though a route looked up and not found since has emptied speedWalkDir
 function map.stopSpeedwalk()
     local held = walk_hold ~= nil
     release_walk_hold()
-    if #speedWalkDir ~= 0 or held then
+    if #speedWalkDir ~= 0 or held or walk_destination then
         walking = false
         walk_destination = nil
         map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
