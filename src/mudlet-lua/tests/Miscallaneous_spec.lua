@@ -1361,6 +1361,109 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
         end)
 
+        -- The default file name format is to the second, so the files are
+        -- written for that second and the next few, ahead of whichever one
+        -- startLogging() ends up taking
+        local function writeLogFilesAhead(contents)
+          local folder = getConfig("logDirectory")
+          lfs.mkdir(folder)
+          local now = os.time()
+          local paths = {}
+          for offset = 0, 3 do
+            local path = folder .. "/" .. os.date("%Y-%m-%d#%H-%M-%S", now + offset) .. ".html"
+            assert.is_false(fileExists(path), "a log file this spec would overwrite already exists: " .. path)
+            paths[#paths + 1] = path
+          end
+          for _, path in ipairs(paths) do
+            writeFile(path, contents)
+          end
+          return paths
+        end
+
+        it("refuses to log over a file that is not a Mudlet HTML log", function()
+          local paths = {}
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+          end)
+          setConfig("logInHTML", true)
+          local notes = "<p>A player's own notes</p>\nsecond line\n"
+          paths = writeLogFilesAhead(notes)
+
+          local started, message = startLogging(true)
+          assert.is_nil(started)
+          assert.is_true(contains(message, "not a Mudlet HTML log"), message)
+          assert.is_false(fileExists(getMudletHomeDir() .. "/autolog"), "a refused log would be retried on the next profile load")
+          for _, path in ipairs(paths) do
+            assert.equals(notes, readFile(path), "the existing file was changed: " .. path)
+          end
+          assert.equals(-2, select(4, startLogging(false)), "logging was left on after it was refused")
+        end)
+
+        it("starts a new log in a file an editor emptied to a newline or byte order mark", function()
+          local paths = {}
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          for _, blank in ipairs({"\n", "\239\187\191", "\239\187\191\r\n"}) do
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+            paths = writeLogFilesAhead(blank)
+            local started, message, path = startLogging(true)
+            assert.is_true(started, message)
+            assert.is_true(table.contains(paths, path), "logging did not open a prepared file: " .. tostring(path))
+            echo("mudlet-spec-html-blank-file-session\n")
+            startLogging(false)
+            local contents = readFile(path)
+            assert.is_true(contains(contents, "mudlet-spec-html-blank-file-session"), "the session did not reach the log")
+            assert.is_false(contains(contents, "<hr>"), "an empty file was treated as an earlier session")
+          end
+        end)
+
+        it("keeps the earlier sessions when a new one is appended to an HTML log", function()
+          local paths = {}
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          local firstPath = select(3, startLogging(true))
+          echo("mudlet-spec-html-first-session\n")
+          startLogging(false)
+          local firstSession = readFile(firstPath)
+          os.remove(firstPath)
+          paths = writeLogFilesAhead(firstSession)
+
+          local started, _, path = startLogging(true)
+          assert.is_true(started)
+          echo("mudlet-spec-html-second-session\n")
+          startLogging(false)
+
+          local contents = readFile(path)
+          assert.is_true(contains(contents, "mudlet-spec-html-first-session"), "the earlier session was lost")
+          assert.is_true(contains(contents, "mudlet-spec-html-second-session"), "the new session was not logged")
+          assert.is_true(contains(contents, "</div><hr><div>"), "the sessions are not separated")
+          local _, documents = contents:gsub("<html>", "")
+          assert.equals(1, documents, "the appended log is not a single document")
+        end)
+
         it("marks the text up with the colours and attributes it carries", function()
           local logPath
           local htmlLogging = getConfig("logInHTML")
@@ -2983,6 +3086,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(sentSince(mark, "mudletSpecOuterAllowed"), "the nested send's deny stopped the command being handled")
       end)
 
+      it("keeps the deny of a send made by a one-shot handler that stays to that send", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecOneShotNestedDenied") then
+            denyCurrentSend()
+          elseif sending:find("^mudletSpecOneShotOuterAllowed") then
+            send("mudletSpecOneShotNestedDenied" .. unencodable, false)
+          end
+          return true
+        end, true)
+        finally(function() killAnonymousEventHandler(handler) end)
+
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOneShotOuterAllowed" .. unencodable, false)
+        assert.is_false(sentSince(mark, "mudletSpecOneShotNestedDenied"), "the nested send was sent although its handler denied it")
+        assert.is_true(sentSince(mark, "mudletSpecOneShotOuterAllowed"), "the nested send's deny stopped the command being handled")
+      end)
+
       describe("outside a send request handler", function()
         it("does not stop the next command", function()
           denyCurrentSend()
@@ -3541,6 +3661,24 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the argument handling of loadProfile", function()
+      it("treats a nil offline mode as not given", function()
+        local ok, result, message = pcall(loadProfile, "mudlet-spec-never-a-profile", nil)
+        assert.is_true(ok, tostring(result))
+        assert.is_nil(result)
+        assert.equals("loadProfile: profile 'mudlet-spec-never-a-profile' does not exist", message)
+
+        ok, result, message = pcall(loadProfile, getProfileName(), nil)
+        assert.is_true(ok, tostring(result))
+        assert.is_nil(result)
+        assert.equals(string.format("loadProfile: profile '%s' is already loaded", getProfileName()), message)
+      end)
+
+      it("still refuses an offline mode that is not a boolean", function()
+        assert.has_error(function() loadProfile("mudlet-spec-never-a-profile", "yes") end)
+      end)
+    end)
+
     -- closeProfile() and resetProfile() only queue the lua_close() of the
     -- caller's state, and a call after them that spins the event loop must not
     -- let it happen underneath: the close or reset waits for the script to
@@ -3764,6 +3902,26 @@ end]])
           string.format('loadProfile(%q, true) closeProfile() report(tostring(closeProfile(%q)))', target, target))
         assert.equals("true", run.result[1])
         assert.is_true(waitUntil(function() return not loaded(closing) and not loaded(target) end), "the profiles did not close")
+      end)
+
+      it("does not reuse an http request id after resetProfile()", function()
+        if needsTestMode() then
+          return
+        end
+        local idAfterReset
+        local handler = registerAnonymousEventHandler("mudletSpecHttpIdAfterReset", function(_, id)
+          idAfterReset = id
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+        local run = runInProfileBeingTornDown([[
+local _, _, id = getHTTP("http://127.0.0.1:1/")
+resetProfile()
+report(id)]], [[
+local _, _, id = getHTTP("http://127.0.0.1:1/")
+raiseGlobalEvent("mudletSpecHttpIdAfterReset", id)]])
+        assert.is_number(run.result[1])
+        assert.is_true(waitUntil(function() return idAfterReset end), "the profile was not reset")
+        assert.is_true(idAfterReset > run.result[1])
       end)
 
       it("closes after resetProfile() then closeProfile()", function()

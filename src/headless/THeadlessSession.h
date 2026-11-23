@@ -188,8 +188,9 @@ public:
     // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
     // signal but quitRequested and mainWindowResizeRequested, which run mid-write, and fail once a close of the
     // profile has begun; submit() checks each line of a paste as a call. It is the app's input line being sent: the
-    // main command line holds the line while its aliases run, then is emptied or kept as the profile says. A command
-    // from elsewhere, such as a button, goes through runLua() and expandAlias(), which leave the line alone.
+    // main command line holds the line while its aliases run, then is emptied or kept as the profile says, unless
+    // something wrote to it meanwhile, which is left as written. A command from elsewhere, such as a button, goes
+    // through runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -229,8 +230,15 @@ public:
     // The profile's scripts read the size as the main window's, and a change raises sysWindowResizeEvent with
     // what the borders leave of it, in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told
     // no more than the profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where
-    // submit() is.
+    // submit() is. Once setGameScreenSize() has given what the game is told, this sizes only the main window.
     bool setScreenSize(int columns, int rows);
+    // What the game is told (NAWS), for a frontend that draws the main console in a font of its own and so counts its
+    // columns and rows itself: from then on in place of the main console's grid, which this leaves as it is, as it
+    // does the main window's size scripts read, so a main window given in pixels (setMainWindowSize()) keeps that
+    // size. As setScreenSize() tells the game, a width below 40 is taken as 40, the game is told no more than the
+    // profile's wrap width, and of a change once it has held for 0.3s. Refused where setScreenSize() is. Holds till
+    // the profile closes.
+    bool setGameScreenSize(int columns, int rows);
     // Shows or closes the Central Debug Console, as the editor's button does: while it is shown, debugText carries
     // what it prints, what was kept from before first, and the profiles write what they write only in debug mode.
     // There is one for the whole process, owned by the session that showed it last: showing it here takes it from
@@ -381,9 +389,10 @@ public:
     // Enter on that line, holding this text, each line of it a command: one goes to the function a script's
     // setCmdLineAction() gave the line, or else through the aliases to the game as submit() sends it, and then a
     // console's own line echoes it in its console unless the profile never echoes commands. The text joins the
-    // line's history, and the line is then emptied where the profile clears a sent command, which
-    // windowCommandLineTextChanged tells. Before it returns. False as setWindowCommandLineText() is, and when the
-    // profile begins to close part-way; a line a script deletes part-way takes no more commands.
+    // line's history, and the line is then emptied, which windowCommandLineTextChanged tells, where the profile
+    // clears a sent command, unless the line has no such function and something wrote to it meanwhile. Before it
+    // returns. False as setWindowCommandLineText() is, and when the profile begins to close part-way; a line a
+    // script deletes part-way takes no more commands.
     bool submitWindowCommandLine(const QString& commandLine, const QString& line);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
@@ -547,8 +556,8 @@ public:
     // The main window's size in pixels, as a resize of the GUI's main window gives it: the borders a script or MXP
     // sets take their room from it, and the main console's font decides how many characters fit in what is left,
     // so a font change regrids it and the area stays. Raises sysWindowResizeEvent as setScreenSize() does, and the
-    // later of the two holds. Refused where setScreenSize() is, and for a size that holds no character of the font
-    // either way, or more than 65535.
+    // later of the two holds; setGameScreenSize() tells the game a grid of its own without resizing it. Refused
+    // where setScreenSize() is, and for a size that holds no character of the font either way, or more than 65535.
     bool setMainWindowSize(const QSize& pixels);
     // The main console's grid in characters, and where its text goes in the main window's area in pixels: the area
     // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
@@ -737,6 +746,31 @@ public:
     };
     // None for a name that is not a label's
     std::optional<LabelContent> labelContent(const QString& name) const;
+    // What a text box from createTextEdit() holds, for the app to draw it as the GUI's QPlainTextEdit would. Its
+    // geometry and font are its ScriptWindow's.
+    struct TextBoxContent
+    {
+        // What getTextEditText() reads: as setTextEditText() or clearTextEdit() left it, or the player typed it
+        QString text;
+        // As setTextEditReadOnly() gave it: the player cannot type in it, though a script still sets its text
+        bool readOnly = false;
+        // As setTextEditPlaceholder() gave it, shown while the box is empty
+        QString placeholder;
+        // As setTextEditStyleSheet() gave it, which Mudlet does not interpret: drawing it is the app's to do or not
+        QString styleSheet;
+        // As setTextEditTabMovesFocus() gave it: Tab moves to the next control rather than typing a tab
+        bool tabMovesFocus = false;
+
+        bool operator==(const TextBoxContent&) const = default;
+    };
+    // None for a name that is not a text box's
+    std::optional<TextBoxContent> textBoxContent(const QString& name) const;
+    // What the player has typed in a text box so far, the whole of its text, which a script's getTextEditText()
+    // then reads, as the GUI's box sets it as its text changes; that raises no event there, so none here. No
+    // scriptWindowsChanged follows it. False for a name that is no text box, for a box that is read-only or not
+    // shown (hidden, or in a window that is hidden), which a player could not type in though a script still sets
+    // its text, and where runLua() is refused.
+    bool setTextBoxText(const QString& name, const QString& text);
     // A row of a console as the GUI draws it: one line of its buffer, after the console's wrap
     struct WindowLine
     {
@@ -1067,7 +1101,8 @@ signals:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
     // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
     // trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose labelContent() differs,
-    // and those whose place among their parent's windows moved with it.
+    // a text box whose textBoxContent() does, by a script, and those whose place among their parent's windows moved
+    // with it.
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);
@@ -1269,11 +1304,13 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
-    // What scriptWindows() and each label's labelContent() gave at profileLoaded, then as each scriptWindowsChanged was sent
+    // What scriptWindows(), each label's labelContent() and each text box's textBoxContent() gave at profileLoaded,
+    // then as each scriptWindowsChanged was sent, and a text box's text as setTextBoxText() set it
     struct WindowsTold
     {
         QList<ScriptWindow> windows;
         QHash<QString, LabelContent> labels;
+        QHash<QString, TextBoxContent> textBoxes;
     };
     std::optional<WindowsTold> mDeliveredWindows;
     // The label pointer() last had the pointer enter, until it left, and which label of that name it was

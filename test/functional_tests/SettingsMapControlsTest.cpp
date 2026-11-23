@@ -337,6 +337,27 @@ private slots:
         // Spaces dropped, since a wrap can fall inside the path
         QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
     }
+
+    // Host::loadMapFile() audits what it loads, so the dialog must not audit it again
+    void test_loadingAMapAuditsItOnce()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("audited.dat"));
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap->mpRoomDB->addRoom(pMap->createNewRoomID()));
+        QVERIFY(mpHost->saveMapFile(path));
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        // Every audit ends by calling the Lua condenseMapLoad(), so counting those calls counts audits
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("specAudits = 0 specCondense = condenseMapLoad "
+                                                  "condenseMapLoad = function() specAudits = specAudits + 1 return specCondense() end")));
+        const auto restoreCondense = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("condenseMapLoad = specCondense specCondense = nil specAudits = nil"));
+        });
+        mpPreferences->loadMap(path);
+        QCOMPARE(pLua->getLuaString(qsl("tostring(specAudits)")), qsl("1"));
+    }
 };
 
 #include "SettingsMapControlsTest.moc"
