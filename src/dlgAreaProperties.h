@@ -61,6 +61,9 @@ private:
         std::optional<QString> original;
         QLineEdit* pLine = nullptr;
         QComboBox* pList = nullptr;
+        // The editor as the dialog filled it in: a row left like this keeps the area's text exactly as it was
+        QString initialText;
+        int initialIndex = -1;
     };
 
     void buildRows(QWidget* pForm);

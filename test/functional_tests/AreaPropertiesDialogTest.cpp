@@ -241,6 +241,17 @@ private slots:
         mpDialog->accept();
         QCOMPARE(zone()->mUserData, (QMap<QString, QString>{{qsl("population"), qsl("lots")}, {qsl("terrain"), qsl("mountains")}}));
     }
+
+    // OK on a row nobody touched leaves its text as the area had it, to the byte, though the dialog would write it
+    // otherwise: without the spaces, and "true" for "yes"
+    void anUntouchedValueIsKeptExactly()
+    {
+        buildMap();
+        zone()->mUserData = {{qsl("population"), qsl(" 1200 ")}, {qsl("noMagic"), qsl("yes")}};
+        openDialog();
+        mpDialog->accept();
+        QCOMPARE(zone()->mUserData, (QMap<QString, QString>{{qsl("population"), qsl(" 1200 ")}, {qsl("noMagic"), qsl("yes")}}));
+    }
 };
 
 #include "AreaPropertiesDialogTest.moc"

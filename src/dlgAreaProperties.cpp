@@ -152,6 +152,8 @@ void dlgAreaProperties::buildRows(QWidget* pForm)
             }
             pEditor = row.pLine;
         }
+        row.initialText = row.pLine ? row.pLine->text() : QString();
+        row.initialIndex = row.pList ? row.pList->currentIndex() : -1;
         pEditor->setObjectName(qsl("areaPropertiesField"));
         pEditor->setProperty("areaField", field.key);
         pEditor->setAccessibleName(field.name);
@@ -164,6 +166,10 @@ void dlgAreaProperties::buildRows(QWidget* pForm)
 
 std::optional<QString> dlgAreaProperties::rowText(const Row& row, QString& error) const
 {
+    // Untouched, it keeps what the area had to the byte, spaces and "yes" for "true" included
+    if (row.pList ? row.pList->currentIndex() == row.initialIndex : row.pLine->text() == row.initialText) {
+        return row.original;
+    }
     QString text;
     if (row.pList) {
         if (!row.pList->currentData().isValid()) {
