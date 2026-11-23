@@ -873,6 +873,40 @@ private slots:
         }
     }
 
+    // The same north and south. The rooms are moved off y 0, where a y bound with its sign flipped would be the same,
+    // to 3 north: the view's y runs south, so its rooms are at -3 there, and must stay a room inside either edge
+    void viewingKeepsTheMapsRoomsInViewNorthAndSouth()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        for (const int roomId : {scmWestRoom, scmEastRoom}) {
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            QVERIFY(map()->setRoomCoordinates(roomId, pRoom->x(), 3, 0));
+        }
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapViewOnly = true;
+        panned.mMapCenterX = 1.0;
+
+        for (const qreal pannedTo : {100.0, -100.0}) {
+            panned.mMapCenterY = pannedTo;
+            map()->mNewMove = false;
+            TMapPainter painter;
+            TMapPainter::PaintResult result;
+            const QImage image = paintedView(painter, panned, result);
+            const qreal northEdge = result.view.mMapCenterY - result.view.yspan / 2.0;
+            const qreal southEdge = result.view.mMapCenterY + result.view.yspan / 2.0;
+            if (pannedTo > 0) {
+                QVERIFY2(northEdge <= -4.0 + 1e-6, qPrintable(qsl("panned south, the view starts at y %1, past the rooms at -3. %2").arg(northEdge).arg(saved(image, qsl("pan-south")))));
+            } else {
+                QVERIFY2(southEdge >= -2.0 - 1e-6, qPrintable(qsl("panned north, the view ends at y %1, short of the rooms at -3. %2").arg(southEdge).arg(saved(image, qsl("pan-north")))));
+            }
+            QVERIFY2(holds(image, QColor(Qt::blue)), qPrintable(saved(image, pannedTo > 0 ? qsl("pan-south") : qsl("pan-north"))));
+        }
+    }
+
     // Viewing, the level buttons go to the next level with rooms and no further; editing, a level at a time
     void viewingTheLevelButtonsGoOnlyToLevelsWithRooms()
     {
