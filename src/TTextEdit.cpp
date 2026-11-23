@@ -3694,7 +3694,7 @@ QString TTextEdit::selectionAnalysisHtml()
     QChar zero('0');
     // Start the UTF-8 indexing at 1 so that it directly maps to string indexing
     // in Lua.
-    short int utf8Index = 1;
+    int16_t utf8Index = 1;
     char utf8Bytes[5];
 
     int total = 0;

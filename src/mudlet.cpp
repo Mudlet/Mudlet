@@ -3581,7 +3581,7 @@ void mudlet::slot_telnetConnectionStateChanged()
 // macOS shortcut glyphs (like the tab glyph in "⌃⇥") which many users cannot
 // read, so on macOS spell the keys out the way Apple's docs do instead
 // ("Control-Tab", "Command-1"):
-static QString keySequenceForProse(const QKeySequence& sequence)
+QString mudlet::keySequenceForProse(const QKeySequence& sequence)
 {
 #if defined(Q_OS_MACOS)
     QStringList keys = sequence.toString(QKeySequence::PortableText).split(QLatin1Char('+'));
@@ -3598,6 +3598,19 @@ static QString keySequenceForProse(const QKeySequence& sequence)
 #else
     return sequence.toString(QKeySequence::NativeText);
 #endif
+}
+
+QString mudlet::profileSwitchingTip(const Host* pHost) const
+{
+    // The caret mode key wins over a shortcut whose press it takes while the input line or main window has the keyboard
+    if (pHost && !mKeySequenceNextProfile.isEmpty() && Host::caretShortcutMatches(pHost->mCaretShortcut, mKeySequenceNextProfile[0])) {
+        //: Shown in a balloon when a second game opens and the profile's caret mode key is also the key for the next game. %1 and %2 are keyboard shortcuts, e.g. Ctrl+1 and Ctrl+9 (Command-1 and Command-9 on macOS)
+        return tr("Press %1 through %2 to jump straight to one of your open games. You can change these keys in the preferences.")
+                .arg(keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back()));
+    }
+    //: Shown in a balloon when a second game opens. %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9 (Control-Tab, Command-1 and Command-9 on macOS)
+    return tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
+            .arg(keySequenceForProse(mKeySequenceNextProfile), keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back()));
 }
 
 void mudlet::addConsoleForNewHost(Host* pH)
@@ -3802,13 +3815,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // about the feature:
     if (mpTabBar->count() == 2 && !mKeySequenceNextProfile.isEmpty()) {
         //: Title of a balloon pointing out the newly added profile tab switching shortcuts
-        TFeatureCallout::maybeShow(
-                qsl("profileTabShortcuts"),
-                mpTabBar,
-                tr("Switch games with the keyboard"),
-                //: %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9 (Control-Tab, Command-1 and Command-9 on macOS)
-                tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
-                        .arg(keySequenceForProse(mKeySequenceNextProfile), keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back())));
+        TFeatureCallout::maybeShow(qsl("profileTabShortcuts"), mpTabBar, tr("Switch games with the keyboard"), profileSwitchingTip(pH));
     }
 
     // update the window title for the currently selected profile
