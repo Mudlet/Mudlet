@@ -350,6 +350,16 @@ if(APPLE)
     COMPILE_OPTIONS "-fobjc-arc"
   )
 
+  # The native menu bar's image visibility, a widgets file like sparkleupdater,
+  # so it goes with mudlet_app; its header is in the set(mudlet_app_HDRS ...) below
+  list(APPEND mudlet_app_SRCS MacMenuImageVisibility.mm)
+  set_source_files_properties(
+    MacMenuImageVisibility.mm
+    PROPERTIES
+    LANGUAGE OBJCXX
+    COMPILE_OPTIONS "-fobjc-arc"
+  )
+
   # The macOS speech recognition backend. Unlike MacMicrophonePermission its
   # class declares Q_OBJECT, so AUTOMOC must see the header - but only where
   # the .mm that defines the class is also built. Leaving it in the
@@ -622,6 +632,7 @@ set(mudlet_app_HDRS
     GripSplitter.h
     HostDialogs.h
     LabelInteractionHandler.h
+    MacMenuImageVisibility.h
     MiddleMousePanHandler.h
     mudlet.h
     MudletInstanceCoordinator.h
@@ -925,8 +936,8 @@ add_library(${LIB_MUDLET_TARGET} STATIC
 )
 
 mudlet_precompile_headers(${LIB_MUDLET_TARGET})
-# Objective-C++ would need a precompiled header of its own for three files
-set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
+# Objective-C++ would need a precompiled header of its own for four files
+set_source_files_properties(AppleSpeechRecognizer.mm MacMenuImageVisibility.mm MacMicrophonePermission.mm sparkleupdater.mm
   PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 if(USE_UPDATER)
   # Its own target, so it keeps plain ccache: the precompiled-header launcher

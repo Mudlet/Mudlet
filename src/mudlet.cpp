@@ -82,6 +82,9 @@
 #include "edbee/edbee.h"
 #include "uiDesign.h"
 #include "widgetutils.h"
+#if defined(Q_OS_MACOS)
+#include "MacMenuImageVisibility.h"
+#endif
 
 #include <QDataStream>
 #include <QSaveFile>
@@ -1387,6 +1390,13 @@ mudlet::mudlet()
 
 static bool anyProfilesExist(const QString& profilesPath);
 
+#if defined(Q_OS_MACOS)
+static void syncMacMenuImageVisibility(mudlet* pMudlet)
+{
+    setMacMenuImagesAlwaysVisible(pMudlet->menuBar(), pMudlet->mShowIconsOnMenuCheckedState == Qt::Checked);
+}
+#endif
+
 void mudlet::init()
 {
     MudletApp::setFirstLaunch(!anyProfilesExist(MudletApp::getMudletPath(enums::profilesPath)));
@@ -2117,6 +2127,19 @@ void mudlet::init()
 
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(menuWindow, &QMenu::aboutToShow, this, &mudlet::updateWindowMenu);
+
+#if defined(Q_OS_MACOS)
+    // An entry added from here on starts out with macOS's own choice, so the menus are set again whenever one opens,
+    // after updateWindowMenu() has added its profiles
+    for (QAction* pMenuAction : menuBar()->actions()) {
+        if (QMenu* pMenu = pMenuAction->menu()) {
+            connect(pMenu, &QMenu::aboutToShow, this, [this]() {
+                syncMacMenuImageVisibility(this);
+            });
+        }
+    }
+    syncMacMenuImageVisibility(this);
+#endif
 
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
@@ -8243,6 +8266,11 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         case Qt::PartiallyChecked:
             qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mShowIconsOnMenuOriginally);
         }
+        // Qt copies an action's icon into a native menu's item when the action changes, not when this attribute does
+        restyleToolBarIcons();
+#if defined(Q_OS_MACOS)
+        syncMacMenuImageVisibility(this);
+#endif
 
         emit signal_showIconsOnMenusChanged(state);
     }

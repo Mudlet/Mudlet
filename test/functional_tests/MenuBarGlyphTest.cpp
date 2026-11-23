@@ -22,7 +22,8 @@
  * entry that does what a toolbar button does carries that button's picture, in colour by default
  * and grey once the icons are set to grayscale, and an unavailable one takes the menu's disabled
  * ink rather than the bar's. A switched-on entry shows its glyph where the tick would be, so it
- * has to be told from one that is off by something else.
+ * has to be told from one that is off by something else. Changing "Show icons on menus" tells
+ * every entry, so a native menu takes or drops its icon at once.
  *
  * Run with: ctest -R MenuBarGlyphTest -V
  */
@@ -31,13 +32,18 @@
 #include <QApplication>
 #include <QImage>
 #include <QMenu>
+#include <QMenuBar>
 #include <QScopeGuard>
+#include <QSet>
 #include <QtTest/QtTest>
 
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
 #include "mudlet.h"
 #include "uiDesign.h"
+#if defined(Q_OS_MACOS)
+#include "MacMenuImageVisibility.h"
+#endif
 
 #include "GroupedTest.h"
 
@@ -465,6 +471,55 @@ private slots:
                  qPrintable(qsl("switched on, the row reads %1 beside its glyph rather than the accent's wash over the card, %2 - nothing says it is on").arg(washed.name(), wanted.name())));
         QVERIFY2(tickDiffering > glyphRow.height(), "a switched-on row without a glyph no longer shows its tick");
     }
+
+    // A native menu - the macOS menu bar, a desktop's global menu - holds a copy of an entry's icon, taken as the entry changes
+    void test_changingShowIconsOnMenusTellsEveryEntry()
+    {
+        mudlet* pMudlet = mudlet::self();
+        const Qt::CheckState wasState = pMudlet->mShowIconsOnMenuCheckedState;
+        auto restore = qScopeGuard([wasState]() {
+            mudlet::self()->setShowIconsOnMenu(wasState);
+        });
+        QSet<QAction*> told;
+        QList<QAction*> entries;
+        QObject listener;
+        for (QMenu* pMenu : menuBarMenus()) {
+            for (QAction* pAction : pMenu->actions()) {
+                if (pAction->isSeparator()) {
+                    continue;
+                }
+                entries << pAction;
+                connect(pAction, &QAction::changed, &listener, [&told, pAction]() {
+                    told.insert(pAction);
+                });
+            }
+        }
+        QVERIFY2(!entries.isEmpty(), "the six menus hold no entries at all, so nothing below was checked");
+
+        pMudlet->setShowIconsOnMenu(wasState == Qt::Unchecked ? Qt::Checked : Qt::Unchecked);
+
+        QStringList untold;
+        for (QAction* pAction : std::as_const(entries)) {
+            if (!told.contains(pAction)) {
+                untold << saidAs(pAction);
+            }
+        }
+        qInfo().noquote() << qsl("  %1 of %2 entries were told the setting changed").arg(QString::number(entries.size() - untold.size()), QString::number(entries.size()));
+        QVERIFY2(untold.isEmpty(), qPrintable(qsl("these entries were not told, so a native menu goes on showing or hiding their icon as before: %1").arg(untold.join(qsl(", ")))));
+    }
+
+#if defined(Q_OS_MACOS)
+    // Offscreen the bar is drawn by Qt, and neither it nor its menus has a native menu to set
+    void test_menuImageVisibilityLeavesABarWithoutNativeMenusAlone()
+    {
+        QMenuBar* pBar = mudlet::self()->menuBar();
+        QVERIFY2(!pBar->toNSMenu(), "the bar has a native menu here, so this case does not run what it is named for");
+
+        setMacMenuImagesAlwaysVisible(nullptr, true);
+        setMacMenuImagesAlwaysVisible(pBar, true);
+        setMacMenuImagesAlwaysVisible(pBar, false);
+    }
+#endif
 };
 
 #include "MenuBarGlyphTest.moc"

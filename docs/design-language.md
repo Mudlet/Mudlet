@@ -477,6 +477,11 @@ picture keeps its mark. The menu bar's own menus are drawn by the base style
 instead, which fills the row under the pointer with `Highlight`: there
 `restyleMenuGlyphs()` inks every glyph, coloured or grey, in the row's words'
 `HighlightedText`, walked with `readableOn()` to `scmQuietMinimumRatio` on `Highlight`, the floor a glyph line is held to.
+On macOS the menu bar is the system's, and macOS 27 hides a menu item's picture
+unless the application asks to show it, which Qt 6.11 never does: with "Show
+icons on menus" ticked, `setMacMenuImagesAlwaysVisible()` asks for every entry
+of the main window's menus and the application menu, and at "follow the system"
+it leaves the choice to macOS.
 
 The corner is the list's, cut by the same `letPopupsTakeTheFieldsCorner()` - see
 the paragraph on it above. A window's style pass gives both to whatever it owns;
