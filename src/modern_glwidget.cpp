@@ -1460,7 +1460,7 @@ GLuint ModernGLWidget::selectionTexture(const bool round)
     return addRoomTexture(key, image);
 }
 
-GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor, const bool exitMarkers)
+GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor, const bool round, const bool exitMarkers)
 {
     // Most rooms have none, and finding that out needs no key built for every room every frame
     const bool specialExitMarker = mpHost && mpHost->mMapperShowSpecialExitMarkers && !room.getSpecialExits().isEmpty();
@@ -1476,7 +1476,7 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     const QColor markerColor = ExitAppearance::contrastColor(roomColor);
     QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
     if (specialExitMarker) {
-        key.append(qsl("|s"));
+        key.append(round ? qsl("|sr") : qsl("|s"));
     }
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
@@ -1485,7 +1485,12 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
         return 0;
     }
 
-    QImage image = clearRoomTextureImage(markerColor);
+    return addRoomTexture(key, exitMarkerImage(room, roomColor, exitMarkers, specialExitMarker, round));
+}
+
+QImage ModernGLWidget::exitMarkerImage(const TRoom& room, const QColor& roomColor, const bool exitMarkers, const bool specialExitMarker, const bool round)
+{
+    QImage image = clearRoomTextureImage(ExitAppearance::contrastColor(roomColor));
     QPainter painter(&image);
     painter.setRenderHint(QPainter::Antialiasing);
     QPen pen;
@@ -1494,10 +1499,10 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
         ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
     }
     if (specialExitMarker) {
-        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, false, false);
+        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, false, round);
     }
     painter.end();
-    return addRoomTexture(key, image);
+    return image;
 }
 
 GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo, const bool softHalo)
@@ -2479,8 +2484,9 @@ void ModernGLWidget::renderRooms()
         }
 
         // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
-        // A terminal's own markers only where it needs them, its special exit dot wherever there is one
-        const GLuint markerTexture = !detailed ? 0 : (terminal ? exitMarkerTexture(*pR, background, terminalMarkersNeeded(*pR)) : exitMarkerTexture(*pR, wireframes ? background : roomColor));
+        // A terminal's own markers only where it needs them, its special exit dot wherever there is one, on the corner of
+        // its character's square
+        const GLuint markerTexture = !detailed ? 0 : (terminal ? exitMarkerTexture(*pR, background, false, terminalMarkersNeeded(*pR)) : exitMarkerTexture(*pR, wireframes ? background : roomColor, round));
         if (markerTexture) {
             GeometryData& batch = decals.markers[markerTexture];
             batch.textureId = markerTexture;
