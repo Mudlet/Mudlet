@@ -39,6 +39,7 @@ dlgAreaProperties::dlgAreaProperties(TMap* pMap, const int areaId, QWidget* pare
 : QDialog(parent)
 , mpMap(pMap)
 , mAreaId(areaId)
+, mMapGeneration(pMap->mpRoomDB->mapGeneration())
 {
     setAttribute(Qt::WA_DeleteOnClose);
     setObjectName(qsl("areaPropertiesDialog"));
@@ -205,7 +206,15 @@ std::optional<QString> dlgAreaProperties::rowText(const Row& row, QString& error
 
 void dlgAreaProperties::accept()
 {
-    TArea* pArea = mpMap ? mpMap->mpRoomDB->getArea(mAreaId) : nullptr;
+    if (!mpMap || mpMap->mpRoomDB->mapGeneration() != mMapGeneration) {
+        //: Title of the message listing area properties that could not be kept
+        QMessageBox::warning(this, tr("Area properties"),
+                             //: Shown on OK when a script loaded or deleted the map while the area properties dialog was open
+                             tr("The map was replaced while this was open, so nothing was kept."));
+        QDialog::reject();
+        return;
+    }
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAreaId);
     if (!pArea) {
         QDialog::reject();
         return;

@@ -252,6 +252,34 @@ private slots:
         mpDialog->accept();
         QCOMPARE(zone()->mUserData, (QMap<QString, QString>{{qsl("population"), qsl(" 1200 ")}, {qsl("noMagic"), qsl("yes")}}));
     }
+
+    // A map loaded or deleted while the dialog is open may hold an area of the same ID, which is another area: OK
+    // writes nothing to it, and says so
+    void okWritesNothingOnceTheMapIsReplaced()
+    {
+        buildMap();
+        openDialog();
+        mpDialog->show();
+        lineFor(qsl("population"))->setText(qsl("1200"));
+        map()->mapClear();
+        QVERIFY(roomDB()->addArea(mZoneId, qsl("Another zone")));
+        QString told;
+        QTimer answer;
+        answer.setInterval(20ms);
+        connect(&answer, &QTimer::timeout, this, [&]() {
+            if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                told = box->text();
+                answer.stop();
+                box->accept();
+            }
+        });
+        answer.start();
+        mpDialog->accept();
+
+        QVERIFY2(told.contains(qsl("replaced")), qPrintable(told));
+        QVERIFY(zone()->mUserData.isEmpty());
+        QVERIFY(!mpDialog || !mpDialog->isVisible());
+    }
 };
 
 #include "AreaPropertiesDialogTest.moc"

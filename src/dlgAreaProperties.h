@@ -73,6 +73,8 @@ private:
 
     QPointer<TMap> mpMap;
     int mAreaId = 0;
+    // A map loaded or deleted while the dialog is open moves this on, and its area of the same ID is another area
+    unsigned int mMapGeneration = 0;
     QWidget* mpShell = nullptr;
     QList<Row> mRows;
 };
