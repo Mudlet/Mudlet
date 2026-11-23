@@ -98,6 +98,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    DetachedWindowToggleStateTest.cpp
     GlobalSettingsFlushTest.cpp
     AppFrontendAsyncTest.cpp
     PastedLinkStateTest.cpp
@@ -107,6 +108,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     ProfileTabBarStyleTest.cpp
+    ProfileTabLabelTest.cpp
     SubCommandLineLifetimeTest.cpp
     ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
@@ -298,6 +300,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAutosaveTest.cpp
+    MapLabelColourWellTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
