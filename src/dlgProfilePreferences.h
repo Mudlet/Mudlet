@@ -562,7 +562,7 @@ private:
     // Keyed by experiment, e.g. "experiment.3dmap.modernmapper"
     QMap<QString, QPointer<QCheckBox>> mExperimentCheckBoxes;
     // App-wide, unlike the profile's experiments beside it on the card
-    QPointer<QCheckBox> mpCheckBox_colouredIcons;
+    QPointer<QCheckBox> mpCheckBox_greyscaleIcons;
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;

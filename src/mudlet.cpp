@@ -4891,9 +4891,10 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mHostManager.readSettings(settings);
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
-    // The toolbar was inked before the settings were read
-    if (settings.value(qsl("colouredIcons"), false).toBool()) {
-        mColouredIcons = true;
+    // The toolbar was inked before the settings were read. A key of its own rather than "colouredIcons", which builds
+    // with the experiment wrote as false for everyone who never ticked it.
+    if (const bool coloured = !settings.value(qsl("greyscaleIcons"), false).toBool(); coloured != mColouredIcons) {
+        mColouredIcons = coloured;
         restyleToolBarIcons();
     }
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
@@ -5337,7 +5338,7 @@ void mudlet::writeSettings()
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("invertMapZoom", mInvertMapZoom);
-    settings.setValue(qsl("colouredIcons"), mColouredIcons);
+    settings.setValue(qsl("greyscaleIcons"), !mColouredIcons);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);

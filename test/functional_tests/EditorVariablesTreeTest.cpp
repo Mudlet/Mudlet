@@ -30,6 +30,7 @@
 #include <QLabel>
 #include <QPalette>
 #include <QPixmap>
+#include <QScopeGuard>
 #include <QStyleOptionViewItem>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -510,8 +511,13 @@ private slots:
                                     .arg(tokens.disabledText.name(), QString::number(ratio, 'f', 2), QString::number(uiDesign::scmQuietMinimumRatio, 'f', 1))));
     }
 
+    // Grayscale icons, as in colour the braces take the old picture's colour rather than the chrome's tone
     void test_theHeadingRowCarriesTheBracesAndNoSquare()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         openTheVariablesView();
         QTreeWidgetItem* pHeading = headingRow();
         QVERIFY(pHeading);

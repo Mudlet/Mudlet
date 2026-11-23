@@ -1623,8 +1623,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the unfinished features that can be switched on for a profile.
     synonyms.append({mpCard_experiments.data(), tr("experiment, experimental, beta, preview, unsupported, 3D map, renderer")});
-    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the toolbar's and the script editor's icons in color.
-    synonyms.append({mpCheckBox_colouredIcons.data(), tr("colour, color, coloured, colored, icons, toolbar, script editor, old icons")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the toolbar's and the script editor's icons in gray instead of in color.
+    synonyms.append({mpCheckBox_greyscaleIcons.data(), tr("colour, color, coloured, colored, gray, grey, grayscale, greyscale, monochrome, icons, toolbar, script editor, old icons")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -2042,14 +2042,14 @@ void dlgProfilePreferences::buildExperimentsCard()
     auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_experiments->layout());
     pCardLayout->setSpacing(4);
 
-    mpCheckBox_colouredIcons = new QCheckBox(mpCard_experiments);
-    mpCheckBox_colouredIcons->setObjectName(qsl("checkBox_colouredIcons"));
-    pCardLayout->addWidget(mpCheckBox_colouredIcons);
-    auto* pColouredDescription = new QLabel(mpCard_experiments);
-    pColouredDescription->setObjectName(qsl("checkBox_colouredIcons_description"));
-    pColouredDescription->setProperty("settingsControlDescription", true);
-    pColouredDescription->setWordWrap(true);
-    pCardLayout->addWidget(pColouredDescription);
+    mpCheckBox_greyscaleIcons = new QCheckBox(mpCard_experiments);
+    mpCheckBox_greyscaleIcons->setObjectName(qsl("checkBox_greyscaleIcons"));
+    pCardLayout->addWidget(mpCheckBox_greyscaleIcons);
+    auto* pGreyscaleDescription = new QLabel(mpCard_experiments);
+    pGreyscaleDescription->setObjectName(qsl("checkBox_greyscaleIcons_description"));
+    pGreyscaleDescription->setProperty("settingsControlDescription", true);
+    pGreyscaleDescription->setWordWrap(true);
+    pCardLayout->addWidget(pGreyscaleDescription);
 
     for (const auto& key : Host::getValidExperiments()) {
         auto* pCheckBox = new QCheckBox(mpCard_experiments);
@@ -2095,11 +2095,10 @@ void dlgProfilePreferences::buildExperimentsCard()
 void dlgProfilePreferences::retranslateExperiments()
 {
     //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
-    mpCheckBox_colouredIcons->setText(tr("Colored icons"));
-    if (auto* pDescription = mpCard_experiments->findChild<QLabel*>(qsl("checkBox_colouredIcons_description")); pDescription) {
-        //: Description under the "Colored icons" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
-        pDescription->setText(tr("Gives the icons on Mudlet's toolbar and in the script editor the colors of the pictures they replaced, so a blue map or a red delete is where you remember it. "
-                                 "Applies to every profile."));
+    mpCheckBox_greyscaleIcons->setText(tr("Grayscale icons"));
+    if (auto* pDescription = mpCard_experiments->findChild<QLabel*>(qsl("checkBox_greyscaleIcons_description")); pDescription) {
+        //: Description under the "Grayscale icons" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+        pDescription->setText(tr("Draws the icons on Mudlet's toolbar and in the script editor in gray only, without the colors of the pictures they replaced. Applies to every profile."));
     }
 
     QHash<QString, QString> labels;
@@ -3525,8 +3524,8 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
     }
 }
 
-// With the colored icons on, a page's colour: what a toolbar button also opens takes that button's, and the input
-// line and accessibility have their own. The rest stay grey.
+// Unless the icons are set to grayscale, a page's colour: what a toolbar button also opens takes that button's, and
+// the input line and accessibility have their own. The rest stay grey.
 static uiDesign::IdentityColour settingsPageIdentity(const QString& iconFile)
 {
     static const QHash<QString, uiDesign::IdentityColour> identities{{qsl("settings-input.svg"), uiDesign::scmIdentity_input},
@@ -4305,7 +4304,7 @@ void dlgProfilePreferences::populateApplicationSettings()
 
     checkBox_reportMapIssuesOnScreen->setChecked(TMap::smShowMapAuditErrors);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
-    mpCheckBox_colouredIcons->setChecked(pMudlet->colouredIcons());
+    mpCheckBox_greyscaleIcons->setChecked(!pMudlet->colouredIcons());
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
@@ -7747,8 +7746,8 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(checkBox_showIconsOnMenus)) {
         pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
     }
-    if (mSnapshot.dirty(mpCheckBox_colouredIcons)) {
-        pMudlet->setColouredIcons(mpCheckBox_colouredIcons->isChecked());
+    if (mSnapshot.dirty(mpCheckBox_greyscaleIcons)) {
+        pMudlet->setColouredIcons(!mpCheckBox_greyscaleIcons->isChecked());
     }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
@@ -9009,8 +9008,8 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
 
 void dlgProfilePreferences::slot_changeColouredIcons(const bool state)
 {
-    if (mpCheckBox_colouredIcons && mpCheckBox_colouredIcons->isChecked() != state) {
-        mpCheckBox_colouredIcons->setChecked(state);
+    if (mpCheckBox_greyscaleIcons && mpCheckBox_greyscaleIcons->isChecked() == state) {
+        mpCheckBox_greyscaleIcons->setChecked(!state);
     }
     // The sidebar's icons, and the search headers and page title copied from them
     applyShellStyle();

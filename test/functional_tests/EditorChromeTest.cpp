@@ -524,6 +524,9 @@ private slots:
         }
 
         QVERIFY2(mSession.startMudlet(), qPrintable(mSession.why()));
+        // Before the editor opens: the heading cases take the strongest ink on the row, glyph included, for the
+        // chrome's tone, which a glyph in its old picture's colour is not
+        mudlet::self()->setColouredIcons(false);
         writeFreshEditorThemesFile();
         QVERIFY2(mSession.openProfile(mProfileName), qPrintable(mSession.why()));
         mpHost = mSession.host();
@@ -565,6 +568,7 @@ private slots:
         mpHost = nullptr;
         if (mudlet::self()) {
             mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+            mudlet::self()->setColouredIcons(true);
         }
         mSession.stop();
     }
