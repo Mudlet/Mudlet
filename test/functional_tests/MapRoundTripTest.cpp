@@ -174,7 +174,8 @@ private:
 
         TArea* pAreaB = pDB->getArea(mAreaB);
         QVERIFY(pAreaB);
-        pAreaB->isZone = true;
+        // B is nested in A, which makes A the zone
+        pAreaA->isZone = true;
         pAreaB->zoneAreaRef = mAreaA;
 
         for (const int id : {scmRoom1, scmRoom2, scmRoom3, scmRoom4}) {
@@ -344,7 +345,9 @@ private:
         if (QTest::currentTestFailed()) {
             return;
         }
-        QVERIFY(pAreaB->isZone);
+        // Worked out again from the zoneAreaRefs on loading
+        QVERIFY(pAreaA->isZone);
+        QVERIFY(!pAreaB->isZone);
         QCOMPARE(pAreaB->zoneAreaRef, mAreaA);
 
         QCOMPARE(pAreaA->mMapLabels.size(), 1);

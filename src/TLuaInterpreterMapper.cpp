@@ -1665,6 +1665,77 @@ int TLuaInterpreter::getAreaGraph(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaParent
+int TLuaInterpreter::setAreaParent(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    std::optional<int> parentId;
+    if (!lua_isnoneornil(L, 2)) {
+        parentId = getVerifiedInt(L, __func__, 2, "parent areaID {nil for the top level}");
+    }
+    const Host& host = getHostFromLua(L);
+    // A JSON export runs timers between writing areas: a change then could save parents that contradict each other,
+    // such as a cycle that never existed in the map
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
+    switch (host.mpMap->mpRoomDB->setAreaParent(areaId, parentId)) {
+    case TRoomDB::AreaParentResult::Changed:
+    case TRoomDB::AreaParentResult::Unchanged:
+        lua_pushboolean(L, true);
+        return 1;
+    case TRoomDB::AreaParentResult::NoSuchArea:
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    case TRoomDB::AreaParentResult::NoSuchParent:
+        return warnArgumentValue(L, __func__, qsl("parent %1").arg(csmInvalidAreaID.arg(parentId.value_or(0))));
+    case TRoomDB::AreaParentResult::OwnParent:
+        return warnArgumentValue(L, __func__, "an area cannot be its own parent");
+    case TRoomDB::AreaParentResult::DefaultAreaAsParent:
+        return warnArgumentValue(L, __func__, "the default area cannot have other areas nested in it");
+    case TRoomDB::AreaParentResult::ParentInside:
+        return warnArgumentValue(L, __func__, qsl("area %1 is inside area %2, so it cannot be its parent").arg(QString::number(parentId.value_or(0)), QString::number(areaId)));
+    }
+    Q_UNREACHABLE();
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaParent
+int TLuaInterpreter::getAreaParent(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+    const std::optional<int> parentId = host.mpMap->mpRoomDB->getAreaParent(areaId);
+    if (!parentId.has_value()) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushnumber(L, *parentId);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaChildren
+int TLuaInterpreter::getAreaChildren(lua_State* L)
+{
+    std::optional<int> areaId;
+    if (!lua_isnoneornil(L, 1)) {
+        areaId = getVerifiedInt(L, __func__, 1, "areaID {nil for the top level}");
+    }
+    const bool recursive = !lua_isnoneornil(L, 2) && getVerifiedBool(L, __func__, 2, "recursive", true);
+    const Host& host = getHostFromLua(L);
+    if (areaId.has_value() && !host.mpMap->mpRoomDB->getAreaNamesMap().contains(*areaId)) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(*areaId));
+    }
+    const QList<int> children = host.mpMap->mpRoomDB->getAreaChildren(areaId, recursive);
+    lua_createtable(L, children.size(), 0);
+    for (int i = 0; i < children.size(); ++i) {
+        lua_pushnumber(L, children.at(i));
+        lua_rawseti(L, -2, i + 1);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaRooms
 int TLuaInterpreter::getAreaRooms(lua_State* L)
 {
