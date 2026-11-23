@@ -1268,11 +1268,11 @@ if false then
   --- knows, by a remap onto it or by setCustomEnvColor(), is in the profile's mapper ANSI color, whatever
   --- setCustomEnvColor() gave it. Any other environment setCustomEnvColor() gave a color is in that color, at any ID,
   --- 17 to 255 and 0 or below included. One from 17 to 255 the map knows only by a remap is in the 256-color palette.
-  --- Any other is red.
+  --- Any other is in the mapper's default room color, which is its red until one is set in Preferences.
   ---
   --- @param environmentID the environment, as setRoomEnv() takes it
   --- @return red, green, blue and alpha, each 0 to 255, then true when the map gives the environment a color
-  ---   or false when the red is the mapper's fallback
+  ---   or false when the color is the mapper's default room color
   ---
   --- @usage Echo the color of the room the player is in
   ---   <pre>

@@ -32,6 +32,9 @@
  * Run with: ctest -R TelnetLargeBurstTest -V
  */
 
+#include <QAbstractEventDispatcher>
+#include <QDataStream>
+#include <QRandomGenerator>
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtNetwork/QSslCertificate>
@@ -107,6 +110,22 @@ private:
         payload.reserve(lineCount * 64);
         for (int i = firstLine; i < firstLine + lineCount; ++i) {
             payload += qsl("BURSTLINE %1 padded out so the burst clears one buffer read\r\n").arg(i, 6, 10, QLatin1Char('0')).toUtf8();
+        }
+        return payload;
+    }
+
+    // Hardly compresses, so a compressed stream is still arriving while the first of it is shown
+    static QByteArray hardToCompressBurstOf(const int lineCount)
+    {
+        QRandomGenerator generator(1);
+        QByteArray payload;
+        payload.reserve(lineCount * 64);
+        for (int i = 0; i < lineCount; ++i) {
+            payload += qsl("BURSTLINE %1 ").arg(i, 6, 10, QLatin1Char('0')).toUtf8();
+            for (int word = 0; word < 3; ++word) {
+                payload += QByteArray::number(generator.generate64(), 36);
+            }
+            payload += "\r\n";
         }
         return payload;
     }
@@ -273,6 +292,35 @@ private:
         mpServer->closeClient();
         return true;
     }
+
+    // Plain text too, and Mudlet reads none of it until the game has closed: Qt goes on taking it in,
+    // and it fits Qt's 1 MB read buffer, so all of it is unread at the close whatever the OS lets a socket hold.
+    bool sendPlainLastWordsUnreadUntilTheClose()
+    {
+        if (!agreeProtocolsAheadOfTheLastWords()) {
+            return false;
+        }
+        cTelnet& telnet = mpHost->mTelnet;
+        // connectIt() makes the connection again
+        if (!disconnect(telnet.mpSocket, &QIODevice::readyRead, &telnet, &cTelnet::slot_socketReadyToBeRead)) {
+            return false;
+        }
+        // Stands in for the reads a burst leaves queued, one per readyRead(), which must not read once the close is noticed
+        connect(
+                telnet.mpSocket,
+                &QAbstractSocket::disconnected,
+                &telnet,
+                [&telnet]() {
+                    for (int i = 0; i < 3; ++i) {
+                        telnet.mReadPending = true;
+                        QMetaObject::invokeMethod(&telnet, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+                    }
+                },
+                Qt::SingleShotConnection);
+        mpServer->sendRaw(burstOf(scmPlainLastWords) + "GOODBYE FROM THE GAME\r\n");
+        mpServer->closeClient();
+        return true;
+    }
     static constexpr int scmCompressedLastWords = 20000;
     static constexpr int scmPlainLastWords = 12000;
     static constexpr int scmLastWordsLineCount = scmCompressedLastWords + scmPlainLastWords;
@@ -331,7 +379,7 @@ private:
     // About 20 MB from a game that stays connected, far more than it takes one
     // read per turn to take in before the sender is done
     static constexpr int scmFloodLineCount = 300000;
-    bool sendFloodAndWait()
+    bool sendFloodAndWait(const bool compressed = false)
     {
         mpHost->mainConsoleView()->buffer.clear();
         smFloodLines = 0;
@@ -341,6 +389,9 @@ private:
         smMostFloodLinesAheadOfAnEvent = 0;
         smMostTextHeldByQt = 0;
         smFloodEventWaiting = false;
+        smFloodLinesAtNestedLoopEnd = 0;
+        smFloodEventsAtNestedLoopEnd = 0;
+        smReadyReadsInNestedLoop = 0;
         smpFloodTelnet = &(mpHost->mTelnet);
         TLuaInterpreter* lua = mpHost->getLuaInterpreter();
         lua_register(lua->getLuaGlobalState(), "countFloodLine", countFloodLine);
@@ -354,29 +405,65 @@ private:
 
         // More to a turn than one read takes, so the queued read never runs out of text
         mpServer->setSendBufferSize(4 * 1024 * 1024);
-        mpServer->sendRaw(burstOf(scmFloodLineCount));
-        QElapsedTimer timer;
-        timer.start();
-        while (smLastFloodLine < scmFloodLineCount - 1 && timer.durationElapsed() < 200s) {
+        // qCompress() prefixes the zlib stream with the source length
+        mpServer->sendRaw(compressed ? QByteArray("\xFF\xFA\x56\xFF\xF0", 5) + qCompress(hardToCompressBurstOf(scmFloodLineCount), 1).mid(4) : burstOf(scmFloodLineCount));
+        // Each line resets this, so a slow build gets all the time it needs and a stream that broke fails soon
+        QElapsedTimer sinceLastLine;
+        sinceLastLine.start();
+        int linesSeen = 0;
+        while (smLastFloodLine < scmFloodLineCount - 1 && sinceLastLine.durationElapsed() < 20s) {
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            if (smFloodLines != linesSeen) {
+                linesSeen = smFloodLines;
+                sinceLastLine.start();
+            }
         }
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         return lua->compileAndExecuteScript(qsl("killTrigger(floodTrigger)"));
     }
 
-    // Averaged, as a nested event loop or a read that empties Qt's buffer can put two reads
-    // in a turn. A second queued read in every turn is half a read past this.
-    static bool floodTookOneReadPerTurn() { return smFloodLines <= 1.5 * linesInOneRead() * smFloodEventsHandled; }
-    static QString floodTurnsReport() { return qsl("%1 lines of a flood took %2 turns, when one read is at most %3 lines.").arg(smFloodLines).arg(smFloodEventsHandled).arg(linesInOneRead()); }
+    // Averaged, as a read that empties Qt's buffer can put two reads in a turn. A second queued read
+    // in every turn is half a read past this. Counted from the last nested event loop, whose turns hold no read.
+    static int floodLinesPastNestedLoops() { return smFloodLines - smFloodLinesAtNestedLoopEnd; }
+    static int floodTurnsPastNestedLoops() { return smFloodEventsHandled - smFloodEventsAtNestedLoopEnd; }
+    static bool floodTookOneReadPerTurn() { return floodLinesPastNestedLoops() <= 1.5 * linesInOneRead() * floodTurnsPastNestedLoops(); }
+    static QString floodTurnsReport()
+    {
+        return qsl("%1 lines of a flood took %2 turns, when one read is at most %3 lines.").arg(floodLinesPastNestedLoops()).arg(floodTurnsPastNestedLoops()).arg(linesInOneRead());
+    }
 
+    inline static bool smInNestedLoop = false;
+    inline static int smReadyReadsInNestedLoop = 0;
+    inline static int smFloodLinesAtNestedLoopEnd = 0;
+    inline static int smFloodEventsAtNestedLoopEnd = 0;
     // Holds the event loop for the milliseconds given, as a modal dialog opened by a
     // trigger does
     static int spinNestedEventLoop(lua_State* L)
     {
         QEventLoop loop;
         QTimer::singleShot(static_cast<int>(lua_tointeger(L, 1)), &loop, &QEventLoop::quit);
+        smInNestedLoop = true;
         loop.exec();
+        smInNestedLoop = false;
+        smFloodLinesAtNestedLoopEnd = smFloodLines;
+        smFloodEventsAtNestedLoopEnd = smFloodEventsHandled;
         return 0;
+    }
+
+    inline static TelnetServerStub* smpGame = nullptr;
+    // Has the game say something from inside a trigger, ahead of its nested event loop
+    static int gameSends(lua_State* L)
+    {
+        smpGame->sendRaw(QByteArray(lua_tostring(L, 1)));
+        return 0;
+    }
+
+    void registerNestedLoopFunctions()
+    {
+        smpGame = mpServer;
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_register(L, "spinNestedEventLoop", spinNestedEventLoop);
+        lua_register(L, "gameSends", gameSends);
     }
 
 private slots:
@@ -595,18 +682,13 @@ private slots:
             end)
         )")));
 
-        // All of it in the socket at once, so the close is there to notice while most of it is unread;
-        // fed out by this thread's event loop, the reads can catch up with the close and leave nothing to test
-        mpServer->setSendBufferSize(4 * 1024 * 1024);
-        QVERIFY2(sendPlainLastWordsAndClose(), "the client never answered the negotiation");
+        QVERIFY2(sendPlainLastWordsUnreadUntilTheClose(), "the client never answered the negotiation, or its reads could not be held off");
         QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(lastWordsTrigger)")));
 
         QVERIFY2(bufferContains(qsl("GOODBYE FROM THE GAME")), "the text sent before the close was cut short");
-        if (smLinesAfterClose <= linesInOneRead()) {
-            QSKIP(qPrintable(qsl("only %1 burst lines were left when the close was noticed, too few to need more than one read").arg(smLinesAfterClose)));
-        }
+        QCOMPARE(smLinesAfterClose, scmPlainLastWords);
         QVERIFY2(smLinesWhenPostedEventHandled > 0 && smLinesWhenPostedEventHandled <= linesInOneRead(),
                  qPrintable(qsl("the event loop stood still for %1 of the %2 burst lines left at the close, when one read is at most %3.")
                                     .arg(smLinesWhenPostedEventHandled)
@@ -650,23 +732,222 @@ private slots:
                  qPrintable(qsl("the event loop stood still for %1 lines of a flood, when one read is at most %2.").arg(smMostFloodLinesAheadOfAnEvent).arg(linesInOneRead())));
     }
 
-    // A trigger's nested event loop can queue a read during a queued read, and two would then
-    // share every turn. Line 5000 is past the flood's first read, where Qt blocks the notifier.
-    void aNestedEventLoopDuringAFloodLeavesOneQueuedRead()
+    void aNestedEventLoopDuringAFloodKeepsEveryLineInOrder_data()
     {
+        QTest::addColumn<bool>("compressed");
+        QTest::newRow("plain") << false;
+        QTest::newRow("compressed") << true;
+    }
+
+    // A read started inside a trigger's nested event loop lands ahead of the one it interrupts and gives zlib its stream out of
+    // order. Nests in every read of the first third, as Qt blocks readyRead inside its own emission and while its buffer is full.
+    void aNestedEventLoopDuringAFloodKeepsEveryLineInOrder()
+    {
+        QFETCH(bool, compressed);
         QVERIFY2(connectAgain(), "could not connect to the game again");
+        if (compressed) {
+            negotiateMccp();
+        }
         TLuaInterpreter* lua = mpHost->getLuaInterpreter();
         lua_register(lua->getLuaGlobalState(), "spinNestedEventLoop", spinNestedEventLoop);
-        QVERIFY(lua->compileAndExecuteScript(qsl(R"(tempRegexTrigger("^BURSTLINE 005000", function() spinNestedEventLoop(20) end, 1))")));
-        QVERIFY(sendFloodAndWait());
-
-        QCOMPARE(smLastFloodLine, scmFloodLineCount - 1);
-        // A nested read overtakes the rest of the read it interrupts, so lines out of place show
-        // that one happened, and neither their order nor their number is checked here
-        if (smFloodLineOutOfPlace < 0) {
-            QSKIP("no read happened inside the trigger, which is what this needs");
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(nestedLoopTrigger = tempRegexTrigger("^BURSTLINE 0\\d\\d000 ", function() spinNestedEventLoop(5) end))")));
+        const auto readyReads = connect(mpHost->mTelnet.mpSocket, &QIODevice::readyRead, this, []() {
+            if (smInNestedLoop) {
+                ++smReadyReadsInNestedLoop;
+            }
+        });
+        const bool floodSent = sendFloodAndWait(compressed);
+        disconnect(readyReads);
+        QVERIFY(floodSent);
+        QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(nestedLoopTrigger)")));
+        // The compressed stream is not ended, and the tests after this connect again
+        if (compressed) {
+            QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
+            mpHost->mTelnet.disconnectIt();
+            QVERIFY2(disconnected.count() || disconnected.wait(15s), "the disconnect never finished");
         }
-        QVERIFY2(floodTookOneReadPerTurn(), qPrintable(floodTurnsReport()));
+
+        QVERIFY2(smFloodLineOutOfPlace < 0, qPrintable(qsl("burst line %1 reached its trigger out of order.").arg(smFloodLineOutOfPlace)));
+        QCOMPARE(smFloodLines, scmFloodLineCount);
+        if (smReadyReadsInNestedLoop == 0) {
+            QSKIP("no readyRead came inside a nested event loop, which is what this needs");
+        }
+        // One read of a compressed stream inflates to many times the lines
+        if (!compressed) {
+            QVERIFY2(floodTookOneReadPerTurn(), qPrintable(floodTurnsReport()));
+        }
+    }
+
+    // feedTelnet() is refused while connected, so this is a trigger on fed text connecting. No read is running
+    // to take in what the game sends during its nested event loop: that has to follow the fed text by itself
+    void textFromTheGameDuringANestedEventLoopOnFedTextFollowsIt()
+    {
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
+        mpHost->mTelnet.disconnectIt();
+        QVERIFY2(disconnected.count() || disconnected.wait(15s), "the disconnect never finished");
+        mpHost->mainConsoleView()->buffer.clear();
+        mpServer->setWelcomeMessage(qsl("LINE FROM THE GAME"));
+        const auto welcomeGuard = qScopeGuard([this] {
+            mpServer->setWelcomeMessage(QString());
+        });
+        QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        lua_register(lua->getLuaGlobalState(), "spinNestedEventLoop", spinNestedEventLoop);
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            tempRegexTrigger("^FIRST FED LINE", function()
+                reconnect()
+                spinNestedEventLoop(500)
+            end, 1)
+            feedTelnet("FIRST FED LINE\r\nLAST FED LINE\r\n")
+        )")));
+        if (connected.isEmpty()) {
+            QSKIP("the connection took longer than the nested event loop, which is what this needs");
+        }
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("LINE FROM THE GAME"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const int fromTheGame = lastLineContaining(qsl("LINE FROM THE GAME"));
+        QVERIFY2(fromTheGame >= 0, "what the game sent was left unread");
+        QVERIFY2(fromTheGame > lastLineContaining(qsl("LAST FED LINE")), "what the game sent landed in the middle of the fed text");
+    }
+
+    void textDuringANestedEventLoopOnAHeldLineIsKept_data()
+    {
+        QTest::addColumn<QString>("during");
+        QTest::addColumn<QString>("lastText");
+        QTest::newRow("a partial line") << qsl(R"(ONLY A PARTIAL)") << qsl("ONLY A PARTIAL");
+        QTest::newRow("lines and a partial line") << qsl(R"(SECOND LINE\r\nTHIRD PART)") << qsl("THIRD PART");
+    }
+
+    // The posting timer shows a partial line after the game falls quiet, outside any read. What the game sends during
+    // a trigger's nested event loop on it is kept. A loop shorter than that timeout, so the timer shows nothing during it.
+    void textDuringANestedEventLoopOnAHeldLineIsKept()
+    {
+        QFETCH(QString, during);
+        QFETCH(QString, lastText);
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        // The stub's welcome, 100 ms after it accepts, would complete the partial line
+        QTRY_VERIFY(mpServer->clientConnected());
+        QTest::qWait(200);
+        mpServer->sendRaw("READY\r\n");
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("READY"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        mpHost->mainConsoleView()->buffer.clear();
+        registerNestedLoopFunctions();
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            tempRegexTrigger("^HELD LINE", function()
+                gameSends("%1")
+                spinNestedEventLoop(100)
+            end, 1)
+        )")
+                                                     .arg(during)));
+
+        mpServer->sendRaw("HELD LINE");
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(lastText)) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const int last = lastLineContaining(lastText);
+        mpServer->sendRaw("\r\n");
+        QVERIFY2(last >= 0, qPrintable(qsl("\"%1\" was lost.").arg(lastText)));
+        QVERIFY2(last > lastLineContaining(qsl("HELD LINE")), "the text from the nested event loop came ahead of the line it followed");
+    }
+
+    void aPartialLineFedFromATriggerIsKept_data()
+    {
+        QTest::addColumn<QString>("fed");
+        QTest::addColumn<QString>("partialLine");
+        QTest::newRow("on a line the posting timer shows") << qsl("FED TO THE TRIGGER") << qsl("PARTIAL FROM THE TRIGGER");
+        QTest::newRow("on a whole line") << qsl(R"(FED TO THE TRIGGER\r\n)") << qsl("PARTIAL FROM THE TRIGGER");
+        // The rest of the outer feed continues the line the trigger left unfinished, as text from the game would
+        QTest::newRow("on a whole line and a partial line") << qsl(R"(FED TO THE TRIGGER\r\nOUTER PARTIAL)") << qsl("PARTIAL FROM THE TRIGGEROUTER PARTIAL");
+    }
+
+    // Offline, as feedTelnet() is refused on a connection
+    void aPartialLineFedFromATriggerIsKept()
+    {
+        QFETCH(QString, fed);
+        QFETCH(QString, partialLine);
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
+            mpHost->mTelnet.disconnectIt();
+            QVERIFY2(disconnected.count() || disconnected.wait(15s), "the disconnect never finished");
+        }
+        mpHost->mainConsoleView()->buffer.clear();
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            outerPartialStartedALine = false
+            outerPartialTrigger = tempRegexTrigger("^OUTER PARTIAL", function() outerPartialStartedALine = true end)
+            tempRegexTrigger("^FED TO THE TRIGGER", function() feedTelnet("LINE FROM THE TRIGGER\r\nPARTIAL FROM THE TRIGGER") end, 1)
+            feedTelnet("%1")
+        )")
+                                                     .arg(fed)));
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("PARTIAL FROM THE TRIGGER"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const int partial = lastLineContaining(qsl("PARTIAL FROM THE TRIGGER"));
+        const QString shown = partial >= 0 ? mpHost->mainConsoleView()->buffer.line(partial) : QString();
+        const int outerPartial = lastLineContaining(qsl("OUTER PARTIAL"));
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            feedTelnet("\r\n")
+            killTrigger(outerPartialTrigger)
+        )")));
+        lua_State* L = lua->getLuaGlobalState();
+        lua_getglobal(L, "outerPartialStartedALine");
+        const bool outerPartialStartedALine = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(partial >= 0, "the partial line the trigger fed was lost");
+        QCOMPARE(shown, partialLine);
+        QCOMPARE(partial, lastLineContaining(qsl("LINE FROM THE TRIGGER")) + 1);
+        QCOMPARE(outerPartial, partialLine.contains(qsl("OUTER PARTIAL")) ? partial : -1);
+        QVERIFY2(!outerPartialStartedALine, "the rest of the outer feed started a line of its own");
+    }
+
+    // A replay can run on a live connection, sharing the text held back from the game
+    void textFromTheGameDuringANestedEventLoopInAReplayFollowsTheChunk()
+    {
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        mpHost->mainConsoleView()->buffer.clear();
+        registerNestedLoopFunctions();
+        const QString fileName = mConfigDir.filePath(qsl("nested-loop-replay.dat"));
+        {
+            QFile file(fileName);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QDataStream stream(&file);
+            stream.setVersion(QDataStream::Qt_5_12);
+            const QByteArray chunk("REPLAY FIRST\r\nREPLAY LAST\r\n");
+            stream << static_cast<qint32>(0) << static_cast<qint32>(chunk.size());
+            stream.writeRawData(chunk.constData(), static_cast<int>(chunk.size()));
+        }
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl(R"(
+            tempRegexTrigger("^REPLAY FIRST", function()
+                gameSends("LIVE LINE\r\nLIVE PARTIAL")
+                spinNestedEventLoop(100)
+            end, 1)
+            assert(loadReplay("%1"))
+        )")
+                                                                             .arg(fileName)));
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !bufferContains(qsl("LIVE PARTIAL"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        const int partial = lastLineContaining(qsl("LIVE PARTIAL"));
+        mpServer->sendRaw("\r\n");
+        QVERIFY2(partial >= 0, "the partial line the game sent was lost");
+        QVERIFY2(lastLineContaining(qsl("LIVE LINE")) > lastLineContaining(qsl("REPLAY LAST")), "the game's text landed in the middle of the replay's chunk");
     }
 
     // A trigger on the last words that disconnects stops them there, as it
@@ -756,7 +1037,7 @@ private slots:
             tempRegexTrigger("^NESTED LINE ([AB])$", function()
                 nestedSeen = nestedSeen .. matches[2]
                 if matches[2] == "A" then
-                    spinNestedEventLoop()
+                    spinNestedEventLoop(500)
                 end
             end, 2)
         )")));
@@ -770,6 +1051,52 @@ private slots:
         const QString seenAtDisconnection = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
         QCOMPARE(seenAtDisconnection, qsl("AB"));
+    }
+
+    // A reconnect on the last words waits for a trigger's nested event loop, with no more than
+    // a retry now and then in that time: a dialog can stay open for as long as the player likes
+    void aReconnectWaitingForANestedEventLoopLeavesTheEventLoopIdle()
+    {
+        constexpr int loopMilliseconds = 300;
+        QVERIFY2(connectAgain(), "could not connect to the game again");
+        mpHost->mainConsoleView()->buffer.clear();
+        registerNestedLoopFunctions();
+        TLuaInterpreter* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            reconnectAsked = false
+            reconnectingTrigger = tempRegexTrigger("^BURSTLINE ", function()
+                local _, _, connected = getConnectionInfo()
+                if not connected and not reconnectAsked then
+                    reconnectAsked = true
+                    reconnect()
+                    spinNestedEventLoop(%1)
+                end
+            end)
+        )")
+                                                     .arg(loopMilliseconds)));
+        int passes = 0;
+        const auto awake = connect(QAbstractEventDispatcher::instance(), &QAbstractEventDispatcher::awake, this, [&passes]() {
+            if (smInNestedLoop) {
+                ++passes;
+            }
+        });
+        QSignalSpy reconnected(&(mpHost->mTelnet), &cTelnet::signal_connected);
+        QSignalSpy accepted(mpServer, &QTcpServer::newConnection);
+
+        // All of it in the socket at once, so that the close is there to notice while most of it is unread
+        mpServer->setSendBufferSize(4 * 1024 * 1024);
+        const bool sent = sendPlainLastWordsAndClose();
+        // The tests after this send to the stub, which drops what it is given ahead of accepting
+        const bool connectedAgain = sent && reconnected.wait(15s) && (accepted.count() || accepted.wait(15s));
+        disconnect(awake);
+        QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(reconnectingTrigger)")));
+
+        QVERIFY2(sent, "the client never answered the negotiation");
+        QVERIFY2(connectedAgain, "the reconnect never connected");
+        if (passes == 0) {
+            QSKIP("no burst line was left when the close was noticed, which is what this needs");
+        }
+        QVERIFY2(passes < loopMilliseconds, qPrintable(qsl("the event loop went round %1 times in a nested loop of %2 ms.").arg(passes).arg(loopMilliseconds)));
     }
 
     // Reconnecting aborts the live connection, which empties its socket: there

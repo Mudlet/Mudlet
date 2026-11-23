@@ -411,7 +411,7 @@ private:
     // Reads a proxy's reply into the dialling socket's proxy engine without running the event loop
     friend class HeadlessSessionTest;
 
-    // Reads how much text Qt holds of a flood
+    // Reads how much text Qt holds of a flood, and holds the reads of a game's last words off until the game has closed
     friend class TelnetLargeBurstTest;
 
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
@@ -469,6 +469,8 @@ private:
     QString getNewEnvironOSCHyperlinksSelection();
     QString getNewEnvironOSCHyperlinksSpoiler();
     QString getNewEnvironOSCHyperlinksDisabled();
+    QString getNewEnvironOSCHyperlinksGmcp();
+    QString getNewEnvironOSCHyperlinksLocal();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();
@@ -588,7 +590,6 @@ private:
     // What the transport has delivered and processSocketData() not yet taken, as a socket buffers it
     QByteArray mTransportInput;
     qsizetype mTransportInputRead = 0;
-    bool mTransportReadDeferred = false;
     QString mTransportCloseReason;
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
@@ -609,6 +610,8 @@ private:
     // on with every connectIt(), so a callback from a lookup a later call
     // superseded would pair its own host name with the newer port.
     int mHostLookupId = -1;
+    // Counted so that a failure can tell when a sysDisconnectionEvent handler has already dialled again
+    quint64 mConnectAttempts = 0;
     int mLoopbackProcessingDepth = 0;
     std::queue<int> mCommandQueue;
 
@@ -627,7 +630,8 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use.
+    // (de)compressed data; bounds stack use. A replay chunk counts too, as above
+    // zero is what puts off whatever must not land in a trigger's nested event loop.
     int mDecompressionRecursionDepth = 0;
     // Input left over once a drain reached scmMaxDecompressionRecursion, processed
     // ahead of anything read after it
@@ -753,7 +757,7 @@ private:
     // Set while what the game sent before closing is still being taken in, one
     // read per event-loop turn; the disconnect is finished once it is all in.
     bool mDisconnectionPending = false;
-    // A readPendingSocketData() is queued for the rest of a burst, and does the reading until it is in
+    // A readPendingSocketData() is queued or postponed for the rest of a burst, and does the reading until it is in
     bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;

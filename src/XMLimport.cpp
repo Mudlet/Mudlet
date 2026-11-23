@@ -1362,6 +1362,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QAnyStringView elementName)
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
+            {qsl("mMapperDefaultRoomColor"), &Host::mMapperDefaultRoomColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
             {qsl("mLightBlack2"), &Host::mLightBlack_2},
