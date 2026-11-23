@@ -380,6 +380,7 @@ bool THeadlessSession::submitWindowCommandLine(const QString& commandLine, const
         return pHost ? dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend()) : nullptr;
     };
     const QStringList commands = pHost->commandLineText(commandLine).value_or(QString()).split(QChar::LineFeed);
+    view()->holdCommandLineForSend(commandLine);
     // TCommandLine::enterCommand() goes on with its own line, so one an action made again under the name gets none
     const QPointer<const QObject> pLine(view()->commandLineInstance(commandLine));
     const auto sameLine = [&view, &commandLine, &pLine]() {

@@ -1055,6 +1055,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         // earlier argument positions keep working
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendHttpRequestId(event, reply);
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -1063,6 +1064,24 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
     }
 
     handleHttpOK(reply);
+}
+
+int TLuaInterpreter::pushHttpRequestResult(lua_State* L, QNetworkReply* reply)
+{
+    // On the reply itself: it is the one object that survives a redirect, which can also change the operation
+    const qint64 id = ++mLastHttpRequestId;
+    reply->setProperty(csmHttpRequestIdProperty, id);
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    lua_pushnumber(L, static_cast<lua_Number>(id));
+    return 3;
+}
+
+void TLuaInterpreter::appendHttpRequestId(TEvent& event, const QNetworkReply* reply)
+{
+    event.mArgumentList << QString::number(reply->property(csmHttpRequestIdProperty).toLongLong());
+    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
 }
 
 // No documentation available in wiki - internal function
@@ -1190,7 +1209,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
     event.mArgumentList << QString::number(createHttpResponseTable(reply));
     event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
-
+    appendHttpRequestId(event, reply);
 
     reply->deleteLater();
     pHost->raiseEvent(event);
@@ -4630,11 +4649,22 @@ void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, c
     }
 }
 
+static void pushGlobalTable(lua_State* L, const char* name)
+{
+    lua_getglobal(L, name);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, name);
+    }
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "atcp");
     lua_pushstring(L, var.toUtf8().constData());
     lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);
@@ -5012,9 +5042,17 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 continue;
             }
 
-            // A variable can carry several values, with the default one last
             const QString msspVAR = payloadList.first();
-            const QString msspVAL = payloadList.last();
+            // A variable can carry several values, with the default one last
+            QString msspVAL = payloadList.last();
+            // setMSSPVariables() has already removed every CR. A line break at either end is
+            // not part of the value, and would spoil the HOSTNAME match and the TLS flags below
+            while (msspVAL.startsWith(QChar::LineFeed)) {
+                msspVAL.remove(0, 1);
+            }
+            while (msspVAL.endsWith(QChar::LineFeed)) {
+                msspVAL.chop(1);
+            }
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
@@ -5291,7 +5329,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "channel102"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "channel102");
     lua_pushnumber(L, var);
     lua_pushnumber(L, arg);
     lua_rawset(L, -3);
@@ -7057,9 +7095,12 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         return lua_error(L);
     }
 
-    QString dataToPost;
+    // Sent byte for byte: the data may hold NULs, or bytes that are not UTF-8
+    QByteArray dataToPost;
     if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
+        size_t dataLength = 0;
+        const char* data = lua_tolstring(L, pos + 1, &dataLength);
+        dataToPost = QByteArray(data, static_cast<qsizetype>(dataLength));
     }
     const QString urlString{lua_tostring(L, pos + 2)};
     QString fileLocation;
@@ -7092,25 +7133,24 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
 
+    const QByteArray& payload = fileToUpload.isEmpty() ? dataToPost : fileToUpload;
     QNetworkReply* reply;
     switch (operation) {
     case QNetworkAccessManager::PostOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, payload);
         break;
     case QNetworkAccessManager::PutOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, payload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, payload);
     }
 
     if (TDebug::wants(TDebug::Category::Network)) {
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;
     }
 
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return host.mLuaInterpreter.pushHttpRequestResult(L, reply);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
@@ -9952,8 +9992,8 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     lua_newtable(L);
 
     // Parse cookies, add them as key-value pairs to the empty table
-    const Host& host = getHostFromLua(L);
-    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    // The reply's own manager: media downloads keep their cookies apart from the scripts' ones
+    QNetworkCookieJar* cookieJar = reply->manager()->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
     for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack
