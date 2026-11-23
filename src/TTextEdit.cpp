@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -444,10 +445,15 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance - for the UPPER pane
-        // so that they are available for NAWS:
-        if (!mIsLowerPane) {
-            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+        // Note the values in the "parent" Host instance so that they are
+        // available for NAWS. The lower pane is laid out after the upper one,
+        // so it is the one that knows the split's height once both have moved;
+        // the width is the upper pane's unless it is dragged out of sight. A
+        // pane that sees nothing of itself, as in a background tab, knows neither.
+        if (!drawable.isEmpty()) {
+            const bool measuresWidth = !mIsLowerPane || mpConsole->mUpperPane->drawableSize().isEmpty();
+            const int columns = measuresWidth ? mScreenWidth : mpHost->mScreenWidth;
+            mpHost->setScreenDimensions(columns, mpConsole->mUpperPane->mainWindowRows());
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -466,6 +472,19 @@ void TTextEdit::updateScreenView()
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
     mLinesTrimmedAtOldScrollPos = mpBuffer->linesTrimmedTotal();
+}
+
+// Scrolling back splits the main window without making it any shorter, so the
+// game is told the rows of both panes together
+int TTextEdit::mainWindowRows() const
+{
+    const TTextEdit* pLower = mpConsole->mLowerPane;
+    // An overlay can cover all of the lower pane, leaving the upper pane's own bottom the lowest seen
+    const int lowerSeen = pLower && !pLower->isHidden() ? pLower->drawableSize().height() : 0;
+    if (lowerSeen == 0) {
+        return mScreenHeight;
+    }
+    return (height() + mpConsole->splitter->handleWidth() + lowerSeen) / mFontHeight;
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -3238,6 +3257,16 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     }
 }
 
+// A small shrink can move the lower pane up without resizing it, and the rows
+// measured while it hung below the splitter's new bottom were short
+void TTextEdit::moveEvent(QMoveEvent* event)
+{
+    if (mIsLowerPane && mpConsole && mpConsole->getType() == TConsole::MainConsole) {
+        updateScreenView();
+    }
+    QWidget::moveEvent(event);
+}
+
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
     // Make the speed up be half of the (upper pane) lines - need to round it so
@@ -3263,13 +3292,15 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // Store the (rounded) remainder
     mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
 
+    // Left unaccepted, a turn the console has no use for scrolls what holds it, such as a scroll box. A touchpad turn
+    // too small for a whole line is still the console's when it would take a whole one
     bool used = false;
     if (yDelta > 0) {
-        mpConsole->scrollUp(yDelta);
-        used = true;
+        used = mpConsole->scrollUp(yDelta);
     } else if (yDelta < 0) {
-        mpConsole->scrollDown(-yDelta);
-        used = true;
+        used = mpConsole->scrollDown(-yDelta);
+    } else if (e->angleDelta().y() != 0) {
+        used = mpConsole->usesWheel(e->angleDelta().y() > 0);
     }
 
     // Space for future use of xDelta
@@ -3694,7 +3725,7 @@ QString TTextEdit::selectionAnalysisHtml()
     QChar zero('0');
     // Start the UTF-8 indexing at 1 so that it directly maps to string indexing
     // in Lua.
-    short int utf8Index = 1;
+    int16_t utf8Index = 1;
     char utf8Bytes[5];
 
     int total = 0;
