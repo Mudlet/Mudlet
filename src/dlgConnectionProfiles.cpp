@@ -403,7 +403,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
         const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
-        offline_button->setIcon(QIcon(qsl(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
         remove_profile_button->setIcon(QIcon::fromTheme(qsl("edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))));
