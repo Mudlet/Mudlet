@@ -611,6 +611,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
+    // Named before applyEditorShellStyle() first runs: its rules reach the pattern list and its scroll bar by this
+    // name, and a later pass with the colours unchanged does nothing
+    mpTriggersMainArea->scrollArea->setObjectName(qsl("editorPatternScroll"));
     layoutColumn->addWidget(mpTriggersMainArea, 1);
     connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
     connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
@@ -1698,7 +1701,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     // QAbstractScrollArea fills its viewport with QPalette::Base, which drew the pattern rows as a field-coloured box
-    mpScrollArea->setObjectName(qsl("editorPatternScroll"));
     mpScrollArea->setFrameShape(QFrame::NoFrame);
     mpScrollArea->viewport()->setAutoFillBackground(false);
     mpWidget_triggerItems = new QWidget;
@@ -16867,10 +16869,12 @@ void dlgTriggerEditor::setupEditorPanel()
     // With allColumnsShowFocus, QTreeView::drawRow() asks the style for the focus rect with no widget, so the trees'
     // "outline: none" cannot reach it and a square hairline is drawn round the rounded pill; per item, the delegate
     // asks with the widget in hand. The .ui sets it on all but the results tree, listed so all nine are settled here.
-    const QList<QTreeWidget*> focusMarkedTrees{
+    const QList<QTreeWidget*> everyTree{
             treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree, treeWidget_searchResults};
-    for (QTreeWidget* pTreeWidget : focusMarkedTrees) {
+    for (QTreeWidget* pTreeWidget : everyTree) {
         pTreeWidget->setAllColumnsShowFocus(false);
+        // Or a bar coming in narrows every row: the trailing counts move left and names are cut sooner
+        uiDesign::keepRoomForVerticalScrollBar(pTreeWidget);
     }
 
     treeWidget_searchResults->setObjectName(qsl("editorSearchResults"));
@@ -16887,6 +16891,15 @@ void dlgTriggerEditor::setupEditorPanel()
     treeWidget_searchResults->setSortingEnabled(false);
     mpSearchResultDelegate = new uiDesign::SearchResultDelegate(treeWidget_searchResults);
     treeWidget_searchResults->setItemDelegate(mpSearchResultDelegate);
+
+    // QHeaderView stretches the last column no narrower than its size on becoming the last, the style's 100 pixel
+    // default, and at the item pane's narrowest the viewport less the bar's room is narrower than that. After every
+    // setColumnCount() and hideColumn() above, as each picks that size again; column 0 is the one every tree shows.
+    for (QTreeWidget* pTreeWidget : everyTree) {
+        QHeaderView* pHeader = pTreeWidget->header();
+        pHeader->setMinimumSectionSize(0);
+        pHeader->resizeSection(0, 0);
+    }
 
     // The shell stylesheet selects on this name
     widget_searchTerm->setObjectName(qsl("editorSearchRow"));
