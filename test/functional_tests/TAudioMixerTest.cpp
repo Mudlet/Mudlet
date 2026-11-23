@@ -195,13 +195,6 @@ private slots:
         media()->playMedia(data);
         QCOMPARE(media()->mediaPlayerCount(), 1);
         QCOMPARE(media()->playersMixed(), TMediaVoice::probePassed() ? 1 : 0);
-        // Sounds enough to evict that player in the same call, before the voice it left is deleted: Qt 6.12 leaves a
-        // detached QAudioBufferOutput pointing at its player, so a voice deleted after the player crashes (QTBUG-152293)
-        for (int sound = 0; sound <= media()->getMaxUnprunedPlayers(); ++sound) {
-            TMediaData burst = clipData(writeClip(qsl("burst%1.wav").arg(sound), 3000), TMediaData::MediaTypeSound);
-            media()->playMedia(burst);
-        }
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
     // Video keeps an output of its own, timed against its picture; the rest are mixed
@@ -383,6 +376,26 @@ private slots:
             QVERIFY2(luaHolds(qsl("finished == %1").arg(passes)), qPrintable(qsl("A sound %1 was reported ending more than once a pass.").arg(when)));
             QVERIFY2(luaHolds(qsl("started == %1").arg(passes)), qPrintable(qsl("A sound %1 was reported starting again.").arg(when)));
         }
+    }
+
+    // Moved off the mix, a sound leaves its voice to be deleted later. Qt 6.12 leaves a detached QAudioBufferOutput
+    // pointing at its player, so a player evicted before then must take that voice with it (QTBUG-152293).
+    void test_aPlayerEvictedJustAfterLeavingTheMixTakesItsVoice()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendFeedsTheMix() ? QString() : noMixingReason());
+        TMediaData data = clipData(writeClip(qsl("retired.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        const QPointer<const TMediaVoice> retired = mixedVoice();
+        QVERIFY2(retired, "The sound was not played through the shared output.");
+        emit const_cast<TMediaVoice*>(retired.data())->signal_unsupported();
+        QCOMPARE(media()->playersMixed(), 0);
+        QVERIFY2(retired, "The voice was deleted as it was moved off the shared output, from within its own signal.");
+
+        for (int sound = 0; sound <= media()->getMaxUnprunedPlayers(); ++sound) {
+            TMediaData burst = clipData(writeClip(qsl("evicts%1.wav").arg(sound), 3000), TMediaData::MediaTypeSound);
+            media()->playMedia(burst);
+        }
+        QVERIFY2(!retired, "An evicted player left its old voice waiting to be deleted after it.");
     }
 
     // The mute switch applies to a sound from its start, not only when it is next flipped
