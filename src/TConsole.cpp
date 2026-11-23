@@ -1057,8 +1057,11 @@ void TConsole::resizeEvent(QResizeEvent* event)
     // QMainWindow::restoreState() resizes windows part way through rearranging the docks, and a
     // handler that docks, floats, shows or hides one then leaves freed items in Qt's dock layout
     if (mudlet* const app = mudlet::self(); app && app->restoringLayout()) {
-        app->callAfterLayoutRestore(this, [this, x, y]() {
-            raiseResizeEvents(x, y);
+        // Dropped if the window has been resized since, as that resize reports the newer size
+        app->callAfterLayoutRestore(this, [this, x, y, heldSize = event->size()]() {
+            if (size() == heldSize) {
+                raiseResizeEvents(x, y);
+            }
         });
         return;
     }
@@ -2916,6 +2919,14 @@ void TConsole::clearSplit()
 
 void TConsole::raiseMudletResizeEvent()
 {
+    // Held while Qt restores the layout, as in resizeEvent(), and measured when delivered
+    if (mudlet* const app = mudlet::self(); app && app->restoringLayout()) {
+        app->callAfterLayoutRestore(this, [this]() {
+            raiseMudletResizeEvent();
+        });
+        return;
+    }
+
     // Hiding the TConsole - particularly the main one, multiview is not active
     // and the profile is being switched away from causes a zero column count
     // even though the TConsole is not actually resized - so don't raise the
