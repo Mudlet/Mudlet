@@ -1143,6 +1143,33 @@ private slots:
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
     }
 
+    // Such a row is not saved, so typing its key says so, rather than the row going without a word on OK
+    void anAddedRowWithAKeyKeptElsewhereSaysItWillNotBeSaved()
+    {
+        buildMap();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(pDlg->label_userDataWarning->isHidden());
+        pDlg->pushButton_addUserData->click();
+        QTableWidgetItem* pKey = pDlg->tableWidget_userData->item(pDlg->tableWidget_userData->rowCount() - 1, 0);
+
+        pKey->setText(qsl("description"));
+        QVERIFY(!pDlg->label_userDataWarning->isHidden());
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("\"description\"")), qPrintable(pDlg->label_userDataWarning->text()));
+
+        pKey->setText(qsl("room.ui_nameColor"));
+        QVERIFY(!pDlg->label_userDataWarning->isHidden());
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("room.ui_")), qPrintable(pDlg->label_userDataWarning->text()));
+
+        pKey->setText(qsl("shop"));
+        QVERIFY(pDlg->label_userDataWarning->isHidden());
+
+        pKey->setText(qsl("description"));
+        pDlg->tableWidget_userData->selectRow(pKey->row());
+        pDlg->pushButton_removeUserData->click();
+        QVERIFY2(pDlg->label_userDataWarning->isHidden(), "the warning outlived the row it was about");
+    }
+
     void aKeyTheRoomsDisagreeOnShowsThePlaceholder()
     {
         buildMap();
