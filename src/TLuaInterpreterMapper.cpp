@@ -1716,15 +1716,26 @@ int TLuaInterpreter::getAreaConnections(lua_State* L)
             neighbours[*toArea].exits << Passage{it.key(), it.value().second, it.value().first};
         }
     }
-    const QMap<int, TArea*>& areas = pRoomDB->getAreaMap();
-    for (auto itArea = areas.cbegin(); itArea != areas.cend(); ++itArea) {
-        if (itArea.key() == areaId || !itArea.value()) {
-            continue;
-        }
-        const auto incoming = itArea.value()->getAreaExitRoomData();
-        for (auto it = incoming.cbegin(); it != incoming.cend(); ++it) {
-            if (areaOfRoom(it.value().second) == areaId) {
-                neighbours[itArea.key()].entrances << Passage{it.key(), it.value().second, it.value().first};
+    // The ways in, from the rooms the entrance map files under each of this area's rooms, rather than from every other
+    // area's exits: a script going through all the areas would otherwise scan them all once per area
+    const QMultiHash<int, int>& entrances = pRoomDB->getEntranceHash();
+    for (const int toRoomId : pA->getAreaRooms()) {
+        for (auto it = entrances.constFind(toRoomId); it != entrances.cend() && it.key() == toRoomId; ++it) {
+            const TRoom* pFrom = pRoomDB->getRoom(it.value());
+            if (!pFrom || pFrom->getArea() == areaId) {
+                continue;
+            }
+            QList<Passage>& passages = neighbours[pFrom->getArea()].entrances;
+            for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+                if (pFrom->getExit(direction) == toRoomId) {
+                    passages << Passage{pFrom->getId(), toRoomId, TRoom::dirCodeToString(direction)};
+                }
+            }
+            const QMap<QString, int>& specialExits = pFrom->getSpecialExits();
+            for (auto itSpecial = specialExits.cbegin(); itSpecial != specialExits.cend(); ++itSpecial) {
+                if (itSpecial.value() == toRoomId && !itSpecial.key().isEmpty()) {
+                    passages << Passage{pFrom->getId(), toRoomId, itSpecial.key()};
+                }
             }
         }
     }
