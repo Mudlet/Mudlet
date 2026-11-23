@@ -354,6 +354,10 @@ public:
     bool mLargeAreaExitArrows = false;
     bool mDirectionalExitLines = false;
 
+signals:
+    // After each frame: whether the level buttons have a level to go to, which viewing is only one with rooms
+    void signal_levelButtonsEnabled(bool up, bool down);
+
 public slots:
     void slot_roomSelectionChanged();
     void slot_deleteCustomExitLine();

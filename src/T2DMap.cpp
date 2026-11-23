@@ -1302,11 +1302,17 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         mpMap->mapper()->comboBox_showArea->setFont(_f);
-
-        const auto [above, below] = roomLevelsBeside();
-        mpMap->mapper()->toolButton_shiftZup->setEnabled(!mMapViewOnly || above.has_value());
-        mpMap->mapper()->toolButton_shiftZdown->setEnabled(!mMapViewOnly || below.has_value());
     }
+
+    // Viewing, there is nowhere to go past the last level with rooms; a secondary view's own buttons follow the signal
+    const auto [above, below] = roomLevelsBeside();
+    const bool upEnabled = !mMapViewOnly || above.has_value();
+    const bool downEnabled = !mMapViewOnly || below.has_value();
+    if (!mIsSecondaryView && mpMap->mapper()) {
+        mpMap->mapper()->toolButton_shiftZup->setEnabled(upEnabled);
+        mpMap->mapper()->toolButton_shiftZdown->setEnabled(downEnabled);
+    }
+    emit signal_levelButtonsEnabled(upEnabled, downEnabled);
 
 
     if (result.areaChanged) {

@@ -33,12 +33,14 @@
 #include <QScopeGuard>
 #include <QFileInfo>
 #include <QTemporaryDir>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
+#include "T2DMap.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMapView.h"
@@ -222,6 +224,43 @@ private slots:
 
     // Once the application palette carries a resolve mask, the view's own
     // setPalette() pins it, so the view has to be told when the scheme changes.
+    // Viewing, a map view's level buttons are off where there is no level with rooms to go to, as the main mapper's are
+    void test_aViewsLevelButtonsGoOnlyToLevelsWithRooms()
+    {
+        map()->mapClear();
+        const int areaId = addAreaWithRoom(qsl("Levels"), 1);
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->addRoom(2));
+        map()->setRoomArea(2, areaId);
+        map()->setRoomCoordinates(2, 1, 0, 5);
+        QPointer<TMapView> view = openView(areaId);
+        QVERIFY(view);
+        auto* pMap = view->findChild<T2DMap*>();
+        QToolButton* pUp = nullptr;
+        QToolButton* pDown = nullptr;
+        for (QToolButton* pButton : view->findChildren<QToolButton*>()) {
+            if (pButton->text() == qsl("+")) {
+                pUp = pButton;
+            } else if (pButton->text() == qsl("-")) {
+                pDown = pButton;
+            }
+        }
+        QVERIFY(pMap && pUp && pDown);
+        QVERIFY(pMap->mMapViewOnly);
+        pMap->resize(300, 200);
+
+        pMap->grab();
+        QCOMPARE(pMap->getZLevel(), 0);
+        QVERIFY2(pUp->isEnabled(), "level 5 has a room to go up to");
+        QVERIFY2(!pDown->isEnabled(), "nothing below level 0 has rooms");
+
+        pUp->click();
+        pMap->grab();
+        QCOMPARE(pMap->getZLevel(), 5);
+        QVERIFY2(!pUp->isEnabled(), "nothing above level 5 has rooms");
+        QVERIFY2(pDown->isEnabled(), "level 0 has a room to go down to");
+    }
+
     void test_aColourSchemeChangeReachesEveryMapView()
     {
         const QPalette original = QApplication::palette();
