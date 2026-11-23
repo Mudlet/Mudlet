@@ -292,6 +292,35 @@ private:
         mpServer->closeClient();
         return true;
     }
+
+    // Plain text too, and Mudlet reads none of it until the game has closed: Qt goes on taking it in,
+    // and it fits Qt's 1 MB read buffer, so all of it is unread at the close whatever the OS lets a socket hold.
+    bool sendPlainLastWordsUnreadUntilTheClose()
+    {
+        if (!agreeProtocolsAheadOfTheLastWords()) {
+            return false;
+        }
+        cTelnet& telnet = mpHost->mTelnet;
+        // connectIt() makes the connection again
+        if (!disconnect(telnet.mpSocket, &QIODevice::readyRead, &telnet, &cTelnet::slot_socketReadyToBeRead)) {
+            return false;
+        }
+        // Stands in for the reads a burst leaves queued, one per readyRead(), which must not read once the close is noticed
+        connect(
+                telnet.mpSocket,
+                &QAbstractSocket::disconnected,
+                &telnet,
+                [&telnet]() {
+                    for (int i = 0; i < 3; ++i) {
+                        telnet.mReadPending = true;
+                        QMetaObject::invokeMethod(&telnet, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+                    }
+                },
+                Qt::SingleShotConnection);
+        mpServer->sendRaw(burstOf(scmPlainLastWords) + "GOODBYE FROM THE GAME\r\n");
+        mpServer->closeClient();
+        return true;
+    }
     static constexpr int scmCompressedLastWords = 20000;
     static constexpr int scmPlainLastWords = 12000;
     static constexpr int scmLastWordsLineCount = scmCompressedLastWords + scmPlainLastWords;
@@ -653,18 +682,13 @@ private slots:
             end)
         )")));
 
-        // All of it in the socket at once, so the close is there to notice while most of it is unread;
-        // fed out by this thread's event loop, the reads can catch up with the close and leave nothing to test
-        mpServer->setSendBufferSize(4 * 1024 * 1024);
-        QVERIFY2(sendPlainLastWordsAndClose(), "the client never answered the negotiation");
+        QVERIFY2(sendPlainLastWordsUnreadUntilTheClose(), "the client never answered the negotiation, or its reads could not be held off");
         QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(lastWordsTrigger)")));
 
         QVERIFY2(bufferContains(qsl("GOODBYE FROM THE GAME")), "the text sent before the close was cut short");
-        if (smLinesAfterClose <= linesInOneRead()) {
-            QSKIP(qPrintable(qsl("only %1 burst lines were left when the close was noticed, too few to need more than one read").arg(smLinesAfterClose)));
-        }
+        QCOMPARE(smLinesAfterClose, scmPlainLastWords);
         QVERIFY2(smLinesWhenPostedEventHandled > 0 && smLinesWhenPostedEventHandled <= linesInOneRead(),
                  qPrintable(qsl("the event loop stood still for %1 of the %2 burst lines left at the close, when one read is at most %3.")
                                     .arg(smLinesWhenPostedEventHandled)
