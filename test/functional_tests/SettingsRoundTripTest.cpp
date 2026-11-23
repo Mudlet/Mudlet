@@ -1515,6 +1515,28 @@ private slots:
         QCOMPARE(announced.count(), 1);
     }
 
+    // A screen reader says a box's name without the row it stands in, so each
+    // opacity box and each of the marker's diameter boxes is named for what it
+    // belongs to
+    void test_everyOpacityAndDiameterBoxHasANameOfItsOwn()
+    {
+        openPreferences();
+        QCOMPARE(mpPreferences->spinBox_playerRoomOuterDiameter->accessibleName(), qsl("Outer ring diameter"));
+        QCOMPARE(mpPreferences->spinBox_playerRoomInnerDiameter->accessibleName(), qsl("Inner ring diameter"));
+        QCOMPARE(ringOpacity(qsl("Outer"))->accessibleName(), qsl("Outer ring opacity"));
+        QCOMPARE(ringOpacity(qsl("Inner"))->accessibleName(), qsl("Inner ring opacity"));
+        QCOMPARE(mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_mapGridColor"))->accessibleName(), qsl("Grid color opacity"));
+
+        QList<QSpinBox*> boxes = mpPreferences->findChildren<QSpinBox*>(QRegularExpression(qsl("^settings(Opacity_|PlayerRoom\\w+Opacity$)")));
+        QCOMPARE(boxes.size(), 8);
+        boxes << mpPreferences->spinBox_playerRoomOuterDiameter << mpPreferences->spinBox_playerRoomInnerDiameter;
+        QStringList names;
+        for (const QSpinBox* pBox : std::as_const(boxes)) {
+            QVERIFY2(!names.contains(pBox->accessibleName()), qPrintable(qsl("two boxes are both named '%1'").arg(pBox->accessibleName())));
+            names << pBox->accessibleName();
+        }
+    }
+
     // The default room colour is the map's red until it is set: its field
     // shows that red and follows it, and a colour typed into it sets it, after
     // which red changes without it

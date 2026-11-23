@@ -1378,6 +1378,15 @@ void dlgProfilePreferences::retranslateShell()
     const QString diameter = tr("Diameter");
     mpLabel_playerRoomOuterDiameter->setText(diameter);
     mpLabel_playerRoomInnerDiameter->setText(diameter);
+    // Each row's words are the same two, so a screen reader is told which ring a box belongs to
+    //: Settings, Mapper page, Player room marker card: screen reader name of the stepper setting the size of the marker's outer ring, as a percentage
+    spinBox_playerRoomOuterDiameter->setAccessibleName(tr("Outer ring diameter"));
+    //: Settings, Mapper page, Player room marker card: screen reader name of the stepper setting the size of the marker's inner ring, as a percentage
+    spinBox_playerRoomInnerDiameter->setAccessibleName(tr("Inner ring diameter"));
+    //: Settings, Mapper page, Player room marker card: screen reader name of the box setting how opaque the marker's outer ring is, as a percentage
+    mpColourValue_playerRoomOuter->opacityBox()->setAccessibleName(tr("Outer ring opacity"));
+    //: Settings, Mapper page, Player room marker card: screen reader name of the box setting how opaque the marker's inner ring is, as a percentage
+    mpColourValue_playerRoomInner->opacityBox()->setAccessibleName(tr("Inner ring opacity"));
     // One width for both ring names, so the colours and the diameters of the two rows stand in columns
     const int ringNameWidth = std::max(mpLabel_playerRoomOuterRing->sizeHint().width(), mpLabel_playerRoomInnerRing->sizeHint().width());
     mpLabel_playerRoomOuterRing->setMinimumWidth(ringNameWidth);
@@ -2955,6 +2964,10 @@ void dlgProfilePreferences::nameColourControls()
             colour.pChoose->setProperty(scmChooseTip, choose);
             colour.pChoose->setAccessibleName(name);
             colour.pValue->setAccessibleName(name);
+            if (colour.seeThrough) {
+                //: Settings, Main display and Mapper pages: screen reader name of the box that sets how opaque one color is, as a percentage; %1 is that color's name as its label shows it, such as "Background" or "Grid color"
+                colour.pValue->opacityBox()->setAccessibleName(tr("%1 opacity").arg(name));
+            }
         }
     }
     // The labels' new words move what two pairs to a row need
