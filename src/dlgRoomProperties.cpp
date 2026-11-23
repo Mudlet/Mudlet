@@ -104,8 +104,14 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(tableWidget_userData, &QTableWidget::itemChanged, this, &dlgRoomProperties::slot_userDataItemChanged);
     tableWidget_userData->setItemDelegateForColumn(1, new UserDataValueDelegate(tableWidget_userData));
     connect(lineEdit_hash, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_hashChanged);
-    mUserDataTextFields = {UserDataTextField{scmDescriptionKey, plainTextEdit_description, tr("Room description...")},
-                           UserDataTextField{scmNotesKey, plainTextEdit_notes, tr("Your own notes on this room...")}};
+    mUserDataTextFields = {UserDataTextField{scmDescriptionKey,
+                                             plainTextEdit_description,
+                                             //: Placeholder of Configure room's description field while it is empty
+                                             tr("Room description...")},
+                           UserDataTextField{scmNotesKey,
+                                             plainTextEdit_notes,
+                                             //: Placeholder of Configure room's notes field while it is empty; the notes are the player's own, kept with the room
+                                             tr("Your own notes on this room...")}};
     for (auto& field : mUserDataTextFields) {
         connect(field.pEdit, &QPlainTextEdit::textChanged, this, [&field]() {
             field.edited = true;
