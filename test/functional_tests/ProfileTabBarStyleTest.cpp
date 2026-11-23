@@ -506,9 +506,11 @@ private slots:
         ExposedTabBar bar(nullptr);
         bar.setAutoFillBackground(true);
         bar.setTabData(bar.addTab(qsl("Chosen")), qsl("Chosen"));
-        // The same displayed word on both resting chips, so only the mark can tell them apart
-        bar.setTabData(bar.addTab(qsl("&Gorbash")), qsl("Gorbash"));
-        bar.setTabData(bar.addTab(qsl("&Gorbash")), qsl("Gorbash-Twin"));
+        // The same displayed word on both resting chips, so only the mark can tell them apart; set
+        // through QTabBar because TTabBar's own setters escape the '&' the platform would have added
+        bar.setTabData(bar.QTabBar::addTab(qsl("&Gorbash")), qsl("Gorbash"));
+        bar.setTabData(bar.QTabBar::addTab(qsl("&Gorbash")), qsl("Gorbash-Twin"));
+        QCOMPARE(bar.tabText(1), qsl("&Gorbash"));
         bar.resize(scmBarWidth, bar.sizeHint().height());
         layOutAtItsOwnSize(&bar);
         bar.setCurrentIndex(0);
