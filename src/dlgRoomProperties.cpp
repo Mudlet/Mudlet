@@ -30,6 +30,7 @@
 
 #include <QColorDialog>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QMenu>
 #include <QPainter>
 #include <QStyledItemDelegate>
@@ -438,10 +439,7 @@ void dlgRoomProperties::accept()
         changeName = false;
     }
 
-    // Find color to return back
-    //   This is using mChangeRoomColor and mRoomColorNumber which are updated
-    //   immediately when the player changes colors in the dialog (as opposed
-    //   to the other room data here) - They need no further review at this time.
+    // mChangeRoomColor and mRoomColorNumber were already set when the color selector closed with OK
 
     // Find symbol to return back
     const QString newSymbol = getNewSymbol();
@@ -655,12 +653,6 @@ QColor dlgRoomProperties::defaultSymbolColor()
 }
 
 
-void dlgRoomProperties::slot_selectRoomColor(QListWidgetItem* pI)
-{
-    mRoomColorNumber = pI->text().toInt();
-}
-
-
 void dlgRoomProperties::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this, tr("Define new room color"));
@@ -695,8 +687,12 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     listWidget->setViewMode(QListView::IconMode);
     listWidget->setResizeMode(QListView::Adjust);
 
+    // Held apart from mRoomColorNumber until OK, so a Cancel discards the click
+    int clickedColorNumber = mRoomColorNumber;
     connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
-    connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
+    connect(listWidget, &QListWidget::itemClicked, dialog, [&clickedColorNumber](QListWidgetItem* pI) {
+        clickedColorNumber = pI->text().toInt();
+    });
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this](const QPoint& pos) {
         // A right-click on empty space leaves the current item as it was, so
@@ -761,8 +757,8 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     }
     listWidget->sortItems();
 
-    if (dialog->exec() == QDialog::Accepted && mpHost->mpMap->mCustomEnvColors.contains(mRoomColorNumber)) {
-        // Only proceed if OK pressed and color is valid - "Cancel" prevents change
+    if (dialog->exec() == QDialog::Accepted && mpHost->mpMap->mCustomEnvColors.contains(clickedColorNumber)) {
+        mRoomColorNumber = clickedColorNumber;
         mChangeRoomColor = true;
         mRoomColor = mpHost->mpMap->mCustomEnvColors.value(mRoomColorNumber);
         slot_updatePreview();
@@ -844,6 +840,7 @@ void dlgRoomProperties::initGeneral()
     }
     const bool single = rooms.size() == 1;
 
+    //: Shown in Configure room's General tab in place of a room ID when several rooms are being configured at once
     label_roomIdValue->setText(single ? QString::number(rooms.first()->getId()) : tr("%n room(s) selected", nullptr, rooms.size()));
 
     // A game ID belongs to one room only, so it cannot be given to a selection
@@ -851,6 +848,7 @@ void dlgRoomProperties::initGeneral()
     mOriginalHash = single ? mpHost->mpMap->mpRoomDB->roomIDToHash.value(rooms.first()->getId()) : QString();
     lineEdit_hash->setText(mOriginalHash);
     lineEdit_hash->setEnabled(single);
+    //: Placeholder of Configure room's game ID field, which is disabled when several rooms are being configured, as a game ID belongs to one room
     lineEdit_hash->setPlaceholderText(single ? QString() : tr("Only for a single room"));
     label_hashWarning->hide();
 
@@ -917,6 +915,7 @@ void dlgRoomProperties::slot_hashChanged(const QString& hash)
         label_hashWarning->hide();
         return;
     }
+    //: Warning under Configure room's game ID field when the ID typed in already belongs to another room; %1 is that room's ID
     label_hashWarning->setText(tr("Room %1 has this game ID now and will lose it.").arg(holder));
     label_hashWarning->show();
 }

@@ -26,7 +26,6 @@
 #include "ui_room_properties.h"
 
 #include <QColor>
-#include <QListWidget>
 #include <QMap>
 #include <QPlainTextEdit>
 
@@ -140,7 +139,6 @@ private slots:
     void slot_updatePreview();
     void slot_resetSymbolColor();
 
-    void slot_selectRoomColor(QListWidgetItem*);
     void slot_defineNewColor();
     void slot_openRoomColorSelector();
 
