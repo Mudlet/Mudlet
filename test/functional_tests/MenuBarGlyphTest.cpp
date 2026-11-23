@@ -22,8 +22,10 @@
  * entry that does what a toolbar button does carries that button's picture, in colour by default
  * and grey once the icons are set to grayscale, and an unavailable one takes the menu's disabled
  * ink rather than the bar's. A switched-on entry shows its glyph where the tick would be, so it
- * has to be told from one that is off by something else. Changing "Show icons on menus" tells
- * every entry, so a native menu takes or drops its icon at once.
+ * has to be told from one that is off by something else, under a script's sheet too. Under the
+ * pointer the glyph takes the ink of the menus' own palette, or stays as at rest while a script's
+ * sheet, whose colours for that row are unknown, styles the menus. Changing "Show icons on menus"
+ * tells every entry, so a native menu takes or drops its icon at once.
  *
  * Run with: ctest -R MenuBarGlyphTest -V
  */
@@ -33,8 +35,10 @@
 #include <QImage>
 #include <QMenu>
 #include <QMenuBar>
+#include <QPalette>
 #include <QScopeGuard>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QtTest/QtTest>
 
 #include "PixelTestHelper.h"
@@ -142,11 +146,14 @@ private:
     static QString appearanceSaidAs(const enums::Appearance appearance) { return appearance == enums::Appearance::dark ? qsl("dark") : qsl("light"); }
 
     // Popped up rather than grabbed while hidden: a menu lays its rows out as it is shown
-    static QImage shotOf(QMenu* pMenu)
+    static QImage shotOf(QMenu* pMenu, QAction* pUnderThePointer = nullptr)
     {
         pMenu->popup(scmMenuAt);
         if (!QTest::qWaitForWindowExposed(pMenu)) {
             return QImage();
+        }
+        if (pUnderThePointer) {
+            pMenu->setActiveAction(pUnderThePointer);
         }
         const QImage shot = TestPixels::shot(pMenu);
         pMenu->hide();
@@ -167,6 +174,94 @@ private:
             }
         }
         return differing;
+    }
+
+    static int pixelsReading(const QImage& shot, const QRect& within, const QColor& wanted)
+    {
+        int reading = 0;
+        for (int y = within.top(); y <= within.bottom(); ++y) {
+            for (int x = within.left(); x <= within.right(); ++x) {
+                const QColor pixel = TestPixels::sampled(shot, QPoint(x, y));
+                reading += pixel.isValid() && TestPixels::readsAs(pixel, wanted, scmInkTolerance) ? 1 : 0;
+            }
+        }
+        return reading;
+    }
+
+    // Those taking the colour between the two shots, so a glyph already in it is not counted
+    static int pixelsTurning(const QImage& before, const QImage& after, const QRect& within, const QColor& wanted)
+    {
+        int turning = 0;
+        for (int y = within.top(); y <= within.bottom(); ++y) {
+            for (int x = within.left(); x <= within.right(); ++x) {
+                const QColor was = TestPixels::sampled(before, QPoint(x, y));
+                const QColor is = TestPixels::sampled(after, QPoint(x, y));
+                turning += is.isValid() && TestPixels::readsAs(is, wanted, scmInkTolerance) && !TestPixels::readsAs(was, wanted, scmInkTolerance) ? 1 : 0;
+            }
+        }
+        return turning;
+    }
+
+    // On its own, a sheet that colours only the row under the pointer leaves the rows to the base style; one giving the rows a box
+    // has every row drawn by Qt's stylesheet style (QStyleSheetStyle::drawControl(), CE_MenuItem)
+    static QString hoveredRowSheet() { return qsl("QMenu::item:selected { background-color: #444444; }"); }
+    static QString paddedRowsSheet() { return qsl("QMenu { background: #222; color: #ddd; } QMenu::item { padding: 4px 24px; } QMenu::item:selected { background: #444; }"); }
+
+    static QColor scriptsWash() { return QColor(200, 40, 40); }
+
+    static void addBothRoads(const QString& what, const QString& sheet)
+    {
+        QTest::addRow("setAppStyleSheet, %s", qPrintable(what)) << true << sheet;
+        QTest::addRow("setProfileStyleSheet, %s", qPrintable(what)) << false << sheet;
+    }
+
+    // The two roads a script's sheet reaches the menu bar's menus by: the application's, and the profile's, which is
+    // set on the menu bar
+    static void useScriptSheet(const bool application, const QString& sheet)
+    {
+        if (application) {
+            mudlet::self()->setAppStyleSheet(sheet);
+        } else {
+            mudlet::self()->getActiveHost()->setProfileStyleSheet(sheet);
+        }
+        QCoreApplication::processEvents();
+    }
+
+    static void dropScriptSheets()
+    {
+        mudlet::self()->setAppStyleSheet(QString());
+        mudlet::self()->getActiveHost()->setProfileStyleSheet(QString());
+        QCoreApplication::processEvents();
+    }
+
+    static QList<QAction*> switchesOfTheMenuBar()
+    {
+        QList<QAction*> switches;
+        for (QMenu* pMenu : menuBarMenus()) {
+            for (QAction* pAction : pMenu->actions()) {
+                if (pAction->isCheckable()) {
+                    switches << pAction;
+                }
+            }
+        }
+        return switches;
+    }
+
+    static QMenu* menuHolding(QAction* pAction)
+    {
+        for (QMenu* pMenu : menuBarMenus()) {
+            if (pMenu->actions().contains(pAction)) {
+                return pMenu;
+            }
+        }
+        return nullptr;
+    }
+
+    // What the base style draws the row under the pointer in, read from the palette the menus are drawn with
+    static QColor chosenRowInk(const QPalette& palette)
+    {
+        const QColor words = palette.color(QPalette::HighlightedText);
+        return uiDesign::readableOn(palette.color(QPalette::Highlight), words, words, uiDesign::scmQuietMinimumRatio);
     }
 
 private slots:
@@ -470,6 +565,261 @@ private slots:
         QVERIFY2(TestPixels::readsAs(washed, wanted, scmInkTolerance),
                  qPrintable(qsl("switched on, the row reads %1 beside its glyph rather than the accent's wash over the card, %2 - nothing says it is on").arg(washed.name(), wanted.name())));
         QVERIFY2(tickDiffering > glyphRow.height(), "a switched-on row without a glyph no longer shows its tick");
+    }
+
+    void test_aSwitchedOnEntryIsToldFromOneThatIsOffUnderAScriptsSheet_data()
+    {
+        QTest::addColumn<bool>("application");
+        QTest::addColumn<QString>("sheet");
+        addBothRoads(qsl("hovered row coloured"), hoveredRowSheet());
+        addBothRoads(qsl("rows padded"), paddedRowsSheet());
+    }
+
+    // Under a sheet giving the rows a box, Qt's stylesheet style draws an entry's icon in place of its tick
+    // (QStyleSheetStyle::renderMenuItemIcon()), so a glyph that is one picture either way needs something round it
+    void test_aSwitchedOnEntryIsToldFromOneThatIsOffUnderAScriptsSheet()
+    {
+        QFETCH(bool, application);
+        QFETCH(QString, sheet);
+        const QList<QAction*> switches = switchesOfTheMenuBar();
+        QList<bool> wereChecked;
+        for (const QAction* pSwitch : switches) {
+            wereChecked << pSwitch->isChecked();
+        }
+        const bool iconsHidden = qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        auto restore = qScopeGuard([switches, wereChecked, iconsHidden]() {
+            for (qsizetype i = 0; i < switches.size(); ++i) {
+                const QSignalBlocker quiet(switches.at(i));
+                switches.at(i)->setChecked(wereChecked.at(i));
+            }
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, iconsHidden);
+            dropScriptSheets();
+        });
+        useScriptSheet(application, sheet);
+        // On a script's dark menu the wash alone reads near 1.2:1 against the row, so the outline is what has to show
+        const QColor outline = uiDesign::themeTokens().accent;
+
+        QStringList alike;
+        QStringList unoutlined;
+        for (QAction* pSwitch : switches) {
+            QMenu* pMenu = menuHolding(pSwitch);
+            // Blocked, so switching Full Screen or Always on Top here changes nothing but the mark
+            const QSignalBlocker quiet(pSwitch);
+            for (const bool hovered : {false, true}) {
+                pSwitch->setChecked(false);
+                const QImage off = shotOf(pMenu, hovered ? pSwitch : nullptr);
+                pSwitch->setChecked(true);
+                const QImage on = shotOf(pMenu, hovered ? pSwitch : nullptr);
+                QVERIFY2(!off.isNull() && !on.isNull(), qPrintable(qsl("the menu holding %1 never came up to be grabbed").arg(saidAs(pSwitch))));
+                const QRect column = leadingColumnOf(pMenu->actionGeometry(pSwitch));
+                const QString said = qsl("%1 %2").arg(saidAs(pSwitch), hovered ? qsl("under the pointer") : qsl("at rest"));
+                if (const int differing = differingPixels(off, on, column); differing <= column.height()) {
+                    alike << qsl("%1 (%2 pixels differ)").arg(said, QString::number(differing));
+                }
+                if (const int outlined = pixelsTurning(off, on, column, outline); outlined <= column.height()) {
+                    unoutlined << qsl("%1 (%2 pixels)").arg(said, QString::number(outlined));
+                }
+            }
+        }
+        qInfo().noquote() << qsl("  %1 switches; in one state or the other %2 of them look alike switched on and off, and %3 show no outline in %4 switched on")
+                                     .arg(QString::number(switches.size()), QString::number(alike.size()), QString::number(unoutlined.size()), outline.name());
+
+        QVERIFY2(!switches.isEmpty(), "the six menus hold no entry that switches on and off, so nothing below was checked");
+        QVERIFY2(alike.isEmpty(), qPrintable(qsl("these entries look the same switched on as off: %1").arg(alike.join(qsl(", ")))));
+        QVERIFY2(unoutlined.isEmpty(), qPrintable(qsl("switched on, these entries show no outline in the accent %1 beside their glyph: %2").arg(outline.name(), unoutlined.join(qsl(", ")))));
+    }
+
+    void test_aScriptsOwnIconRuleIsKept_data()
+    {
+        QTest::addColumn<bool>("application");
+        QTest::addColumn<QString>("sheet");
+        // The second is less specific than a design rule for a switched-on icon would be, so it shows whether one is set
+        addBothRoads(qsl("switched-on icon"), paddedRowsSheet() + qsl(" QMenu::icon:checked { background-color: %1; }").arg(scriptsWash().name()));
+        addBothRoads(qsl("every icon"), paddedRowsSheet() + qsl(" QMenu::icon { background-color: %1; }").arg(scriptsWash().name()));
+    }
+
+    void test_aScriptsOwnIconRuleIsKept()
+    {
+        QFETCH(bool, application);
+        QFETCH(QString, sheet);
+        QAction* pEntry = mudlet::self()->dactionInputLine;
+        QMenu* pMenu = mudlet::self()->menuEditor;
+        const bool wasChecked = pEntry->isChecked();
+        const bool iconsHidden = qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        auto restore = qScopeGuard([pEntry, wasChecked, iconsHidden]() {
+            const QSignalBlocker quiet(pEntry);
+            pEntry->setChecked(wasChecked);
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, iconsHidden);
+            dropScriptSheets();
+        });
+        useScriptSheet(application, sheet);
+        {
+            const QSignalBlocker quiet(pEntry);
+            pEntry->setChecked(true);
+        }
+
+        const QImage shot = shotOf(pMenu);
+        QVERIFY2(!shot.isNull(), "the Toolbox menu never came up to be grabbed");
+        const QRect row = pMenu->actionGeometry(pEntry);
+        const int washed = pixelsReading(shot, leadingColumnOf(row), scriptsWash());
+        qInfo().noquote() << qsl("  %1 pixels of the switched-on Compact input line's leading column are the script's wash").arg(QString::number(washed));
+        QVERIFY2(washed > row.height(),
+                 qPrintable(qsl("the script's own icon rule no longer washes the switched-on Compact input line: %1 pixels at %2 are in its colour")
+                                    .arg(QString::number(washed), TestPixels::describe(row))));
+    }
+
+    void test_aScriptsSheetLeavesAGlyphUnderThePointerAsAtRest_data()
+    {
+        QTest::addColumn<bool>("application");
+        QTest::addColumn<QString>("sheet");
+        QTest::addColumn<bool>("stylesMenus");
+        for (const bool application : {true, false}) {
+            const char* road = application ? "setAppStyleSheet" : "setProfileStyleSheet";
+            QTest::addRow("%s, hovered row coloured", road) << application << qsl("QMenu::item:selected { background-color: #f0f0f0; color: #141414; }") << true;
+            QTest::addRow("%s, rows padded", road) << application << paddedRowsSheet() << true;
+            QTest::addRow("%s, the bar alone", road) << application << qsl("QMenuBar { background-color: #102030; }") << false;
+        }
+    }
+
+    // Qt has no way to read what a script's sheet fills the row under the pointer with, so the glyph stays as at rest
+    // there; a sheet that names only the bar leaves the menus to the base style
+    void test_aScriptsSheetLeavesAGlyphUnderThePointerAsAtRest()
+    {
+        QFETCH(bool, application);
+        QFETCH(QString, sheet);
+        QFETCH(bool, stylesMenus);
+        auto restore = qScopeGuard([]() {
+            dropScriptSheets();
+        });
+        const auto astrayFrom = [](const bool asAtRest) {
+            QStringList astray;
+            for (QMenu* pMenu : menuBarMenus()) {
+                const QColor wanted = chosenRowInk(QApplication::palette(pMenu));
+                for (QAction* pAction : pMenu->actions()) {
+                    if (pAction->isSeparator()) {
+                        continue;
+                    }
+                    for (const QIcon::Mode mode : {QIcon::Active, QIcon::Selected}) {
+                        for (const QIcon::State state : {QIcon::Off, QIcon::On}) {
+                            const QImage chosen = drawnAt(pAction->icon(), mode, state);
+                            const bool astrayHere = asAtRest ? chosen != drawnAt(pAction->icon(), QIcon::Normal, state) : !TestPixels::readsAs(strongestInk(chosen), wanted, scmInkTolerance);
+                            if (astrayHere) {
+                                astray << qsl("%1 %2 %3 in %4")
+                                                  .arg(saidAs(pAction),
+                                                       mode == QIcon::Active ? qsl("Active") : qsl("Selected"),
+                                                       state == QIcon::On ? qsl("On") : qsl("Off"),
+                                                       strongestInk(chosen).name());
+                            }
+                        }
+                    }
+                }
+            }
+            return astray;
+        };
+
+        useScriptSheet(application, sheet);
+        const QStringList underTheSheet = astrayFrom(stylesMenus);
+        const QString menuBarSheet = mudlet::self()->menuBar()->styleSheet();
+        dropScriptSheets();
+        const QStringList afterTheSheet = astrayFrom(false);
+        qInfo().noquote() << qsl("  under the sheet %1 glyphs are astray, and %2 once it is gone").arg(QString::number(underTheSheet.size()), QString::number(afterTheSheet.size()));
+
+        QVERIFY2(underTheSheet.isEmpty(),
+                 qPrintable(qsl("under the sheet, these glyphs are not %1 under the pointer: %2")
+                                    .arg(stylesMenus ? qsl("as they are at rest") : qsl("in the base style's chosen-row ink"), underTheSheet.join(qsl(", ")))));
+        QVERIFY2(afterTheSheet.isEmpty(), qPrintable(qsl("with the sheet gone, these glyphs are not back in the chosen-row ink: %1").arg(afterTheSheet.join(qsl(", ")))));
+        QVERIFY2(stylesMenus || !menuBarSheet.contains(qsl("QMenu::icon")),
+                 qPrintable(qsl("a sheet naming only the bar put an icon rule on the menu bar, which hands the menus' glyphs to the stylesheet style: %1").arg(menuBarSheet)));
+    }
+
+    // The Windows platform theme gives QMenu a palette of its own, apart from the application's
+    void test_theRowUnderThePointerFollowsTheMenusClassPalette()
+    {
+        mudlet* pMudlet = mudlet::self();
+        const bool iconsHidden = qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        TestPixels::setAppearanceAndWait(enums::Appearance::light);
+        const QPalette before = QApplication::palette("QMenu");
+        auto restore = qScopeGuard([before, iconsHidden]() {
+            QApplication::setPalette(before, "QMenu");
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, iconsHidden);
+            // A change of the application's palette clears every class palette
+            TestPixels::setAppearanceAndWait(enums::Appearance::dark);
+            TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
+        });
+
+        QPalette menus = before;
+        menus.setColor(QPalette::Highlight, QColor(250, 226, 120));
+        menus.setColor(QPalette::HighlightedText, QColor(48, 24, 0));
+        QApplication::setPalette(menus, "QMenu");
+        TestPixels::settle();
+        pMudlet->restyleToolBarIcons();
+        const QPalette read = QApplication::palette("QMenu");
+        const QColor wanted = chosenRowInk(read);
+        const QColor applications = chosenRowInk(QApplication::palette());
+        QVERIFY2(TestPixels::distance(wanted, applications) > scmDrawnInkTolerance,
+                 qPrintable(qsl("the menus' palette reads %1 under the pointer, the application's %2: too alike for this case to tell them apart").arg(wanted.name(), applications.name())));
+
+        QStringList astray;
+        for (QMenu* pMenu : menuBarMenus()) {
+            for (QAction* pAction : pMenu->actions()) {
+                if (pAction->isSeparator()) {
+                    continue;
+                }
+                for (const QIcon::State state : {QIcon::Off, QIcon::On}) {
+                    if (const QColor ink = strongestInk(drawnAt(pAction->icon(), QIcon::Active, state)); !TestPixels::readsAs(ink, wanted, scmInkTolerance)) {
+                        astray << qsl("%1 %2 in %3").arg(saidAs(pAction), state == QIcon::On ? qsl("On") : qsl("Off"), ink.name());
+                    }
+                }
+            }
+        }
+
+        QMenu* pMenu = pMudlet->menuGames;
+        QAction* pEntry = pMudlet->dactionConnect;
+        const QImage shot = shotOf(pMenu, pEntry);
+        const QRect row = pMenu->actionGeometry(pEntry);
+        const QRect glyphColumn = QRect(row.left(), row.top(), row.height(), row.height()).adjusted(2, 2, -2, -2);
+        const int filled = pixelsReading(shot, row, read.color(QPalette::Highlight));
+        QColor nearest;
+        for (int y = glyphColumn.top(); y <= glyphColumn.bottom(); ++y) {
+            for (int x = glyphColumn.left(); x <= glyphColumn.right(); ++x) {
+                const QColor pixel = TestPixels::sampled(shot, QPoint(x, y));
+                if (pixel.isValid() && (!nearest.isValid() || TestPixels::distance(pixel, wanted) < TestPixels::distance(nearest, wanted))) {
+                    nearest = pixel;
+                }
+            }
+        }
+        qInfo().noquote() << qsl("  on the menus' Highlight %1 the glyph is inked %2 (the application's palette would give %3); the hovered Play row has %4 pixels of that fill and its glyph's "
+                                 "nearest pixel is %5")
+                                     .arg(read.color(QPalette::Highlight).name(), wanted.name(), applications.name(), QString::number(filled), nearest.name());
+
+        QVERIFY2(filled > row.height(),
+                 qPrintable(qsl("the hovered Play row is not filled with the menus' own Highlight %1, so the menu is not drawn with that palette").arg(read.color(QPalette::Highlight).name())));
+        QVERIFY2(astray.isEmpty(), qPrintable(qsl("under the pointer these glyphs are not in the ink of the menus' own palette, %1: %2").arg(wanted.name(), astray.join(qsl(", ")))));
+        QVERIFY2(nearest.isValid() && TestPixels::distance(nearest, wanted) <= scmDrawnInkTolerance,
+                 qPrintable(qsl("the hovered Play row shows no glyph in the ink of the menus' own palette %1; the nearest pixel in its glyph column is %2").arg(wanted.name(), nearest.name())));
+    }
+
+    void test_theRowUnderThePointerFollowsAPaletteSetOnTheMenu()
+    {
+        QMenu menu;
+        QPalette own = QApplication::palette(&menu);
+        own.setColor(QPalette::Highlight, QColor(250, 226, 120));
+        own.setColor(QPalette::HighlightedText, QColor(48, 24, 0));
+        menu.setPalette(own);
+        QAction* pEntry = menu.addAction(qsl("Play"));
+        const QString glyphFile = qsl(":/icons/toolbar-connect.svg");
+        uiDesign::restyleMenuGlyphs({{pEntry, glyphFile, QString(), uiDesign::scmIdentity_connect}}, uiDesign::themeTokens(), true, false);
+
+        const QColor wanted = chosenRowInk(menu.palette());
+        const QColor applications = chosenRowInk(QApplication::palette());
+        QVERIFY2(TestPixels::distance(wanted, applications) > scmDrawnInkTolerance,
+                 qPrintable(qsl("the menu's own palette reads %1 under the pointer, the application's %2: too alike for this case to tell them apart").arg(wanted.name(), applications.name())));
+        const QColor ink = strongestInk(drawnAt(pEntry->icon(), QIcon::Active, QIcon::Off));
+        QVERIFY2(TestPixels::readsAs(ink, wanted, scmInkTolerance),
+                 qPrintable(qsl("under the pointer the glyph is inked %1 rather than %2, the ink of the palette set on its menu").arg(ink.name(), wanted.name())));
     }
 
     // A native menu - the macOS menu bar, a desktop's global menu - holds a copy of an entry's icon, taken as the entry changes

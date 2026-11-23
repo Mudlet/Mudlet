@@ -1311,6 +1311,15 @@ QString disclosureButtonStyleSheet(const QString& buttonSelector, const ThemeTok
            + buttonSelector + qsl(":focus { border-color: %1; }").arg(tokens.accent.name());
 }
 
+namespace {
+// A sheet-drawn entry with an icon gets no check mark (QStyleSheetStyle::renderMenuItemIcon()), so a switched-on one is
+// washed behind its glyph, as a switched-on toolbar button is; the box grows by the padding round the glyph
+QString menuIconWashDeclarations(const ThemeTokens& tokens)
+{
+    return qsl("background-color: %1; border-radius: %2px; padding: %3px;").arg(tokens.accentSoft, QString::number(scmRadiusChip), QString::number(scmMenuIconWashPadding));
+}
+} // namespace
+
 // No font here: a menu is read in the font of whatever it hangs from
 QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix)
 {
@@ -1335,14 +1344,21 @@ QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix)
     // Exclusive rows would come out as boxes rather than circles; none of these menus has one
     const ChoiceMarkInks inks = choiceMarkInks(tokens);
     rules += choiceMarkRules(scoped({qsl("QMenu::indicator")}), scmChoiceBoxRadius, inks.tick, QString(), inks.quietTick, QString(), inks, tokens)
-             + scoped({qsl("QMenu::indicator"), qsl("QMenu::icon")})
-             + qsl(" { left: %1px; }").arg(QString::number(scmMenuItemMarkInset))
-             // A sheet-drawn entry with an icon gets no check mark (QStyleSheetStyle::renderMenuItemIcon()), so a switched-on
-             // one is washed behind its glyph, as a switched-on toolbar button is
-             + scoped({qsl("QMenu::icon:checked")})
-             + qsl(" { background-color: %1; border-radius: %2px; padding: %3px; left: %4px; }")
-                       .arg(tokens.accentSoft, QString::number(scmRadiusChip), QString::number(scmMenuIconWashPadding), QString::number(scmMenuItemMarkInset - scmMenuIconWashPadding));
+             + scoped({qsl("QMenu::indicator"), qsl("QMenu::icon")}) + qsl(" { left: %1px; }").arg(QString::number(scmMenuItemMarkInset)) + scoped({qsl("QMenu::icon:checked")})
+             + qsl(" { %1 left: %2px; }").arg(menuIconWashDeclarations(tokens), QString::number(scmMenuItemMarkInset - scmMenuIconWashPadding));
     return rules;
+}
+
+QString menuIconWashStyleSheet(const ThemeTokens& tokens)
+{
+    // Every glyph takes the box's room, as a script's sheet may start the icon at the row's edge, where the row's clip
+    // would cut a box moved back off. The outline is for a script's dark menu, where the wash alone is near 1.2:1
+    return qsl("QMenu::icon { padding: %1px; } QMenu::icon:checked { %2 border: %3px solid %4; padding: %5px; }")
+            .arg(QString::number(scmMenuIconWashPadding),
+                 menuIconWashDeclarations(tokens),
+                 QString::number(scmInputBorderWidth),
+                 tokens.accent.name(),
+                 QString::number(scmMenuIconWashPadding - scmInputBorderWidth));
 }
 
 QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens)
@@ -1815,20 +1831,42 @@ void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& t
     }
 }
 
-void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured)
+namespace {
+// A menu is drawn in its palette(), which an appearance change reaches only once events run, so unless one was set on
+// the menu itself this is the class's it resolves from, which a platform theme may set apart (Windows)
+QPalette menuPaletteOf(const QAction* pAction)
 {
-    // A base style fills the row under the pointer with Highlight and writes its words in HighlightedText; it asks the
-    // icon for Active (Fusion, the Windows styles) or Selected (Breeze, while the row is pressed)
-    const QPalette palette = QApplication::palette();
-    const QColor highlightedText = palette.color(QPalette::HighlightedText);
-    const QColor chosenRowInk = readableOn(palette.color(QPalette::Highlight), highlightedText, highlightedText, scmQuietMinimumRatio);
+    for (QObject* pObject : pAction->associatedObjects()) {
+        if (const auto* pMenu = qobject_cast<const QMenu*>(pObject)) {
+            return pMenu->testAttribute(Qt::WA_SetPalette) ? pMenu->palette() : QApplication::palette(pMenu);
+        }
+    }
+    return QApplication::palette("QMenu");
+}
+} // namespace
+
+void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const bool scriptSheetStylesMenus)
+{
     for (const ActionGlyph& glyph : glyphs) {
         if (!glyph.pAction) {
             continue;
         }
         QIcon icon = identityOrTintedIcon(glyph, tokens, coloured, tokens.disabledText);
-        const QPixmap chosenOff = tintedGlyph(glyphPixmap(glyph.glyphOff), chosenRowInk);
-        const QPixmap chosenOn = glyph.glyphOn.isEmpty() ? chosenOff : tintedGlyph(glyphPixmap(glyph.glyphOn), chosenRowInk);
+        QPixmap chosenOff;
+        QPixmap chosenOn;
+        if (scriptSheetStylesMenus) {
+            const QSize raster = glyphPixmap(glyph.glyphOff).size();
+            chosenOff = icon.pixmap(raster, 1.0, QIcon::Normal, QIcon::Off);
+            chosenOn = icon.pixmap(raster, 1.0, QIcon::Normal, QIcon::On);
+        } else {
+            // A base style fills the row under the pointer with Highlight and writes its words in HighlightedText; it asks
+            // the icon for Active (Fusion, the Windows styles) or Selected (Breeze, while the row is pressed)
+            const QPalette palette = menuPaletteOf(glyph.pAction);
+            const QColor highlightedText = palette.color(QPalette::HighlightedText);
+            const QColor chosenRowInk = readableOn(palette.color(QPalette::Highlight), highlightedText, highlightedText, scmQuietMinimumRatio);
+            chosenOff = tintedGlyph(glyphPixmap(glyph.glyphOff), chosenRowInk);
+            chosenOn = glyph.glyphOn.isEmpty() ? chosenOff : tintedGlyph(glyphPixmap(glyph.glyphOn), chosenRowInk);
+        }
         // Each replaces the recipe's own pixmap of that mode, state and size
         for (const QIcon::Mode mode : {QIcon::Active, QIcon::Selected}) {
             icon.addPixmap(chosenOff, mode, QIcon::Off);

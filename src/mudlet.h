@@ -267,8 +267,10 @@ public:
     void setToolBarIconSize(int);
     void restyleToolBarIcons();
     void restyleMainToolBar();
+    void restyleMenuBar();
     static QString toolBarShellStyleSheet(const QString& barSelector);
     static bool sheetStylesToolBars(const QString& sheet);
+    static bool sheetStylesMenus(const QString& sheet);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
@@ -397,7 +399,8 @@ public:
     bool mProcessingTelnetUri = false;
     bool mGameLinkQuestionOpen = false;
     QToolBar* mpMainToolBar = nullptr;
-    // Never set on the bar directly: restyleMainToolBar() appends it to the design's rules on the same widget
+    // Never set on the toolbar or the menu bar directly: restyleMainToolBar() and restyleMenuBar() put it after the
+    // design's rules on the same widget
     QString mMainToolBarProfileStyleSheet;
     QList<uiDesign::ActionGlyph> mToolBarGlyphs;
     QList<uiDesign::ActionGlyph> mMenuGlyphs;

@@ -106,6 +106,7 @@
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPoint>
+#include <QRegularExpression>
 #include <QScopeGuard>
 #include <QScreen>
 #include <QScrollBar>
@@ -5111,7 +5112,7 @@ void mudlet::restyleToolBarIcons()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens, mColouredIcons);
-    uiDesign::restyleMenuGlyphs(mMenuGlyphs, tokens, mColouredIcons);
+    uiDesign::restyleMenuGlyphs(mMenuGlyphs, tokens, mColouredIcons, sheetStylesMenus(qApp->styleSheet() + mMainToolBarProfileStyleSheet));
     // Outside mToolBarGlyphs: its own green stays whether or not the bar is coloured
     if (mpButtonAbout) {
         mpButtonAbout->setIcon(aboutUpdateIcon(tokens));
@@ -5119,6 +5120,7 @@ void mudlet::restyleToolBarIcons()
     uiDesign::ToolBarOverflow::restyle(mpMainToolBar, tokens);
     uiDesign::ToolBarOverflow::restyle(mpToolBarReplay, tokens);
     restyleMainToolBar();
+    restyleMenuBar();
 }
 
 // A script's sheet naming these styles the bars as before the design, whose rules set on a bar itself would outrank an
@@ -5126,6 +5128,25 @@ void mudlet::restyleToolBarIcons()
 bool mudlet::sheetStylesToolBars(const QString& sheet)
 {
     return sheet.contains(qsl("QToolBar")) || sheet.contains(qsl("QToolButton"));
+}
+
+// Not QMenuBar alone, which styles only the bar and leaves its menus to the base style
+bool mudlet::sheetStylesMenus(const QString& sheet)
+{
+    static const QRegularExpression menuSelector(qsl("\\bQMenu\\b"));
+    return sheet.contains(menuSelector);
+}
+
+// The profile's Lua sheet is the menu bar's own. The wash joins it only while a script's sheet styles the menus but not
+// their icons: an icon rule alone moves a base-style menu's glyphs and drops the box that marks a switched-on one
+void mudlet::restyleMenuBar()
+{
+    const QString scriptSheets = qApp->styleSheet() + mMainToolBarProfileStyleSheet;
+    const bool washSwitchedOnGlyphs = sheetStylesMenus(scriptSheets) && !scriptSheets.contains(qsl("QMenu::icon"), Qt::CaseInsensitive);
+    const QString sheet = washSwitchedOnGlyphs ? uiDesign::menuIconWashStyleSheet(uiDesign::themeTokens()) + mMainToolBarProfileStyleSheet : mMainToolBarProfileStyleSheet;
+    if (menuBar()->styleSheet() != sheet) {
+        menuBar()->setStyleSheet(sheet);
+    }
 }
 
 QString mudlet::toolBarShellStyleSheet(const QString& barSelector)
@@ -8555,7 +8576,6 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     restyleMainToolBar();
     restyleToolBarIcons();
     mpTabBar->setStyleSheet(styleSheet);
-    menuBar()->setStyleSheet(styleSheet);
 }
 
 void mudlet::registerBlinkClient()

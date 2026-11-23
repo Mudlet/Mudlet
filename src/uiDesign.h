@@ -225,6 +225,8 @@ QString disclosureButtonStyleSheet(const QString& buttonSelector, const ThemeTok
 
 // Follow with letPopupsTakeTheFieldsCorner() on the same container; a menu built on demand gets both before exec().
 QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix = QString());
+// menuStyleSheet()'s wash behind a switched-on entry's glyph alone, for menus whose rows a script's sheet draws
+QString menuIconWashStyleSheet(const ThemeTokens& tokens);
 
 inline constexpr int scmNoticeGlyphSize = 20;
 inline constexpr int scmNoticePaddingHorizontal = 10;
@@ -467,10 +469,9 @@ void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& to
 // For actions on a toolbar: unavailable, the glyph takes disabledBarText as the bar's words do. Coloured, a glyph with
 // an identity colour keeps it at rest, under the pointer and switched on.
 void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured = false);
-// For actions in a menu the base style draws: unavailable, the glyph takes disabledText, and on the row under the pointer
-// it takes HighlightedText, walked to read on Highlight, whatever its colour, as that row's words do. Not for a menu
-// carrying menuStyleSheet(), whose chosen row is a wash under accentText.
-void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured);
+// For actions in a menu the base style draws: unavailable, disabledText; under the pointer, the menu palette's
+// HighlightedText walked to read on its Highlight, or as at rest while a script's sheet styles the menus.
+void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const bool scriptSheetStylesMenus);
 
 struct CardMetrics
 {

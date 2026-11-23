@@ -476,7 +476,18 @@ amount so the glyph does not shift when the row is switched on. A row without a
 picture keeps its mark. The menu bar's own menus are drawn by the base style
 instead, which fills the row under the pointer with `Highlight`: there
 `restyleMenuGlyphs()` inks every glyph, coloured or grey, in the row's words'
-`HighlightedText`, walked with `readableOn()` to `scmQuietMinimumRatio` on `Highlight`, the floor a glyph line is held to.
+`HighlightedText`, walked with `readableOn()` to `scmQuietMinimumRatio` on `Highlight`, the floor a glyph line is held to,
+both read from the `QMenu` class palette, which a platform theme may set apart
+from the application's (Windows), or from one set on the menu itself, rather
+than from a menu's `palette()`, which takes an appearance change only once
+events run. A script's sheet naming `QMenu` hands those rows to the stylesheet
+style, so `mudlet::restyleMenuBar()` puts `menuIconWashStyleSheet()` on the menu
+bar ahead of the profile's sheet - this wash, with every glyph given its room,
+as a script's row may start the icon at the edge the row is clipped to, and a
+1px `accent` outline taken out of that room, as on a script's dark menu the wash
+alone reads near 1.2:1 against the row and the outline 4:1 - unless
+the script styles `QMenu::icon` itself, and the glyph under the pointer stays as
+at rest, as Qt has no way to read the colours the sheet gives that row.
 On macOS the menu bar is the system's, and macOS 27 hides a menu item's picture
 unless the application asks to show it, which Qt 6.11 never does: with "Show
 icons on menus" ticked, `setMacMenuImagesAlwaysVisible()` asks for every entry
