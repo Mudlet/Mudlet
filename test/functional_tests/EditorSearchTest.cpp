@@ -674,6 +674,31 @@ private slots:
         QCOMPARE(selected->text(0), qsl("qaSearchVariable"));
     }
 
+    // A match on a later line of a string is shown and reached on that line, as one in a script is
+    void test_aMatchInALaterLineOfAVariableValueLeadsToThatLine()
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaMultiLineVariable = \"first line\\nsecond line\\nthird qaBuried line\\nlast\"")));
+        auto removeVariable = qScopeGuard([this]() {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaMultiLineVariable = nil"));
+        });
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        mpEditor->slot_showScripts();
+        search(qsl("qaBuried"));
+
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("qaMultiLineVariable||| name=qaMultiLineVariable view=7 type=8 line=2 pos=6 index=0 +"),
+                         qsl("  Value third qaBuried line||| name=qaMultiLineVariable view=7 type=8 line=2 pos=6 index=0"),
+                 }));
+
+        mpEditor->slot_itemSelectedInSearchResults(topLevelResultFor(qsl("Variable")));
+        auto* controller = mpEditor->mpSourceEditorEdbee->controller();
+        QVERIFY(QTest::qWaitFor([controller]() {
+            const size_t caret = controller->textSelection()->range(0).caret();
+            return controller->textDocument()->lineFromOffset(caret) == 2 && controller->textDocument()->columnFromOffsetAndLine(caret, 2) == 6;
+        }));
+    }
+
     // The find box inside the script pane marks every match as the term is
     // typed, so it waits until enough has been typed to be worth a pass over
     // the document - one or two characters match most of a script (#3847).
@@ -838,6 +863,29 @@ private slots:
         mpEditor->slot_sourceReplace();
         mpEditor->slot_sourceReplace();
         QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma delta\n"));
+    }
+
+    // Searching variables rereads them, which must leave the item open in another view as it was
+    void test_searchingVariablesFromAnotherViewKeepsItsForm()
+    {
+        mpEditor->slot_showScripts();
+        QTreeWidgetItem* pScriptRow = mpEditor->treeWidget_scripts->findItems(qsl("qaSearchScript"), Qt::MatchExactly | Qt::MatchRecursive).value(0);
+        QVERIFY(pScriptRow);
+        mpEditor->treeWidget_scripts->setCurrentItem(pScriptRow);
+        QVERIFY(mpEditor->mpSourceEditorArea->isVisibleTo(mpEditor));
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        search(mNeedle);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmScriptView);
+        QVERIFY2(mpEditor->mpSourceEditorArea->isVisibleTo(mpEditor), "the open script's code was hidden by the variables being reread");
+        QVERIFY2(!mpEditor->mpLabel_hiddenVariablesCount->isVisibleTo(mpEditor), "the hidden variables count showed outside the Variables view");
+
+        QTreeWidgetItem* pVariableResult = topLevelResultFor(qsl("Variable"));
+        QVERIFY(pVariableResult);
+        mpEditor->slot_itemSelectedInSearchResults(pVariableResult);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmVarsView);
+        QVERIFY2(mpEditor->mpLabel_hiddenVariablesCount->isVisibleTo(mpEditor), "the Variables view, reached from a result, did not say how many variables are hidden");
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()

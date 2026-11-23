@@ -1310,16 +1310,25 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
+    // Worked out now, as the dialog stays open while the map is panned, zoomed or moved to another level
+    const QRectF box = labelRectangle.normalized();
+    const float mx = (box.left() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (box.top() / mRoomHeight) - mMapCenterY;
+    const float mx2 = (box.right() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my2 = (yspan / 2.0) - (box.bottom() / mRoomHeight) - mMapCenterY;
+    const QVector3D mapPosition(mx, my, mMapCenterZ);
+    const QSizeF mapSize = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
+
     // The map can be replaced while this non-modal dialog is open, so re-find the area by id rather than
     // keep the pointer, and check the map generation, since a new map reuses area and label ids.
     const int areaId = mAreaID;
     const unsigned int mapGeneration = mpMap->mpRoomDB->mapGeneration();
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId, mapGeneration]() {
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, mapPosition, mapSize, labelId, areaId, mapGeneration]() {
         if (mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
             return;
         }
         if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
-            updateMapLabel(labelRectangle, labelId, pLabelArea);
+            updateMapLabel(labelRectangle, mapPosition, mapSize, labelId, areaId, pLabelArea);
         }
     });
 
@@ -1337,7 +1346,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     mpDlgMapLabel->updated();
 }
 
-void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
+void T2DMap::updateMapLabel(QRectF labelRectangle, QVector3D mapPosition, QSizeF mapSize, int labelId, int areaId, TArea* pArea)
 {
     TMapLabel label;
     QFont font;
@@ -1394,17 +1403,12 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     }
 
     label.pix = pixmap.copy(drawRectangle);
-    const float mx = (box.left() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my = (yspan / 2.0) - (box.top() / mRoomHeight) - mMapCenterY;
-
-    const float mx2 = (box.right() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my2 = (yspan / 2.0) - (box.bottom() / mRoomHeight) - mMapCenterY;
-    label.pos = QVector3D(mx, my, mMapCenterZ);
-    label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
+    label.pos = mapPosition;
+    label.size = mapSize;
 
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
-        mpMap->updateArea(mAreaID);
+        mpMap->updateArea(areaId);
         if (!label.temporary) {
             mpMap->setUnsaved(__func__);
         }
@@ -2206,6 +2210,8 @@ void T2DMap::slot_movePosition()
                 pArea->calcSpan();
             }
         }
+        // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area
+        mpMap->updateArea(dirtyAreas.size() == 1 ? *dirtyAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
     dialog->deleteLater();
@@ -2427,6 +2433,20 @@ void T2DMap::slot_setImage() {}
 
 void T2DMap::slot_deleteRoom()
 {
+    // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area.
+    // Rooms whose exits lead in lose those exits too, and may be in other areas.
+    QSet<int> affectedAreas;
+    const QMultiHash<int, int>& entrances = mpMap->mpRoomDB->getEntranceHash();
+    for (const int roomId : std::as_const(mMultiSelectionSet)) {
+        if (const TRoom* room = mpMap->mpRoomDB->getRoom(roomId)) {
+            affectedAreas.insert(room->getArea());
+        }
+        for (auto it = entrances.constFind(roomId); it != entrances.cend() && it.key() == roomId; ++it) {
+            if (const TRoom* enteringRoom = mpMap->mpRoomDB->getRoom(it.value())) {
+                affectedAreas.insert(enteringRoom->getArea());
+            }
+        }
+    }
     mpMap->mpRoomDB->removeRoom(mMultiSelectionSet);
     // mMultiSelectionSet gets cleared as rooms are removed by
     // TRoomDB::removeRoom() so no need to clear it here!
@@ -2434,6 +2454,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
+    mpMap->updateArea(affectedAreas.size() == 1 ? *affectedAreas.cbegin() : -1);
     mpMap->setUnsaved(__func__);
 }
 
@@ -2477,9 +2498,7 @@ void T2DMap::slot_spread()
     mMultiRect = QRect(0, 0, 0, 0);
     const int dx = pR_centerRoom->x();
     const int dy = pR_centerRoom->y();
-    const int areaID = pR_centerRoom->getArea();
-    auto pArea = mpMap->mpRoomDB->getArea(areaID);
-    bool doneSomething = false;
+    QSet<int> movedAreas;
     QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -2487,7 +2506,7 @@ void T2DMap::slot_spread()
             continue;
         }
 
-        doneSomething = true;
+        movedAreas.insert(pMovingR->getArea());
         pMovingR->setCoordinates(((pMovingR->x() - dx) * spread + dx), ((pMovingR->y() - dy) * spread + dy), pMovingR->z());
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
@@ -2504,12 +2523,15 @@ void T2DMap::slot_spread()
         pMovingR->customLines = newCustomLinePointsMap;
         pMovingR->calcRoomDimensions();
     }
-    if (doneSomething) {
-        if (pArea) {
-            pArea->mIsDirty = true;
-            pArea->clean();
+    if (!movedAreas.isEmpty()) {
+        for (const int areaId : std::as_const(movedAreas)) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pArea->mIsDirty = true;
+                pArea->clean();
+            }
         }
         repaint();
+        mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2554,9 +2576,7 @@ void T2DMap::slot_shrink()
     mMultiRect = QRect(0, 0, 0, 0);
     const int dx = pR_centerRoom->x();
     const int dy = pR_centerRoom->y();
-    const int areaID = pR_centerRoom->getArea();
-    auto pArea = mpMap->mpRoomDB->getArea(areaID);
-    bool doneSomething = false;
+    QSet<int> movedAreas;
     QSetIterator<int> itSelectionRoom(mMultiSelectionSet);
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -2564,7 +2584,7 @@ void T2DMap::slot_shrink()
             continue;
         }
 
-        doneSomething = true;
+        movedAreas.insert(pMovingR->getArea());
         pMovingR->setCoordinates(((pMovingR->x() - dx) / spread + dx), ((pMovingR->y() - dy) / spread + dy), pMovingR->z());
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
@@ -2581,12 +2601,15 @@ void T2DMap::slot_shrink()
         pMovingR->customLines = newCustomLinePointsMap;
         pMovingR->calcRoomDimensions();
     }
-    if (doneSomething) {
-        if (pArea) {
-            pArea->mIsDirty = true;
-            pArea->clean();
+    if (!movedAreas.isEmpty()) {
+        for (const int areaId : std::as_const(movedAreas)) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pArea->mIsDirty = true;
+                pArea->clean();
+            }
         }
         repaint();
+        mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2742,6 +2765,8 @@ void T2DMap::slot_setArea()
             mpMap->setRoomArea(itSelectedRoom.next(), newAreaId);
         }
         if (!mMultiSelectionSet.isEmpty()) {
+            // The rooms leave their areas for another, so every area involved must be redrawn
+            mpMap->updateArea(-1);
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
             if (!mIsSecondaryView && mpMap->mapper()) {
                 mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
@@ -2964,7 +2989,32 @@ void T2DMap::slot_configureAreas()
             return;
         }
 
-        // Delete immediately without confirmation
+        // There is no undo, so taking rooms with it needs a second word; an empty area is cheap to make again
+        if (const TArea* pArea = mpMap->mpRoomDB->getArea(areaId)) {
+            if (const QSet<int> roomsAsked = pArea->getAreaRooms(); !roomsAsked.isEmpty()) {
+                const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+                //: Title of the confirmation shown before deleting an area that still has rooms in it
+                const QString title = tr("Delete area");
+                //: Confirmation before deleting an area from the "Configure Areas" dialog; %1 is the area's name and %n how many rooms are deleted with it
+                const QString question = tr("Delete the area \"%1\" and the %n room(s) in it? This cannot be undone.", nullptr, static_cast<int>(roomsAsked.size())).arg(areaName);
+                const TRoomDB* roomDB = mpMap->mpRoomDB.get();
+                const unsigned int mapGeneration = roomDB->mapGeneration();
+                if (QMessageBox::question(dialog, title, question, QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes) {
+                    return;
+                }
+                // Scripts keep running while the question is up: they may load another map that reuses this id, or move rooms into or out of the area
+                const TArea* pAreaNow = mpMap->mpRoomDB.get() == roomDB && roomDB->mapGeneration() == mapGeneration ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
+                if (!pAreaNow || pAreaNow->getAreaRooms() != roomsAsked) {
+                    repopulate();
+                    //: Shown when the map changed while the "Delete area" confirmation was open, so the area was not deleted
+                    auto* notice = new QMessageBox(QMessageBox::Information, title, tr("The map changed while you were deciding, so nothing was deleted."), QMessageBox::Ok, dialog);
+                    notice->setAttribute(Qt::WA_DeleteOnClose);
+                    notice->open();
+                    return;
+                }
+            }
+        }
+
         const bool removed = mpMap->mpRoomDB->removeArea(areaId);
         if (!removed) {
             //: Warning message shown when trying to delete an area fails.

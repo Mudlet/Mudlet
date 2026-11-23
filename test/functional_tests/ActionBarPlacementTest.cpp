@@ -17,10 +17,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QGridLayout>
 #include <QLayout>
 #include <QMenu>
 #include <QMoveEvent>
+#include <QPushButton>
 #include <QResizeEvent>
+#include <QSet>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -1184,6 +1187,68 @@ private slots:
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledBar', 'background-color: blue;')")));
         QCOMPARE(console->actionEasyButtonBar(packaged), bar.data());
         QCOMPARE(bar->styleSheet(), qsl("background-color: blue;"));
+    }
+
+    void test_theEmptyPlacesBeforeTheFirstButtonCoverNoButton_data()
+    {
+        QTest::addColumn<int>("location");
+        QTest::addColumn<int>("orientation");
+        QTest::newRow("docked, filled in rows") << 0 << 1;
+        QTest::newRow("docked, filled in columns") << 0 << 0;
+        QTest::newRow("floating, filled in rows") << 4 << 1;
+        QTest::newRow("floating, filled in columns") << 4 << 0;
+    }
+
+    void test_theEmptyPlacesBeforeTheFirstButtonCoverNoButton()
+    {
+        QFETCH(int, location);
+        QFETCH(int, orientation);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* root = makeRootBar(host, qsl("placementFillerBar"), location);
+        root->mOrientation = orientation;
+        root->setButtonColumns(3);
+        root->setButtonFillerOffset(2);
+        QCOMPARE(root->getButtonFillerOffset(), 2);
+        for (int i = 2; i <= 4; ++i) {
+            auto* button = new TAction(root, host);
+            button->setName(qsl("placementFiller button %1").arg(i));
+            button->setIsActive(true);
+            host->getActionUnit()->registerAction(button);
+        }
+        host->getActionUnit()->updateAllToolbars();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QWidget* buttonArea = location == 4 ? console->actionToolBar(root)->widget()
+                                            : console->actionEasyButtonBar(root)->findChild<QWidget*>(qsl("easyButtonBar_Widget_%1_placementFillerBar").arg(host->getName()));
+        QVERIFY(buttonArea);
+        auto* grid = qobject_cast<QGridLayout*>(buttonArea->layout());
+        QVERIFY(grid);
+
+        QSet<std::pair<int, int>> cells;
+        qsizetype fillers = 0;
+        for (int index = 0; index < grid->count(); ++index) {
+            int row = 0;
+            int column = 0;
+            int rowSpan = 0;
+            int columnSpan = 0;
+            grid->getItemPosition(index, &row, &column, &rowSpan, &columnSpan);
+            if (!qobject_cast<QPushButton*>(grid->itemAt(index)->widget())) {
+                ++fillers;
+            }
+            for (int r = row; r < row + rowSpan; ++r) {
+                for (int c = column; c < column + columnSpan; ++c) {
+                    QVERIFY2(!cells.contains({r, c}), qPrintable(qsl("two widgets share row %1, column %2").arg(r).arg(c)));
+                    cells.insert({r, c});
+                }
+            }
+        }
+        QCOMPARE(fillers, 2);
+        QCOMPARE(grid->count(), 6);
     }
 
     // A button bar takes its size from its own action, so a stray one made
