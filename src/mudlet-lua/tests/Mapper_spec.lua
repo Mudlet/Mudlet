@@ -2765,7 +2765,7 @@ describe("Tests mapper functions against a shared fixture", function()
     -- key; a map info contributor is asked again on every paint, so it counts them
     describe("repaints the map when the room name font changes", function()
       local nameFont = "Sans,11,-1,5,50,0,0,0,0,0"
-      local paints
+      local paints, painted
 
       local function waitForPaint(ms)
         local waitedMs = 0
@@ -2784,7 +2784,9 @@ describe("Tests mapper functions against a shared fixture", function()
         end))
         assert.is_true(enableMapInfo("MapperSpecNameFontPaints"))
         assert.is_true(centerview(rA1))
-        assert.is_true(waitForPaint(5000), "the map was never painted")
+        -- Asserted in each test, not here: mudlet-headless never paints the map, and
+        -- CI can list a failing test as known but not a failing hook
+        painted = waitForPaint(5000)
         -- let the paints this set off settle, so only the change under test is counted
         pumpEvents(100)
         paints = 0
@@ -2796,11 +2798,13 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       it("in setMapUserData", function()
+        assert.is_true(painted, "the map was never painted")
         assert.is_true(setMapUserData("room.ui_nameFont", nameFont))
         assert.is_true(waitForPaint(1000))
       end)
 
       it("in clearMapUserDataItem", function()
+        assert.is_true(painted, "the map was never painted")
         setMapUserData("room.ui_nameFont", nameFont)
         pumpEvents(100)
         paints = 0
@@ -2809,6 +2813,7 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       it("in clearMapUserData", function()
+        assert.is_true(painted, "the map was never painted")
         setMapUserData("room.ui_nameFont", nameFont)
         pumpEvents(100)
         paints = 0
@@ -3040,6 +3045,31 @@ describe("Tests mapper functions against a shared fixture", function()
         assert.is_true(getPath(from, north))
       end)
     end
+
+    it("keeps its routing graph when a room is set to the area it is already in", function()
+      -- the filter only runs while the graph is being rebuilt
+      local builds = 0
+      setExitWeightFilter(function() builds = builds + 1 end)
+      assert.is_true(getPath(rA1, rA3))
+      builds = 0
+      assert.is_true(setRoomArea(rA2, areaAlpha))
+      assert.is_true(setRoomArea({rA1, rA3}, "MapperSpecAlpha"))
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(0, builds)
+      assert.are.equal(areaAlpha, getRoomArea(rA2))
+
+      -- moving a room to another area still rebuilds it, as the filter may route by area
+      local moved = createRoomID(); addRoom(moved)
+      finally(function() deleteRoom(moved) end)
+      -- a new room says it is in -1 before that area holds it, so this must still file it
+      assert.is_true(table.contains(getAreaRooms1(-1) or {}, moved))
+      setRoomArea(moved, areaAlpha)
+      assert.is_true(getPath(rA1, rA3))
+      builds = 0
+      assert.is_true(setRoomArea(moved, areaBeta))
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_true(builds > 0)
+    end)
 
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
