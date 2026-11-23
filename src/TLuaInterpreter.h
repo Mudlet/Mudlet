@@ -848,6 +848,7 @@ public:
     static int resetDiscordData(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
+    static int getMapMousePosition(lua_State*);
     static int addWordToDictionary(lua_State*);
     static int removeWordFromDictionary(lua_State*);
     static int spellCheckWord(lua_State*);

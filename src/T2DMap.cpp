@@ -977,6 +977,16 @@ void T2DMap::switchArea(int areaId)
     switchArea(areaName);
 }
 
+std::optional<QPointF> T2DMap::mapPointAt(const QPoint& pixel) const
+{
+    // A frame with no area to show returns before laying out, so the scale left behind would be an earlier map's. An
+    // area with no rooms yet is laid out like any other, so a script can place its first room or a label there.
+    if (!mLastFrameLaidOut) {
+        return std::nullopt;
+    }
+    return painterView().mapPointAt(pixel);
+}
+
 std::pair<bool, QString> T2DMap::centerview(int roomId)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
@@ -1177,6 +1187,7 @@ void T2DMap::applyPaintResult(const TMapPainter::View& before, const TMapPainter
 {
     const TMapPainter::View& after = result.view;
     applyPaintedView(before, after);
+    mLastFrameLaidOut = result.laidOut;
     if (result.selectionPruned) {
         mMultiSelectionSet = after.mMultiSelectionSet;
         mMultiSelectionHighlightRoomId = after.mMultiSelectionHighlightRoomId;

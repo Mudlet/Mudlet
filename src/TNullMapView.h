@@ -79,6 +79,7 @@ public:
     // The area the view follows, which the next render() draws
     int shownAreaId() const override { return mRecentre ? mFollowedAreaId : mView.mAreaID; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
+    std::optional<MapPoint> mousePositionOnMap() const override;
     std::pair<bool, QString> centerViewOn(int roomId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;
@@ -108,6 +109,8 @@ private:
     int mFollowedRoomId = 0;
     int mFollowedAreaId = 0;
     bool mLaidOut = false;
+    // Where the app last said the mouse was on the map, at a press, double-click or wheel turn: it reports no other move
+    std::optional<QPointF> mLastPointer;
     // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn
     struct PendingZoom
     {

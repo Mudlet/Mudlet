@@ -2193,6 +2193,23 @@ int TLuaInterpreter::getHiddenMapMenuItems(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapMousePosition
+int TLuaInterpreter::getMapMousePosition(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mapOpen()) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    const std::optional<TMapViewFrontend::MapPoint> position = host.mapViewFrontend()->mousePositionOnMap();
+    if (!position) {
+        return warnArgumentValue(L, __func__, "the mouse is not over the 2D map");
+    }
+    lua_pushnumber(L, position->x);
+    lua_pushnumber(L, position->y);
+    lua_pushinteger(L, position->z);
+    return 3;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapSelection
 int TLuaInterpreter::getMapSelection(lua_State* L)
 {

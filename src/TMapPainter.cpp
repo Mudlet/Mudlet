@@ -2514,6 +2514,7 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
     }
 
     mRoomWidth = widgetWidth / xspan;
+    result.laidOut = true;
     mRoomHeight = widgetHeight / yspan;
 
     if (!qFuzzyCompare(1.0f + mPrevRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + mPrevRoomHeight, 1.0f + mRoomHeight)) {
