@@ -26,6 +26,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLocale>
 #include <QRegularExpression>
 #include <QSet>
 
@@ -47,10 +48,14 @@ const QList<std::pair<Type, QString>>& typeNames()
     return names;
 }
 
-// As QString::number(), without the exponent it would give a whole number past six digits
+// The shortest text that reads back as the very same double, and a whole number written out rather than with an
+// exponent wherever every whole number up to it is exact (2^53)
 QString numberText(const double value)
 {
-    return QString::number(value, 'g', 15);
+    if (value == std::trunc(value) && std::fabs(value) <= 9007199254740992.0) {
+        return QString::number(static_cast<qint64>(value));
+    }
+    return QString::number(value, 'g', QLocale::FloatingPointShortest);
 }
 
 std::optional<double> finiteNumber(const QString& text)
@@ -172,8 +177,10 @@ std::optional<QVariant> parseValue(const Field& field, const QString& text)
         }
         return std::nullopt;
     case Type::Range: {
-        // "10-20", and "-5-5" for one starting below zero: the dash between the two is the one after a digit
-        static const QRegularExpression rangeText(QStringLiteral(R"(^\s*(-?[\d.]+)\s*-\s*(-?[\d.]+)\s*$)"));
+        // "10-20", "-5-5" for one starting below zero and "1e-08-1e-07" as numberText() writes very small ones: each
+        // bound is a whole number, a decimal or either with an exponent, so the dash between them is the one left over
+        static const QRegularExpression rangeText(
+                QStringLiteral(R"(^\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*-\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*$)"));
         const QRegularExpressionMatch match = rangeText.match(text);
         if (!match.hasMatch()) {
             return std::nullopt;
