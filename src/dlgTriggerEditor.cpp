@@ -16893,6 +16893,15 @@ void dlgTriggerEditor::setupEditorPanel()
     mpSearchResultDelegate = new uiDesign::SearchResultDelegate(treeWidget_searchResults);
     treeWidget_searchResults->setItemDelegate(mpSearchResultDelegate);
 
+    // QHeaderView stretches the last column no narrower than its size on becoming the last, the style's 100 pixel
+    // default, and at the item pane's narrowest the viewport less the bar's room is narrower than that. After every
+    // setColumnCount() and hideColumn() above, as each picks that size again; column 0 is the one every tree shows.
+    for (QTreeWidget* pTreeWidget : everyTree) {
+        QHeaderView* pHeader = pTreeWidget->header();
+        pHeader->setMinimumSectionSize(0);
+        pHeader->resizeSection(0, 0);
+    }
+
     // The shell stylesheet selects on this name
     widget_searchTerm->setObjectName(qsl("editorSearchRow"));
 

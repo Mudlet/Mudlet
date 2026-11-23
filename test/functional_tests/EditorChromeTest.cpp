@@ -51,6 +51,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QTreeWidget>
+#include <QWheelEvent>
 #include <QtTest/QtTest>
 #include <cstdlib>
 
@@ -88,6 +89,23 @@ protected:
     }
 };
 
+class ShowCount : public QObject
+{
+public:
+    explicit ShowCount(QWidget* pWidget) { pWidget->installEventFilter(this); }
+
+    int mShows = 0;
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Show) {
+            ++mShows;
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+};
+
 class EditorChromeTest : public QObject
 {
     Q_OBJECT
@@ -117,6 +135,8 @@ private:
     // Triggers are added to a group until the tree scrolls, a batch between checks
     static constexpr int scmTreeRowsABatch = 10;
     static constexpr int scmMostTreeRows = 200;
+    static constexpr int scmSwipeStep = 20;
+    static constexpr int scmWiderAfterSwipes = 24;
 
     // The compile and duplicate notes say a reading in the error hue, and a chip
     // label holds an event name the reader typed - content, not chrome
@@ -261,6 +281,26 @@ private:
             found << qsl("%1 pixels %2 time(s)").arg(QString::number(it.key()), QString::number(it.value()));
         }
         return found.join(qsl(", "));
+    }
+
+    // A touchpad swipe, sent to the viewport as a real one arrives: a begin, an update and an end. Returns the phases
+    // after which the vertical bar was on show, read before the event loop runs again and could paint it.
+    static QStringList swipeShowingTheBar(QAbstractScrollArea* pView)
+    {
+        QWidget* pViewport = pView->viewport();
+        const QPointF centre = QRectF(pViewport->rect()).center();
+        const QMetaEnum phases = QMetaEnum::fromType<Qt::ScrollPhase>();
+        QStringList shownAfter;
+        for (const Qt::ScrollPhase phase : {Qt::ScrollBegin, Qt::ScrollUpdate, Qt::ScrollEnd}) {
+            // As a trackpad sends them: only an update carries a distance
+            const QPoint distance = phase == Qt::ScrollUpdate ? QPoint(0, -scmSwipeStep) : QPoint();
+            QWheelEvent wheel(centre, pViewport->mapToGlobal(centre), distance, distance, Qt::NoButton, Qt::NoModifier, phase, false);
+            QApplication::sendEvent(pViewport, &wheel);
+            if (pView->verticalScrollBar()->isVisible()) {
+                shownAfter << QString::fromLatin1(phases.valueToKey(phase));
+            }
+        }
+        return shownAfter;
     }
 
     void buildThreePatternRows()
@@ -1529,6 +1569,94 @@ private slots:
         QVERIFY2(nothingInIt == 0, qPrintable(qsl("an unchecked option already has %1 pixels in its box that are not the fill").arg(nothingInIt)));
         QVERIFY2(aTick > 0, "a checked option paints nothing inside its box, so there is no mark on it");
         QVERIFY2(nearest <= scmMarkInkSlack, qPrintable(qsl("the mark's nearest ink is %1 away from the %2 every other choice is marked in").arg(nearest).arg(markInk.name())));
+    }
+
+    // A swipe's begin shows a hidden bar whatever its range, and with nothing to scroll no range change hides it
+    // again. Two swipes: where bars are not transient, as offscreen, the first one's end marks the bar transient and
+    // the second one's begin shows it.
+    void test_aTouchpadSwipeLeavesNoBarWhereThereIsNothingToScroll()
+    {
+        enterView(EditorViewType::cmTriggerView);
+        auto* pPatterns = mpEditor->findChild<QScrollArea*>(qsl("editorPatternScroll"));
+        QVERIFY2(pPatterns != nullptr, "The trigger form has no pattern list to scroll");
+        const QList<std::pair<QString, QAbstractScrollArea*>> views{{qsl("the triggers tree"), mpEditor->treeWidget_triggers}, {qsl("the pattern list"), pPatterns}};
+        const QSize sizeAtStart = mpEditor->size();
+        const auto putBack = qScopeGuard([this, sizeAtStart]() {
+            mpEditor->resize(sizeAtStart);
+            TestPixels::settle();
+        });
+        TestPixels::settle();
+
+        for (const auto& [name, pView] : views) {
+            QScrollBar* pBar = pView->verticalScrollBar();
+            QVERIFY2(pBar->maximum() <= pBar->minimum() && !pBar->isVisible(), qPrintable(qsl("%1 has something to scroll, or shows its bar before any swipe").arg(name)));
+            ShowCount barShows(pBar);
+            QStringList shownAfter = swipeShowingTheBar(pView);
+            shownAfter << swipeShowingTheBar(pView);
+            TestPixels::settle();
+            qInfo().noquote() << qsl("  two swipes over %1 showed its bar %2 time(s)").arg(name, QString::number(barShows.mShows));
+            QVERIFY2(barShows.mShows > 0, qPrintable(qsl("two swipes over %1 never showed its hidden bar, so this case checks nothing").arg(name)));
+            QVERIFY2(shownAfter.isEmpty(),
+                     qPrintable(qsl("%1 has nothing to scroll, but its bar was on show after a swipe's %2, when a frame can be painted with it").arg(name, shownAfter.join(qsl(", ")))));
+            QVERIFY2(!pBar->isVisible(), qPrintable(qsl("%1 has nothing to scroll, but its bar is on show once two swipes have settled").arg(name)));
+        }
+
+        // A resize lays the bar's container out again and leaves an empty range as it was
+        mpEditor->resize(sizeAtStart + QSize(scmWiderAfterSwipes, 0));
+        TestPixels::settle();
+        for (const auto& [name, pView] : views) {
+            const QScrollBar* pBar = pView->verticalScrollBar();
+            QVERIFY2(pBar->maximum() <= pBar->minimum(), qPrintable(qsl("%1 has something to scroll in the wider window").arg(name)));
+            QVERIFY2(!pBar->isVisible(), qPrintable(qsl("%1 has nothing to scroll, but its bar is on show after a swipe and a resize").arg(name)));
+        }
+    }
+
+    // QHeaderView stretches a last column no narrower than the width it had on becoming the last, the style's default
+    // section; at the item pane's narrowest, a viewport less the bar's room is narrower still and rows run past it
+    void test_aTreesColumnIsItsViewportsWidthAtTheNarrowestItemPane()
+    {
+        QSplitter* pSplitter = mpEditor->splitter_main;
+        QWidget* pPane = mpEditor->frame_left;
+        const int pane = pSplitter->indexOf(pPane);
+        QVERIFY2(pane >= 0 && pane + 1 < pSplitter->count(), "the item pane is not in the main splitter ahead of another pane");
+        const QList<int> sizesAtStart = pSplitter->sizes();
+        const EditorViewType viewAtStart = mpEditor->mCurrentView;
+        const auto putBack = qScopeGuard([this, pSplitter, sizesAtStart, viewAtStart]() {
+            enterView(viewAtStart);
+            pSplitter->setSizes(sizesAtStart);
+            TestPixels::settle();
+        });
+        // One pixel: QSplitter holds a pane given less than its minimum at that minimum, where none would collapse it
+        QList<int> narrowest = sizesAtStart;
+        narrowest[pane + 1] += narrowest.at(pane) - 1;
+        narrowest[pane] = 1;
+
+        QStringList misses;
+        for (const EditorViewType view : {EditorViewType::cmTriggerView,
+                                          EditorViewType::cmAliasView,
+                                          EditorViewType::cmTimerView,
+                                          EditorViewType::cmScriptView,
+                                          EditorViewType::cmKeysView,
+                                          EditorViewType::cmActionView,
+                                          EditorViewType::cmVarsView}) {
+            enterView(view);
+            // Per view, as each fills the pane with other rows and may hold it at another minimum
+            pSplitter->setSizes(narrowest);
+            TestPixels::settle();
+            QTreeWidget* pTree = mpEditor->treeForView(view);
+            QVERIFY2(pTree && pTree->isVisible(), qPrintable(qsl("the tree of view %1 is not on show").arg(static_cast<int>(view))));
+            // As QSplitter takes it: a minimum width set on the pane replaces its hint
+            const int paneMinimum = pPane->minimumWidth() > 0 ? pPane->minimumWidth() : pPane->minimumSizeHint().width();
+            QVERIFY2(pPane->width() == paneMinimum, qPrintable(qsl("the item pane is %1 pixels wide, not its narrowest %2").arg(QString::number(pPane->width()), QString::number(paneMinimum))));
+            const int viewportWidth = pTree->viewport()->width();
+            const int columnWidth = pTree->header()->sectionSize(0);
+            qInfo().noquote() << qsl("  %1: the item pane is %2 pixels wide, the tree's viewport %3 and its column %4")
+                                         .arg(pTree->objectName(), QString::number(pPane->width()), QString::number(viewportWidth), QString::number(columnWidth));
+            if (columnWidth != viewportWidth) {
+                misses << qsl("%1 has a column %2 pixels wide in a viewport %3 wide").arg(pTree->objectName(), QString::number(columnWidth), QString::number(viewportWidth));
+            }
+        }
+        QVERIFY2(misses.isEmpty(), qPrintable(qsl("at the item pane's narrowest, %1").arg(misses.join(qsl("; ")))));
     }
 
     // Last, as it adds rows and resizes the window, which the cases above would read. Every Resize is read, as a
