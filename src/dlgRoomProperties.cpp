@@ -513,7 +513,10 @@ void dlgRoomProperties::accept()
     QMap<QString, std::optional<QString>> changes = userDataChanges();
     if (mDescriptionWasEdited) {
         const QString description = plainTextEdit_description->toPlainText();
-        if (description != mOriginalDescription) {
+        // Rooms that started out with different descriptions keep them unless one is typed in: empty again, the field is
+        // back to its placeholder rather than set to nothing
+        const bool mixedAndLeftEmpty = !mOriginalDescription.has_value() && description.isEmpty();
+        if (!mixedAndLeftEmpty && description != mOriginalDescription) {
             changes.insert(scmDescriptionKey, description.isEmpty() ? std::nullopt : std::optional<QString>(description));
         }
     }
@@ -832,6 +835,7 @@ void dlgRoomProperties::initGeneral()
     }
     const bool single = rooms.size() == 1;
 
+    //: Shown in Configure room's General tab in place of a room ID when several rooms are being configured at once
     label_roomIdValue->setText(single ? QString::number(rooms.first()->getId()) : tr("%n room(s) selected", nullptr, rooms.size()));
 
     // A game ID belongs to one room only, so it cannot be given to a selection
@@ -839,6 +843,7 @@ void dlgRoomProperties::initGeneral()
     mOriginalHash = single ? mpHost->mpMap->mpRoomDB->roomIDToHash.value(rooms.first()->getId()) : QString();
     lineEdit_hash->setText(mOriginalHash);
     lineEdit_hash->setEnabled(single);
+    //: Placeholder of Configure room's game ID field, which is disabled when several rooms are being configured, as a game ID belongs to one room
     lineEdit_hash->setPlaceholderText(single ? QString() : tr("Only for a single room"));
     label_hashWarning->hide();
 
@@ -886,6 +891,7 @@ void dlgRoomProperties::initGeneral()
     }
     const QSignalBlocker descriptionBlocker(plainTextEdit_description);
     plainTextEdit_description->setPlainText(mOriginalDescription.value_or(QString()));
+    //: Placeholder of Configure room's description field while it is empty
     plainTextEdit_description->setPlaceholderText(mOriginalDescription.has_value() ? tr("Room description...") : multipleValuesPlaceholder);
     mDescriptionWasEdited = false;
 }
@@ -898,6 +904,7 @@ void dlgRoomProperties::slot_hashChanged(const QString& hash)
         label_hashWarning->hide();
         return;
     }
+    //: Warning under Configure room's game ID field when the ID typed in already belongs to another room; %1 is that room's ID
     label_hashWarning->setText(tr("Room %1 has this game ID now and will lose it.").arg(holder));
     label_hashWarning->show();
 }

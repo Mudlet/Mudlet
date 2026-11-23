@@ -1217,6 +1217,28 @@ private slots:
         QCOMPARE(mEmitted.hashEmitCount, 0);
     }
 
+    // Typed in and backspaced away again, the mixed field is back to its placeholder: the rooms keep their own
+    // descriptions, and a description typed in does reach them all
+    void aMixedDescriptionTypedInAndEmptiedAgainLeavesTheRoomsAlone()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.")}};
+        room(scmSecondRoom)->userData = {{qsl("description"), qsl("A bright yard.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->plainTextEdit_description->setPlainText(qsl("x"));
+        pDlg->plainTextEdit_description->clear();
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+
+        cleanup();
+        mEmitted = EmittedProperties();
+        pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->plainTextEdit_description->setPlainText(qsl("A room."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A room.")}}));
+    }
+
     void anEditedDescriptionIsSavedAndAClearedOneRemoved()
     {
         buildMap();
