@@ -418,6 +418,47 @@ private slots:
         QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, exit), "a custom line stopping a room short of the west room stood in for its exit");
     }
 
+    // The west room's exits east and north both lead to the east room, whose one way back, west, pairs with the exit
+    // east: so the east room's custom line west stands in for that exit only, not for the one north as well
+    void aCustomLineBackStandsInOnlyForTheExitItPairsWith()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        pEastRoom->customLines[qsl("w")] = {QPointF(1, 1), QPointF(0, 0)};
+        TMapPainter::ExitToPaint east;
+        east.destination = pEastRoom;
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint north = east;
+        north.direction = DIR_NORTH;
+
+        QVERIFY(TMapPainter::returnExitHasCustomLine(*pWestRoom, east));
+        QCOMPARE(TMapPainter::wayBack(*pWestRoom, north), 0);
+        QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, north), "the custom line for the exit east hid the exit north");
+    }
+
+    // The export decides alike: the exit north is drawn there, so the export with it differs from one without it
+    void anExportDrawsAnExitTheCustomLineBackDoesNotPairWith()
+    {
+        roomDB()->getRoom(scmEastRoom)->customLines[qsl("w")] = {QPointF(1, 1), QPointF(0, 0)};
+        const auto exportedMap = [this](const QString& name) {
+            TMapPainter::View exportView = view();
+            exportView.mDirectionalExitLines = true;
+            TMapPainter painter;
+            painter.setView(exportView);
+            QObject saveOwner;
+            const QString exportFile = qsl("%1/%2.png").arg(mConfigDir.path(), name);
+            const auto [started, message] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+            return started ? exported(&saveOwner, exportFile) : QImage();
+        };
+        const QImage without = exportedMap(qsl("without-north"));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        const QImage with = exportedMap(qsl("with-north"));
+        QVERIFY(!without.isNull() && !with.isNull());
+        QVERIFY2(with != without, qPrintable(qsl("the exit north was left out of the export: ") + saved(with, qsl("export-with-north"))));
+    }
+
     // Two rooms just left of the view, whose east exits lead to each other: their bent line runs through their east
     // stubs half a cell to the right, inside the view, though both rooms' centres are outside it
     void aBentLineFromRoomsJustOutsideTheViewIsDrawn()
