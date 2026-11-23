@@ -100,6 +100,15 @@ int xyExitFor(const TRoom& room, const QString& key)
     }
     return 0;
 }
+
+// An unscaled label is drawn at its pixmap's size whatever the zoom, so its stored size does not say what it covers
+QSize drawnLabelSize(const TMapLabel& label, const qreal roomWidth, const qreal roomHeight)
+{
+    if (label.noScaling) {
+        return label.pix.deviceIndependentSize().toSize();
+    }
+    return QSize(abs(qRound(label.size.width() * roomWidth)), abs(qRound(label.size.height() * roomHeight)));
+}
 } // namespace
 
 // A special exit can be named like a normal one ("n", "up"...); a custom line by
@@ -2722,8 +2731,9 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const QSize drawnSize = drawnLabelSize(mapLabel, mRoomWidth, mRoomHeight);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
         if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
             continue;
         }
@@ -2940,8 +2950,9 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const QSize drawnSize = drawnLabelSize(mapLabel, mRoomWidth, mRoomHeight);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
             continue;
@@ -3620,8 +3631,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
+        const QSize drawnSize = drawnLabelSize(mapLabel, finalRoomSize, finalRoomSize);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
         }
@@ -4211,8 +4223,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
         const int exportRY = padding - (pArea->min_y * finalRoomSize);
         const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
         const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
+        const QSize drawnSize = drawnLabelSize(mapLabel, finalRoomSize, finalRoomSize);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
