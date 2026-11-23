@@ -3713,6 +3713,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
                 if (!pH->mpDlgIRC) {
                     pH->mpDlgIRC = new dlgIRC(pH);
                 }
+                // show() leaves a minimized window minimized
+                pH->mpDlgIRC->setWindowState(pH->mpDlgIRC->windowState() & ~Qt::WindowMinimized);
                 pH->mpDlgIRC->raise();
                 pH->mpDlgIRC->show();
             },
