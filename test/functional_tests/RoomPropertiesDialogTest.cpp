@@ -51,6 +51,7 @@
 #include <QSpinBox>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTextCursor>
 #include <QTimer>
 #include <QtTest/QtTest>
 
@@ -1441,6 +1442,22 @@ private slots:
         const QString saved = mEmitted.userDataChanges.value(qsl("notes")).value_or(QString());
         QCOMPARE(saved.size(), longValue.size() + 1);
         QVERIFY(saved.endsWith(qsl("ab")));
+    }
+
+    // Games use them to lay out a description, and mapper scripts match it as the game sent it
+    void anEditedDescriptionKeepsItsNonBreakingSpaces()
+    {
+        buildMap();
+        const QString nbsp(QChar::Nbsp);
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A%1dim hall.\nCandles.").arg(nbsp)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QTextCursor cursor = pDlg->plainTextEdit_description->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pDlg->plainTextEdit_description->setTextCursor(cursor);
+        QTest::keyClicks(pDlg->plainTextEdit_description, qsl(" Lit."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A%1dim hall.\nCandles. Lit.").arg(nbsp)}}));
     }
 
     // The dialog opens on the name, so a name typed straight away and Enter rename the room

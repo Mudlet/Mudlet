@@ -34,6 +34,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <QStyledItemDelegate>
+#include <QTextDocument>
 
 #include <limits>
 
@@ -48,6 +49,26 @@ const QLatin1String scmDescriptionKey{"description"};
 bool editedInUserDataTable(const QString& key)
 {
     return !key.startsWith(scmMudletOwnedUserDataPrefix) && key != scmDescriptionKey;
+}
+
+// What toPlainText() gives, but with non-breaking spaces kept: it turns them into plain ones, and a mapper script
+// matching the game's description would then miss the room
+QString plainTextKeepingSpaces(const QPlainTextEdit& edit)
+{
+    QString text = edit.document()->toRawText();
+    for (QChar& character : text) {
+        switch (character.unicode()) {
+        case 0xfdd0: // QTextBeginningOfFrame
+        case 0xfdd1: // QTextEndOfFrame
+        case QChar::ParagraphSeparator:
+        case QChar::LineSeparator:
+            character = QLatin1Char('\n');
+            break;
+        default:
+            break;
+        }
+    }
+    return text;
 }
 
 // Set on a value cell that shows the placeholder because the selected rooms do not agree on that key
@@ -531,7 +552,7 @@ void dlgRoomProperties::accept()
 
     QMap<QString, std::optional<QString>> changes = userDataChanges();
     if (mDescriptionWasEdited) {
-        const QString description = plainTextEdit_description->toPlainText();
+        const QString description = plainTextKeepingSpaces(*plainTextEdit_description);
         // Rooms that started out with different descriptions keep them unless one is typed in: empty again, the field is
         // back to its placeholder rather than set to nothing
         const bool mixedAndLeftEmpty = !mOriginalDescription.has_value() && description.isEmpty();
