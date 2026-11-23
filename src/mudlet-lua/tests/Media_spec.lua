@@ -711,6 +711,70 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("playSoundFile refuses an MP3 that turns from stereo to mono, which crashes Qt's FFmpeg backend", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- Silent 128 kbps MPEG-1 layer III frames, about 40 to a second, cycling through the given channel modes, at
+    -- 44.1 kHz or, given rate 1, 48 kHz
+    local function frames(modes, count, rate)
+      rate = rate or 0
+      local out = {}
+      for i = 1, count do
+        out[i] = string.char(0xFF, 0xFB, 0x90 + rate * 4, modes[(i - 1) % #modes + 1] * 64) .. string.rep("\0", rate == 0 and 413 or 380)
+      end
+      return table.concat(out)
+    end
+    local stereo, jointStereo, mono = 0, 1, 3
+    local tagged = frames({stereo}, 80)
+    -- a frame header inside the last frame's data, which no frame follows, then an ID3v1 tag
+    tagged = tagged:sub(1, -21) .. string.char(0xFF, 0xFB, 0x90, mono * 64) .. string.rep("\0", 16) .. "TAG" .. string.rep("\0", 125)
+    local files = {
+      ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
+      ["busted-turns-mono-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 40, 1),
+      ["busted-turns-mono-last.mp3"] = frames({stereo}, 40) .. frames({mono}, 1),
+      ["busted-turns-mono-last-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 1, 1),
+      -- playback can start in the stereo part
+      ["busted-mono-stereo-mono.mp3"] = frames({mono}, 20) .. frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-a.mp3"] = frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-b.mp3"] = frames({stereo}, 40),
+      ["busted-turns-stereo.mp3"] = frames({mono}, 40) .. frames({stereo}, 40),
+      ["busted-stereo-tagged.mp3"] = tagged,
+    }
+    lfs.mkdir(mediaDirectory)
+    for name, contents in pairs(files) do
+      local path = mediaDirectory .. "/" .. name
+      local handle = io.open(path, "wb")
+      handle:write(contents)
+      handle:close()
+      onCleanup(function() os.remove(path) end)
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    for _, name in ipairs({"busted-turns-mono.mp3", "busted-turns-mono-48k.mp3", "busted-turns-mono-last.mp3", "busted-turns-mono-last-48k.mp3",
+                          "busted-mono-stereo-mono.mp3"}) do
+      playSoundFile({name = name})
+    end
+    -- past the first second, where the mono frames would reach the resampler
+    pumpEvents(2000)
+    assert.equals(0, #started)
+
+    for i, name in ipairs({"busted-turns-stereo.mp3", "busted-stereo-tagged.mp3"}) do
+      playSoundFile({name = name})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals(i, #started)
+      assert.equals(name, started[i].file)
+    end
+
+    -- a wildcard passes over a refused match to one that plays
+    for i = 3, 6 do
+      playSoundFile({name = "busted-wildcard-*.mp3"})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals("busted-wildcard-b.mp3", started[i].file)
+    end
+  end)
+
   it("playSoundFile plays a file given in the ordered argument form", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1248,6 +1312,80 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  describe("media download events take the shape of downloadFile's", function()
+    -- Every argument of each event for a file whose path contains name, packed so a trailing nil still counts
+    local function captureFor(eventName, name)
+      local captured = {}
+      local handler = registerAnonymousEventHandler(eventName, function(...)
+        local args = {n = select("#", ...), ...}
+        if contains(tostring(args[eventName == "sysDownloadDone" and 2 or 3]), name) then
+          captured[#captured + 1] = args
+        end
+      end)
+      onCleanup(function() killAnonymousEventHandler(handler) end)
+      return captured
+    end
+
+    it("sysDownloadDone carries file, bytes, response and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local downloaded = mediaDirectory .. "/" .. fixtureFile
+      lfs.mkdir(mediaDirectory)
+      preserveMediaDirectory()
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
+
+      local done = captureFor("sysDownloadDone", fixtureFile)
+      assert.is_true(loadSoundFile({name = fixtureFile, url = fixtureUrl()}))
+      waitForCount("sysDownloadDone", done, 1)
+
+      assert.equals(1, #done)
+      local args = done[1]
+      assert.equals(5, args.n)
+      assert.equals(#fixtureBody, args[3])
+      assert.equals("table", type(args[4]))
+      assert.equals(200, args[4].status)
+      assert.equals("1", args[4].cookies["mudlet-fixture"])
+      assert.is_nil(args[5])
+    end)
+
+    it("a failed download carries message, file, url, response, body and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local name = "busted-media-missing.wav"
+      local errors = captureFor("sysDownloadError", name)
+      -- /missing is not below /media, so the fixture server answers 404
+      assert.is_true(loadSoundFile({name = name, url = fixtureUrl() .. "/missing"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals(fixtureUrl() .. "/missing/" .. name, args[4])
+      assert.equals("table", type(args[5]))
+      assert.equals(404, args[5].status)
+      assert.equals("string", type(args[6]))
+      assert.is_nil(args[7])
+    end)
+
+    it("a refused url carries message, file, url and nil for the response, body and request id", function()
+      local name = "busted-media-refused-shape.wav"
+      local errors = captureFor("sysDownloadError", name)
+      assert.is_true(loadSoundFile({name = name, url = "ftp://example.invalid/sounds"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals("ftp://example.invalid/sounds/" .. name, args[4])
+      assert.is_nil(args[5])
+      assert.is_nil(args[6])
+      assert.is_nil(args[7])
+    end)
   end)
 
   it("a preload from a url keeps the file without playing it", function()
@@ -4514,6 +4652,29 @@ describe("Tests the text-to-speech Lua API", function()
         cleanups = {}
       end)
 
+      -- Checked from a build with TTS, the only place the real functions can be
+      -- listed: a script calling one that Other.lua has no shim for errors on a
+      -- build without TTS instead of carrying on.
+      it("Other.lua has a shim for every tts function, for builds without TTS", function()
+        if ttsUnsupported() then
+          return
+        end
+        local path = debug.getinfo(packageUrlDrop, "S").source:gsub("^@", "")
+        local file = assert(io.open(path, "r"))
+        local source = file:read("*a")
+        file:close()
+        local list = assert(source:match("if not ttsSpeak then.-local funcs = (%b{})"))
+        local shimmed = {}
+        for name in list:gmatch('"(tts%w+)"') do
+          shimmed[name] = true
+        end
+        for name, value in pairs(_G) do
+          if type(value) == "function" and name:match("^tts%u") then
+            assert.is_true(shimmed[name] == true, name .. " has no shim")
+          end
+        end
+      end)
+
       it("ttsSpeak rejects whitespace-only text", function()
         if ttsUnsupported() then
           return
@@ -5090,10 +5251,16 @@ describe("Tests the text-to-speech Lua API", function()
 describe("FFmpeg's hardware device types", function()
   local variables = {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}
 
-  it("are named on Linux only, unless already set, so Qt does not try each one when the first sound plays", function()
+  it("are named on Linux and Windows, unless already set, so Qt does not try each one when the first sound plays", function()
     local named = "vaapi,vdpau,qsv,drm"
+    if getOS() == "windows" then
+      for _, variable in ipairs(variables) do
+        assert.equals("d3d11va,dxva2", os.getenv(variable))
+      end
+      return
+    end
     if getOS() ~= "linux" then
-      -- Qt's own list there holds the platform's decoders, such as D3D11 and VideoToolbox
+      -- Qt's own list there holds the platform's decoders, such as VideoToolbox
       for _, variable in ipairs(variables) do
         assert.are_not.equals(named, os.getenv(variable))
         assert.are_not.equals("cuda," .. named, os.getenv(variable))
