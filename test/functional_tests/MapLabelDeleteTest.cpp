@@ -17,9 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// isUnsaved(), signal_mapLabelsChanged and the debug console's LuaWarning lines
-// cannot be seen from Lua, so these checks are a functional test, not a spec
+// isUnsaved(), signal_mapLabelsChanged, the debug console's LuaWarning lines and the
+// Create label dialog's colour pickers cannot be reached from Lua, so these checks are a functional test, not a spec
 
+#include <QColorDialog>
 #include <QImage>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -35,6 +36,7 @@
 #include "TMap.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgMapLabel.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -140,6 +142,39 @@ private slots:
         QVERIFY(runLua(qsl("assert(next(getMapLabel(mapLabelDeleteTestArea, mapLabelDeleteTestLabel) or {}) == nil)")));
         QVERIFY2(mpHost->mpMap->isUnsaved(), "deleting a real image label at 0,0,0 left the map marked as saved");
         QCOMPARE(labelsChangedSpy.count(), 1);
+    }
+
+    // The label dialog remembers its colors for the next label, but a color
+    // only previewed in a picker that was then cancelled is not a choice
+    void test_aCancelledLabelColorIsNotRememberedForTheNextLabel()
+    {
+        auto pickFgColor = [](dlgMapLabel* pDlg, const QColor& color, const bool pressOk) {
+            QTest::mouseClick(pDlg->pushButton_fgColor, Qt::LeftButton);
+            auto* picker = pDlg->findChild<QColorDialog*>();
+            QVERIFY(picker);
+            picker->setCurrentColor(color);
+            QCOMPARE(pDlg->getFgColor(), color);
+            if (pressOk) {
+                picker->accept();
+            } else {
+                picker->reject();
+            }
+            delete picker;
+        };
+
+        auto* pFirst = new dlgMapLabel(nullptr);
+        pickFgColor(pFirst, QColor(Qt::blue), true);
+        delete pFirst;
+
+        auto* pSecond = new dlgMapLabel(nullptr);
+        QCOMPARE(pSecond->getFgColor(), QColor(Qt::blue));
+        pickFgColor(pSecond, QColor(Qt::red), false);
+        QCOMPARE(pSecond->getFgColor(), QColor(Qt::blue));
+        delete pSecond;
+
+        auto* pThird = new dlgMapLabel(nullptr);
+        QCOMPARE(pThird->getFgColor(), QColor(Qt::blue));
+        delete pThird;
     }
 
     void test_menuEventRefusalsWarnInTheDebugConsole()
