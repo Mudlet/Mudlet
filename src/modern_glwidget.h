@@ -884,8 +884,9 @@ private:
     GLuint imageTexture(const QString& key, const std::function<QImage()>& makeImage);
     // nullptr where the map style leaves the label as it is
     const QPixmap* themedLabel(int labelId, const TMapLabel& label, const MapStyle& style, int sharpness);
-    // The 2D map's up/down/in/out markers for the room, or 0 when it has none
-    GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
+    // The 2D map's up/down/in/out markers for the room, or 0 when it has none; without exitMarkers only its special exit
+    // dot, for a style that leaves the others out
+    GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor, bool exitMarkers = true);
     // Text on a clear background, with a rim of halo around it if that is valid; size is set to the texture's size in pixels
     GLuint
     textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo = QColor(), bool softHalo = false);

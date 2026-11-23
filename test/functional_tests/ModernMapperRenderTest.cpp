@@ -5701,7 +5701,8 @@ private slots:
         QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
     }
 
-    // A terminal's character shows no special exit, so the dot for one is drawn while the setting is on
+    // A terminal's character shows no special exit, so the dot for one is drawn while the setting is on; but not the
+    // plain stairs the character does show, which the terminal leaves out of its markers
     void test_terminalMarksASpecialExitWhileItsDotIsShownWithoutGL()
     {
         constexpr int kSpecialRoomId = 4;
@@ -5709,6 +5710,7 @@ private slots:
         QVERIFY(areaId > 0);
         QVERIFY(addRoomAt(kSpecialRoomId, areaId, 4, 0, 0));
         map()->mpRoomDB->getRoom(kSpecialRoomId)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        QVERIFY(map()->setExit(kSpecialRoomId, kPlayerRoomId, DIR_UP));
         const auto restore = qScopeGuard([this]() {
             mpHost->mMapperShowSpecialExitMarkers = true;
             mpHost->setMapStyle(qsl("tiles"));
