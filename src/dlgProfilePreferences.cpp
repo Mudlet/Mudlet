@@ -1685,9 +1685,35 @@ public:
     }
 };
 
+// QScrollBar shows itself whatever its range as a touchpad swipe begins, and on a style change that ends transient
+// bars; neither moves the range, so no rangeChanged comes to hide it again
+class EmptyScrollBarHider : public QObject
+{
+public:
+    explicit EmptyScrollBarHider(QScrollBar* pBar)
+    : QObject(pBar)
+    , mpBar(pBar)
+    {
+        pBar->installEventFilter(this);
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        // Inside the Show event, before the event loop can paint the bar; a queued hide leaves it a frame to show in
+        if (pWatched == mpBar && pEvent->type() == QEvent::Show && mpBar->maximum() <= mpBar->minimum()) {
+            mpBar->hide();
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    QScrollBar* mpBar = nullptr;
+};
+
 // The viewport is laid out beside the bar's room whether or not there is anything to scroll, so the cards never
-// change width and no frame is painted between two widths. Qt shows and hides the bar's container, never the bar,
-// which leaves the bar's own visibility to follow its range.
+// change width and no frame is painted between two widths. The scroll area shows and hides the bar's container, never
+// the bar, which leaves the bar's own visibility to follow its range.
 void keepRoomForTheVerticalBar(QScrollArea* pScrollArea)
 {
     pScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -1700,6 +1726,7 @@ void keepRoomForTheVerticalBar(QScrollArea* pScrollArea)
         pBar->setVisible(pBar->maximum() > pBar->minimum());
     };
     QObject::connect(pBar, &QAbstractSlider::rangeChanged, pBar, showWhileScrollable);
+    new EmptyScrollBarHider(pBar);
     showWhileScrollable();
 }
 } // namespace

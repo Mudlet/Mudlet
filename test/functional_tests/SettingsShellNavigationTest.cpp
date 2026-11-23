@@ -184,6 +184,47 @@ protected:
     }
 };
 
+class ShowCounter : public QObject
+{
+public:
+    explicit ShowCounter(QWidget* pWatched)
+    : QObject(pWatched)
+    {
+        pWatched->installEventFilter(this);
+    }
+
+    int mShows = 0;
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Show) {
+            ++mShows;
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+};
+
+// A touchpad swipe, sent to the viewport as a real one arrives: a begin, an update and an end. Returns the phases after
+// which the vertical bar was on show, read before the event loop runs again and could paint it.
+static QStringList swipeShowingTheBar(QAbstractScrollArea* pView)
+{
+    QWidget* pViewport = pView->viewport();
+    const QPointF centre = QRectF(pViewport->rect()).center();
+    const QMetaEnum phases = QMetaEnum::fromType<Qt::ScrollPhase>();
+    QStringList shownAfter;
+    for (const Qt::ScrollPhase phase : {Qt::ScrollBegin, Qt::ScrollUpdate, Qt::ScrollEnd}) {
+        // As a trackpad sends them: only an update carries a distance
+        const QPoint distance = phase == Qt::ScrollUpdate ? QPoint(0, -20) : QPoint();
+        QWheelEvent wheel(centre, pViewport->mapToGlobal(centre), distance, distance, Qt::NoButton, Qt::NoModifier, phase, false);
+        QApplication::sendEvent(pViewport, &wheel);
+        if (pView->verticalScrollBar()->isVisible()) {
+            shownAfter << QString::fromLatin1(phases.valueToKey(phase));
+        }
+    }
+    return shownAfter;
+}
+
 class SettingsShellNavigationTest : public QObject
 {
     Q_OBJECT
@@ -833,6 +874,43 @@ private slots:
         QTRY_VERIFY2(!pBar->isVisible(), "SETUP: back left to right, the General page still scrolls in the tall window");
         const Picture backFits = picture();
         QVERIFY2(describe(backFits) == describe(leftToRightFits), qPrintable(qsl("back left to right while the page fits: %1, against %2 before").arg(describe(backFits), describe(leftToRightFits))));
+    }
+
+    // A swipe's begin shows a hidden bar whatever its range, and with nothing to scroll no range change hides it
+    // again. Two swipes: where bars are not transient, as offscreen, the first one's end marks the bar transient and
+    // the second one's begin shows it.
+    void test_aTouchpadSwipeLeavesNoBarOnAPageWithNothingToScroll()
+    {
+        selectCategory(qsl("general"));
+        QScrollArea* pPage = pageOf(qsl("general"));
+        QWidget* pColumn = pPage->widget();
+        QScrollBar* pBar = pPage->verticalScrollBar();
+        const auto settle = [this](const QSize& size) {
+            mpPreferences->resize(size);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QCoreApplication::processEvents();
+        };
+        const int chrome = mpPreferences->height() - pPage->viewport()->height();
+        // Measured at the narrower of the two widths the cards could have, so they fit at either
+        const int tall = chrome + pColumn->heightForWidth(pPage->viewport()->width() - pBar->sizeHint().width()) + 40;
+        settle(QSize(mpPreferences->width(), tall));
+        QTRY_VERIFY2(pBar->maximum() <= pBar->minimum() && !pBar->isVisible(), qPrintable(qsl("SETUP: the General page still scrolls in a %1px tall window").arg(mpPreferences->height())));
+
+        auto* pShows = new ShowCounter(pBar);
+        QStringList shownAfter = swipeShowingTheBar(pPage);
+        shownAfter << swipeShowingTheBar(pPage);
+        QCoreApplication::processEvents();
+        qDebug() << "two swipes showed the General page's bar" << pShows->mShows << "time(s)";
+        QVERIFY2(pShows->mShows > 0, "SETUP: two swipes never showed the General page's hidden bar, so this case checks nothing");
+        QVERIFY2(shownAfter.isEmpty(),
+                 qPrintable(qsl("the General page has nothing to scroll, but its bar was on show after a swipe's %1, when a frame can be painted with it").arg(shownAfter.join(qsl(", ")))));
+        QVERIFY2(!pBar->isVisible(), "the General page has nothing to scroll, but its bar is on show once two swipes have settled");
+
+        // A resize lays the bar's container out again and leaves an empty range as it was
+        settle(QSize(mpPreferences->width() + 24, tall));
+        QVERIFY2(pBar->maximum() <= pBar->minimum(), qPrintable(qsl("SETUP: the General page scrolls in a %1px wide window").arg(mpPreferences->width())));
+        QVERIFY2(!pBar->isVisible(), "the General page has nothing to scroll, but its bar is on show after a swipe and a resize");
+        mpPreferences->resize(1060, 760);
     }
 
     void test_theSidebarOpensAtTheWidthARestyleKeeps()
