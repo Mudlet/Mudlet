@@ -276,6 +276,18 @@ private:
         if (!disconnect(telnet.mpSocket, &QIODevice::readyRead, &telnet, &cTelnet::slot_socketReadyToBeRead)) {
             return false;
         }
+        // Stands in for the reads a burst leaves queued, one per readyRead(), which must not read once the close is noticed
+        connect(
+                telnet.mpSocket,
+                &QAbstractSocket::disconnected,
+                &telnet,
+                [&telnet]() {
+                    for (int i = 0; i < 3; ++i) {
+                        telnet.mReadPending = true;
+                        QMetaObject::invokeMethod(&telnet, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+                    }
+                },
+                Qt::SingleShotConnection);
         mpServer->sendRaw(burstOf(scmPlainLastWords) + "GOODBYE FROM THE GAME\r\n");
         mpServer->closeClient();
         return true;
