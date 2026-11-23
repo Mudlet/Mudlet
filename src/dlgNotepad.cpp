@@ -296,6 +296,8 @@ void dlgNotepad::setupAddTabButton()
     mpAddTabButton = new QToolButton(this);
     mpAddTabButton->setObjectName(qsl("notepadAddTab"));
     mpAddTabButton->setToolTip(tr("Add new note tab (Ctrl+T)"));
+    //: Accessible name of the notepad's button that adds a note tab, announced by a screen reader
+    mpAddTabButton->setAccessibleName(tr("Add note tab"));
     mpAddTabButton->setAutoRaise(false);
     connect(mpAddTabButton, &QToolButton::clicked, this, &dlgNotepad::slot_addTabClicked);
     tabWidget->setCornerWidget(mpAddTabButton, Qt::TopRightCorner);
@@ -323,22 +325,30 @@ void dlgNotepad::setupFindBar()
     mpFindLineEdit->setObjectName(qsl("notepadFindField"));
     //: Placeholder text for the search field in notepad
     mpFindLineEdit->setPlaceholderText(tr("Find"));
+    //: Accessible name of the notepad's search field, announced by a screen reader
+    mpFindLineEdit->setAccessibleName(tr("Find in note"));
     mpFindLineEdit->setClearButtonEnabled(true);
     mpFindLineEdit->installEventFilter(this);
 
     mpFindPrevButton = new QToolButton(mpFindBar);
     mpFindPrevButton->setObjectName(qsl("notepadFindPrevious"));
+    //: Tooltip and screen reader name of the notepad's find bar button that jumps to the previous match
     mpFindPrevButton->setToolTip(tr("Find previous"));
+    mpFindPrevButton->setAccessibleName(mpFindPrevButton->toolTip());
     mpFindPrevButton->setAutoRaise(false);
 
     mpFindNextButton = new QToolButton(mpFindBar);
     mpFindNextButton->setObjectName(qsl("notepadFindNext"));
+    //: Tooltip and screen reader name of the notepad's find bar button that jumps to the next match
     mpFindNextButton->setToolTip(tr("Find next"));
+    mpFindNextButton->setAccessibleName(mpFindNextButton->toolTip());
     mpFindNextButton->setAutoRaise(false);
 
     mpFindCloseButton = new QToolButton(mpFindBar);
     mpFindCloseButton->setObjectName(qsl("notepadFindClose"));
+    //: Tooltip and screen reader name of the notepad's find bar button that closes the find bar
     mpFindCloseButton->setToolTip(tr("Close find bar"));
+    mpFindCloseButton->setAccessibleName(mpFindCloseButton->toolTip());
     mpFindCloseButton->setAutoRaise(false);
 
     layout->addWidget(mpFindLineEdit, 1);
@@ -844,12 +854,12 @@ void dlgNotepad::slot_sendLine()
         return;
     }
 
-    QTextCursor cursor = textEdit->textCursor();
-    cursor.select(QTextCursor::LineUnderCursor);
-    const QString line = cursor.selectedText();
+    // The block, not QTextCursor::LineUnderCursor: that is only the row a wrapped line shows on screen.
+    // A Shift+Enter break stays inside the block, and goes as its own line as it does in Send all.
+    const QStringList lines = textEdit->textCursor().block().text().split(QChar::LineSeparator);
 
-    if (!line.isEmpty()) {
-        startSendingLines(QStringList{line});
+    if (sendableLineCount(lines) > 0) {
+        startSendingLines(lines);
     }
 }
 
@@ -931,8 +941,8 @@ void dlgNotepad::finishSending(const bool stopped)
 
     if (mSending) {
         if (stopped) {
-            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %2 how many there were in all.
-            mudlet::self()->announce(tr("Stopped after %1 of %2 lines").arg(QString::number(mLinesSent), QString::number(mLinesToSendCount)));
+            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %n how many there were in all.
+            mudlet::self()->announce(tr("Stopped after %1 of %n lines", nullptr, mLinesToSendCount).arg(QString::number(mLinesSent)));
         } else {
             //: Announced when the notepad has sent a note to the game. %n is how many lines went.
             mudlet::self()->announce(mLinesSent == 1 ? tr("Sent 1 line") : tr("Sent %n lines", "", mLinesSent));

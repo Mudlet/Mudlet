@@ -59,6 +59,14 @@ public:
     bool clientConnected() const { return !mpClient.isNull(); }
     // Everything the clients have sent, across connections
     const QByteArray& receivedSoFar() const { return mReceivedSoFar; }
+    // Asks for this much of a send to go into the current client's socket at once, which
+    // the OS can cap; the rest waits for this thread's event loop
+    void setSendBufferSize(const int bytes)
+    {
+        if (mpClient) {
+            mpClient->setSocketOption(QAbstractSocket::SendBufferSizeSocketOption, bytes);
+        }
+    }
     // Closes the connection gracefully, once everything sent has gone out
     void closeClient()
     {
