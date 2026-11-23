@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -288,9 +289,9 @@ void TTextEdit::needUpdate(int y1, int y2)
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-    // The central debug console's menus never took the grab from the profile's own console
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-    if (!centralDebug && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+    // The central debug console's and the error console's menus never took the grab from the profile's own console
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+    if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
         grabKeyboard();
     }
 #endif
@@ -306,14 +307,14 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // rather than forcing focus to the command line. This pane's own menus only
     // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
     const QWidget* popup = QApplication::activePopupWidget();
-    // The central debug console shares its Host's caret mode without driving it.
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    // The central debug console and the error console share their Host's caret mode without driving it.
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
     if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // Caret mode's keyboard grab would otherwise beat the popup to every key
         releaseKeyboard();
 #endif
-    } else if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    } else if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -444,10 +445,15 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance - for the UPPER pane
-        // so that they are available for NAWS:
-        if (!mIsLowerPane) {
-            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+        // Note the values in the "parent" Host instance so that they are
+        // available for NAWS. The lower pane is laid out after the upper one,
+        // so it is the one that knows the split's height once both have moved;
+        // the width is the upper pane's unless it is dragged out of sight. A
+        // pane that sees nothing of itself, as in a background tab, knows neither.
+        if (!drawable.isEmpty()) {
+            const bool measuresWidth = !mIsLowerPane || mpConsole->mUpperPane->drawableSize().isEmpty();
+            const int columns = measuresWidth ? mScreenWidth : mpHost->mScreenWidth;
+            mpHost->setScreenDimensions(columns, mpConsole->mUpperPane->mainWindowRows());
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -465,6 +471,20 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = mpBuffer->linesTrimmedTotal();
+}
+
+// Scrolling back splits the main window without making it any shorter, so the
+// game is told the rows of both panes together
+int TTextEdit::mainWindowRows() const
+{
+    const TTextEdit* pLower = mpConsole->mLowerPane;
+    // An overlay can cover all of the lower pane, leaving the upper pane's own bottom the lowest seen
+    const int lowerSeen = pLower && !pLower->isHidden() ? pLower->drawableSize().height() : 0;
+    if (lowerSeen == 0) {
+        return mScreenHeight;
+    }
+    return (height() + mpConsole->splitter->handleWidth() + lowerSeen) / mFontHeight;
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -498,9 +518,13 @@ void TTextEdit::showNewLines()
         mpBuffer->mCursorY = mpBuffer->size();
     }
 
-    const int previousOldScrollPos = mOldScrollPos;
+    // A trim off the top of the buffer moves the last line seen up with everything else, and must
+    // not read as the new lines that came in with it being taken away
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const int previousOldScrollPos = std::max(0, mOldScrollPos - static_cast<int>(linesTrimmed - mLinesTrimmedAtOldScrollPos));
 
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = linesTrimmed;
 
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
@@ -2283,8 +2307,8 @@ void TTextEdit::slot_popupMenu()
 #endif
         mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1);
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-        const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-        if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
+        const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+        if (!borrowsCaretMode && mpHost->caretEnabled() && hasFocus()) {
             grabKeyboard();
         }
 #endif
@@ -3037,9 +3061,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                             }
                         }
                         popup->popup(eventGlobalPos);
+                        mIsCommandPopup = true;
+                        return;
                     }
-                    mIsCommandPopup = true;
-                    return;
                 }
             }
         }
@@ -3180,8 +3204,9 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
 
     if (mpConsole->getType() == TConsole::ErrorConsole) {
         QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
-        connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
-            mpConsole->buffer.clear();
+        clearErrorConsole->setObjectName(qsl("consoleClearErrorConsole"));
+        connect(clearErrorConsole, &QAction::triggered, this, [this]() {
+            mpConsole->clear();
             mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
         });
         popup->addAction(clearErrorConsole);
@@ -3230,6 +3255,16 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     if (mpConsole && !mIsLowerPane && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole))) {
         mpConsole->raiseMudletResizeEvent();
     }
+}
+
+// A small shrink can move the lower pane up without resizing it, and the rows
+// measured while it hung below the splitter's new bottom were short
+void TTextEdit::moveEvent(QMoveEvent* event)
+{
+    if (mIsLowerPane && mpConsole && mpConsole->getType() == TConsole::MainConsole) {
+        updateScreenView();
+    }
+    QWidget::moveEvent(event);
 }
 
 void TTextEdit::wheelEvent(QWheelEvent* e)
@@ -3688,7 +3723,7 @@ QString TTextEdit::selectionAnalysisHtml()
     QChar zero('0');
     // Start the UTF-8 indexing at 1 so that it directly maps to string indexing
     // in Lua.
-    short int utf8Index = 1;
+    int16_t utf8Index = 1;
     char utf8Bytes[5];
 
     int total = 0;

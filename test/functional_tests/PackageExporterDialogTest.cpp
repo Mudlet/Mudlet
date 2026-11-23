@@ -32,6 +32,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTextEdit>
@@ -805,6 +806,46 @@ private slots:
         QVERIFY2(exportButton()->isEnabled(), "the Export button stayed disabled after the package was named");
     }
 
+    // The name is the staging folder the export wipes first, so "../<folder>" would wipe a folder beside it
+    void test_exportRefusesANameThatStepsOutOfItsStagingFolder()
+    {
+        // A private temporary directory, so a regression that lets ".." through wipes only that
+        QTemporaryDir privateTemp;
+        QVERIFY(privateTemp.isValid());
+        const QList<const char*> tempVariables{"TMPDIR", "TMP", "TEMP"};
+        QList<std::pair<bool, QByteArray>> savedTemp;
+        for (const char* variable : tempVariables) {
+            savedTemp.append({qEnvironmentVariableIsSet(variable), qgetenv(variable)});
+            qputenv(variable, QFile::encodeName(privateTemp.path()));
+        }
+        const auto restoreTemp = qScopeGuard([&tempVariables, &savedTemp]() {
+            for (qsizetype i = 0; i < tempVariables.size(); ++i) {
+                savedTemp.at(i).first ? qputenv(tempVariables.at(i), savedTemp.at(i).second) : qunsetenv(tempVariables.at(i));
+            }
+        });
+        QCOMPARE(QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation)).canonicalPath(), QDir(privateTemp.path()).canonicalPath());
+
+        const QString outsideName = packageNamed(qsl("exporter-outside-staging"));
+        const QString outsideDir = qsl("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation), outsideName);
+        QVERIFY(QDir().mkpath(outsideDir));
+        const QString keptFile = qsl("%1/keep.txt").arg(outsideDir);
+        QFile keep(keptFile);
+        QVERIFY(keep.open(QIODevice::WriteOnly));
+        keep.close();
+
+        makeTrigger(qsl("exporter traversal trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter traversal trigger")));
+
+        for (const QString& badName : {qsl("../%1").arg(outsideName), qsl(".."), qsl("."), qsl(". .."), qsl("sub\\name")}) {
+            nameField()->setText(badName);
+            mpExporter->slot_exportPackage();
+            QVERIFY(waitForExportToSettle());
+            QVERIFY2(infoLabel()->text().contains(qsl("The name cannot be")), qPrintable(qsl("\"%1\" was not refused, the label held: \"%2\"").arg(badName, infoLabel()->text())));
+        }
+        QVERIFY2(QFileInfo::exists(keptFile), "exporting under a name that steps out of the staging folder wiped a folder outside it");
+    }
+
     // Names come off the property, as an unnamed combo box is announced by its current
     // item; descriptions off the accessible interface, where a placeholder stands in
     void test_theUnlabelledFieldsAreNamedForAScreenReader_8227()
@@ -828,6 +869,16 @@ private slots:
         QVERIFY2(nameField()->accessibleName() != packageName, "the module name field is still announced as the package name");
         QVERIFY2(pLocation->accessibleName() != packageLocation, "the module location field is still announced as the package's");
         QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
+    }
+
+    // Neither view is a label's buddy, so its accessibleName is all a screen reader has to announce
+    void test_theExportTreeAndFileListAreNamedForAScreenReader()
+    {
+        openExporter();
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{tree(), addedFiles()}) {
+            QVERIFY(pWidget);
+            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pWidget->objectName())));
+        }
     }
 
     // An empty package would install as nothing at all, so the export stops
@@ -1207,6 +1258,41 @@ private slots:
         QVERIFY2(installed, qPrintable(reason));
         QCOMPARE(mpHost->mPackageInfo.value(rebuiltName).value(qsl("icon")), qsl("badge.png"));
         QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/Icon/badge.png").arg(profileHome(), rebuiltName)), "the icon file did not survive the round trip");
+    }
+
+    // The dropdown offers installed modules as well, whose details are kept apart from packages'
+    void test_choosingAnInstalledModuleFillsTheFormFromItsDetails()
+    {
+        const QString existingModule = qsl("exporter-existing-module");
+        auto* member = makeTrigger(qsl("exporter module member"), nullptr);
+        member->mPackageName = existingModule;
+
+        mpHost->mInstalledModules[existingModule] = QStringList{qsl("%1/%2.mpackage").arg(mExportDir, existingModule), qsl("0")};
+        mpHost->mModuleInfo[existingModule] = QMap<QString, QString>{{qsl("mpackage"), existingModule},
+                                                                     {qsl("author"), qsl("The Module Author")},
+                                                                     {qsl("title"), qsl("The module summary")},
+                                                                     {qsl("version"), qsl("2.1")},
+                                                                     {qsl("helpURL"), qsl("https://example.org/module")},
+                                                                     {qsl("dependencies"), qsl("some-dependency")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingModule);
+        QVERIFY2(index > 0, "the installed module was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+
+        QCOMPARE(nameField()->text(), existingModule);
+        QCOMPARE(lineEditNamed(qsl("lineEdit_author"))->text(), qsl("The Module Author"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_title"))->text(), qsl("The module summary"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_version"))->text(), qsl("2.1"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_helpUrl"))->text(), qsl("https://example.org/module"));
+        auto* dependencies = comboNamed(qsl("comboBox_dependencies"));
+        QCOMPARE(dependencies->count(), 1);
+        QCOMPARE(dependencies->itemText(0), qsl("some-dependency"));
+        QCOMPARE(itemNamed(triggersTop(), qsl("exporter module member"))->checkState(0), Qt::Checked);
+
+        mpHost->mInstalledModules.remove(existingModule);
+        mpHost->mModuleInfo.remove(existingModule);
     }
 
     // The dialog is not modal, so the editor or a script can delete an item it

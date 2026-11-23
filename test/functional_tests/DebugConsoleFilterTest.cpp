@@ -27,6 +27,7 @@
 
 #include "GroupedTest.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -41,6 +42,7 @@
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 using namespace std::chrono_literals;
@@ -945,6 +947,66 @@ private slots:
         QTest::keyClick(focused, Qt::Key_C, Qt::ControlModifier);
 
         QVERIFY2(clipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the console's selection").arg(clipboard->text().left(60))));
+    }
+
+    // The script editor's error console has no command line either, and people
+    // copy errors out of it to report them
+    void test_ctrlCCopiesTheErrorConsolesSelection()
+    {
+        auto* host = startDebuggingProfile();
+        mudlet::self()->slot_showScriptDialog();
+        dlgTriggerEditor* editor = HostDialogs::of(host).mpEditorDialog;
+        QVERIFY2(editor, "the editor dialog was not created");
+        TConsole* console = editor->mpErrorConsole;
+        console->show();
+        editor->resize(1200, 900);
+        QTRY_VERIFY2(!console->mUpperPane->visibleRegion().isEmpty(), "the error console never came into view");
+        editor->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(editor), "the editor never became active");
+        const QString sentinel = qsl("qzxerrorcopyline");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("debugc(\"%1\")").arg(sentinel)));
+
+        QClipboard* clipboard = QApplication::clipboard();
+        QVERIFY(clipboard);
+        clipboard->setText(qsl("nothing has been copied yet"));
+
+        QTest::mouseClick(console->mUpperPane, Qt::LeftButton, Qt::NoModifier, console->mUpperPane->rect().center());
+        console->mUpperPane->slot_selectAll();
+        QVERIFY2(!console->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the error console");
+
+        QWidget* focused = QApplication::focusWidget();
+        QVERIFY2(focused, "nothing in the application has the focus to press Ctrl+C in");
+        QTest::keyClick(focused, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(clipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the error console's selection").arg(clipboard->text().left(60))));
+    }
+
+    // Nor may leaving the error console for the script editor's own widgets
+    void test_leavingTheErrorConsoleKeepsTheProfilesCaretMode()
+    {
+        auto* host = startDebuggingProfile();
+        mudlet::self()->slot_showScriptDialog();
+        dlgTriggerEditor* editor = HostDialogs::of(host).mpEditorDialog;
+        QVERIFY2(editor, "the editor dialog was not created");
+        TConsole* console = editor->mpErrorConsole;
+        console->show();
+        editor->resize(1200, 900);
+        QTRY_VERIFY2(!console->mUpperPane->visibleRegion().isEmpty(), "the error console never came into view");
+        editor->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(editor), "the editor never became active");
+        host->setCaretEnabled(true);
+        QVERIFY2(QApplication::activeWindow() == editor, "turning caret mode on took the editor's activation");
+
+        QTest::mouseClick(console->mUpperPane, Qt::LeftButton, Qt::NoModifier, console->mUpperPane->rect().center());
+        QTRY_VERIFY2(console->mUpperPane->hasFocus(), "clicking the error console did not give it the focus");
+        QVERIFY2(host->caretEnabled(), "caret mode was off before the focus left the error console");
+
+        auto* searchArea = editor->findChild<QLineEdit*>();
+        QVERIFY2(searchArea, "the editor has no text box to move the focus to");
+        searchArea->setFocus(Qt::MouseFocusReason);
+        QTRY_VERIFY2(!console->mUpperPane->hasFocus(), "the error console kept the focus");
+
+        QVERIFY2(host->caretEnabled(), "leaving the error console turned off the profile's caret mode");
     }
 
     // Caret mode belongs to the profile's own console, so leaving a debug pane for the filter box must not turn it off

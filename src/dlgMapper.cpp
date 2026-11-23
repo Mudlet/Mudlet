@@ -610,11 +610,6 @@ void dlgMapper::keyPressEvent(QKeyEvent* event)
     }
 }
 
-int dlgMapper::getCurrentShownAreaIndex()
-{
-    return comboBox_showArea->currentIndex();
-}
-
 void dlgMapper::updateAreaComboBox()
 {
     if (!mpMap) {
