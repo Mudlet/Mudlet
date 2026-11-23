@@ -364,6 +364,12 @@ public:
         mCalls << call("mousePositionOnMap");
         return mMousePosition;
     }
+
+    std::pair<bool, QString> centerViewOn(int roomId) override
+    {
+        mCalls << call("centerViewOn", {QString::number(roomId)});
+        return roomId == 1 ? std::pair{true, QString()} : std::pair{false, qsl("routed centring refusal")};
+    }
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {
         mCalls << call("exportAreaToImage", {QString::number(areaId), filePath, zLevel ? QString::number(*zLevel) : qsl("none"), number(zoom), flag(exportAllZLevels)});
@@ -884,6 +890,28 @@ assert(x == nil and why == "the mouse is not over the 2D map", "getMapMousePosit
 )lua")),
                  qsl("ok"));
         QCOMPARE(mMapView.mCalls.join(qsl("; ")), QStringList({call("mousePositionOnMap"), call("mousePositionOnMap")}).join(qsl("; ")));
+    }
+
+    // centerview(roomID, false) pans the view to the room and leaves the player's room alone
+    void test_centerviewWithoutMovingThePlayerReachesTheMapView()
+    {
+        TMap* map = mpHost->mpMap.data();
+        const int savedPlayerRoom = map->mRoomIdHash.value(map->mProfileName);
+        auto restore = qScopeGuard([map, savedPlayerRoom]() {
+            map->mRoomIdHash[map->mProfileName] = savedPlayerRoom;
+        });
+        map->mRoomIdHash[map->mProfileName] = 2;
+
+        const QString result = runMapLua(qsl(R"lua(
+assert(centerview(1, false) == true, "centerview did not pass on the view panning")
+local refused, why = centerview(2, false)
+assert(refused == nil and why == "routed centring refusal", "centerview did not pass on the view refusing it")
+assert(not pcall(centerview, 1, "east"), "centerview took a string for its view id or movePlayer")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), QStringList({call("centerViewOn", {qsl("1")}), call("centerViewOn", {qsl("2")})}).join(qsl("; ")));
+        QCOMPARE(map->mRoomIdHash.value(map->mProfileName), 2);
     }
 
     void test_mapSelectionReachesTheMapView()

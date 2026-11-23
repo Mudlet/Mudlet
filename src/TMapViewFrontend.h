@@ -60,6 +60,9 @@ public:
         int z = 0;
     };
     virtual std::optional<MapPoint> mousePositionOnMap() const = 0;
+    // Pans the 2D map to a room, its area and level, leaving the player's room where it is; the map follows the player
+    // again once they move. Refused for a room that does not exist or lies in no area.
+    virtual std::pair<bool, QString> centerViewOn(int roomId) = 0;
     virtual std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) = 0;
 
     // Without the 3D mapper compiled in there is no 3D view to show. The null view never has one, so it refuses a show with why.

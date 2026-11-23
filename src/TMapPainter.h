@@ -83,6 +83,7 @@ struct TMapPainterView
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
     double eSize = 3.0;
     // The room the view was last centred on, and whether it has since been panned away from the player
     int mRoomID = 0;
@@ -223,6 +224,9 @@ public:
         bool oneWay = false;
         // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
         bool drawnByCustomLine = false;
+        int direction = 0;
+        // The destination draws its way back as a custom line, which then also draws this exit when it is bent
+        bool returnDrawnByCustomLine = false;
     };
 
     // Below this many pixels per room, both room loops just fill the environment colour, dropping border,
@@ -236,6 +240,11 @@ public:
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
     static int customLineDestination(const TRoom& room, const QString& key);
     static bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other);
+    // Whether exit's destination leads back through the opposite exit and draws that one as a custom line reaching room,
+    // which then shows the two-way connection a bent plain line would draw again beside it
+    static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
+    // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
+    static bool directionalExitLinesEnabled();
 
     void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
     qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }
@@ -334,6 +343,9 @@ public:
     int roomBorderWidth(const TRoom&) const;
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+    // From the room's center to the destination's: straight, or, with mDirectionalExitLines, leaving each end in its
+    // exit's direction when the other room does not lie that way
+    QVector<QPointF> exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub = nullptr) const;
 
     // Draws an area at a size of its own into an image file, written on a pool thread; how that goes is reported to
     // the profile. The returned pair says whether the export started, or why not.
