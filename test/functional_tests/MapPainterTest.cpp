@@ -54,6 +54,11 @@
 #include "TRoomDB.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+
+#include <QOpenGLContext>
+#endif
 
 #include "GroupedTest.h"
 
@@ -361,6 +366,54 @@ private slots:
         QCOMPARE(map()->getColor(scmWestRoom), QColor(20, 160, 90));
         // A room with an environment of its own keeps it
         QCOMPARE(map()->getColor(scmEastRoom), QColor(Qt::blue));
+    }
+
+    // The original 3D view draws such a room in the default room colour too, once one is set; unset, in its own colour
+    // for environment 1 as before. Needs OpenGL, which the offscreen platform ctest runs under does not have, so it
+    // only runs where Qt's native platform is used, as with QT_QPA_PLATFORM=windows
+    void theOriginal3DViewTakesTheDefaultRoomColour()
+    {
+#if defined(INCLUDE_3DMAPPER)
+        if (QOpenGLContext probe; !probe.create()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        roomDB()->getRoom(scmWestRoom)->environment = 999;
+        map()->mRoomIdHash[map()->mProfileName] = scmWestRoom;
+        const QColor savedDefault = mpHost->mMapperDefaultRoomColor;
+        auto restore = qScopeGuard([this, savedDefault]() {
+            mpHost->mMapperDefaultRoomColor = savedDefault;
+        });
+        const auto drawn = [this]() {
+            GLWidget widget(map(), mpHost);
+            widget.resize(400, 400);
+            // Close in, as the view's zoom slider does: a tenth of the field of view, which is 60 degrees times
+            // 150 / (angle + 300), so the rooms fill much of the view
+            widget.slot_setScale(1200);
+            widget.show();
+            return QTest::qWaitForWindowExposed(&widget) ? widget.grabFramebuffer().convertToFormat(QImage::Format_ARGB32) : QImage();
+        };
+        // Clearly green, under whatever lighting the view applies
+        const auto greenPixels = [](const QImage& image) {
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor colour = image.pixelColor(x, y);
+                    count += colour.green() > colour.red() + 40 && colour.green() > colour.blue() + 40;
+                }
+            }
+            return count;
+        };
+
+        mpHost->mMapperDefaultRoomColor = QColor();
+        const QImage unset = drawn();
+        QVERIFY(!unset.isNull());
+        QVERIFY2(greenPixels(unset) == 0, qPrintable(saved(unset, qsl("gl-unset"))));
+        mpHost->mMapperDefaultRoomColor = QColor(Qt::green);
+        const QImage green = drawn();
+        QVERIFY2(greenPixels(green) > 50, qPrintable(qsl("%1 green pixels. %2").arg(greenPixels(green)).arg(saved(green, qsl("gl-green")))));
+#else
+        QSKIP("built without the 3D mapper");
+#endif
     }
 
     // A door is two strokes across the exit line, in the colour of its status
