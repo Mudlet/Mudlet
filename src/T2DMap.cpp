@@ -979,9 +979,9 @@ void T2DMap::switchArea(int areaId)
 
 std::optional<QPointF> T2DMap::mapPointAt(const QPoint& pixel) const
 {
-    // Painting a map with no rooms returns before laying out, so the scale left behind is a deleted map's
-    TArea* pArea = mpMap ? mpMap->mpRoomDB->getArea(mAreaID) : nullptr;
-    if (!pArea || pArea->rooms.isEmpty()) {
+    // A frame with no area to show returns before laying out, so the scale left behind would be an earlier map's. An
+    // area with no rooms yet is laid out like any other, so a script can place its first room or a label there.
+    if (!mLastFrameLaidOut) {
         return std::nullopt;
     }
     return painterView().mapPointAt(pixel);
@@ -1187,6 +1187,7 @@ void T2DMap::applyPaintResult(const TMapPainter::View& before, const TMapPainter
 {
     const TMapPainter::View& after = result.view;
     applyPaintedView(before, after);
+    mLastFrameLaidOut = result.laidOut;
     if (result.selectionPruned) {
         mMultiSelectionSet = after.mMultiSelectionSet;
         mMultiSelectionHighlightRoomId = after.mMultiSelectionHighlightRoomId;

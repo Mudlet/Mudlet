@@ -172,6 +172,8 @@ public:
         // Rooms outside the area now shown left the selection, so its room list is stale
         bool selectionPruned = false;
         int lodExitIndexRoomsHandedOver = -1;
+        // The frame laid the area out, so the view's scale and origin are this frame's: not when it had no area to show
+        bool laidOut = false;
     };
     // Paints the whole view, the map info box included, at view.mSize. viewSettled is handed the frame's view just
     // before the info box's contributors run, so the Lua they run can read this frame's area and zoom from its caller.

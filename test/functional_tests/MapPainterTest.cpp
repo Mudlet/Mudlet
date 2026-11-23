@@ -361,6 +361,25 @@ private slots:
         QVERIFY(!mapperMap.mapPointAt(westCentre));
     }
 
+    // An area with no rooms yet is drawn like any other, so the mouse reads coordinates there too, as it does in the
+    // frontend with no window: a script may place the area's first room or a label by them
+    void anAreaWithNoRoomsReadsCoordinates()
+    {
+        setUpPlayerView();
+        const int emptyAreaId = roomDB()->addArea(qsl("Empty area"));
+        QVERIFY(emptyAreaId > 0);
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        mapperMap.switchArea(emptyAreaId);
+        mapperMap.grab();
+        QCOMPARE(mapperMap.getAreaId(), emptyAreaId);
+        QVERIFY2(mapperMap.mapPointAt(QPoint(scmImageWidth / 2, scmImageHeight / 2)), "no coordinates in an area without rooms");
+    }
+
     // A door is two strokes across the exit line, in the colour of its status
     void aDoorIsDrawnAcrossItsExitInItsStatusColour()
     {

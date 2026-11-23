@@ -311,6 +311,8 @@ public:
     // Rooms the exit index handed paintRoomExits() last frame, -1 if unused. For tests, which would
     // otherwise pass just as well on the every-room fallback.
     int mLodExitIndexRoomsHandedOver = -1;
+    // Whether the last frame laid an area out, so that mapPointAt() reads this frame's scale and origin
+    bool mLastFrameLaidOut = false;
     // Test-only: forces the every-room loop so a test can check the index path draws the same frame,
     // i.e. never hands over too few rooms.
     bool mLodExitIndexDisabled = false;
