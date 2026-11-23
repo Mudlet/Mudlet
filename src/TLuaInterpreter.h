@@ -985,6 +985,8 @@ private:
     static bool checkCommandsOrFunctionsTable(lua_State*, const char* functionName, const int index);
     static bool checkHintsTable(lua_State*, const char* functionName, const int index);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static int getVerifiedGeometry(lua_State*, const char* functionName, const int pos, const char* publicName);
+    static int boundedGeometry(double);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static std::pair<bool, QString> getVerifiedStringOrInteger(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -1078,6 +1080,8 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
+    int pushHttpRequestResult(lua_State*, QNetworkReply*);
+    static void appendHttpRequestId(TEvent&, const QNetworkReply*);
     void stopSpawnedProcesses();
 #if defined(Q_OS_WINDOWS)
     void loadUtf8Filenames();
@@ -1233,6 +1237,9 @@ private:
     // dropped whenever it is replaced.
     QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
+    static constexpr const char* csmHttpRequestIdProperty = "mudletHttpRequestId";
+    // Lives as long as the Host, so an id from before a resetProfile() is never reused
+    qint64 mLastHttpRequestId = 0;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
     // so it has to be unref'd once the waiter has read it.
