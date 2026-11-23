@@ -22,20 +22,25 @@
 
 // Only the executables' main() includes this: mudlet_core must not load libraries, as an app embedding it may not
 
+#include <QByteArrayView>
 #include <QtGlobal>
 #if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
 #include "utils.h"
 
-#include <QByteArray>
 #include <QFile>
 #include <QLibrary>
 #endif
 
-// On Linux, names FFmpeg's hardware device types unless already set; otherwise Qt Multimedia opens a device of each
-// type as the first sound plays, blocking the main thread
+// On Linux and Windows, names FFmpeg's hardware device types unless already set, so Qt Multimedia doesn't open a device
+// of each type as the first sound plays: that blocks the main thread, and on Windows can crash
 inline void nameHardwareDeviceTypes()
 {
-#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+#if (defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)) || defined(Q_OS_WINDOWS)
+#if defined(Q_OS_WINDOWS)
+    // D3D11VA is Qt's own first choice; naming the types skips its probe of the rest, and probing Vulkan through
+    // Microsoft's Vulkan-on-Direct3D 12 layer crashes some AMD drivers (#12990)
+    const char* deviceTypes = "d3d11va,dxva2";
+#else
     // Named types skip Qt's driver prechecks, so this repeats its CUDA one: FFmpeg can crash without libnvcuvid
     // (QTBUG-122199)
     QLibrary nvcuvid(qsl("libnvcuvid.so"));
@@ -43,7 +48,8 @@ inline void nameHardwareDeviceTypes()
     nvcuvid.unload();
     // Qt's Linux order, less Vulkan, which can be a software driver that decodes nothing. A type that doesn't
     // work here is skipped when a video opens
-    const QByteArray deviceTypes = cuda ? "cuda,vaapi,vdpau,qsv,drm" : "vaapi,vdpau,qsv,drm";
+    const char* deviceTypes = cuda ? "cuda,vaapi,vdpau,qsv,drm" : "vaapi,vdpau,qsv,drm";
+#endif
     for (const char* variable : {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}) {
         if (!qEnvironmentVariableIsSet(variable)) {
             qputenv(variable, deviceTypes);
