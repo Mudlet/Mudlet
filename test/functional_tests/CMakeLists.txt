@@ -108,6 +108,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     ProfileTabBarStyleTest.cpp
+    ProfileTabLabelTest.cpp
     SubCommandLineLifetimeTest.cpp
     ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
@@ -195,6 +196,7 @@ set(TELNET_GROUP_TEST_SOURCES
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
+    TelnetTerminalTypeCycleTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MirrorToStdOutTest.cpp
@@ -343,9 +345,9 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDeletedEditItemTest.cpp
 )
 
-# CameraController and GeometryManager are only compiled into the library with the 3D mapper
+# GLWidget, CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp LegacyMapZoomTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them

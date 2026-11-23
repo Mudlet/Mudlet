@@ -65,6 +65,7 @@ class QDockWidget;
 class QKeyEvent;
 class QMediaPlayer;
 class QMenu;
+class QMessageBox;
 class QLabel;
 class QListWidget;
 class QPushButton;
@@ -147,6 +148,9 @@ public:
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
+    static QString keySequenceForProse(const QKeySequence&);
+    // What the balloon says when a second game opens: the keys that switch games for this profile
+    QString profileSwitchingTip(const Host*) const;
     bool profileSwitchShortcutMatches(const Qt::Key, const Qt::KeyboardModifiers) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
@@ -683,6 +687,7 @@ private:
     QPointer<QAction> mpActionAboutWithUpdates;
 #if defined(INCLUDE_UPDATER)
     bool mUpdateInstalled = false;
+    QPointer<QMessageBox> mpUpdateFailedBox;
 #endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;

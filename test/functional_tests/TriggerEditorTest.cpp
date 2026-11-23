@@ -35,10 +35,12 @@
 #include <QHeaderView>
 #include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDialog>
 #include <QMenu>
 #include <QScopeGuard>
 #include <QShortcut>
 
+#include "ChipRow.h"
 #include "HostDialogs.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -50,6 +52,7 @@
 #include "TConsole.h"
 #include "TTextEdit.h"
 #include "TMap.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
@@ -93,6 +96,34 @@ private:
     if (dir.exists()) {
       dir.removeRecursively();
     }
+  }
+
+  // doCleanReset() rebuilds the trees later, so wait for the item to come back
+  QTreeWidgetItem *resetAndFindItem(dlgTriggerEditor *pEditor, QTreeWidget *pTree, const QString &name) {
+    QTreeWidgetItem *pItem = nullptr;
+    pEditor->doCleanReset();
+    if (!QTest::qWaitFor([&]() {
+          const auto found = pTree->findItems(name, Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+          pItem = found.isEmpty() ? nullptr : found.first();
+          return pItem != nullptr;
+        })) {
+      return nullptr;
+    }
+    return pItem;
+  }
+
+  // Opens the script in the editor and types over it without saving
+  QTreeWidgetItem *typeIntoScript(dlgTriggerEditor *pEditor, const QString &name, const QString &text) {
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QTreeWidgetItem *pItem = resetAndFindItem(pEditor, pTree, name);
+    if (!pItem) {
+      return nullptr;
+    }
+    pEditor->slot_showScripts();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_scriptsSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(text);
+    return pItem;
   }
 
 private slots:
@@ -301,6 +332,70 @@ private slots:
     QCOMPARE(text(3), qsl("return true"));
     QCOMPARE(text(4), qsl("c"));
     QCOMPARE(pEditor->mVisiblePatternCount, 5);
+  }
+
+  // A colour pattern row's buttons have to show the colours its pattern text
+  // holds, not whatever the picker last chose for some other row
+  void test_colorPatternButtonsFollowTheirOwnRow() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    auto *pTrigger = new TTrigger(nullptr, mpHost);
+    pTrigger->setName(qsl("qaColourRows"));
+    pTrigger->setRegexCodeList(
+        {TTrigger::createColorPatternText(1, TTrigger::scmIgnored),
+         TTrigger::createColorPatternText(4, TTrigger::scmIgnored)},
+        {REGEX_COLOR_PATTERN, REGEX_COLOR_PATTERN});
+    QVERIFY(pTrigger->registerTrigger());
+    // As left by picking red for the first row
+    pTrigger->mColorTriggerFgAnsi = 1;
+    pTrigger->mColorTriggerFgColor = mpHost->getAnsiColor(1, false);
+    pEditor->doCleanReset();
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaColourRows"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted trigger");
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+
+    auto *pBlueRow = pEditor->mTriggerPatternEdit.at(1);
+    const QString blueStyleSheet = dlgTriggerEditor::generateButtonStyleSheet(mpHost->getAnsiColor(4, false));
+    QCOMPARE(pBlueRow->pushButton_fgColor->styleSheet(), blueStyleSheet);
+
+    QTimer::singleShot(0, qApp, []() {
+      if (auto *pPicker = qobject_cast<QDialog *>(QApplication::activeModalWidget())) {
+        pPicker->reject();
+      }
+    });
+    pBlueRow->pushButton_fgColor->click();
+
+    QCOMPARE(pBlueRow->singleLineTextEdit_pattern->toPlainText(), TTrigger::createColorPatternText(4, TTrigger::scmIgnored));
+    QCOMPARE(pBlueRow->pushButton_fgColor->text(), qsl("Foreground color [ANSI 4]"));
+    QCOMPARE(pBlueRow->pushButton_fgColor->styleSheet(), blueStyleSheet);
+
+    QTimer::singleShot(0, qApp, []() {
+      if (auto *pPicker = QApplication::activeModalWidget()) {
+        if (auto *pGreen = pPicker->findChild<QPushButton *>(qsl("pushButton_green"))) {
+          pGreen->click();
+        }
+      }
+    });
+    pBlueRow->pushButton_bgColor->click();
+
+    QCOMPARE(pBlueRow->singleLineTextEdit_pattern->toPlainText(), TTrigger::createColorPatternText(4, 2));
+    QCOMPARE(pBlueRow->pushButton_bgColor->text(), qsl("Background color [ANSI 2]"));
+    QCOMPARE(pBlueRow->pushButton_bgColor->styleSheet(), dlgTriggerEditor::generateButtonStyleSheet(mpHost->getAnsiColor(2, true)));
+    QCOMPARE(pBlueRow->pushButton_fgColor->styleSheet(), blueStyleSheet);
   }
 
   // The deselect on focus-out exists so a pattern line does not keep showing a
@@ -988,6 +1083,206 @@ private slots:
     QVERIFY(pLua->compileAndExecuteScript(
         qsl("setScript(\"qaShownScript\", \"-- after\")")));
     QCOMPARE(pEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- after"));
+  }
+
+  // A package installing or a synced module reloading resets the editor while
+  // the player may be partway through an edit
+  void test_editorResetKeepsUnsavedEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permScript(\"qaUnsavedScript\", \"\", \"-- saved\")")));
+    QVERIFY(typeIntoScript(pEditor, qsl("qaUnsavedScript"), qsl("-- typed but not saved")));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    const auto ids = mpHost->getScriptUnit()->findItems(qsl("qaUnsavedScript"));
+    QCOMPARE(ids.size(), 1);
+    QCOMPARE(mpHost->getScriptUnit()->getScript(ids.front())->getScript(), qsl("-- typed but not saved"));
+  }
+
+  // The reset saves whatever view is open, not only scripts
+  void test_editorResetKeepsUnsavedTriggerEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permSubstringTrigger(\"qaUnsavedTrigger\", \"\", {\"qaUnsavedTrigger\"}, [[-- saved]])")));
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = resetAndFindItem(pEditor, pTree, qsl("qaUnsavedTrigger"));
+    QVERIFY(pItem);
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- typed but not saved"));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    const auto ids = mpHost->getTriggerUnit()->findItems(qsl("qaUnsavedTrigger"));
+    QCOMPARE(ids.size(), 1);
+    QCOMPARE(mpHost->getTriggerUnit()->getTrigger(ids.front())->getScript(), qsl("-- typed but not saved"));
+  }
+
+  void test_editorResetKeepsUnsavedVariableEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaResetVar = \"old\"")));
+    pEditor->slot_showVariables();
+    QTreeWidgetItem *pItem = nullptr;
+    QTRY_VERIFY([&]() {
+      pItem = pEditor->treeWidget_variables->findItems(qsl("qaResetVar"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive).value(0);
+      return pItem != nullptr;
+    }());
+    pEditor->treeWidget_variables->setCurrentItem(pItem);
+    pEditor->slot_variableSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("new"));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetVar == \"new\")")));
+  }
+
+  void test_editorResetWithHalfTypedTriggerLeavesItActive() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permSubstringTrigger(\"qaHalfTyped\", \"\", {\"qaHalfTyped\"}, [[-- ok]])")));
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = resetAndFindItem(pEditor, pTree, qsl("qaHalfTyped"));
+    QVERIFY(pItem);
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    // No longer new, so the final save below cannot switch it back on and hide what the reset did
+    pEditor->slot_saveSelectedItem();
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("if ("));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    const auto ids = mpHost->getTriggerUnit()->findItems(qsl("qaHalfTyped"));
+    QCOMPARE(ids.size(), 1);
+    TTrigger *pTrigger = mpHost->getTriggerUnit()->getTrigger(ids.front());
+    QVERIFY(pTrigger);
+    QVERIFY(pTrigger->shouldBeActive());
+    QVERIFY2(pEditor->systemMessage().contains(qsl("unsaved edit")), qPrintable(pEditor->systemMessage()));
+
+    pItem = resetAndFindItem(pEditor, pTree, qsl("qaHalfTyped"));
+    QVERIFY(pItem);
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- finished"));
+    pEditor->slot_saveSelectedItem();
+    QVERIFY(pTrigger->isActive());
+  }
+
+  // Saving a script runs its body, which an untouched script must not get from a reset
+  void test_editorResetLeavesAnUneditedScriptUnrun() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    const QString body = qsl("qaResetRuns = (qaResetRuns or 0) + 1");
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("qaResetRuns = 0 permScript(\"qaUneditedScript\", \"\", [[%1]])").arg(body)));
+    QVERIFY(typeIntoScript(pEditor, qsl("qaUneditedScript"), body));
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaResetRuns = 0")));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetRuns == 0)")));
+  }
+
+  // A script whose body is untouched still counts as edited when its name or event handlers changed
+  void test_editorResetKeepsScriptNameAndHandlerEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permScript(\"qaRenamedScript\", \"\", \"-- body\")")));
+    QVERIFY(typeIntoScript(pEditor, qsl("qaRenamedScript"), qsl("-- body")));
+    pEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("qaRenamedScriptNew"));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    QCOMPARE(mpHost->getScriptUnit()->findItems(qsl("qaRenamedScriptNew")).size(), 1u);
+
+    QVERIFY(typeIntoScript(pEditor, qsl("qaRenamedScriptNew"), qsl("-- body")));
+    pEditor->mpChipRow_scriptEvents->setItems({qsl("qaAddedEvent")});
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    const auto ids = mpHost->getScriptUnit()->findItems(qsl("qaRenamedScriptNew"));
+    QCOMPARE(ids.size(), 1u);
+    QCOMPARE(mpHost->getScriptUnit()->getScript(ids.front())->getEventHandlerList(), QStringList{qsl("qaAddedEvent")});
+  }
+
+  // The chip row shows a handler named twice in the profile file once
+  void test_editorResetLeavesAnUneditedScriptWithARepeatedHandlerUnrun() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    const QString body = qsl("qaRepeatedHandlerRuns = (qaRepeatedHandlerRuns or 0) + 1");
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permScript(\"qaRepeatedHandlerScript\", \"\", [[%1]])").arg(body)));
+    const auto ids = mpHost->getScriptUnit()->findItems(qsl("qaRepeatedHandlerScript"));
+    QCOMPARE(ids.size(), 1);
+    mpHost->getScriptUnit()->getScript(ids.front())->setEventHandlerList({qsl("qaRepeatedEvent"), qsl("qaRepeatedEvent")});
+    QVERIFY(typeIntoScript(pEditor, qsl("qaRepeatedHandlerScript"), body));
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaRepeatedHandlerRuns = 0")));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaRepeatedHandlerRuns == 0)")));
+  }
+
+  void test_editorResetAfterUninstallDropsEditsToTheRemovedItem() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QTemporaryDir packageDir;
+    QVERIFY(packageDir.isValid());
+    const QString path = packageDir.filePath(qsl("qaUninstalledPackage.xml"));
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+               "<!DOCTYPE MudletPackage>\n"
+               "<MudletPackage version=\"1.001\">\n"
+               "<ScriptPackage>\n"
+               "<Script isActive=\"yes\" isFolder=\"no\">\n"
+               "<name>qaUninstalledScript</name><packageName></packageName>\n"
+               "<script>-- saved</script><eventHandlerList />\n"
+               "</Script>\n"
+               "</ScriptPackage>\n"
+               "</MudletPackage>\n");
+    file.close();
+    QVERIFY(mpHost->installPackage(path, enums::PackageModuleType::Package).first);
+    QVERIFY(typeIntoScript(pEditor, qsl("qaUninstalledScript"), qsl("-- typed but not saved")));
+
+    mpHost->waitForProfileSave();
+    QVERIFY(mpHost->uninstallPackage(qsl("qaUninstalledPackage"), enums::PackageModuleType::Package));
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getScriptUnit()->findItems(qsl("qaUninstalledScript")).empty());
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree->findItems(qsl("qaUninstalledScript"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0).isEmpty());
   }
 
   // Items a script makes are picked up the next time the editor gets the
