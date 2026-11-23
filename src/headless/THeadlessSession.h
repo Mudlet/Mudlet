@@ -739,6 +739,9 @@ public:
         // What a screen reader says for it, and whether it is told it is a button
         QString accessibleName;
         bool accessibleButton = false;
+        // How a screen reader is told of a change of its text, as setLabelLiveRegion() gave it and ARIA's aria-live
+        enum class LiveRegion { off, polite, assertive };
+        LiveRegion liveRegion = LiveRegion::off;
         // As setLabelStyleSheet() gave it, which Mudlet does not interpret: drawing it is the app's to do or not
         QString styleSheet;
 

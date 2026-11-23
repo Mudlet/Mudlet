@@ -1208,6 +1208,10 @@ trimmed under the row it is scrolled back to.
 - `clickThrough`, as `enableClickthrough()` sets it;
 - `accessibleName` and `accessibleButton`, what a screen reader says for it and whether it is told it is
   a button;
+- `liveRegion`, as `setLabelLiveRegion()` gave it: `off`, or `polite` or `assertive` for a label whose
+  new text a screen reader is to announce as ARIA's `aria-live` does. The GUI announces it itself, and only
+  while the profile's `accessibleLabels` setting (`getConfig()`) is on; with no widget, announcing is the
+  app's to do;
 - `styleSheet`, as `setLabelStyleSheet()` gave it. Mudlet does not interpret it for the app: drawing what
   it says is the app's to do, or not.
 
