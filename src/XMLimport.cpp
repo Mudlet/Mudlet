@@ -51,6 +51,7 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <algorithm>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -169,7 +170,10 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        const float versionNumber = versionString.toFloat(&isOk);
+                        // No Mudlet wrote a version that reads as NaN, negative or past 255: it is refused as a later
+                        // Mudlet's, rather than overflowing qFloor() or wrapping the quint8 major version
+                        const float parsedVersion = versionString.toFloat(&isOk);
+                        const float versionNumber = parsedVersion >= 0.0f ? std::min(parsedVersion, 255.0f) : 255.0f;
                         if (isOk) {
                             mVersionMajor = qFloor(versionNumber);
                             mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
