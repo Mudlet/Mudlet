@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 
 #include <memory>
+#include <numbers>
 
 #include "ExitAppearance.h"
 #include "Host.h"
@@ -300,6 +301,50 @@ private slots:
         map()->mCustomEnvColors[scmRedEnvironment] = QColor(Qt::red);
         map()->mCustomEnvColors[scmBlueEnvironment] = QColor(Qt::blue);
         mpHost->mMapperShowRoomBorders = false;
+    }
+
+    // A room with a special exit has a white dot on its top right corner: on a round room where its edge crosses the
+    // diagonal, so it stays on the room; and none with the markers turned off
+    void aSpecialExitIsADotOnTheRoomsCorner()
+    {
+        TRoom* pRoom = roomDB()->getRoom(scmWestRoom);
+        QVERIFY(pRoom);
+        pRoom->setSpecialExit(scmEastRoom, qsl("climb tree"));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        auto restore = qScopeGuard([this, savedMarkers]() {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+        });
+        const auto drawn = [&](const bool round) {
+            TMapPainter::View roomView = view();
+            roomView.mBubbleMode = round;
+            TMapPainter painter;
+            painter.setView(roomView);
+            QImage image = blankImage();
+            QPainter imagePainter(&image);
+            QFont roomIdFont;
+            QFont roomNameFont;
+            QPen pen;
+            const QPointF centre = onImage(QPointF(0, 0));
+            painter.drawRoom(imagePainter, roomIdFont, roomNameFont, pen, pRoom, false, false, false, -1, centre.x(), centre.y(), false);
+            return image;
+        };
+        // Half the default rSize of 0.5 is a quarter of the cell from the centre to the room's edge
+        const qreal halfRoom = scmRoomPixels / 4.0;
+        const QPointF centre = onImage(QPointF(0, 0));
+        const QPoint squareCorner = (centre + QPointF(halfRoom, -halfRoom)).toPoint();
+        const QPoint roundCorner = (centre + QPointF(halfRoom, -halfRoom) / std::numbers::sqrt2).toPoint();
+
+        mpHost->mMapperShowSpecialExitMarkers = true;
+        const QImage square = drawn(false);
+        QVERIFY2(square.pixelColor(squareCorner) == QColor(Qt::white), qPrintable(saved(square, qsl("special-exit-square"))));
+        const QImage round = drawn(true);
+        QVERIFY2(round.pixelColor(roundCorner) == QColor(Qt::white), qPrintable(saved(round, qsl("special-exit-round"))));
+        // Off the circle, where the square room's corner would be
+        QVERIFY2(round.pixelColor(squareCorner) != QColor(Qt::white), qPrintable(saved(round, qsl("special-exit-round"))));
+
+        mpHost->mMapperShowSpecialExitMarkers = false;
+        const QImage off = drawn(false);
+        QVERIFY2(off.pixelColor(squareCorner) != QColor(Qt::white), qPrintable(saved(off, qsl("special-exit-off"))));
     }
 
     // A room fills rSize of its cell, centred on its coordinates, in its environment's colour

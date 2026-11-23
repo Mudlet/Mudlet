@@ -1491,7 +1491,7 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     const qreal center = scmRoomTextureSize / 2.0;
     ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
     if (specialExitMarker) {
-        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, false);
+        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, false, false);
     }
     painter.end();
     return addRoomTexture(key, image);

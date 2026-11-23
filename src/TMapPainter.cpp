@@ -645,7 +645,7 @@ void TMapPainter::drawRoom(QPainter& painter,
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
 
     if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty()) {
-        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), !isGridMode);
+        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), !isGridMode, mBubbleMode);
     }
 }
 
@@ -1249,7 +1249,7 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
 
     for (const auto& [room, roomRect] : specialExitRooms) {
         const QPointF center = roomRect.center();
-        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), false);
+        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), false, mBubbleMode);
     }
 
     const qreal timeCollision = timer.nsecsElapsed() / 1000000.0;
