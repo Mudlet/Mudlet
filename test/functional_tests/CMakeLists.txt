@@ -195,6 +195,7 @@ set(TELNET_GROUP_TEST_SOURCES
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
+    TelnetTerminalTypeCycleTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MirrorToStdOutTest.cpp
