@@ -521,7 +521,10 @@ void dlgRoomProperties::accept()
             continue;
         }
         const QString text = field.pEdit->toPlainText();
-        if (text != field.original) {
+        // Rooms that started out with different values keep them unless one is typed in: empty again, the field is
+        // back to its placeholder rather than set to nothing
+        const bool mixedAndLeftEmpty = !field.original.has_value() && text.isEmpty();
+        if (!mixedAndLeftEmpty && text != field.original) {
             changes.insert(field.key, text.isEmpty() ? std::nullopt : std::optional<QString>(text));
         }
     }

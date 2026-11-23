@@ -1219,6 +1219,20 @@ private slots:
 
     // Typed in and backspaced away again, the mixed field is back to its placeholder: the rooms keep their own
     // descriptions, and a description typed in does reach them all
+    // As for the description: notes typed in and backspaced away again leave each room's own notes as they were
+    void mixedNotesTypedInAndEmptiedAgainLeaveTheRoomsAlone()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("Shop opens at dawn.")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("Guard is bribable.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->plainTextEdit_notes->setPlainText(qsl("x"));
+        pDlg->plainTextEdit_notes->clear();
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
     void aMixedDescriptionTypedInAndEmptiedAgainLeavesTheRoomsAlone()
     {
         buildMap();
