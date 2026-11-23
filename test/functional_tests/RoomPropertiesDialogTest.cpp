@@ -1157,6 +1157,10 @@ private slots:
         QVERIFY(!pDlg->label_userDataWarning->isHidden());
         QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("\"description\"")), qPrintable(pDlg->label_userDataWarning->text()));
 
+        // The notes have a field of their own on the General tab too
+        pKey->setText(qsl("notes"));
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("\"notes\"")), qPrintable(pDlg->label_userDataWarning->text()));
+
         pKey->setText(qsl("room.ui_nameColor"));
         QVERIFY(!pDlg->label_userDataWarning->isHidden());
         QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("room.ui_")), qPrintable(pDlg->label_userDataWarning->text()));
