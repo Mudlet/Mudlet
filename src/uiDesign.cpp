@@ -146,6 +146,8 @@ constexpr int scmMenuItemPaddingTrailing = scmButtonPaddingHorizontal;
 // A sub-control is placed from the row's padding box, the edge its highlight starts at, so a mark left there sits on
 // the highlight's arc
 constexpr int scmMenuItemMarkInset = (scmMenuItemPaddingLeading - scmChoiceIndicatorSize) / 2;
+// Room round a switched-on entry's glyph for its wash; the box moves back by as much, so the glyph stays put
+constexpr int scmMenuIconWashPadding = 2;
 
 constexpr qreal scmTypeRatio_caption = 0.85;
 constexpr qreal scmTypeRatio_title = 1.15;
@@ -1333,7 +1335,13 @@ QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix)
     // Exclusive rows would come out as boxes rather than circles; none of these menus has one
     const ChoiceMarkInks inks = choiceMarkInks(tokens);
     rules += choiceMarkRules(scoped({qsl("QMenu::indicator")}), scmChoiceBoxRadius, inks.tick, QString(), inks.quietTick, QString(), inks, tokens)
-             + scoped({qsl("QMenu::indicator"), qsl("QMenu::icon")}) + qsl(" { left: %1px; }").arg(QString::number(scmMenuItemMarkInset));
+             + scoped({qsl("QMenu::indicator"), qsl("QMenu::icon")})
+             + qsl(" { left: %1px; }").arg(QString::number(scmMenuItemMarkInset))
+             // A sheet-drawn entry with an icon gets no check mark (QStyleSheetStyle::renderMenuItemIcon()), so a switched-on
+             // one is washed behind its glyph, as a switched-on toolbar button is
+             + scoped({qsl("QMenu::icon:checked")})
+             + qsl(" { background-color: %1; border-radius: %2px; padding: %3px; left: %4px; }")
+                       .arg(tokens.accentSoft, QString::number(scmRadiusChip), QString::number(scmMenuIconWashPadding), QString::number(scmMenuItemMarkInset - scmMenuIconWashPadding));
     return rules;
 }
 
@@ -1790,15 +1798,43 @@ void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& to
     restyleGlyphsDisabledIn(glyphs, tokens, tokens.disabledText);
 }
 
+namespace {
+QIcon identityOrTintedIcon(const ActionGlyph& glyph, const ThemeTokens& tokens, const bool coloured, const QColor& disabledInk)
+{
+    const QString glyphOn = glyph.glyphOn.isEmpty() ? glyph.glyphOff : glyph.glyphOn;
+    return coloured && glyph.identity.hue >= 0.0 ? identityIcon(glyph.glyphOff, glyphOn, glyph.identity, tokens, disabledInk) : tintedIconDisabledIn(glyph.glyphOff, glyphOn, tokens, disabledInk);
+}
+} // namespace
+
 void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured)
 {
+    for (const ActionGlyph& glyph : glyphs) {
+        if (glyph.pAction) {
+            glyph.pAction->setIcon(identityOrTintedIcon(glyph, tokens, coloured, tokens.disabledBarText));
+        }
+    }
+}
+
+void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured)
+{
+    // A base style fills the row under the pointer with Highlight and writes its words in HighlightedText; it asks the
+    // icon for Active (Fusion, the Windows styles) or Selected (Breeze, while the row is pressed)
+    const QPalette palette = QApplication::palette();
+    const QColor highlightedText = palette.color(QPalette::HighlightedText);
+    const QColor chosenRowInk = readableOn(palette.color(QPalette::Highlight), highlightedText, highlightedText, scmQuietMinimumRatio);
     for (const ActionGlyph& glyph : glyphs) {
         if (!glyph.pAction) {
             continue;
         }
-        const QString glyphOn = glyph.glyphOn.isEmpty() ? glyph.glyphOff : glyph.glyphOn;
-        glyph.pAction->setIcon(coloured && glyph.identity.hue >= 0.0 ? identityIcon(glyph.glyphOff, glyphOn, glyph.identity, tokens, tokens.disabledBarText)
-                                                                     : tintedIconDisabledIn(glyph.glyphOff, glyphOn, tokens, tokens.disabledBarText));
+        QIcon icon = identityOrTintedIcon(glyph, tokens, coloured, tokens.disabledText);
+        const QPixmap chosenOff = tintedGlyph(glyphPixmap(glyph.glyphOff), chosenRowInk);
+        const QPixmap chosenOn = glyph.glyphOn.isEmpty() ? chosenOff : tintedGlyph(glyphPixmap(glyph.glyphOn), chosenRowInk);
+        // Each replaces the recipe's own pixmap of that mode, state and size
+        for (const QIcon::Mode mode : {QIcon::Active, QIcon::Selected}) {
+            icon.addPixmap(chosenOff, mode, QIcon::Off);
+            icon.addPixmap(chosenOn, mode, QIcon::On);
+        }
+        glyph.pAction->setIcon(icon);
     }
 }
 

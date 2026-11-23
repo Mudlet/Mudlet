@@ -467,6 +467,10 @@ void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& to
 // For actions on a toolbar: unavailable, the glyph takes disabledBarText as the bar's words do. Coloured, a glyph with
 // an identity colour keeps it at rest, under the pointer and switched on.
 void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured = false);
+// For actions in a menu the base style draws: unavailable, the glyph takes disabledText, and on the row under the pointer
+// it takes HighlightedText, walked to read on Highlight, whatever its colour, as that row's words do. Not for a menu
+// carrying menuStyleSheet(), whose chosen row is a wash under accentText.
+void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured);
 
 struct CardMetrics
 {

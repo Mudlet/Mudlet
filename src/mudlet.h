@@ -400,6 +400,7 @@ public:
     // Never set on the bar directly: restyleMainToolBar() appends it to the design's rules on the same widget
     QString mMainToolBarProfileStyleSheet;
     QList<uiDesign::ActionGlyph> mToolBarGlyphs;
+    QList<uiDesign::ActionGlyph> mMenuGlyphs;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     // More modern Desktop styles no longer include icons on the buttons in

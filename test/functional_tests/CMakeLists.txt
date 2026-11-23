@@ -73,6 +73,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainConsoleSelectionTest.cpp
     MainToolBarGlyphTest.cpp
     MainToolBarStyleTest.cpp
+    MenuBarGlyphTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp

@@ -1782,6 +1782,46 @@ void mudlet::init()
                       {mpActionMultiView, qsl(":/icons/toolbar-multiview.svg"), QString()},
                       {mpActionAbout, qsl(":/icons/toolbar-about.svg"), QString()},
                       {mpActionFullScreenView, qsl(":/icons/toolbar-fullscreen.svg"), qsl(":/icons/toolbar-fullscreen-exit.svg")}};
+    // An entry that does what a toolbar button does carries that button's picture. The profiles updateWindowMenu() lists
+    // are left out: a glyph would take the place of the tick that says which one is in front.
+    mMenuGlyphs = {{dactionConnect, qsl(":/icons/toolbar-connect.svg"), QString(), uiDesign::scmIdentity_connect},
+                   {dactionDisconnect, qsl(":/icons/toolbar-disconnect.svg"), QString()},
+                   {dactionReconnect, qsl(":/icons/toolbar-reconnect.svg"), QString(), uiDesign::scmIdentity_reconnect},
+                   {dactionCloseProfile, qsl(":/icons/toolbar-close-profile.svg"), QString(), uiDesign::scmIdentity_connect},
+                   {dactionCloseApplication, qsl(":/icons/toolbar-quit.svg"), QString(), uiDesign::scmIdentity_delete},
+                   {dactionScriptEditor, qsl(":/icons/settings-editor.svg"), QString()},
+                   {dactionShowErrors, qsl(":/icons/editor-errors.svg"), QString(), uiDesign::scmIdentity_errors},
+                   {dactionShowMap, qsl(":/icons/toolbar-map.svg"), QString(), uiDesign::scmIdentity_map},
+                   {dactionInputLine, qsl(":/icons/settings-input.svg"), QString(), uiDesign::scmIdentity_input},
+                   {dactionNotepad, qsl(":/icons/toolbar-notepad.svg"), QString()},
+                   {dactionPackageManager, qsl(":/icons/toolbar-packages.svg"), QString(), uiDesign::scmIdentity_packages},
+                   {dactionReplay, qsl(":/icons/toolbar-replay.svg"), QString()},
+                   {dactionModuleManager, qsl(":/icons/editor-module.svg"), QString(), uiDesign::scmIdentity_packages},
+                   {dactionPackageExporter, qsl(":/icons/toolbar-export.svg"), QString(), uiDesign::scmIdentity_packages},
+                   {dactionToggleReplay, qsl(":/icons/menu-record-replay.svg"), QString()},
+                   {dactionToggleLogging, qsl(":/icons/menu-record-log.svg"), QString()},
+                   {dactionToggleEmergencyStop, qsl(":/icons/menu-emergency-stop.svg"), QString(), uiDesign::scmIdentity_delete},
+                   {dactionOptions, qsl(":/icons/toolbar-settings.svg"), QString()},
+                   {dactionToggleTimeStamp, qsl(":/icons/menu-timestamps.svg"), QString()},
+                   {dactionMuteMedia, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                   {dactionMuteAPI, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                   {dactionMuteGame, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                   {dactionToggleFullScreen, qsl(":/icons/toolbar-fullscreen.svg"), qsl(":/icons/toolbar-fullscreen-exit.svg")},
+                   {dactionMultiView, qsl(":/icons/toolbar-multiview.svg"), QString()},
+                   {dactionReattachDetachedWindows, qsl(":/icons/menu-reattach-windows.svg"), QString()},
+                   {dactionToggleAlwaysOnTop, qsl(":/icons/menu-always-on-top.svg"), QString()},
+                   {dactionMinimize, qsl(":/icons/control-minus.svg"), QString()},
+                   {dactionHelp, qsl(":/icons/toolbar-manual.svg"), QString(), uiDesign::scmIdentity_manual},
+                   {dactionUiTour, qsl(":/icons/menu-ui-tour.svg"), QString()},
+                   {dactionVideo, qsl(":/icons/menu-video-tutorials.svg"), QString()},
+                   {dactionDiscord, qsl(":/icons/toolbar-discord.png"), QString(), uiDesign::scmIdentity_discord},
+                   {dactionMudletDiscord, qsl(":/icons/menu-discord-help.svg"), QString(), uiDesign::scmIdentity_discord},
+                   {dactionLiveHelpChat, qsl(":/icons/settings-chat.svg"), QString(), uiDesign::scmIdentity_discord},
+                   {dactionForum, qsl(":/icons/about-forums.svg"), QString()},
+                   {dactionAbout, qsl(":/icons/toolbar-about.svg"), QString()},
+                   {dactionUpdate, qsl(":/icons/packages-update.svg"), QString()},
+                   {dactionChangelog, qsl(":/icons/menu-changelog.svg"), QString()},
+                   {dactionReportIssue, qsl(":/icons/about-bug.svg"), QString()}};
     restyleToolBarIcons();
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
@@ -5048,6 +5088,7 @@ void mudlet::restyleToolBarIcons()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens, mColouredIcons);
+    uiDesign::restyleMenuGlyphs(mMenuGlyphs, tokens, mColouredIcons);
     // Outside mToolBarGlyphs: its own green stays whether or not the bar is coloured
     if (mpButtonAbout) {
         mpButtonAbout->setIcon(aboutUpdateIcon(tokens));

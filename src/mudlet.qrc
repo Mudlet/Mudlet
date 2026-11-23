@@ -176,6 +176,16 @@
         <file>icons/media-tape.png</file>
         <file>icons/media-tape-red-cross.png</file>
         <file>icons/medievia.png</file>
+        <file>icons/menu-always-on-top.svg</file>
+        <file>icons/menu-changelog.svg</file>
+        <file>icons/menu-discord-help.svg</file>
+        <file>icons/menu-emergency-stop.svg</file>
+        <file>icons/menu-reattach-windows.svg</file>
+        <file>icons/menu-record-log.svg</file>
+        <file>icons/menu-record-replay.svg</file>
+        <file>icons/menu-timestamps.svg</file>
+        <file>icons/menu-ui-tour.svg</file>
+        <file>icons/menu-video-tutorials.svg</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/morgengrauen_480x120.png</file>
         <file>icons/mudlet.png</file>
