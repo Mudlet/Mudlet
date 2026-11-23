@@ -24,9 +24,11 @@
  */
 
 #include <QListWidget>
+#include <QMenu>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolBar>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -875,6 +877,13 @@ private slots:
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
         QVERIFY(mpEditor->mpCurrentTriggerItem);
         QVERIFY2(!mpEditor->mpCreateModuleAction->isEnabled(), "Create Module would preselect the trigger the merged folder hides");
+        // Only Create Module: the button's arrow still opens the other package tools
+        auto* pButton = qobject_cast<QToolButton*>(mpEditor->toolBar->widgetForAction(mpEditor->mpCreateModuleAction));
+        QVERIFY(pButton && pButton->menu());
+        QVERIFY2(pButton->isEnabled(), "the disabled Create Module took the package tools' menu with it");
+        for (QAction* pTool : pButton->menu()->actions()) {
+            QVERIFY2(pTool->isEnabled(), qPrintable(qsl("%1 is off on a merged folder").arg(pTool->text())));
+        }
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         QVERIFY(mpEditor->mpCreateModuleAction->isEnabled());
     }

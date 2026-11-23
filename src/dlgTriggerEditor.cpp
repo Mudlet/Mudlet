@@ -1345,6 +1345,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
         pButton_packages->setPopupMode(QToolButton::MenuButtonPopup);
         // Named so the stylesheet's split-button padding reaches it, as it does Save Profile
         pButton_packages->setObjectName(qsl("editorCreateModuleButton"));
+        // A button follows its action's enabled state, arrow and all: Create Module being off, as on a merged folder,
+        // must not cut off the other tools. The button has taken the action's state by the time changed() is emitted,
+        // and a disabled action is not triggered by a click on the button.
+        connect(mpCreateModuleAction, &QAction::changed, pButton_packages, [pButton_packages]() {
+            pButton_packages->setEnabled(true);
+        });
     }
 
     // In the order the groups give up their labels: profile actions first, item actions last
