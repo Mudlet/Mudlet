@@ -93,6 +93,7 @@
 #include <QFile>
 #include <QClipboard>
 #include <QFileDialog>
+#include <QHostAddress>
 #include <QJsonDocument>
 #include <QImage>
 #include <QKeyEvent>
@@ -3190,33 +3191,13 @@ void mudlet::updateWindowMenu()
     }
 }
 
-void mudlet::slot_activateMainWindow()
+// show() leaves a minimized window minimized; clearing just that bit keeps a maximized or full-screen state
+void mudlet::bringWindowToFront(QWidget* window)
 {
-    raise();
-    activateWindow();
-    show();             // Ensure it's not minimized
-    updateWindowMenu(); // Refresh checkmarks
-}
-
-void mudlet::slot_activateDetachedWindow()
-{
-    QAction* action = qobject_cast<QAction*>(sender());
-    if (!action) {
-        return;
-    }
-
-    QString profileName = action->data().toString();
-
-    if (mDetachedWindows.contains(profileName)) {
-        TDetachedWindow* detachedWindow = mDetachedWindows[profileName];
-
-        if (detachedWindow) {
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
-            updateWindowMenu();     // Refresh checkmarks
-        }
-    }
+    window->setWindowState((window->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+    window->show();
+    window->raise();
+    window->activateWindow();
 }
 
 void mudlet::slot_activateMainWindowProfile()
@@ -3240,10 +3221,7 @@ void mudlet::slot_activateMainWindowProfile()
     }
 
     if (tabIndex >= 0) {
-        // Activate the main window first
-        raise();
-        activateWindow();
-        show(); // Ensure it's not minimized
+        bringWindowToFront(this);
 
         // Switch to the specific tab
         mpTabBar->setCurrentIndex(tabIndex);
@@ -3268,10 +3246,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     // Find which detached window contains this profile
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
-            // Activate the detached window
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
+            bringWindowToFront(detachedWindow);
 
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);
@@ -3594,13 +3569,19 @@ void mudlet::slot_telnetConnectionStateChanged()
     // the brief "Connecting" (yellow) state.
     updateMainWindowTabIndicators();
     updateDetachedWindowTabIndicators();
+    // A detached window with one profile names its connection state in its title
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->updateWindowTitle();
+        }
+    }
 }
 
 // Renders a key sequence for use inside a sentence. NativeText produces the
 // macOS shortcut glyphs (like the tab glyph in "⌃⇥") which many users cannot
 // read, so on macOS spell the keys out the way Apple's docs do instead
 // ("Control-Tab", "Command-1"):
-static QString keySequenceForProse(const QKeySequence& sequence)
+QString mudlet::keySequenceForProse(const QKeySequence& sequence)
 {
 #if defined(Q_OS_MACOS)
     QStringList keys = sequence.toString(QKeySequence::PortableText).split(QLatin1Char('+'));
@@ -3617,6 +3598,19 @@ static QString keySequenceForProse(const QKeySequence& sequence)
 #else
     return sequence.toString(QKeySequence::NativeText);
 #endif
+}
+
+QString mudlet::profileSwitchingTip(const Host* pHost) const
+{
+    // The caret mode key wins over a shortcut whose press it takes while the input line or main window has the keyboard
+    if (pHost && !mKeySequenceNextProfile.isEmpty() && Host::caretShortcutMatches(pHost->mCaretShortcut, mKeySequenceNextProfile[0])) {
+        //: Shown in a balloon when a second game opens and the profile's caret mode key is also the key for the next game. %1 and %2 are keyboard shortcuts, e.g. Ctrl+1 and Ctrl+9 (Command-1 and Command-9 on macOS)
+        return tr("Press %1 through %2 to jump straight to one of your open games. You can change these keys in the preferences.")
+                .arg(keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back()));
+    }
+    //: Shown in a balloon when a second game opens. %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9 (Control-Tab, Command-1 and Command-9 on macOS)
+    return tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
+            .arg(keySequenceForProse(mKeySequenceNextProfile), keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back()));
 }
 
 void mudlet::addConsoleForNewHost(Host* pH)
@@ -3636,6 +3630,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_connecting, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_connectingCalledOff, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
     // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
     // no-op that also prints a warning); duplicate wiring is instead prevented by
@@ -3820,13 +3815,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // about the feature:
     if (mpTabBar->count() == 2 && !mKeySequenceNextProfile.isEmpty()) {
         //: Title of a balloon pointing out the newly added profile tab switching shortcuts
-        TFeatureCallout::maybeShow(
-                qsl("profileTabShortcuts"),
-                mpTabBar,
-                tr("Switch games with the keyboard"),
-                //: %1, %2 and %3 are keyboard shortcuts, e.g. Ctrl+Tab, Ctrl+1 and Ctrl+9 (Control-Tab, Command-1 and Command-9 on macOS)
-                tr("Press %1 to cycle through your open games, or %2 to %3 to jump straight to one. You can change these keys in the preferences.")
-                        .arg(keySequenceForProse(mKeySequenceNextProfile), keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back())));
+        TFeatureCallout::maybeShow(qsl("profileTabShortcuts"), mpTabBar, tr("Switch games with the keyboard"), profileSwitchingTip(pH));
     }
 
     // update the window title for the currently selected profile
@@ -4489,6 +4478,11 @@ bool mudlet::openProfile(const QString& profileName, bool connect)
 
 bool mudlet::requestProfileClose(const QString& profileName)
 {
+    // A detached profile's tab is in its own window, not the main tab bar
+    if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        pDetachedWindow->closeProfileByName(profileName);
+        return true;
+    }
     const int index = mpTabBar->tabIndex(profileName);
     if (index == -1) {
         return false;
@@ -6816,8 +6810,17 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 {
     QString profileName = uriData.host;
 
-    int dotIndex = profileName.indexOf('.');
-    if (dotIndex > 0) {
+    if (QHostAddress address; address.setAddress(profileName)) {
+        // An IPv6 address's colons cannot be in a profile name, and an IPv4 address's first number alone says little.
+        // A zone ID is free text that could hold "..", and names only a network interface on this computer.
+        address.setScopeId(QString());
+        profileName = address.toString();
+        for (QChar& c : profileName) {
+            if (!MudletApp::scmAllowedProfileNameChars.contains(c)) {
+                c = QLatin1Char('-');
+            }
+        }
+    } else if (const int dotIndex = profileName.indexOf('.'); dotIndex > 0) {
         profileName = profileName.left(dotIndex);
     }
 
@@ -7440,7 +7443,7 @@ void mudlet::slot_replayStarted()
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedDown);
 
-    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mHostManager.replay().speed())));
+    slot_replaySpeedChanged(mHostManager.replay().speed());
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
@@ -7594,6 +7597,12 @@ void mudlet::slot_replaySpeedChanged(const int speed)
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(speed)));
         mpLabelReplaySpeedDisplay->show();
     }
+    if (mpActionReplaySpeedUp) {
+        mpActionReplaySpeedUp->setEnabled(speed < MudletReplay::scMaxSpeed);
+    }
+    if (mpActionReplaySpeedDown) {
+        mpActionReplaySpeedDown->setEnabled(speed > MudletReplay::scMinSpeed);
+    }
 }
 
 void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const bool isLinesAndParagraphsToBeShown)
@@ -7716,7 +7725,18 @@ void mudlet::slot_updateCheckFailed(const QString& error)
     auto* pHost = getActiveHost();
     if (pHost && pHost->mainConsoleView()) {
         pHost->mainConsoleView()->printSystemMessage(tr("Update check failed. Error: %1\n").arg(error));
+        return;
     }
+
+    // An automatic update that keeps failing to install reports again on every twice-daily check
+    if (mpUpdateFailedBox) {
+        mpUpdateFailedBox->setText(error);
+        return;
+    }
+    //: Title of the message box shown when checking for, downloading or installing a Mudlet update fails while no profile is open
+    mpUpdateFailedBox = new QMessageBox(QMessageBox::Warning, tr("Update check failed"), error, QMessageBox::Ok, this);
+    mpUpdateFailedBox->setAttribute(Qt::WA_DeleteOnClose);
+    mpUpdateFailedBox->open();
 }
 
 void mudlet::slot_showFullChangelog()
