@@ -952,6 +952,32 @@ private slots:
         QCOMPARE(pLayer->maximumHeight(), oneRow);
     }
 
+    // A completion long enough to wrap needs the line to grow as typing would
+    void test_tabCompletionThatWrapsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto cleanUp = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLineSuggestions('main')"));
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('main', 'qzxwrap' .. string.rep('a', 600))")));
+
+        pMain->setFocus();
+        type(pMain, qsl("qzxwr"));
+        press(pMain, Qt::Key_Tab);
+        qApp->processEvents();
+
+        QVERIFY(pMain->toPlainText().size() > 600);
+        const int completedHeight = pLayer->maximumHeight();
+        QVERIFY2(completedHeight > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(completedHeight).arg(oneRow)));
+    }
+
     // The context menu's Paste, a middle-click and a drop bypass the key handler,
     // so the line has to grow for a pasted block of rows by itself
     void test_pastingSeveralRowsResizesTheMainCommandLine()
