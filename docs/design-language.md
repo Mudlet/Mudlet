@@ -2079,8 +2079,8 @@ readable-but-wrong tone would otherwise pass.
 connection dialog's two tabs and its buttons to the recipes: both containers
 holding a button carry a sheet with the push button rules in it, Copy carries
 `uiMenuButton` and is named by a rule of its own, Connect is still the dialog's
-default button and carries `uiPrimaryButton`, which the row's sheet has a rule
-for, and the New button's top edge is read off a grab of the window and has to
+default button, is drawn on the same face as Offline with only its word in
+semibold and does not carry `uiPrimaryButton`, and the New button's top edge is read off a grab of the window and has to
 be the design's hairline rather than a platform bevel. Both pages carry a sheet built on
 the `field` surface, the three Connect-to fields are at the dialog's own font
 rather than the 9pt the `.ui` pinned them at, the port field is wide enough for
