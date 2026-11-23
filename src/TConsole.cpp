@@ -1517,7 +1517,8 @@ bool TConsole::showLowerPane()
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+    // Ctrl+Enter only clears the main console's split, so elsewhere the hint misleads and uses up a showing
+    if (lowerAppears && mType == MainConsole && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
         const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
@@ -2250,10 +2251,6 @@ int TConsole::upperPaneWidthFor(const int containerWidth) const
 
 int TConsole::upperPaneHeightFor(const int containerHeight) const
 {
-    // A scrolled-back console also shows the lower pane, and the user-dragged split can't be predicted.
-    if (!mLowerPane->isHidden()) {
-        return -1;
-    }
     int paneHeight = containerHeight - mpTopToolBar->height();
     const QMargins borders = mpHost->borders();
     paneHeight -= borders.top() + borders.bottom();
