@@ -552,7 +552,7 @@ private slots:
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
 
-        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_roomSymbol, pDlg->spinBox_weight, pDlg->spinBox_borderThickness};
+        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_hash, pDlg->plainTextEdit_description, pDlg->lineEdit_roomSymbol, pDlg->spinBox_weight, pDlg->spinBox_borderThickness};
         for (QWidget* pField : fields) {
             QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pField);
             QVERIFY(pInterface);
@@ -560,7 +560,7 @@ private slots:
         }
         // Everywhere but Windows, Qt reports a combo box's current text as its
         // name, so only the property itself can be checked here
-        for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
+        for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_area), static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
             QVERIFY2(!pCombo->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has no accessible name").arg(pCombo->objectName())));
         }
     }
