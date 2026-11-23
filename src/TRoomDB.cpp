@@ -719,12 +719,14 @@ void TRoomDB::afterAreaRemoved(const int areaId, const std::optional<int> parent
     if (parentId.has_value()) {
         updateIsZone(*parentId);
     }
-    // A handler may load another map, which deletes this database: the loop reads only its own copies, and stops
-    // once that has happened, as the children it would report are no longer in the map
+    // A handler may load another map, which deletes this database, or delete the map, which clears it: the loop reads
+    // only its own copies, and stops once either has happened, as the children it would report are no longer in the
+    // map. Both move the map's generation on, and a database loaded in place of this one carries it on.
     TMap* pMap = mpMap;
     const TRoomDB* pThisRoomDB = this;
+    const unsigned int generation = mMapGeneration;
     for (const int childId : movedChildren) {
-        if (pMap->mpRoomDB.get() != pThisRoomDB) {
+        if (pMap->mpRoomDB.get() != pThisRoomDB || pMap->mpRoomDB->mapGeneration() != generation) {
             return;
         }
         raiseAreaParentChanged(pMap, childId, areaId, parentId);

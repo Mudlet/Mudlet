@@ -217,6 +217,29 @@ describe("Tests that nested areas survive saving and loading the map", function(
     assert.are.equal(parent, getAreaParent(child))
   end)
 
+  it("stops reporting children moved by a delete once a handler has deleted the map", function()
+    local parent = addAreaName("HierarchySpecClearedParent")
+    local first = addAreaName("HierarchySpecClearedFirst")
+    local second = addAreaName("HierarchySpecClearedSecond")
+    assert.is_true(setAreaParent(first, parent))
+    assert.is_true(setAreaParent(second, parent))
+    local deleted, movedAfterDeleting = false, {}
+    local handler = registerAnonymousEventHandler("sysAreaParentChanged", function(_, areaId)
+      if not deleted then
+        deleted = true
+        deleteMap()
+      else
+        movedAfterDeleting[#movedAfterDeleting + 1] = areaId
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    deleteArea(parent)
+
+    assert.is_true(deleted)
+    assert.are.same({}, movedAfterDeleting)
+  end)
+
   it("stops reporting children moved by a delete once a handler has loaded another map", function()
     local parent = addAreaName("HierarchySpecReplacedParent")
     local first = addAreaName("HierarchySpecReplacedFirst")
