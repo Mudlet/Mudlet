@@ -334,9 +334,12 @@ private slots:
         pane->mSincePaint.restart();
         console->print(qsl("first line of a flood\n"));
         QVERIFY2(pane->mpPaintPacer->isActive(), "the first line did not hold a frame back");
-        printLines(console, pane->mScreenHeight + 1);
-        // As though the frame had only just been painted, so the stretch is exercised however long the prints took.
-        pane->mSincePaint.restart();
+        // Each line as though the frame had only just been painted: once prints on a slow runner
+        // outlast the pace, scheduleUpdate() hands the frame to update() and nothing is held back.
+        for (int i = 0; i <= pane->mScreenHeight; ++i) {
+            pane->mSincePaint.restart();
+            console->print(qsl("line %1\n").arg(i));
+        }
 
         int fires = 0;
         int paintsBeforeFirstFire = -1;
