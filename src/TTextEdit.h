@@ -81,6 +81,7 @@ public:
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
     void resizeEvent(QResizeEvent* event) override;
+    void moveEvent(QMoveEvent* event) override;
     void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -121,8 +122,11 @@ public:
     void setCaretPosition(int line, int column);
     // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
     void moveCaretToLink(bool first);
+    QString linkAnnouncement(int linkIndex) const;
     void updateCaret();
     void showKeyboardContextMenu();
+    void showLinkMenuAt(int linkIndex, const QPoint& globalPosition, bool alreadyActivated = false);
+    QPoint caretGlobalPosition();
     void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;
@@ -167,6 +171,8 @@ public:
     int mPopupLinkIndex = 0;
     // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
     qint64 mPopupLinkIssue = 0;
+    // Activating a local: link with a menu opens the menu, so choosing an item must not change its selection a second time
+    bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
@@ -201,12 +207,12 @@ private slots:
     void slot_showSelectionAnalysis();
 
 private:
+    int mainWindowRows() const;
     void applyPendingScrollBarUpdate();
     void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     QString selectionAnalysisHtml();
-    QPoint caretGlobalPosition();
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;

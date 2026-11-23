@@ -319,7 +319,8 @@ private:
         const QList<std::tuple<QLabel*, QPushButton*, bool>> column =
                 trailing ? QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_4, p->pushButton_roomBorderColor, false},
                                                                           {p->label_pushButton_roomCollisionBorderColor, p->pushButton_roomCollisionBorderColor, false},
-                                                                          {p->label_39, p->pushButton_foreground_color_2, false}}
+                                                                          {p->label_39, p->pushButton_foreground_color_2, false},
+                                                                          {p->label_defaultRoomColor, p->pushButton_defaultRoomColor, false}}
                          : QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_40, p->pushButton_background_color_2, true},
                                                                           {p->label_mapInfoBg, p->pushButton_mapInfoBg, true},
                                                                           {p->label_upperLevelColor, p->pushButton_upperLevelColor, true},

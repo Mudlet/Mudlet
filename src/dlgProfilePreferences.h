@@ -127,6 +127,7 @@ public slots:
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
     void slot_setMapGridColor();
+    void slot_setMapDefaultRoomColor();
     void slot_setLowerLevelColor();
     void slot_setUpperLevelColor();
     void slot_resetMapColors();
@@ -254,7 +255,8 @@ protected:
 private:
     void setColors();
     void setColors2();
-    void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
+    // Whether a color was accepted, even the one it started from
+    bool setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void takeColour(QPushButton* pChoose, QColor& held, const QColor& colour);
     void setPlayerRoomColor(QPushButton*, QColor&);
     void passOnPlayerRoomColour(const bool outer);

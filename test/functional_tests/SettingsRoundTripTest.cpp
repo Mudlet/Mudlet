@@ -239,6 +239,7 @@ private:
                 {qsl("lowerLevelColor"), &h->mLowerLevelColor},
                 {qsl("foreground_color_2"), &h->mFgColor_2},
                 {qsl("mapGridColor"), &h->mMapGridColor},
+                {qsl("defaultRoomColor"), &h->mMapperDefaultRoomColor},
                 {qsl("black_2"), &h->mBlack_2},
                 {qsl("Lblack_2"), &h->mLightBlack_2},
                 {qsl("red_2"), &h->mRed_2},
@@ -1514,6 +1515,35 @@ private slots:
         QCOMPARE(announced.count(), 1);
     }
 
+    // The default room colour is the map's red until it is set: its field
+    // shows that red and follows it, and a colour typed into it sets it, after
+    // which red changes without it
+    void test_theDefaultRoomColourFieldShowsTheMapsRedUntilItIsSet()
+    {
+        const QColor priorRed = mpHost->mRed_2;
+        const QColor priorDefault = mpHost->mMapperDefaultRoomColor;
+        restoreLater([this, priorRed, priorDefault]() {
+            mpHost->mRed_2 = priorRed;
+            mpHost->mMapperDefaultRoomColor = priorDefault;
+        });
+        mpHost->mRed_2 = QColor(0x80, 0x10, 0x20);
+        mpHost->mMapperDefaultRoomColor = QColor();
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        QVERIFY2(colourField(qsl("defaultRoomColor")), "the default room colour has no field");
+        QCOMPARE(colourField(qsl("defaultRoomColor"))->text(), qsl("#801020"));
+
+        typeInto(colourField(qsl("red_2")), qsl("#0A0B0C"), Qt::Key_Return);
+        QCOMPARE(colourField(qsl("defaultRoomColor"))->text(), qsl("#0A0B0C"));
+        QVERIFY2(!mpHost->mMapperDefaultRoomColor.isValid(), "following red set the default room colour");
+
+        typeInto(colourField(qsl("defaultRoomColor")), qsl("#112233"), Qt::Key_Return);
+        QCOMPARE(mpHost->mMapperDefaultRoomColor, QColor(0x11, 0x22, 0x33));
+        typeInto(colourField(qsl("red_2")), qsl("#445566"), Qt::Key_Return);
+        QCOMPARE(colourField(qsl("defaultRoomColor"))->text(), qsl("#112233"));
+    }
+
     // ...and so has the Main display's background
     void test_aTypedDisplayBackgroundOpacityKeepsTheColour()
     {
@@ -1894,7 +1924,7 @@ private slots:
         });
         openPreferences();
         const QList<uiDesign::ColourValue*> fields = mpPreferences->findChildren<uiDesign::ColourValue*>();
-        QCOMPARE(fields.size(), 48);
+        QCOMPARE(fields.size(), 49);
         for (const uiDesign::ColourValue* pField : fields) {
             QVERIFY2(pField->chooseButton(), qPrintable(qsl("%1 has no Choose for its swatch to stand for").arg(pField->objectName())));
         }
