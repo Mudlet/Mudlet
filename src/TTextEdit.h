@@ -81,6 +81,7 @@ public:
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
     void resizeEvent(QResizeEvent* event) override;
+    void moveEvent(QMoveEvent* event) override;
     void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -203,6 +204,7 @@ private slots:
     void slot_showSelectionAnalysis();
 
 private:
+    int mainWindowRows() const;
     void applyPendingScrollBarUpdate();
     void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
@@ -314,6 +316,8 @@ private:
     int mCtrlDragStartY{};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos = 0;
+    // The buffer's linesTrimmedTotal() when mOldScrollPos was taken
+    qint64 mLinesTrimmedAtOldScrollPos = 0;
     // top-left point of the selection
     QPoint mPA;
     // bottom-right point of the selection

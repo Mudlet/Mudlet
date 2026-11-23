@@ -111,6 +111,13 @@ private:
 
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
 
+    static void addAutoClearRows()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
+
     // Real macOS arrow keys arrive with the keypad modifier set, and TCommandLine's
     // Up/Down handlers only recognise them there when it is present, so a synthesised
     // event has to carry it too or the key falls through to the editor.
@@ -419,6 +426,23 @@ private slots:
         QVERIFY2(waitForServerToReceive("east"), "the second of the two lines never reached the game");
     }
 
+    // An action that resets itself on the first of several lines leaves the rest to go to the game
+    void test_linesAfterAnActionResetsItselfGoToTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("cmdLineActionSaw = ''")));
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) cmdLineActionSaw = text resetCmdLineAction('%1') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("to the action"));
+        press(pCommandLine, Qt::Key_Return, Qt::ShiftModifier);
+        type(pCommandLine, qsl("to the game"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("cmdLineActionSaw"), qsl("to the action"));
+        QVERIFY2(waitForServerToReceive("to the game"), qPrintable(qsl("the game never received the second line - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+    }
+
     // The preference decides what is left in the box afterwards: cleared, or
     // kept and selected so the next thing typed replaces it.
     void test_autoClearPreferenceDecidesWhatIsLeftBehind()
@@ -437,6 +461,106 @@ private slots:
         type(pCleared, qsl("cleared"));
         press(pCleared, Qt::Key_Return);
         QCOMPARE(pCleared->toPlainText(), QString());
+    }
+
+    // An alias that fills the line in for the player, like "t bob" writing
+    // "tell bob ", must not have that cleared, or selected for the next key
+    // to replace.
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data() { addAutoClearRows(); }
+
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specPrefillAlias = tempAlias([[^specPrefill (\\w+)$]], [[printCmdLine('%1', 'tell ' .. matches[2] .. ' ')]])").arg(mLineName)));
+        const auto killPrefillAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specPrefillAlias)"));
+        });
+
+        type(pCommandLine, qsl("specPrefill bob"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob "));
+        QCOMPARE(selection(pCommandLine), QString());
+        type(pCommandLine, qsl("hi"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob hi"));
+    }
+
+    // Writing back the very text that was sent still counts as the script's
+    void test_aCommandAnAliasWritesBackIsLeftAsWritten()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specStickyAlias = tempAlias([[^specSticky$]], [[printCmdLine('%1', 'specSticky')]])").arg(mLineName)));
+        const auto killStickyAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specStickyAlias)"));
+        });
+
+        type(pCommandLine, qsl("specSticky"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("specSticky"));
+    }
+
+    // A setCmdLineAction() field that writes to its line, as packages' settings
+    // fields do, is still cleared or selected for the next value to replace
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected_data() { addAutoClearRows(); }
+
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        const QString expected = autoClear ? QString() : qsl("250");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
+    }
+
+    // As does a one-shot field whose action resets itself before writing its value back
+    void test_anActionFieldThatResetsItselfKeepsItsValueSelected()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = false;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) resetCmdLineAction('%1') printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("250"));
+        QCOMPARE(selection(pCommandLine), qsl("250"));
+    }
+
+    // An alias that leaves the line alone has it cleared or selected as usual
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect_data() { addAutoClearRows(); }
+
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specQuietAlias = tempAlias([[^specQuiet$]], [[specQuietSaw = getCmdLine('%1')]])").arg(mLineName)));
+        const auto killQuietAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specQuietAlias)"));
+        });
+
+        type(pCommandLine, qsl("specQuiet"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("specQuietSaw"), qsl("specQuiet"));
+        const QString expected = autoClear ? QString() : qsl("specQuiet");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
     }
 
     // Up walks back through what was sent, Down comes forward again, and the
@@ -950,6 +1074,55 @@ private slots:
         QVERIFY(runLua(qsl("clearCmdLine()")));
         qApp->processEvents();
         QCOMPARE(pLayer->maximumHeight(), oneRow);
+    }
+
+    // A completion long enough to wrap needs the line to grow as typing would
+    void test_tabCompletionThatWrapsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto cleanUp = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLineSuggestions('main')"));
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('main', 'qzxwrap' .. string.rep('a', 600))")));
+
+        pMain->setFocus();
+        type(pMain, qsl("qzxwr"));
+        press(pMain, Qt::Key_Tab);
+        qApp->processEvents();
+
+        QVERIFY(pMain->toPlainText().size() > 600);
+        const int completedHeight = pLayer->maximumHeight();
+        QVERIFY2(completedHeight > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(completedHeight).arg(oneRow)));
+    }
+
+    // The context menu's Paste, a middle-click and a drop bypass the key handler,
+    // so the line has to grow for a pasted block of rows by itself
+    void test_pastingSeveralRowsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QGuiApplication::clipboard()->setText(qsl("row one\nrow two\nrow three"));
+        pMain->paste();
+        qApp->processEvents();
+
+        QCOMPARE(pMain->document()->blockCount(), 3);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("three pasted rows left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
     }
 
     // Escape leaves completion mode, and selects the line so the next thing
