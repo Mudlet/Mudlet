@@ -250,6 +250,35 @@ private slots:
         delete manager;
     }
 
+    // Help opens the page of the current row, so it has to follow that row
+    // when the arrow keys or a rebuild move it, not just when it is clicked
+    void test_helpFollowsTheCurrentModuleWithoutAClick()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+        host->mModuleInfo[qsl("listing-a")][qsl("helpURL")] = qsl("https://example.invalid/listing-a");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        const int withHelp = rowNames(manager).indexOf(qsl("listing-a"));
+        const int withoutHelp = rowNames(manager).indexOf(qsl("listing-b"));
+        QVERIFY(withHelp >= 0 && withoutHelp >= 0);
+
+        manager->moduleTable->setCurrentCell(withHelp, 0);
+        QVERIFY2(manager->helpButton->isEnabled(), "Help stayed off for a module that has a help page");
+        manager->moduleTable->setCurrentCell(withoutHelp, 0);
+        QVERIFY2(!manager->helpButton->isEnabled(), "Help stayed on for a module without a help page");
+        manager->moduleTable->setCurrentCell(withHelp, 0);
+        QVERIFY(manager->helpButton->isEnabled());
+
+        manager->layoutModules();
+        QCOMPARE(manager->moduleTable->currentRow(), -1);
+        QVERIFY2(!manager->helpButton->isEnabled(), "Help stayed on after the rebuild left no module current");
+
+        host->mModuleInfo.remove(qsl("listing-a"));
+        delete manager;
+    }
+
     // Ctrl-clicking a second module adds it to the selection, and the remove
     // button then takes away every selected module, not just the last clicked
     void test_removingSeveralSelectedModulesRemovesThemAll()
@@ -287,6 +316,41 @@ private slots:
         QVERIFY(host->mInstalledModules.contains(qsl("listing-c")));
 
         delete manager;
+    }
+
+    // An import asked for while the profile is saving still says why it failed,
+    // not just in the console behind this window once the save is over
+    void test_aFailedImportDuringASaveSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        host->saveProfile();
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the import would not have been put off");
+        const QString msg = manager->installModuleFiles(QStringList({qsl("%1/no-such-module.xml").arg(mConfigDir.path())}));
+        host->waitForProfileSave();
+        delete manager;
+
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
+    }
+
+    // The reason a file was refused otherwise goes only to the main console, behind the dialog
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        const QString msg = manager->installModuleFiles(QStringList({qsl("%1/no-such-module.xml").arg(mConfigDir.path()), qsl("%1/also-missing.xml").arg(mConfigDir.path())}));
+        delete manager;
+
+        // The reason repeats the path, so check the name where the line leads with it
+        QVERIFY2(msg.contains(qsl("Failed to import also-missing.xml: ")), qPrintable(qsl("The second refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.count(QLatin1Char('\n')) == 1, qPrintable(qsl("The two refusals are not on lines of their own: %1").arg(msg)));
+
+        QVERIFY2(msg.contains(qsl("Failed to import no-such-module.xml: ")), qPrintable(qsl("The refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
     }
 
     // Refusals are gathered into one message: a single module is named on its

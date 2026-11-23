@@ -1199,6 +1199,29 @@ describe("Tests DB.lua functions", function()
       end
     end)
 
+    it("reads back a plain epoch number stored in a datetime field as that timestamp", function()
+      local conn = db.__conn["mydbdstesting"]
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(1, conn:execute(string.format("INSERT INTO sheet (seen, n) VALUES (%d, %d)", epoch, n)))
+      end
+      local results = db:fetch(mydb.sheet, nil, { mydb.sheet.n })
+      assert.are.equal(#epochs, #results)
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(epoch, results[n].seen:as_number())
+      end
+      assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+    end)
+
+    it("aggregates by time across plain epoch numbers and timestamps in one datetime field", function()
+      db:add(mydb.sheet, { seen = db:Timestamp(1500000000), n = 1 })
+      local conn = db.__conn["mydbdstesting"]
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1800000000, 2)"))
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1600000000, 3)"))
+
+      assert.are.equal(1800000000, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+      assert.are.equal(1500000000, db:aggregate(mydb.sheet.seen, "MIN"):as_number())
+    end)
+
     it("aggregates to the same epoch as was added", function()
       for n, epoch in ipairs(epochs) do
         db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
@@ -1920,6 +1943,29 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Eve"}, names(results))
     end)
 
+    it("an empty table query returns every row", function()
+      assert.are.same({"Ada", "Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, {})))
+    end)
+
+    it("db:aggregate over an empty table query counts every row", function()
+      assert.are.equal(5, db:aggregate(mydb.people.name, "COUNT", {}))
+    end)
+
+    it("db:aggregate ANDs a table query of several conditions", function()
+      assert.are.equal(1, db:aggregate(mydb.people.name, "COUNT", {
+        db:eq(mydb.people.city, "Chicago"),
+        db:gt(mydb.people.level, 25),
+      }))
+    end)
+
+    it("a hash-style table query fails with nil rather than returning every row", function()
+      assert.is_nil(db:fetch(mydb.people, {name = "Ada"}))
+    end)
+
+    it("db:aggregate over a hash-style table query raises rather than counting every row", function()
+      assert.has_error(function() db:aggregate(mydb.people.name, "COUNT", {name = "Ada"}) end)
+    end)
+
     it("db:exp still combines with db:AND and db:OR", function()
       local anded = db:fetch(mydb.people, db:AND(db:exp("level > 25"), db:eq(mydb.people.city, "Chicago")))
       assert.are.same({"Eve"}, names(anded))
@@ -1935,6 +1981,21 @@ describe("Tests DB.lua functions", function()
     it("db:OR matches either sub-expression", function()
       local query = db:OR(db:eq(mydb.people.city, "Denver"), db:eq(mydb.people.city, "Chicago"))
       assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR matches any of more than two sub-expressions", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), db:eq(mydb.people.name, "Cyra"), db:eq(mydb.people.name, "Eve"))
+      assert.are.same({"Ada", "Cyra", "Eve"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR with a single sub-expression matches just that expression", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"))
+      assert.are.same({"Ada"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR keeps a nil condition so the fetch fails rather than dropping it", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), nil, db:eq(mydb.people.name, "Eve"))
+      assert.is_nil(db:fetch(mydb.people, query))
     end)
 
     it("a table-array query is implicitly ANDed", function()
