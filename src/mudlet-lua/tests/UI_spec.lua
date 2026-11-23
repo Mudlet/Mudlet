@@ -8636,6 +8636,39 @@ describe("Main window size and saved layout", function()
       assert.are.same({savedWidth, savedHeight}, {width, height})
     end)
 
+    it("a resize handler the load runs finds every window already where the layout puts it", function()
+      -- a handler run part way through Qt's restore, that docked or floated a window, corrupted its dock layout
+      local first, second = "layoutRestoredA", "layoutRestoredB"
+      local handler
+      finally(function()
+        if handler then
+          killAnonymousEventHandler(handler)
+        end
+        deleteMiniConsole(first)
+        deleteMiniConsole(second)
+      end)
+      -- swapping a side dock for a bottom one changes both sizes, so the load resizes both
+      openUserWindow(first, false, true, "left")
+      openUserWindow(second, false, true, "bottom")
+      pumpEvents(300)
+      assert.is_true(saveWindowLayout())
+      openUserWindow(first, false, true, "bottom")
+      openUserWindow(second, false, true, "left")
+      pumpEvents(300)
+      local seen = {}
+      handler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, name)
+        if name == first or name == second then
+          seen[#seen + 1] = {{getWindowGeometry(first)}, {getWindowGeometry(second)}}
+        end
+      end)
+      assert.is_true(loadWindowLayout())
+      local restored = {{getWindowGeometry(first)}, {getWindowGeometry(second)}}
+      assert.is_true(#seen > 0, "the load resized neither window")
+      for _, geometries in ipairs(seen) do
+        assert.are.same(restored, geometries)
+      end
+    end)
+
     it("openUserWindow refuses a window a handler deletes or replaces as it is made or as the layout loads", function()
       local other, deleted, replaced, replacedInLoad = "layoutFontOther", "layoutFontDeleted", "layoutFontReplaced", "layoutLoadReplaced"
       local target, replace, trigger

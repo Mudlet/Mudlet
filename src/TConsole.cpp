@@ -1050,24 +1050,37 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (preventLuaEvent) {
             return;
         }
-        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        const QString func = "handleWindowResizeEvent";
-        const QString n = "WindowResizeEvent";
-        pLua->call(func, n);
+    }
+    if (!(mType & (MainConsole | UserWindow))) {
+        return;
+    }
+    // QMainWindow::restoreState() resizes windows part way through rearranging the docks, and a
+    // handler that docks, floats, shows or hides one then leaves freed items in Qt's dock layout
+    if (mudlet* const app = mudlet::self(); app && app->layoutLoading()) {
+        app->callAfterLayoutRestore(this, [this, x, y]() {
+            raiseResizeEvents(x, y);
+        });
+        return;
+    }
+    raiseResizeEvents(x, y);
+}
 
-        raiseMudletSysWindowResizeEvent(x, y);
+void TConsole::raiseResizeEvents(const int overallWidth, const int overallHeight)
+{
+    TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+    const QString func = "handleWindowResizeEvent";
+    const QString n = "WindowResizeEvent";
+    pLua->call(func, n);
+
+    if (mType & MainConsole) {
+        raiseMudletSysWindowResizeEvent(overallWidth, overallHeight);
     }
     //create the sysUserWindowResize Event for automatic resizing with Geyser
     if (mType & (UserWindow)) {
-        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        const QString func = "handleWindowResizeEvent";
-        const QString n = "WindowResizeEvent";
-        pLua->call(func, n);
-
         TEvent mudletEvent{};
         mudletEvent.mArgumentList.append(QLatin1String("sysUserWindowResizeEvent"));
-        mudletEvent.mArgumentList.append(QString::number(x));
-        mudletEvent.mArgumentList.append(QString::number(y));
+        mudletEvent.mArgumentList.append(QString::number(overallWidth));
+        mudletEvent.mArgumentList.append(QString::number(overallHeight));
         mudletEvent.mArgumentList.append(mConsoleName);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);

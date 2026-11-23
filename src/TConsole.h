@@ -343,6 +343,7 @@ private:
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
+    void raiseResizeEvents(const int overallWidth, const int overallHeight);
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
     void applyFootSeamColour();

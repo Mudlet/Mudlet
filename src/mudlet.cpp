@@ -4243,12 +4243,24 @@ bool mudlet::loadWindowLayout()
                     }
                 }
             }
+            // Before the flag drops, so a handler run from here is still refused a nested load or a save
+            while (!mCallsAfterLayoutRestore.isEmpty()) {
+                const auto [context, callback] = mCallsAfterLayoutRestore.takeFirst();
+                if (context) {
+                    callback();
+                }
+            }
             mIsLoadingLayout = false;
 
             return rv;
         }
     }
     return false;
+}
+
+void mudlet::callAfterLayoutRestore(QObject* context, std::function<void()> callback)
+{
+    mCallsAfterLayoutRestore.append({context, std::move(callback)});
 }
 
 void mudlet::commitLayoutUpdates(bool flush)
