@@ -4383,6 +4383,15 @@ function map.customwalkdelay(seconds, maxSeconds)
         walk_hold = nil
         if walking then
             map.speedwalk(walk_destination)
+            -- no way on from where the character got to: the walk is over, rather than left walking on its old
+            -- directions where nothing can stop it
+            if walking and #speedWalkPath == 0 then
+                local arrived = tonumber(walk_destination) == map.currentRoom
+                walking = false
+                walk_destination = nil
+                map.walkDirs = {}
+                raiseEvent(arrived and "sysSpeedwalkFinished" or "sysSpeedwalkStopped")
+            end
         end
     end)
     return seconds
@@ -4390,9 +4399,9 @@ end
 
 function map.speedwalk(roomID, walkPath, walkDirs)
     roomID = roomID or speedWalkPath[#speedWalkPath]
-    walk_destination = roomID
     -- a walk chosen during a hold sets off when the hold ends
     if walk_hold then
+        walk_destination = roomID
         walking = true
         return
     end
@@ -4436,7 +4445,8 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             walkDirs[k] = map.configs.lang_dirs[v] or v
         end
     end
-    -- perform walk
+    -- perform walk, kept only while one is under way, so a lookup that found no path leaves no walk to resume
+    walk_destination = roomID
     walking = true
     if map.configs.speedwalk_wait or map.configs.speedwalk_delay &gt; 0 then
         map.walkDirs = walkDirs
@@ -4451,6 +4461,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
            end
         end
         walking = false
+        walk_destination = nil
         raiseEvent("sysSpeedwalkFinished")
     end
 end
@@ -4470,10 +4481,12 @@ function doSpeedWalk()
     end
 end
 
+-- A held walk is still a walk, though a route looked up and not found in the meantime has emptied speedWalkDir
 function map.pauseSpeedwalk()
-    if #speedWalkDir ~= 0 then
+    local held = walk_hold ~= nil
+    release_walk_hold()
+    if #speedWalkDir ~= 0 or held then
         walking = false
-        release_walk_hold()
         raiseEvent("sysSpeedwalkPaused")
         map.echo("Speedwalking paused.")
     else
@@ -4482,7 +4495,7 @@ function map.pauseSpeedwalk()
 end
 
 function map.resumeSpeedwalk(delay)
-    if #speedWalkDir ~= 0 then
+    if #speedWalkDir ~= 0 or walk_destination then
         map.find_me(nil, nil, nil, true)
         raiseEvent("sysSpeedwalkResumed")
         map.echo("Speedwalking resumed.")
@@ -4493,9 +4506,10 @@ function map.resumeSpeedwalk(delay)
 end
 
 function map.stopSpeedwalk()
-    if #speedWalkDir ~= 0 then
+    local held = walk_hold ~= nil
+    release_walk_hold()
+    if #speedWalkDir ~= 0 or held then
         walking = false
-        release_walk_hold()
         walk_destination = nil
         map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
         raiseEvent("sysSpeedwalkStopped")

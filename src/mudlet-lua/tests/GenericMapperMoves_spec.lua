@@ -633,6 +633,32 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
     assert.spy(paths).was_called_with(rooms[1], rooms[2])
   end)
 
+  it("ends the walk when the hold ends with no way on from where the character got to", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    setExit(rooms[1], -1, "n")
+    local stopped = 0
+    local handler = registerAnonymousEventHandler("sysSpeedwalkStopped", function() stopped = stopped + 1 end)
+    finally(function() killAnonymousEventHandler(handler) end)
+    liveTimers()[1].fn()
+    assert.equals(1, stopped)
+    -- the old directions are not walked on
+    continueWalk()
+    assert.equals(1, #sent)
+  end)
+
+  it("can be stopped while held after another route was not found", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    local hold = liveTimers()[1]
+    getPath(rooms[1], makeRoom("Walk island", 5))
+    assert.equals(0, #speedWalkDir, "the failed lookup should have emptied speedWalkDir")
+    map.stopSpeedwalk()
+    assert.is_true(hold.killed)
+    hold.fn()
+    assert.equals(1, #sent)
+  end)
+
   it("picks a time from the range when given a second number", function()
     map.speedwalk(rooms[3])
     for _ = 1, 20 do
