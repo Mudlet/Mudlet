@@ -25,6 +25,7 @@
 #include <QMouseEvent>
 #include <QPointF>
 #include <QRect>
+#include <utility>
 
 RoomMoveActivationHandler::RoomMoveActivationHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
@@ -126,6 +127,11 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         mMapWidget.mHasRoomMoveLastMapPoint = false;
         context.isRoomBeingMoved = false;
         mMapWidget.mHelpMsg.clear();
+        // Announced once on the drop rather than on every step, which would rebuild the 3D view's caches each time
+        if (!mMapWidget.mAreasMovedByDrag.isEmpty()) {
+            const QSet<int> movedAreas = std::exchange(mMapWidget.mAreasMovedByDrag, {});
+            mMapWidget.mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
+        }
         mMapWidget.update();
         return true;
     default:

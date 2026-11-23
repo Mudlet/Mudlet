@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TimerPackage>
+		<TimerGroup isActive="yes" isFolder="yes" isTempTimer="no">
+			<name>fuzz timers</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<time>00:00:00.000</time>
+			<Timer isActive="yes" isFolder="no" isTempTimer="no">
+				<name>fuzz timer</name>
+				<script>fuzzTimerRuns = (fuzzTimerRuns or 0) + 1</script>
+				<command></command>
+				<packageName></packageName>
+				<time>00:00:00.050</time>
+			</Timer>
+		</TimerGroup>
+	</TimerPackage>
+	<ActionPackage>
+		<ActionGroup isActive="yes" isFolder="yes" isPushButton="no" isFlatButton="no" useCustomLayout="no">
+			<name>xml fuzz top bar</name>
+			<packageName></packageName>
+			<script></script>
+			<css>background-color: red;</css>
+			<commandButtonUp></commandButtonUp>
+			<commandButtonDown></commandButtonDown>
+			<icon></icon>
+			<orientation>1</orientation>
+			<location>0</location>
+			<posX>0</posX>
+			<posY>0</posY>
+			<mButtonState>1</mButtonState>
+			<sizeX>0</sizeX>
+			<sizeY>0</sizeY>
+			<buttonColumn>2</buttonColumn>
+			<buttonFillerOffset>1</buttonFillerOffset>
+			<buttonRotation>1</buttonRotation>
+			<Action isActive="yes" isFolder="no" isPushButton="yes" isFlatButton="no" useCustomLayout="no">
+				<name>fuzz push</name>
+				<packageName></packageName>
+				<script>fuzzButtonRuns = (fuzzButtonRuns or 0) + 1</script>
+				<css></css>
+				<commandButtonUp>up</commandButtonUp>
+				<commandButtonDown>down</commandButtonDown>
+				<icon></icon>
+				<orientation>0</orientation>
+				<location>0</location>
+				<posX>0</posX>
+				<posY>0</posY>
+				<mButtonState>2</mButtonState>
+				<sizeX>0</sizeX>
+				<sizeY>0</sizeY>
+				<buttonColumn>1</buttonColumn>
+				<buttonFillerOffset>0</buttonFillerOffset>
+				<buttonRotation>2</buttonRotation>
+			</Action>
+			<ActionGroup isActive="yes" isFolder="yes" isPushButton="no" isFlatButton="yes" useCustomLayout="no">
+				<name>fuzz menu</name>
+				<packageName></packageName>
+				<script></script>
+				<css></css>
+				<commandButtonUp></commandButtonUp>
+				<commandButtonDown></commandButtonDown>
+				<icon></icon>
+				<orientation>0</orientation>
+				<location>0</location>
+				<posX>0</posX>
+				<posY>0</posY>
+				<mButtonState>1</mButtonState>
+				<sizeX>0</sizeX>
+				<sizeY>0</sizeY>
+				<buttonColumn>1</buttonColumn>
+				<buttonFillerOffset>0</buttonFillerOffset>
+				<buttonRotation>0</buttonRotation>
+				<Action isActive="yes" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">
+					<name>fuzz menu item</name>
+					<packageName></packageName>
+					<script></script>
+					<css></css>
+					<commandButtonUp>look</commandButtonUp>
+					<commandButtonDown></commandButtonDown>
+					<icon></icon>
+					<orientation>0</orientation>
+					<location>0</location>
+					<posX>0</posX>
+					<posY>0</posY>
+					<mButtonState>1</mButtonState>
+					<sizeX>0</sizeX>
+					<sizeY>0</sizeY>
+					<buttonColumn>1</buttonColumn>
+					<buttonFillerOffset>0</buttonFillerOffset>
+					<buttonRotation>0</buttonRotation>
+				</Action>
+			</ActionGroup>
+		</ActionGroup>
+		<ActionGroup isActive="yes" isFolder="yes" isPushButton="no" isFlatButton="no" useCustomLayout="yes">
+			<name>fuzz floating bar</name>
+			<packageName></packageName>
+			<script></script>
+			<css></css>
+			<commandButtonUp></commandButtonUp>
+			<commandButtonDown></commandButtonDown>
+			<icon></icon>
+			<orientation>0</orientation>
+			<location>4</location>
+			<posX>40</posX>
+			<posY>30</posY>
+			<mButtonState>1</mButtonState>
+			<sizeX>200</sizeX>
+			<sizeY>100</sizeY>
+			<buttonColumn>3</buttonColumn>
+			<buttonFillerOffset>2</buttonFillerOffset>
+			<buttonRotation>0</buttonRotation>
+			<Action isActive="yes" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="yes">
+				<name>fuzz floating button</name>
+				<packageName></packageName>
+				<script></script>
+				<css></css>
+				<commandButtonUp>say hi</commandButtonUp>
+				<commandButtonDown></commandButtonDown>
+				<icon></icon>
+				<orientation>0</orientation>
+				<location>4</location>
+				<posX>5</posX>
+				<posY>5</posY>
+				<mButtonState>1</mButtonState>
+				<sizeX>60</sizeX>
+				<sizeY>20</sizeY>
+				<buttonColumn>1</buttonColumn>
+				<buttonFillerOffset>0</buttonFillerOffset>
+				<buttonRotation>0</buttonRotation>
+			</Action>
+		</ActionGroup>
+		<ActionGroup isActive="yes" isFolder="yes" isPushButton="no" isFlatButton="no" useCustomLayout="no">
+			<name>fuzz side bar</name>
+			<packageName></packageName>
+			<script></script>
+			<css></css>
+			<commandButtonUp></commandButtonUp>
+			<commandButtonDown></commandButtonDown>
+			<icon></icon>
+			<orientation>1</orientation>
+			<location>2</location>
+			<posX>0</posX>
+			<posY>0</posY>
+			<mButtonState>1</mButtonState>
+			<sizeX>0</sizeX>
+			<sizeY>0</sizeY>
+			<buttonColumn>2</buttonColumn>
+			<buttonFillerOffset>0</buttonFillerOffset>
+			<buttonRotation>0</buttonRotation>
+			<Action isActive="yes" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">
+				<name>fuzz side button</name>
+				<packageName></packageName>
+				<script></script>
+				<css></css>
+				<commandButtonUp>score</commandButtonUp>
+				<commandButtonDown></commandButtonDown>
+				<icon></icon>
+				<orientation>0</orientation>
+				<location>2</location>
+				<posX>0</posX>
+				<posY>0</posY>
+				<mButtonState>1</mButtonState>
+				<sizeX>0</sizeX>
+				<sizeY>0</sizeY>
+				<buttonColumn>1</buttonColumn>
+				<buttonFillerOffset>0</buttonFillerOffset>
+				<buttonRotation>0</buttonRotation>
+			</Action>
+		</ActionGroup>
+	</ActionPackage>
+	<KeyPackage>
+		<KeyGroup isActive="yes" isFolder="yes">
+			<name>fuzz keys</name>
+			<packageName></packageName>
+			<script></script>
+			<command></command>
+			<keyCode>0</keyCode>
+			<keyModifier>0</keyModifier>
+			<Key isActive="yes" isFolder="no">
+				<name>fuzz key</name>
+				<packageName></packageName>
+				<script>fuzzKeyRuns = (fuzzKeyRuns or 0) + 1</script>
+				<command>look</command>
+				<keyCode>16777264</keyCode>
+				<keyModifier>67108864</keyModifier>
+			</Key>
+		</KeyGroup>
+	</KeyPackage>
+</MudletPackage>

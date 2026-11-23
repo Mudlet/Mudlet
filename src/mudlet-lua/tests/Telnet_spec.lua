@@ -462,6 +462,25 @@ describe("Tests the rest of the SGR decoder", function()
     end
   end)
 
+  -- underline colour is not drawn, but its arguments must not be read as codes
+  -- of their own; each semicolon form ends in a value that would show if it were
+  it("steps over the arguments of an underline colour and applies the codes around it", function()
+    for i, colour in ipairs({"58;5;9", "58;2;1;2;3", "58;3;1;2;3", "58;4;1;2;3;7", "58;1", "59", "58:5:196", "58:2::1:2:3"}) do
+      local marker = ("SgrUnderlineColour%02d"):format(i)
+      feed("\27[4;" .. colour .. ";41;31m" .. marker)
+      local format = formatOf(marker)
+      assert.is_true(format.underline, "the underline before SGR " .. colour .. " was dropped")
+      assert.equals("none", format.blinking, "an argument of SGR " .. colour .. " was read as blink")
+      assert.is_false(format.italic, "an argument of SGR " .. colour .. " was read as italic")
+      assert.is_false(format.bold, "an argument of SGR " .. colour .. " was read as bold")
+      assert.is_false(format.reverse, "an argument of SGR " .. colour .. " was read as reverse")
+      assert.is_false(format.strikeout, "an argument of SGR " .. colour .. " was read as strikeout")
+      selectMarker(marker)
+      assert.is_true(isAnsiBgColor(4), "the background after SGR " .. colour .. " was dropped")
+      assert.is_true(isAnsiFgColor(4), "the foreground after SGR " .. colour .. " was dropped")
+    end
+  end)
+
   -- a sequence with an intermediate byte is held over a split between two
   -- reads like any other, rather than its tail reaching the screen
   it("carries a sequence with an intermediate byte over to the next read", function()
@@ -2232,6 +2251,41 @@ describe("Tests CHARSET negotiation", function()
   it("takes a variant spelling of ASCII as ASCII", function()
     request("US-ASCII")
     assert.equals("ASCII", getServerEncoding())
+  end)
+
+  -- RFC 2066 names come from the IANA registry, where each has aliases, and
+  -- servers also offer the codec names of the language they are written in
+  it("recognises a character set offered by an alias", function()
+    local cases = {
+      {"UTF8", "UTF-8"},
+      {"ANSI_X3.4-1968", "ASCII"},
+      {"latin1", "ISO 8859-1"},
+      {"ISO_8859-1:1987", "ISO 8859-1"},
+      {"ISO_8859-15", "ISO 8859-15"},
+      {"IBM437", "CP437"},
+      {"cp1252", "WINDOWS-1252"},
+      {"CP1251", "WINDOWS-1251"},
+      {"SJIS", "SHIFT_JIS"},
+      {"Big-5", "BIG5"},
+    }
+    for _, case in ipairs(cases) do
+      local offered, expected = case[1], case[2]
+      setServerEncoding(expected == "UTF-8" and "CP437" or "UTF-8")
+      request(offered)
+      assert.equals(expected, getServerEncoding(), "offering " .. offered)
+    end
+  end)
+
+  it("does not take GB2312 as GBK", function()
+    -- GBK decodes GB2312, but what Mudlet sends would be GBK, which a GB2312 game cannot read
+    request("GB2312")
+    assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  it("still prefers the encoding in use over an alias for another", function()
+    setServerEncoding("ISO 8859-1")
+    request("UTF-8", "latin1")
+    assert.equals("ISO 8859-1", getServerEncoding())
   end)
 
   it("ignores a request with nothing on offer after the separator", function()
