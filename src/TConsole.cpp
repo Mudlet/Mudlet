@@ -1015,13 +1015,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // to again. A detached profile has its own window.
         mudlet* const app = mudlet::self();
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
-            for (const auto& otherHostPtr : *HostManager::self()) {
-                Host* otherHost = otherHostPtr.data();
-                if (TConsole* const other = otherHost && otherHost != mpHost.data() ? otherHost->mainConsoleView() : nullptr) {
-                    // Queued: it runs that profile's resize handlers, which could close this profile mid-resize
-                    other->mpHiddenSyncTimer->start();
-                }
-            }
+            app->syncHiddenProfilesSoon();
         }
     }
 
@@ -2334,6 +2328,14 @@ void TConsole::syncHiddenScreenDimensions()
     mBorders = mpHost->borders();
     mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
     raiseMudletSysWindowResizeEvent(comingBackTo.width() - (mpLeftToolBar->width() + mpRightToolBar->width()), comingBackTo.height() - mpTopToolBar->height());
+}
+
+void TConsole::syncHiddenScreenDimensionsSoon()
+{
+    // Queued: it runs this profile's resize handlers, which could close whatever profile or dock asked for it
+    if (mpHiddenSyncTimer && !mpHiddenSyncTimer->isActive()) {
+        mpHiddenSyncTimer->start();
+    }
 }
 
 QSize TConsole::sizeComingBackTo() const

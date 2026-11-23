@@ -186,6 +186,8 @@ public:
     QSize getMainWindowSize() const;
     // For a MainConsole hidden by a tab switch, which gets no resize events: NAWS-reports its restored size.
     void syncHiddenScreenDimensions();
+    // Not pushed back by a later call, so changes that never stop still reach a hidden console every 100 ms
+    void syncHiddenScreenDimensionsSoon();
     // What a MainConsole hidden by a tab switch will measure when it comes back
     QSize sizeComingBackTo() const;
     ConsoleType getType() const { return mType; }
@@ -361,7 +363,7 @@ private:
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
     QSize mOldSize;
-    // MainConsole only: restarted by each step of a drag, so a hidden profile is resized once, for the size it ends at
+    // MainConsole only: a hidden profile is resized at most every 100 ms, however fast a drag steps
     QTimer* mpHiddenSyncTimer = nullptr;
     // only ever written from a size that was really measured, so what
     // getMainWindowSize() falls back to while the console is hidden or too small

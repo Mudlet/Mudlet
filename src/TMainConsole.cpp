@@ -250,6 +250,7 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
         }
         if (docks > 1) {
             window->resizeDocks({dock.data()}, {total / docks}, orientation);
+            window->noteDockSidesKeepTheirDepth();
         }
     });
 }

@@ -198,6 +198,10 @@ public:
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
     // The profile container's size once profileName is in front, from its size now
     QSize profileContainerSizeFor(const QString& profileName, QSize containerSize) const;
+    // Profiles hidden by a tab switch get no resize events of their own
+    void syncHiddenProfilesSoon();
+    // After a resizeDocks() on the main window, from which Qt keeps each dock side's depth
+    void noteDockSidesKeepTheirDepth() { mDockSidesKeepTheirDepth = true; }
     std::optional<QSize> getImageSize(const QString&) override;
     const QLocale& getUserLocale() const { return mUserLocale; }
     // Used to enable "emergency" control recovery action - if Mudlet is
@@ -534,6 +538,8 @@ public slots:
     void slot_showVariableDialog();
 
 protected:
+    void childEvent(QChildEvent*) override;
+    bool eventFilter(QObject*, QEvent*) override;
     void closeEvent(QCloseEvent*) override;
     void changeEvent(QEvent*) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -596,6 +602,7 @@ private slots:
 
 private:
     void assignKeySequences();
+    void noticeDockSidesKeepingTheirDepth();
     void keepFloatingDocksOnScreen();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
@@ -924,6 +931,9 @@ private:
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
     QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets
+    // Whether Qt has stopped sizing dock sides from their hints, as it does for good once a side's edge or a dock is
+    // dragged, or resizeDocks() or restoreState() runs
+    bool mDockSidesKeepTheirDepth = false;
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
