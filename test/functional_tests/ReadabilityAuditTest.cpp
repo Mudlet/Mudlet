@@ -35,6 +35,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QToolButton>
@@ -54,7 +55,12 @@
 #include "TriggerUnit.h"
 #include "dlgActionMainArea.h"
 #include "dlgKeysMainArea.h"
+#include "TArea.h"
+#include "TAreaFields.h"
+#include "TMap.h"
+#include "TRoomDB.h"
 #include "dlgAboutDialog.h"
+#include "dlgAreaProperties.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
@@ -84,6 +90,8 @@ private:
     dlgNotepad* mpNotepad = nullptr;
     dlgPackageManager* mpPackages = nullptr;
     dlgPackageExporter* mpExporter = nullptr;
+    // Deletes itself on close, so held where a close cannot leave it dangling
+    QPointer<dlgAreaProperties> mpAreaProperties;
     Host* mpHost = nullptr;
     QTreeWidgetItem* mpKeyItem = nullptr;
     QTreeWidgetItem* mpTimerItem = nullptr;
@@ -138,6 +146,8 @@ private:
     static constexpr int scmLeastAuditedOnTheExporterSelection = 3;
     static constexpr int scmLeastAuditedOnTheExporterDetails = 18;
     static constexpr int scmLeastAuditedOnTheExporterFoot = 3;
+    // A field of each kind - a line and a list - with their labels, and OK and Cancel
+    static constexpr int scmLeastAuditedInTheAreaProperties = 6;
 
     // A colour well's fill is a value rather than a surface, and its words are
     // chosen against that fill by generateButtonStyleSheet(), so it is not audited
@@ -292,6 +302,18 @@ private:
         QVERIFY2(mpExporter->findChild<QWidget*>(qsl("exporterSelectionColumn")), "the package exporter built no selection column, so there is nothing to walk");
         QVERIFY2(mpExporter->findChild<QWidget*>(qsl("exporterDetailsColumn")), "the package exporter built no details column, so there is nothing to walk");
         QVERIFY2(mpExporter->findChild<QWidget*>(qsl("exporterFoot")), "the package exporter built no foot, so there is nothing to walk");
+
+        // An area with a value in a line and one in a list, so both kinds of field carry text to read
+        const int areaId = mpHost->mpMap->mpRoomDB->addArea(qsl("Audited area"));
+        QVERIFY(areaId > 0);
+        TAreaFields::setFields(*mpHost->mpMap,
+                               {{qsl("population"), TAreaFields::Field{qsl("population"), qsl("Population"), TAreaFields::Type::Number, false, {}}},
+                                {qsl("noMagic"), TAreaFields::Field{qsl("noMagic"), qsl("No magic"), TAreaFields::Type::YesNo, false, {}}}});
+        mpHost->mpMap->mpRoomDB->getArea(areaId)->mUserData = {{qsl("population"), qsl("1200")}, {qsl("noMagic"), qsl("true")}};
+        mpAreaProperties = new dlgAreaProperties(mpHost->mpMap.data(), areaId);
+        mpAreaProperties->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpAreaProperties));
+        QCoreApplication::processEvents();
     }
 
     // Through the settings dialog's control, the path a player takes; each window
@@ -317,6 +339,9 @@ private:
         }
         if (mpExporter) {
             mpExporter->grab();
+        }
+        if (mpAreaProperties) {
+            mpAreaProperties->grab();
         }
     }
 
@@ -650,6 +675,13 @@ private:
             auditWithinFor(qsl("exporter"), mpExporter, pFoot, qsl("the package exporter's foot"), appearance, scmLeastAuditedOnTheExporterFoot);
         }
 
+        // Walked whole: the design draws all of the area properties dialog
+        if (!mpAreaProperties) {
+            mCases[qsl("areaProperties")].setupFailure = qsl("the area properties dialog closed before it was walked");
+        } else {
+            auditWindowFor(qsl("areaProperties"), mpAreaProperties, qsl("the area properties dialog"), appearance, scmLeastAuditedInTheAreaProperties);
+        }
+
         if (showForm(
                     qsl("buttons"),
                     [this]() {
@@ -798,6 +830,7 @@ private slots:
     void cleanupTestCase()
     {
         mpNotepad = nullptr;
+        delete mpAreaProperties.data();
         delete mpExporter;
         mpExporter = nullptr;
         delete mpPackages;
@@ -856,6 +889,8 @@ private slots:
     void test_thePackageManagerIsReadableInBothAppearances() { report(qsl("packages")); }
 
     void test_thePackageExporterIsReadableInBothAppearances() { report(qsl("exporter")); }
+
+    void test_theAreaPropertiesDialogIsReadableInBothAppearances() { report(qsl("areaProperties")); }
 
     void test_theButtonsFormIsReadableInBothAppearances() { report(qsl("buttons")); }
 };

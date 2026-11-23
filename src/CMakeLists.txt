@@ -236,6 +236,7 @@ set(mudlet_app_SRCS
     CustomLineSession.cpp
     DarkTheme.cpp
     dlgAboutDialog.cpp
+    dlgAreaProperties.cpp
     dlgActionMainArea.cpp
     dlgAliasMainArea.cpp
     dlgColorTrigger.cpp
@@ -585,6 +586,7 @@ set(mudlet_app_HDRS
     CustomLineSession.h
     DarkTheme.h
     dlgAboutDialog.h
+    dlgAreaProperties.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
     dlgColorTrigger.h

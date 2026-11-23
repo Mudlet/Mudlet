@@ -326,6 +326,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLockNoOpTest.cpp
     MapLabelDeleteTest.cpp
     MapRevisionTest.cpp
+    AreaPropertiesDialogTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
