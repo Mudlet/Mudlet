@@ -842,6 +842,20 @@ assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitE
         QVERIFY(!TAppFrontend::viewGone());
     }
 
+    // While a map is loaded or saved, a timer may run between areas being written: a parent changed then could be saved
+    // contradicting one already written, so it is refused until the operation is over
+    void test_anAreaParentCannotChangeWhileTheMapIsLoadedOrSaved()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QCOMPARE(runLua(qsl("routingChild = addAreaName('RoutingNestedChild') routingParent = addAreaName('RoutingNestedParent')")), qsl("ok"));
+        {
+            const TMap::MapOperationScope operation(pMap);
+            QCOMPARE(runLua(qsl("local ok, message = setAreaParent(routingChild, routingParent) assert(ok == nil, 'accepted') assert(message:find('saved'), message)")), qsl("ok"));
+        }
+        QCOMPARE(runLua(qsl("assert(getAreaParent(routingChild) == nil) assert(setAreaParent(routingChild, routingParent) == true)")), qsl("ok"));
+        QCOMPARE(runLua(qsl("deleteArea('RoutingNestedChild') deleteArea('RoutingNestedParent')")), qsl("ok"));
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(

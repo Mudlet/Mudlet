@@ -1647,6 +1647,11 @@ int TLuaInterpreter::setAreaParent(lua_State* L)
         parentId = getVerifiedInt(L, __func__, 2, "parent areaID {nil for the top level}");
     }
     const Host& host = getHostFromLua(L);
+    // A JSON export runs timers between writing areas: a change then could save parents that contradict each other,
+    // such as a cycle that never existed in the map
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
     switch (host.mpMap->mpRoomDB->setAreaParent(areaId, parentId)) {
     case TRoomDB::AreaParentResult::Changed:
     case TRoomDB::AreaParentResult::Unchanged:
