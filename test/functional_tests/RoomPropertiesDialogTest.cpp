@@ -1412,6 +1412,22 @@ private slots:
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), QString()}}));
     }
 
+    // The dialog opens on the name, so a name typed straight away and Enter rename the room
+    void typingANameAndPressingEnterRenamesTheRoom()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowActive(pDlg));
+        QCOMPARE(QApplication::focusWidget(), pDlg->lineEdit_name);
+
+        QTest::keyClicks(QApplication::focusWidget(), qsl("Armoury"));
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        QCOMPARE(mEmitted.emitCount, 1);
+        QVERIFY(mEmitted.changeName);
+        QCOMPARE(mEmitted.newName, qsl("Armoury"));
+    }
+
     void aMixedValueOpenedAndLeftAloneInItsEditorChangesNothing()
     {
         buildMap();

@@ -693,9 +693,8 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>tabWidget_room</tabstop>
-  <tabstop>lineEdit_hash</tabstop>
   <tabstop>lineEdit_name</tabstop>
+  <tabstop>lineEdit_hash</tabstop>
   <tabstop>comboBox_area</tabstop>
   <tabstop>plainTextEdit_description</tabstop>
   <tabstop>pushButton_setRoomColor</tabstop>
@@ -708,6 +707,7 @@
   <tabstop>tableWidget_userData</tabstop>
   <tabstop>pushButton_addUserData</tabstop>
   <tabstop>pushButton_removeUserData</tabstop>
+  <tabstop>tabWidget_room</tabstop>
  </tabstops>
  <resources/>
  <connections>

@@ -248,6 +248,10 @@ void dlgRoomProperties::init(
     initGeneral();
     initUserData();
 
+    // The name is what is most often changed: typed straight away, Enter renames. Set here, as the buttons not in the
+    // tab order would otherwise be the first to take focus
+    lineEdit_name->setFocus(Qt::OtherFocusReason);
+
     // Configure dialog display
     adjustSize();
 }
