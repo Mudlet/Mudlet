@@ -93,6 +93,7 @@ private:
     void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
     QPlainTextEdit* currentTextEdit() const;
+    QString noteName(int index) const;
     void applyNotepadShellStyle();
     void setupSendStrip();
     [[nodiscard]] int stripWordPointSize() const;

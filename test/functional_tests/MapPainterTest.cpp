@@ -202,6 +202,58 @@ private:
         return image;
     }
 
+    static QImage paintedView(TMapPainter& painter, const TMapPainter::View& view, TMapPainter::PaintResult& result, const qreal devicePixelRatio)
+    {
+        QImage image(qRound(scmImageWidth * devicePixelRatio), qRound(scmImageHeight * devicePixelRatio), QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(devicePixelRatio);
+        image.fill(Qt::black);
+        QPainter imagePainter(&image);
+        painter.paintView(imagePainter, view, result);
+        return image;
+    }
+
+    // The bounding box, in device pixels, of where two images of the same size differ
+    static QRect differingPixels(const QImage& a, const QImage& b)
+    {
+        QRect box;
+        for (int y = 0; y < a.height(); ++y) {
+            for (int x = 0; x < a.width(); ++x) {
+                if (a.pixel(x, y) != b.pixel(x, y)) {
+                    box |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        return box;
+    }
+
+    // A symbol drawn at 1x and scaled up 2x without smoothing is made of 2 by 2 blocks of one colour
+    static bool hasDetailFinerThanTwoDevicePixels(const QImage& image, const QRect& area)
+    {
+        for (int y = area.top() & ~1; y + 1 < image.height() && y <= area.bottom(); y += 2) {
+            for (int x = area.left() & ~1; x + 1 < image.width() && x <= area.right(); x += 2) {
+                const QRgb corner = image.pixel(x, y);
+                if (image.pixel(x + 1, y) != corner || image.pixel(x, y + 1) != corner || image.pixel(x + 1, y + 1) != corner) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Where the east room's symbol lands in a fresh painter's view at a pixel ratio
+    QRect eastSymbolPixels(const qreal devicePixelRatio)
+    {
+        TRoom* pRoom = roomDB()->getRoom(scmEastRoom);
+        TMapPainter::PaintResult result;
+        pRoom->mSymbol = qsl("W");
+        TMapPainter withSymbol;
+        const QImage symbol = paintedView(withSymbol, playerView(), result, devicePixelRatio);
+        pRoom->mSymbol.clear();
+        TMapPainter withoutSymbol;
+        const QImage blank = paintedView(withoutSymbol, playerView(), result, devicePixelRatio);
+        return differingPixels(symbol, blank);
+    }
+
     // An info box line from a contributor of the test's own, which counts its calls and keeps what it was asked about
     struct InfoBoxCalls
     {
@@ -632,6 +684,95 @@ private slots:
         QCOMPARE(calls->displayAreaId, mAreaId);
     }
 
+    // On a high-DPI screen a symbol is drawn with every pixel the screen has, at the same size and place as on a 1x screen
+    void aSymbolIsDrawnAtTheScreensPixelRatio()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        for (const bool gridMode : {false, true}) {
+            roomDB()->getArea(mAreaId)->gridMode = gridMode;
+            const QRect atOne = eastSymbolPixels(1.0);
+            const QRect atTwo = eastSymbolPixels(2.0);
+            const QString where = qsl("grid mode %1: at 1x %2,%3 %4x%5; at 2x %6,%7 %8x%9")
+                                          .arg(gridMode ? qsl("on") : qsl("off"))
+                                          .arg(atOne.x())
+                                          .arg(atOne.y())
+                                          .arg(atOne.width())
+                                          .arg(atOne.height())
+                                          .arg(atTwo.x())
+                                          .arg(atTwo.y())
+                                          .arg(atTwo.width())
+                                          .arg(atTwo.height());
+            QVERIFY2(!atOne.isEmpty(), qPrintable(where));
+            QVERIFY2(qAbs(atTwo.left() - atOne.left() * 2) <= 2 && qAbs(atTwo.top() - atOne.top() * 2) <= 2, qPrintable(where));
+            QVERIFY2(qAbs(atTwo.right() - atOne.right() * 2 - 1) <= 2 && qAbs(atTwo.bottom() - atOne.bottom() * 2 - 1) <= 2, qPrintable(where));
+
+            roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+            TMapPainter painter;
+            TMapPainter::PaintResult result;
+            const QImage image = paintedView(painter, playerView(), result, 2.0);
+            QVERIFY2(hasDetailFinerThanTwoDevicePixels(image, atTwo), qPrintable(where + qsl("; ") + saved(image, qsl("high-dpi-symbol"))));
+        }
+    }
+
+    // Moving the view to a screen of another pixel ratio must not reuse the symbols made for the old one
+    void movingToAnotherScreenRemakesTheSymbols()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        for (const auto& [from, to] : {std::pair{1.0, 2.0}, std::pair{2.0, 1.0}}) {
+            TMapPainter painter;
+            TMapPainter freshPainter;
+            TMapPainter::PaintResult result;
+            paintedView(painter, playerView(), result, from);
+            const QImage moved = paintedView(painter, result.view, result, to);
+            const QImage fresh = paintedView(freshPainter, playerView(), result, to);
+            QVERIFY(!eastSymbolPixels(to).isEmpty());
+            roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+            const QString name = qsl("moved-%1x-to-%2x").arg(from).arg(to);
+            QVERIFY2(moved == fresh, qPrintable(saved(moved, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+        }
+    }
+
+    // An area image exported at a zoom draws its symbols at that zoom, not scaled up from 1x
+    void anExportedSymbolIsDrawnAtTheExportsZoom()
+    {
+        setUpPlayerView();
+        TRoom* pRoom = roomDB()->getRoom(scmEastRoom);
+        const auto exportedAtTwo = [this](const QString& name) {
+            TMapPainter painter;
+            painter.setView(playerView());
+            QObject saveOwner;
+            const QString exportFile = qsl("%1/%2.png").arg(mConfigDir.path(), name);
+            const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 2.0, false, &saveOwner);
+            return exportStarted ? exported(&saveOwner, exportFile) : QImage();
+        };
+        pRoom->mSymbol = qsl("W");
+        const QImage symbol = exportedAtTwo(qsl("zoomed-symbol"));
+        pRoom->mSymbol.clear();
+        const QImage blank = exportedAtTwo(qsl("zoomed-blank"));
+        QVERIFY(!symbol.isNull() && symbol.size() == blank.size());
+        const QRect symbolPixels = differingPixels(symbol, blank);
+        QVERIFY2(!symbolPixels.isEmpty(), qPrintable(saved(symbol, qsl("zoomed-export"))));
+        QVERIFY2(hasDetailFinerThanTwoDevicePixels(symbol, symbolPixels), qPrintable(saved(symbol, qsl("zoomed-export"))));
+    }
+
+    // At a zoom so small that a symbol has no device pixels at all, there is nothing to paint it on
+    void anExportTooSmallForItsSymbolsLeavesThemOut()
+    {
+        setUpPlayerView();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TMapPainter painter;
+        painter.setView(playerView());
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/tiny-export.png").arg(mConfigDir.path());
+        QTest::failOnWarning(QRegularExpression(qsl("^QPainter::")));
+        const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 0.01, false, &saveOwner);
+        QVERIFY2(exportStarted, qPrintable(exportMessage));
+        QVERIFY(!exported(&saveOwner, exportFile).isNull());
+    }
+
     // In grid mode a room fills its whole cell
     void aGridModeViewFillsEachCell()
     {
@@ -661,6 +802,67 @@ private slots:
         QVERIFY(result.view.mRoomWidth < TMapPainter::cLodPixelThreshold);
         QVERIFY2(image.pixelColor(westCentreInView() + QPoint(4, 0)) == QColor(Qt::blue), qPrintable(saved(image, qsl("lod"))));
         QVERIFY2(image.pixelColor(westCentreInView()) == markerColour(), qPrintable(saved(image, qsl("lod"))));
+    }
+
+    // An unscaled label is drawn at its pixmap's size, so one hanging off the view's left or top edge still shows
+    // the part of it inside, even where its stored size, scaled by the zoom, would end before the edge
+    void anUnscaledLabelOverTheViewsEdgeShowsItsVisiblePart()
+    {
+        setUpPlayerView();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+        // A map unit is 40 pixels, with map (0, 0) at the view's (200, 150); a quarter unit is 10 pixels
+        const auto addLabel = [pArea](const int id, const QPointF& topLeftInView, const bool showOnTop) {
+            TMapLabel label;
+            label.pix = QPixmap(100, 40);
+            label.pix.fill(Qt::magenta);
+            label.size = QSizeF(0.25, 0.25);
+            label.noScaling = true;
+            label.showOnTop = showOnTop;
+            label.pos = QVector3D((topLeftInView.x() - 200) / 40.0, (150 - topLeftInView.y()) / 40.0, 0);
+            pArea->mMapLabels.insert(id, label);
+        };
+        addLabel(1, QPointF(-30, 220), true);
+        addLabel(2, QPointF(300, -20), false);
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, playerView(), result);
+
+        QVERIFY2(image.pixelColor(10, 240) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-left"))));
+        QVERIFY2(image.pixelColor(350, 10) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-top"))));
+    }
+
+    // An export sizes its image by the rooms alone, so an unscaled label can hang off its left or top edge too
+    void anUnscaledLabelOverAnExportsEdgeShowsItsVisiblePart()
+    {
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+        // The two rooms span map x 0 to 2 on y 0, so a room is 50 pixels with map (0, 0) at the image's (100, 100)
+        const auto addLabel = [pArea](const int id, const QPointF& topLeftInImage, const bool showOnTop) {
+            TMapLabel label;
+            label.pix = QPixmap(100, 40);
+            label.pix.fill(Qt::magenta);
+            label.size = QSizeF(0.25, 0.25);
+            label.noScaling = true;
+            label.showOnTop = showOnTop;
+            label.pos = QVector3D((topLeftInImage.x() - 100) / 50.0, (100 - topLeftInImage.y()) / 50.0, 0);
+            pArea->mMapLabels.insert(id, label);
+        };
+        addLabel(1, QPointF(-25, 150), true);
+        addLabel(2, QPointF(250, -20), false);
+
+        TMapPainter painter;
+        painter.setView(view());
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/unscaled-label-export.png").arg(mConfigDir.path());
+        const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+        QVERIFY2(exportStarted, qPrintable(exportMessage));
+        const QImage image = exported(&saveOwner, exportFile);
+        QCOMPARE(image.size(), QSize(350, 250));
+
+        QVERIFY2(image.pixelColor(10, 170) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-export-left"))));
+        QVERIFY2(image.pixelColor(300, 10) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-export-top"))));
     }
 
     // The info box starts to the right of the selection's room list while that is shown
@@ -862,6 +1064,39 @@ private slots:
         const QImage round = paintedView(painter, roundAgain, result);
         const QImage fresh = paintedView(freshPainter, roundView, result);
         QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
+    }
+
+    // A grid mode room fills its whole cell, so its symbol is made at a different size: switching an area in or out
+    // of grid mode at the same zoom must not reuse the symbols made for the other mode
+    void switchingGridModeRemakesTheSymbols()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+
+        // The player's room is drawn apart from the rest in grid mode; a see-through marker leaves its symbol visible
+        map()->mPlayerRoomInnerColor = Qt::transparent;
+        map()->mPlayerRoomOuterColor = Qt::transparent;
+        for (const int roomId : {scmEastRoom, scmWestRoom}) {
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            for (const bool startInGridMode : {false, true}) {
+                pRoom->mSymbol = qsl("W");
+                pArea->gridMode = startInGridMode;
+                TMapPainter painter;
+                TMapPainter freshPainter;
+                TMapPainter::PaintResult result;
+                paintedView(painter, playerView(), result);
+                pArea->gridMode = !startInGridMode;
+                const QImage switched = paintedView(painter, result.view, result);
+                const QImage fresh = paintedView(freshPainter, playerView(), result);
+                const QString name = qsl("room%1-%2").arg(QString::number(roomId), startInGridMode ? qsl("out-of-grid") : qsl("into-grid"));
+                QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+                pRoom->mSymbol.clear();
+                TMapPainter blankPainter;
+                const QImage blank = paintedView(blankPainter, playerView(), result);
+                QVERIFY2(fresh != blank, qPrintable(qsl("no symbol was drawn, so the comparison proves nothing: ") + saved(fresh, name + qsl("-fresh"))));
+            }
+        }
     }
 
     // A double-click no room or area exit takes is spent with its frame, or a later one would act on whatever moved

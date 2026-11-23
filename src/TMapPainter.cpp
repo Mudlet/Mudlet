@@ -100,6 +100,15 @@ int xyExitFor(const TRoom& room, const QString& key)
     }
     return 0;
 }
+
+// An unscaled label is drawn at its pixmap's size whatever the zoom, so its stored size does not say what it covers
+QSize drawnLabelSize(const TMapLabel& label, const qreal roomWidth, const qreal roomHeight)
+{
+    if (label.noScaling) {
+        return label.pix.deviceIndependentSize().toSize();
+    }
+    return QSize(abs(qRound(label.size.width() * roomWidth)), abs(qRound(label.size.height() * roomHeight)));
+}
 } // namespace
 
 // A special exit can be named like a normal one ("n", "up"...); a custom line by
@@ -169,7 +178,12 @@ bool TMapPainter::customLineRunsStraightTo(const TRoom& owner, const TRoom& othe
     return false;
 }
 
-// key format: <QColor.name()><QString of one or more QChars>
+// A grid mode room fills its whole cell, so its symbol is made at a different size
+static QString symbolPixmapKey(const QColor& symbolColor, const QString& symbol, const bool gridMode)
+{
+    return qsl("%1_%2_%3").arg(symbolColor.name(), gridMode ? qsl("g") : qsl("n"), symbol);
+}
+
 void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
     // Prevents small, unreadable symbols:
@@ -189,10 +203,14 @@ void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, 
         symbolRectangle = QRectF(0.0, 0.0, mRoomWidth * rSize, mRoomHeight * rSize);
     }
 
-    auto pixmap = new QPixmap(symbolRectangle.toRect().size());
+    // At the target's device pixel ratio: a 1x pixmap is scaled up when painted, which makes the symbol blocky or blurred
+    const QSize logicalSize = symbolRectangle.toRect().size();
+    auto pixmap = new QPixmap((QSizeF(logicalSize) * mSymbolPixmapDevicePixelRatio).toSize());
+    pixmap->setDevicePixelRatio(mSymbolPixmapDevicePixelRatio);
     pixmap->fill(Qt::transparent);
 
-    if (symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
+    // A tiny export zoom can leave a symbol no device pixels to be painted on
+    if (pixmap->isNull() || symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
         // if the space to draw the symbol on is too small then do not create
         // anything on the pixmap as it will be unreadable - instead insert an
         // empty pixmap:
@@ -201,7 +219,7 @@ void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, 
     }
 
     QPainter symbolPainter(pixmap);
-    RoomAppearance::paintSymbol(symbolPainter, pixmap->rect(), text, symbolColor, mpMap->mMapSymbolFont, mpMap->mMapSymbolFontFudgeFactor, mSymbolFontSize);
+    RoomAppearance::paintSymbol(symbolPainter, QRect(QPoint(), logicalSize), text, symbolColor, mpMap->mMapSymbolFont, mpMap->mMapSymbolFontFudgeFactor, mSymbolFontSize);
     symbolPainter.end();
 
     if (!mSymbolPixmapCache.insert(key, pixmap)) {
@@ -599,7 +617,7 @@ void TMapPainter::drawRoom(QPainter& painter,
     // Do we need to draw the room symbol:
     if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
         const QColor symbolColor = RoomAppearance::symbolColor(pRoom->mSymbolColor, roomColor);
-        auto pixmapKey = qsl("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
+        const QString pixmapKey = symbolPixmapKey(symbolColor, pRoom->mSymbol, isGridMode);
         if (!mSymbolPixmapCache.contains(pixmapKey)) {
             addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
         }
@@ -627,13 +645,15 @@ void TMapPainter::drawRoom(QPainter& painter,
                 *                         |  +---+  |
                 *                         |Rectangle|
                 *                         +---------+
-                *                            |<->|<--symbolRect.width()
-                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                *                            |<->|<--symbolSize.width()
+                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolSize.width())/2.0
                 * similarly for the y-offset
                 */
 
-            painter.drawPixmap(QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
-                               *pix);
+            const QSizeF symbolSize = pix->deviceIndependentSize();
+            const int symbolLeft = qRound(roomRectangle.left() + (roomRectangle.width() - symbolSize.width()) / 2.0);
+            const int symbolTop = qRound(roomRectangle.top() + (roomRectangle.height() - symbolSize.height()) / 2.0);
+            painter.drawPixmap(QPoint(symbolLeft, symbolTop), *pix);
         }
 
         painter.restore();
@@ -1273,14 +1293,15 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
         if (!showVnums && !room->mSymbol.isEmpty()) {
             const QColor roomColor = environmentColor(room->environment);
             const QColor symbolColor = RoomAppearance::symbolColor(room->mSymbolColor, roomColor);
-            const QString pixmapKey = qsl("%1_%2").arg(symbolColor.name(), room->mSymbol);
+            const QString pixmapKey = symbolPixmapKey(symbolColor, room->mSymbol, true);
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
                 addSymbolToPixmapCache(pixmapKey, room->mSymbol, symbolColor, true);
             }
             if (const QPixmap* pix = mSymbolPixmapCache.object(pixmapKey); pix && !pix->isNull()) {
                 painter.save();
                 painter.setBackgroundMode(Qt::TransparentMode);
-                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - pix->width()) / 2.0), qRound(roomRect.top() + (roomRect.height() - pix->height()) / 2.0)), *pix);
+                const QSizeF symbolSize = pix->deviceIndependentSize();
+                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - symbolSize.width()) / 2.0), qRound(roomRect.top() + (roomRect.height() - symbolSize.height()) / 2.0)), *pix);
                 painter.restore();
             }
         }
@@ -2354,6 +2375,10 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
         flushSymbolPixmapCache();
         mCachedBubbleMode = mBubbleMode;
     }
+    if (const qreal devicePixelRatio = painter.device()->devicePixelRatio(); devicePixelRatio != mSymbolPixmapDevicePixelRatio) {
+        flushSymbolPixmapCache();
+        mSymbolPixmapDevicePixelRatio = devicePixelRatio;
+    }
 
     resetSymbolFontSize();
     mMapSymbolFont = mpMap->mMapSymbolFont;
@@ -2711,8 +2736,9 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const QSize drawnSize = drawnLabelSize(mapLabel, mRoomWidth, mRoomHeight);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
         if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
             continue;
         }
@@ -2929,8 +2955,9 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const QSize drawnSize = drawnLabelSize(mapLabel, mRoomWidth, mRoomHeight);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
             continue;
@@ -3575,6 +3602,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
     // Flush symbol cache to ensure symbols are regenerated with export dimensions
     flushSymbolPixmapCache();
+    mSymbolPixmapDevicePixelRatio = zoom;
 
     // Calculate if room IDs should be legible based on export room size
     // Similar to logic in paintEvent, but using export dimensions
@@ -3608,8 +3636,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
+        const QSize drawnSize = drawnLabelSize(mapLabel, finalRoomSize, finalRoomSize);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
         }
@@ -4199,8 +4228,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
         const int exportRY = padding - (pArea->min_y * finalRoomSize);
         const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
         const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
+        const QSize drawnSize = drawnLabelSize(mapLabel, finalRoomSize, finalRoomSize);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;

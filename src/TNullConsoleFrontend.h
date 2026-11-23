@@ -222,8 +222,8 @@ public:
     QStringList mainCommandLineHistory() const;
     // Why the main command line's history file could not be read, if it could not
     std::optional<QString> mainCommandLineHistoryReadError() const;
-    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
-    // if the profile clears it after a send
+    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, then is emptied or
+    // selected as the profile says, unless something wrote to it meanwhile
     bool holdMainCommandLineForSend(const QString& line);
     void mainCommandLineSent();
     // As the GUI's command line as it is typed into, or as it is set by a history recall or Tab completion
@@ -231,7 +231,8 @@ public:
     // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
     // if it took one.
     bool hiddenInputOpened();
-    // As TCommandLine::enterCommand() empties the line behind the box, the empty line a send could not report
+    // As TCommandLine::enterCommand() empties, behind the box, a line nothing wrote to while it was sent: the empty
+    // line a send could not report
     void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
@@ -300,6 +301,7 @@ public:
     // scripts between them: the Lua function a line is handed to, 0 for none, a console's echo of a line it sent,
     // and the history and the emptying after the last line.
     void typeCommandLine(const QString& name, const QString& text);
+    void holdCommandLineForSend(const QString& name);
     std::optional<int> commandLineAction(const QString& name) const;
     // The line under the name, which one deleted and made again under it is not
     const QObject* commandLineInstance(const QString& name) const;
@@ -338,10 +340,10 @@ public:
     bool setTextBoxText(const QString& name, const QString& text) override;
     bool clearTextBox(const QString& name) override { return setTextBoxText(name, QString()); }
     bool setTextBoxReadOnly(const QString& name, bool readOnly) override;
-    // What these set changes nothing a Lua call reads back
-    bool setTextBoxPlaceholder(const QString& name, const QString&) override { return mTextBoxes.contains(name); }
+    // What these set no Lua call reads back; textBoxRecord() gives it to a frontend that draws the box
+    bool setTextBoxPlaceholder(const QString& name, const QString& text) override;
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
-    bool setTextBoxTabMovesFocus(const QString& name, bool) override { return mTextBoxes.contains(name); }
+    bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     void createBuffer(const QString& name) override;
     void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
@@ -488,6 +490,19 @@ public:
         qint64 made = 0;
     };
     std::optional<LabelRecord> labelRecord(const QString& name) const;
+    // What a text box keeps beside its text and font, which are the registry's, as a real TTextBox keeps it in its
+    // widget; and whether a player could type in it, as it shows, as does each window it is in
+    struct TextBoxRecord
+    {
+        bool readOnly = false;
+        QString placeholder;
+        QString styleSheet;
+        bool tabMovesFocus = false;
+        bool shown = false;
+    };
+    std::optional<TextBoxRecord> textBoxRecord(const QString& name) const;
+    // The player's typing in it, as QPlainTextEdit::textChanged gives the registry its text, which raises nothing
+    void typeTextBox(const QString& name, const QString& text);
     // A label's model while it is made, or once deleted till deferred deletes run, as the GUI's TLabel is
     bool holdsLabelModel(const TLabelModel* pModel) const;
     // Changes as the label of the name is made, hides or moves into another window, or as the console or scroll box
@@ -574,6 +589,10 @@ private:
         QSet<QString> suggestions;
         QSet<QString> blacklist;
         QPointer<HistoryWriter> writer;
+        // As TCommandLine::enterCommand(): whether the line went to a function when a send began, and whether
+        // anything wrote to it since, either of which decides whether the send empties it
+        bool sentToAction = false;
+        bool rewritten = false;
         // A console's own command line, still in TConsole::layerCommandLine, which TConsole::setCmdVisible() shows
         // and hides with it
         bool inConsole = false;
@@ -584,6 +603,9 @@ private:
         // QPlainTextEdit::isReadOnly() and the window's own sheet, which its limits depend on
         bool readOnly = false;
         QString styleSheet;
+        // A text box's QPlainTextEdit::placeholderText() and tabChangesFocus()
+        QString placeholder;
+        bool tabMovesFocus = false;
         qint64 stackOrder = 0;
     };
     struct SubConsole
@@ -819,7 +841,8 @@ private:
     std::optional<QString> mMainCommandLineCompleted;
     // Unlike mMainCommandLineAllSelected, not set by a completion
     bool mMainCommandLineWhollySelected = false;
-    // Whether the line held for a send was written to while it was sent
+    // Whether a script, the player or the frontend's clear of a sent line wrote to the main line since a send last
+    // held it; then addMainCommandLineHistory() records the line as it is and mainCommandLineSent() leaves it
     bool mMainCommandLineRewritten = false;
     // A send emptied the line while hidden input was wanted, which the app has not been told
     bool mMainCommandLineClearPending = false;
