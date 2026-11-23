@@ -1111,6 +1111,9 @@ private:
     bool mFolderViewActive = false;
     bool mFolderTreeStale = true;
     QAction* mpCreateModuleAction = nullptr;
+    QAction* mpPackageExporterAction = nullptr;
+    QAction* mpPackageManagerAction = nullptr;
+    QAction* mpModuleManagerAction = nullptr;
 
     // Smart undo/redo actions (route based on focus):
     QAction* mpUndoAction = nullptr;

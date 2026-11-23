@@ -366,19 +366,14 @@ void TDetachedWindow::createMenus()
     connect(mpMenuNotepadAction, &QAction::triggered, this, &TDetachedWindow::slot_showNotesDialog);
     toolboxMenu->addAction(mpMenuNotepadAction);
 
+    toolboxMenu->addSeparator();
+
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction = new QAction(tr("&Package manager"), this);
     //: This explains the "Package manager" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuPackageManagerAction->setStatusTip(tr("Install and remove collections of Mudlet lua items (packages)."));
     connect(mpMenuPackageManagerAction, &QAction::triggered, this, &TDetachedWindow::slot_showPackageManagerDialog);
     toolboxMenu->addAction(mpMenuPackageManagerAction);
-
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    auto replayAction = new QAction(tr("Load &replay"), this);
-    //: This explains the "Load replay" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
-    replayAction->setStatusTip(tr("Load a previous saved game session that can be used to test Mudlet lua systems (off-line!)."));
-    connect(replayAction, &QAction::triggered, this, &TDetachedWindow::slot_showReplayDialog);
-    toolboxMenu->addAction(replayAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Show map" among them.
     mpMenuModuleManagerAction = new QAction(tr("M&odule manager"), this);
@@ -393,6 +388,15 @@ void TDetachedWindow::createMenus()
     packageExporterAction->setStatusTip(tr("Gather and bundle up collections of Mudlet Lua items and other reasources into a module."));
     connect(packageExporterAction, &QAction::triggered, this, &TDetachedWindow::slot_showPackageExporterDialog);
     toolboxMenu->addAction(packageExporterAction);
+
+    toolboxMenu->addSeparator();
+
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    auto replayAction = new QAction(tr("Load &replay"), this);
+    //: This explains the "Load replay" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    replayAction->setStatusTip(tr("Load a previous saved game session that can be used to test Mudlet lua systems (off-line!)."));
+    connect(replayAction, &QAction::triggered, this, &TDetachedWindow::slot_showReplayDialog);
+    toolboxMenu->addAction(replayAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuToggleReplayAction = new QAction(tr("Record replay"), this);

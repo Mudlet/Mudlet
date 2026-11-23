@@ -279,6 +279,10 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
+    // For pHost rather than the active profile, as the script editor of a profile in the background needs
+    void showModuleManager(Host* pHost);
+    void showPackageManager(Host* pHost);
+    dlgPackageExporter* showPackageExporter(Host* pHost);
     void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
