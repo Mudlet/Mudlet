@@ -97,6 +97,7 @@ public:
     void endDrag() { mMouseTracking = false; }
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
+    bool hasSelectedText() const;
     int bufferScrollDown(int lines);
     // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a) { mBgColor = QColor(r, g, b, a); }
@@ -146,6 +147,7 @@ public:
 
     friend class AnalyseCharactersTest;
     friend class CopyAsImageTest;
+    friend class CommandLineKeyHandlingTest;
     friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
@@ -233,7 +235,6 @@ private:
     void scheduleUpdate(const QRect& rect = QRect());
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
-    bool hasSelectedText() const;
     std::pair<int, int> visibleLines();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
