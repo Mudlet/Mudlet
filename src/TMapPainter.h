@@ -92,6 +92,8 @@ struct TMapPainterView
     qreal mMapCenterY = 0.0;
     // A secondary view does not follow the player
     bool mIsSecondaryView = false;
+    // This view's own mode, as each map window keeps one: viewing keeps the map's rooms in view
+    bool mMapViewOnly = false;
     // The area sysMapAreaChanged was last raised for
     int mLastViewedAreaID = -2;
     qreal xyzoom = 0.0;

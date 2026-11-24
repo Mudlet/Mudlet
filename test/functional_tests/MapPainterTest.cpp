@@ -1062,6 +1062,204 @@ private slots:
         QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
     }
 
+    // Viewing, the map cannot be panned so far that no room is left in view; editing, it can go anywhere. Each view
+    // goes by its own mode, as map windows keep one apiece, whatever the profile's says.
+    void viewingKeepsTheMapsRoomsInView()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        // Panned a hundred rooms east of the east room, the player's room still the one the view last followed
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapCenterX = 102.0;
+        panned.mMapCenterY = 0.0;
+
+        for (const bool viewOnly : {true, false}) {
+            panned.mMapViewOnly = viewOnly;
+            mpHost->mMapViewOnly = !viewOnly;
+            // A pending move would centre on the player instead, whatever the pan
+            map()->mNewMove = false;
+            TMapPainter painter;
+            TMapPainter::PaintResult result;
+            const QImage image = paintedView(painter, panned, result);
+            if (viewOnly) {
+                // The east room, at x 2, is a room in from the view's west edge
+                QVERIFY2(result.view.mMapCenterX < 102.0, qPrintable(saved(image, qsl("pan-viewing"))));
+                const qreal westEdge = result.view.mMapCenterX - result.view.xspan / 2.0;
+                QVERIFY2(westEdge <= 1.0 + 1e-6, qPrintable(qsl("the view starts at x %1, past the east room. %2").arg(westEdge).arg(saved(image, qsl("pan-viewing")))));
+                QVERIFY2(holds(image, QColor(Qt::blue)), qPrintable(saved(image, qsl("pan-viewing"))));
+            } else {
+                QCOMPARE(result.view.mMapCenterX, 102.0);
+            }
+        }
+    }
+
+    // The same north and south. The rooms are moved off y 0, where a y bound with its sign flipped would be the same,
+    // to 3 north: the view's y runs south, so its rooms are at -3 there, and must stay a room inside either edge
+    void viewingKeepsTheMapsRoomsInViewNorthAndSouth()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        for (const int roomId : {scmWestRoom, scmEastRoom}) {
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            QVERIFY(map()->setRoomCoordinates(roomId, pRoom->x(), 3, 0));
+        }
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapViewOnly = true;
+        panned.mMapCenterX = 1.0;
+
+        for (const qreal pannedTo : {100.0, -100.0}) {
+            panned.mMapCenterY = pannedTo;
+            map()->mNewMove = false;
+            TMapPainter painter;
+            TMapPainter::PaintResult result;
+            const QImage image = paintedView(painter, panned, result);
+            const qreal northEdge = result.view.mMapCenterY - result.view.yspan / 2.0;
+            const qreal southEdge = result.view.mMapCenterY + result.view.yspan / 2.0;
+            if (pannedTo > 0) {
+                QVERIFY2(northEdge <= -4.0 + 1e-6, qPrintable(qsl("panned south, the view starts at y %1, past the rooms at -3. %2").arg(northEdge).arg(saved(image, qsl("pan-south")))));
+            } else {
+                QVERIFY2(southEdge >= -2.0 - 1e-6, qPrintable(qsl("panned north, the view ends at y %1, short of the rooms at -3. %2").arg(southEdge).arg(saved(image, qsl("pan-north")))));
+            }
+            QVERIFY2(holds(image, QColor(Qt::blue)), qPrintable(saved(image, pannedTo > 0 ? qsl("pan-south") : qsl("pan-north"))));
+        }
+    }
+
+    // A label shows on a level of its own, such as a legend, and far off from the rooms, so it is as much worth reaching
+    void viewingAMapLabelIsAsMuchWorthReachingAsARoom()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+        const auto removeLabels = qScopeGuard([pArea]() {
+            pArea->mMapLabels.clear();
+        });
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 2, 0, 5));
+        TMapLabel legend;
+        legend.pos = QVector3D(0, 0, 1);
+        legend.size = QSizeF(1, 1);
+        pArea->mMapLabels.insert(1, legend);
+        TMapLabel farOff;
+        farOff.pos = QVector3D(50, 0, 0);
+        farOff.size = QSizeF(2, 1);
+        pArea->mMapLabels.insert(2, farOff);
+
+        // The level buttons stop at the label's level
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        mpHost->mMapViewOnly = true;
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        QCOMPARE(mapperMap.getZLevel(), 0);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 1);
+
+        // and panning reaches the label far off on the rooms' level
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapViewOnly = true;
+        panned.mMapCenterX = 51.0;
+        panned.mMapCenterY = 0.0;
+        map()->mNewMove = false;
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, panned, result);
+        QVERIFY2(qFuzzyCompare(result.view.mMapCenterX, 51.0), qPrintable(qsl("panned to the label, the view was held at x %1. %2").arg(result.view.mMapCenterX).arg(saved(image, qsl("pan-label")))));
+    }
+
+    // A level with neither rooms nor labels, which a script can still show, is not held to the rooms of other levels
+    void viewingALevelWithNothingOnItIsNotHeldToOtherLevels()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapViewOnly = true;
+        panned.mMapCenterZ = 3;
+        panned.mMapCenterX = 102.0;
+        panned.mMapCenterY = 0.0;
+        map()->mNewMove = false;
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, panned, result);
+        QVERIFY2(qFuzzyCompare(result.view.mMapCenterX, 102.0), qPrintable(qsl("on an empty level the view was held at x %1. %2").arg(result.view.mMapCenterX).arg(saved(image, qsl("pan-empty-level")))));
+    }
+
+    // While the mapper's 3D view shows, its level buttons step it a level at a time, and the 2D map steps with it
+    void viewingTheLevelButtonsStepWithTheThreeDView()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 2, 0, 5));
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        mpHost->mMapViewOnly = true;
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        mapperMap.mStepsWith3DView = true;
+
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 1);
+    }
+
+    // Viewing, the level buttons go to the next level with rooms and no further; editing, a level at a time
+    void viewingTheLevelButtonsGoOnlyToLevelsWithRooms()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 2, 0, 5));
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        mpHost->mMapViewOnly = true;
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        QCOMPARE(mapperMap.getZLevel(), 0);
+
+        mapperMap.slot_shiftZdown();
+        QCOMPARE(mapperMap.getZLevel(), 0);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 5);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 5);
+
+        mpHost->mMapViewOnly = false;
+        mapperMap.mMapViewOnly = false;
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 6);
+    }
+
     // centerview() pans the main mapper to a room as a drag would: the player stays where they are, and the view only
     // goes back to them once they move
     void theMapperPansToARoomWithoutMovingThePlayer()

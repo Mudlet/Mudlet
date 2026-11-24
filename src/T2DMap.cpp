@@ -695,17 +695,59 @@ void T2DMap::slot_shiftRight()
     mMapCenterX++;
     update();
 }
+// The nearest levels above and below the one shown that hold rooms or labels of the area shown: a label on a level of
+// its own, such as a legend, is as much worth going to
+std::pair<std::optional<int>, std::optional<int>> T2DMap::roomLevelsBeside() const
+{
+    const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(mAreaID) : nullptr;
+    if (!pArea) {
+        return {};
+    }
+    std::optional<int> above;
+    std::optional<int> below;
+    const auto consider = [this, &above, &below](const int zLevel) {
+        if (zLevel < mMapCenterZ && (!below || zLevel > *below)) {
+            below = zLevel;
+        } else if (zLevel > mMapCenterZ && (!above || zLevel < *above)) {
+            above = zLevel;
+        }
+    };
+    for (const int zLevel : pArea->zLevels) {
+        consider(zLevel);
+    }
+    for (const TMapLabel& label : pArea->mMapLabels) {
+        consider(static_cast<int>(label.pos.z()));
+    }
+    return {above, below};
+}
+
 void T2DMap::slot_shiftZup()
 {
+    if (mMapViewOnly && !mStepsWith3DView) {
+        const std::optional<int> above = roomLevelsBeside().first;
+        if (!above) {
+            return;
+        }
+        mMapCenterZ = *above;
+    } else {
+        mMapCenterZ++;
+    }
     mShiftMode = true;
-    mMapCenterZ++;
     update();
 }
 
 void T2DMap::slot_shiftZdown()
 {
+    if (mMapViewOnly && !mStepsWith3DView) {
+        const std::optional<int> below = roomLevelsBeside().second;
+        if (!below) {
+            return;
+        }
+        mMapCenterZ = *below;
+    } else {
+        mMapCenterZ--;
+    }
     mShiftMode = true;
-    mMapCenterZ--;
     update();
 }
 
@@ -1050,6 +1092,7 @@ TMapPainter::View T2DMap::painterView() const
     view.mpMap = mpMap;
     view.mpHost = mpHost;
     view.mSize = size();
+    view.mMapViewOnly = mMapViewOnly;
     view.mRoomWidth = mRoomWidth;
     view.mRoomHeight = mRoomHeight;
     view.mRX = mRX;
@@ -1267,6 +1310,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         mpMap->mapper()->comboBox_showArea->setFont(_f);
     }
+
+    // Viewing, there is nowhere to go past the last level with rooms; a secondary view's own buttons follow the signal
+    const auto [above, below] = roomLevelsBeside();
+    const bool upEnabled = !mMapViewOnly || above.has_value();
+    const bool downEnabled = !mMapViewOnly || below.has_value();
+    if (!mIsSecondaryView && mpMap->mapper()) {
+        mpMap->mapper()->toolButton_shiftZup->setEnabled(upEnabled);
+        mpMap->mapper()->toolButton_shiftZdown->setEnabled(downEnabled);
+    }
+    emit signal_levelButtonsEnabled(upEnabled, downEnabled);
 
 
     if (result.areaChanged) {

@@ -191,6 +191,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     view.mpMap = pMap;
     view.mpHost = mpHost;
     view.mSize = size;
+    view.mMapViewOnly = mpHost->mMapViewOnly;
     view.eSize = mpHost->mLineSize;
     view.mBSize = mpHost->mRoomBorderSize;
     view.rSize = mpHost->mRoomSize;

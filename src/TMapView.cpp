@@ -224,6 +224,14 @@ void TMapView::setupUi()
         mp2dMap->slot_shiftZdown();
     });
     connect(mpAreaComboBox, qOverload<int>(&QComboBox::activated), this, &TMapView::slot_switchArea);
+    // The 3D view handles levels itself, so its buttons stay enabled while it shows
+    connect(mp2dMap, &T2DMap::signal_levelButtonsEnabled, this, [this](const bool up, const bool down) {
+        if (showing3DView()) {
+            return;
+        }
+        mpZUpButton->setEnabled(up);
+        mpZDownButton->setEnabled(down);
+    });
 }
 
 void TMapView::updateAreaComboBox()
@@ -455,6 +463,11 @@ void TMapView::show3DView(const bool show)
     }
     mp2dMap->setVisible(!show);
     mp3DView->setVisible(show);
+    if (show) {
+        // The 3D view handles levels itself; the 2D map's next frame sets them again on the way back
+        mpZUpButton->setEnabled(true);
+        mpZDownButton->setEnabled(true);
+    }
     if (mp3DButton) {
         const QSignalBlocker blocker(mp3DButton);
         mp3DButton->setChecked(show);
