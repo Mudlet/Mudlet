@@ -590,8 +590,10 @@ void dlgRoomProperties::accept()
     }
 
     const QSet<int> rooms = liveRoomIds();
-    if (rooms.size() == 1 && lineEdit_hash->text() != mOriginalHash) {
-        emit signal_save_hash(*rooms.cbegin(), lineEdit_hash->text());
+    // Pasted with a space around it, a game ID would be stored with it, and getRoomIDbyHash() would not find the room
+    const QString hash = lineEdit_hash->text().trimmed();
+    if (rooms.size() == 1 && hash != mOriginalHash) {
+        emit signal_save_hash(*rooms.cbegin(), hash);
     }
 
     // Last, as the map then shows the area the rooms went to
@@ -971,7 +973,8 @@ void dlgRoomProperties::slot_hashChanged(const QString& hash)
     // Counted as initGeneral() counts them when it enables the field, so the room's own game ID is not taken for another's
     const QSet<int> rooms = liveRoomIds();
     const int roomId = rooms.size() == 1 ? *rooms.cbegin() : 0;
-    const int holder = hash.isEmpty() ? -1 : mpHost->mpMap->mpRoomDB->hashToRoomID.value(hash, -1);
+    const QString trimmed = hash.trimmed();
+    const int holder = trimmed.isEmpty() ? -1 : mpHost->mpMap->mpRoomDB->hashToRoomID.value(trimmed, -1);
     if (holder < 1 || holder == roomId) {
         label_hashWarning->hide();
         return;

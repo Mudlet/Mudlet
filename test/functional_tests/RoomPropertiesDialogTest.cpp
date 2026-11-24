@@ -1432,6 +1432,19 @@ private slots:
         QVERIFY2(pDlg->label_hashWarning->isHidden(), qPrintable(pDlg->label_hashWarning->text()));
     }
 
+    void aGameIdPastedWithSpacesAroundItIsSavedWithout()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmSecondRoom, qsl("500")));
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_hash->setText(qsl(" 500 "));
+        QVERIFY(!pDlg->label_hashWarning->isHidden());
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.newHash, qsl("500"));
+    }
+
     void theMapperMovesAGameIdToTheRoomItIsGivenTo()
     {
         buildMap();
