@@ -172,6 +172,26 @@ describe("Tests nesting areas under parent areas", function()
 
       assert.are.same({{zone, middle, continent}, {subzone, middle, continent}}, seen)
     end)
+
+    it("does not report a child as moved up once a handler has moved it elsewhere", function()
+      local middle = addAreaName("HierarchySpecMiddle")
+      setAreaParent(middle, continent)
+      setAreaParent(zone, middle)
+      setAreaParent(subzone, middle)
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysAreaParentChanged", function(_, areaId, oldParent, newParent)
+        seen[#seen + 1] = {areaId, oldParent, newParent}
+        if areaId == zone then
+          setAreaParent(subzone, other)
+        end
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      deleteArea("HierarchySpecMiddle")
+
+      assert.are.same({{zone, middle, continent}, {subzone, continent, other}}, seen)
+      assert.are.equal(other, getAreaParent(subzone))
+    end)
   end)
 end)
 

@@ -721,6 +721,11 @@ void TRoomDB::afterAreaRemoved(const int areaId, const std::optional<int> parent
         if (pMap->mpRoomDB.get() != pThisRoomDB || pMap->mpRoomDB->mapGeneration() != generation) {
             return;
         }
+        // A handler may have moved this child on already, and that move was reported by itself
+        const TArea* pChild = areas.value(childId);
+        if (!pChild || pChild->zoneAreaRef != parentId.value_or(0)) {
+            continue;
+        }
         raiseAreaParentChanged(pMap, childId, areaId, parentId);
     }
 }
