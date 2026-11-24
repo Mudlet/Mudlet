@@ -5651,12 +5651,17 @@ void mudlet::restoreProfileFocus(const QString& profileName)
 
 void mudlet::restoreFocusAfterTool(const QString& profileName, const QPointer<QWidget>& pOpener)
 {
-    if (!pOpener) {
+    // Closing the editor mostly hides it: a hidden one is as gone as a deleted one, and the profile takes focus back
+    if (!pOpener || !pOpener->isVisible()) {
         restoreProfileFocus(profileName);
         return;
     }
     // The same small delay, for the closing window to be out of the way
-    QTimer::singleShot(50ms, pOpener.data(), [pOpener]() {
+    QTimer::singleShot(50ms, pOpener.data(), [pOpener, profileName]() {
+        if (!pOpener->isVisible()) {
+            restoreProfileFocus(profileName);
+            return;
+        }
         QWidget* window = pOpener->window();
         window->raise();
         window->activateWindow();

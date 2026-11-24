@@ -574,6 +574,29 @@ private slots:
         QCOMPARE(mudlet::self()->getActiveHost(), pOtherHost);
     }
 
+    // Closed, the editor is only hidden: a tool it opened then hands focus to its profile rather than to the hidden window
+    void test_aPackageToolClosedAfterItsEditorGivesFocusToTheProfile()
+    {
+        Host* pEditorHost = mpHost;
+        QVERIFY2(mSession.openProfile(scmOtherProfile), qPrintable(mSession.why()));
+        const auto closeOther = qScopeGuard([this, pEditorHost]() {
+            closeOtherProfile(pEditorHost);
+            mpEditor->show();
+        });
+        Host* pOtherHost = mSession.host();
+        QVERIFY(pOtherHost && pOtherHost != pEditorHost);
+        mudlet::self()->activateProfile(pOtherHost);
+
+        mpEditor->mpPackageManagerAction->trigger();
+        QPointer<dlgPackageManager> pManager = HostDialogs::of(pEditorHost).mpPackageManager;
+        QVERIFY(pManager);
+        mpEditor->hide();
+        pManager->close();
+
+        QTest::qWait(200);
+        QCOMPARE(mudlet::self()->getActiveHost(), pEditorHost);
+    }
+
 private:
     static inline const QString scmOtherProfile = qsl("EditorToolBarOverflow-Test-Other-Profile");
 
