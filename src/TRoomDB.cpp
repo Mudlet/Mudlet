@@ -30,6 +30,7 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QVarLengthArray>
 
 #include <limits>
@@ -242,7 +243,8 @@ bool TRoomDB::__removeRoom(int id)
         // itself could not have tolerated that.
         const QList<int> enteringRoomIds = entranceMap.values(id);
         // mapDeletedRoomExitsAsStubs: an exit that led here still leads somewhere, just not to this room
-        const bool exitsBecomeStubs = mpMap->mpHost && mpMap->mpHost->mMapperDeletedRoomExitsAsStubs;
+        // Not for a whole area going, often to be built again or imported anew: stubs would only clutter the areas around
+        const bool exitsBecomeStubs = mpMap->mpHost && mpMap->mpHost->mMapperDeletedRoomExitsAsStubs && !mRemovingArea;
         for (const int enteringRoomId : enteringRoomIds) {
             if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
                 continue; // Bypass rooms we know are also to be deleted
@@ -421,6 +423,7 @@ bool TRoomDB::removeArea(int id)
             // During map deletion rooms will already
             // have been cleared so this would not
             // be wanted to be done in that case.
+            const QScopedValueRollback removingArea(mRemovingArea, true);
             removeRoom(pA->rooms);
         }
         // During map deletion areaNamesMap will

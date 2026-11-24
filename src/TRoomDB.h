@@ -148,6 +148,8 @@ private:
     int mLowestFreeRoomIdHint = 1;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
+    // While removeArea() deletes the area's rooms, whose exits from other areas then go rather than becoming stubs
+    bool mRemovingArea = false;
     // Flag to prevent expensive individual cleanup during bulk destruction
     bool mBulkDeletionMode = false;
     unsigned int mMapGeneration = 0;
