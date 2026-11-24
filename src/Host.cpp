@@ -4226,9 +4226,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         --mPackageInstallsInProgress;
     });
 
-    // Every failure below returns a reason, and some callers drop it: the repository
-    // install names only which packages failed, and default-package installs ignore
-    // it. Say it here too. Script installs pass quiet and get the reason back as a
+    // Every failure below returns a reason, and default-package installs ignore it,
+    // so say it here too. Script installs pass quiet and get the reason back as a
     // return value, so they are left to report it themselves.
     // Not for a module sync: it reinstalls the same archive on every save and reloadModule(),
     // so an unreadable source would repeat the message forever.
@@ -6600,14 +6599,23 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
     auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
-    if (!mProxyUsername.isEmpty()) {
-        proxy->setUser(mProxyUsername);
-    }
-    if (!mProxyPassword.isEmpty()) {
-        proxy->setPassword(mProxyPassword);
-    }
+    // Unconditionally, as the proxy is kept between connections: credentials the player has since
+    // cleared would otherwise still be offered, to whichever proxy is now set
+    proxy->setUser(mProxyUsername);
+    proxy->setPassword(mProxyPassword);
 
     return mpConnectionProxy;
+}
+
+void Host::setProxyPassword(const QString& password)
+{
+    // The saved profile never holds it, so loading reads secure storage, which would hand back a cleared one. Only
+    // when one was there to clear: an empty field can also be a password that could not be read at load.
+    if (password.isEmpty() && !mProxyPassword.isEmpty() && !CredentialManager::removeCredential(getName(), qsl("proxy"))) {
+        //: Shown in the profile's main window when the player cleared the proxy password but the saved copy of it could not be deleted
+        postMessage(tr("[ WARN ]  - The saved proxy password could not be deleted, so the next time this profile is loaded it will have that password again."));
+    }
+    mProxyPassword = password;
 }
 
 void Host::loadSecuredPassword()
@@ -8176,6 +8184,7 @@ void Host::setLargeAreaExitArrows(const bool state)
         mLargeAreaExitArrows = state;
         if (mpMap) {
             consoleFrontend()->setMapLargeAreaExitArrows(state);
+            mpMap->requestMapRepaint();
         }
     }
 }
@@ -8224,30 +8233,56 @@ void Host::setCaretEnabled(bool enabled)
     consoleFrontend()->setCaretMode(enabled);
 }
 
+#if defined(Q_OS_MACOS)
+// The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::ControlModifier;
+#endif
+
 // Whether this key press is the one selected in the accessibility preferences
 // to toggle caret mode - such a press must reach the caret-toggling key
 // handlers instead of being swallowed by an application-wide QShortcut,
 // which the user could have remapped onto any of these keys:
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
+    return caretShortcutMatches(mCaretShortcut, ke->keyCombination());
+}
+
+bool Host::caretShortcutMatches(const CaretShortcut shortcut, const QKeyCombination combination)
+{
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
-#if defined(Q_OS_MACOS)
-    // The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
-    constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
-#else
-    constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
-#endif
-    switch (mCaretShortcut) {
+    constexpr Qt::KeyboardModifier controlKey = caretControlKey;
+    const Qt::Key key = combination.key();
+    const Qt::KeyboardModifiers modifiers = combination.keyboardModifiers();
+    // A Shift+Tab press arrives as Key_Backtab, so a shortcut spelt with Shift and Tab is never the caret key's
+    const bool tab = key == Qt::Key_Tab && !(modifiers & Qt::ShiftModifier);
+    switch (shortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & controlKey);
+        return tab && !(modifiers & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & controlKey);
+        return tab && (modifiers & controlKey);
     case CaretShortcut::F6:
-        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+        return key == Qt::Key_F6 && (modifiers & allModifiers) == Qt::NoModifier;
     }
     return false;
+}
+
+QKeyCombination Host::caretShortcutCombination(const CaretShortcut shortcut)
+{
+    switch (shortcut) {
+    case CaretShortcut::None:
+        return QKeyCombination::fromCombined(0);
+    case CaretShortcut::Tab:
+        return QKeyCombination(Qt::Key_Tab);
+    case CaretShortcut::CtrlTab:
+        return QKeyCombination(caretControlKey, Qt::Key_Tab);
+    case CaretShortcut::F6:
+        return QKeyCombination(Qt::Key_F6);
+    }
+    return QKeyCombination::fromCombined(0);
 }
 
 void Host::setFocusOnHostActiveCommandLine()

@@ -105,6 +105,17 @@ static int sendableLineCount(const QStringList& lines)
     return count;
 }
 
+// A tab bar reads a "&" as a mnemonic marker, so "Spells & Skills" would lose its ampersand
+static QString tabLabelFor(QString name)
+{
+    return name.replace(QLatin1Char('&'), QLatin1String("&&"));
+}
+
+QString dlgNotepad::noteName(const int index) const
+{
+    return tabWidget->tabText(index).replace(QLatin1String("&&"), QLatin1String("&"));
+}
+
 // QTextCursor::selectedText() separates lines with U+2029 rather than newlines
 static QStringList linesOf(QString text)
 {
@@ -489,7 +500,7 @@ int dlgNotepad::addTab(const QString& name, const QString& content)
 
     //: Default name for a new note tab
     const QString tabName = name.isEmpty() ? tr("New Note") : name;
-    const int index = tabWidget->addTab(textEdit, tabName);
+    const int index = tabWidget->addTab(textEdit, tabLabelFor(tabName));
     updateTabClosability();
     return index;
 }
@@ -517,7 +528,7 @@ bool dlgNotepad::okToDiscardNotes(const QList<int>& indices)
     QString destroy;
     if (indices.size() == 1) {
         //: Dialog asking the reader to confirm closing a note that has text in it. %1 is the note's name.
-        ask = tr("Close the note \"%1\"?").arg(tabWidget->tabText(indices.constFirst()));
+        ask = tr("Close the note \"%1\"?").arg(noteName(indices.constFirst()));
         //: Body of the dialog asking the reader to confirm closing a note that has text in it
         consequence = tr("Its text will be lost. Mudlet keeps no copy of a closed note.");
         //: Button on that dialog which goes ahead and closes the one note it asked about
@@ -608,7 +619,7 @@ void dlgNotepad::renameTab(int index)
         return;
     }
 
-    const QString currentName = tabWidget->tabText(index);
+    const QString currentName = noteName(index);
     bool ok = false;
     //: Dialog title for renaming a note tab
     const QString newName = QInputDialog::getText(this,
@@ -619,7 +630,7 @@ void dlgNotepad::renameTab(int index)
                                                   currentName,
                                                   &ok);
     if (ok && !newName.isEmpty() && newName != currentName) {
-        tabWidget->setTabText(index, newName);
+        tabWidget->setTabText(index, tabLabelFor(newName));
         mNeedToSave = true;
     }
 }
@@ -694,7 +705,7 @@ void dlgNotepad::save()
     QJsonArray tabsArray;
     for (int i = 0; i < tabWidget->count(); ++i) {
         QJsonObject tabObj;
-        tabObj.insert(qsl("name"), tabWidget->tabText(i));
+        tabObj.insert(qsl("name"), noteName(i));
 
         if (auto* textEdit = qobject_cast<QPlainTextEdit*>(tabWidget->widget(i))) {
             tabObj.insert(qsl("content"), textEdit->toPlainText());
@@ -1306,10 +1317,12 @@ void dlgNotepad::scheduleRehighlight()
             Qt::QueuedConnection);
 }
 
+// Every note, not just the current one: a note searched before switching tabs keeps its marks
 void dlgNotepad::clearSearchHighlights()
 {
-    auto* textEdit = currentTextEdit();
-    if (textEdit) {
-        textEdit->setExtraSelections(QList<QTextEdit::ExtraSelection>());
+    for (int i = 0; i < tabWidget->count(); ++i) {
+        if (auto* textEdit = qobject_cast<QPlainTextEdit*>(tabWidget->widget(i))) {
+            textEdit->setExtraSelections({});
+        }
     }
 }
