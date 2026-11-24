@@ -1578,6 +1578,20 @@ private slots:
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A%1dim hall.\nCandles. Lit.").arg(nbsp)}}));
     }
 
+    void anEditedDescriptionKeepsItsLineEndings()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.\r\nCandles.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QTextCursor cursor = pDlg->plainTextEdit_description->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pDlg->plainTextEdit_description->setTextCursor(cursor);
+        QTest::keyClicks(pDlg->plainTextEdit_description, qsl(" Lit."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A dim hall.\r\nCandles. Lit.")}}));
+    }
+
     // The dialog opens on the name, so a name typed straight away and Enter rename the room
     void typingANameAndPressingEnterRenamesTheRoom()
     {

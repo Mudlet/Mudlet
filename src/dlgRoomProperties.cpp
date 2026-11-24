@@ -558,7 +558,12 @@ void dlgRoomProperties::accept()
 
     QMap<QString, std::optional<QString>> changes = userDataChanges();
     if (mDescriptionWasEdited) {
-        const QString description = plainTextKeepingSpaces(*plainTextEdit_description);
+        QString description = plainTextKeepingSpaces(*plainTextEdit_description);
+        // The field reads "\r\n" as one line break and gives back "\n": a description stored with them gets them back,
+        // so that a mapper script matching it as the game sent it still finds the room
+        if (mOriginalDescription.value_or(QString()).contains(qsl("\r\n"))) {
+            description.replace(QLatin1Char('\n'), qsl("\r\n"));
+        }
         // Rooms that started out with different descriptions keep them unless one is typed in: empty again, the field is
         // back to its placeholder rather than set to nothing
         const bool mixedAndLeftEmpty = !mOriginalDescription.has_value() && description.isEmpty();
