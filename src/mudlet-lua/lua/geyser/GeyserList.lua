@@ -427,7 +427,7 @@ function Geyser.List:indexOf(item)
 end
 
 -- Internal function: runs a function with the layout held back, and ends the update
--- afterwards even if the function raises, unless one was already running.
+-- afterwards, unless one was already running.
 -- @param list The list.
 -- @param fn The function.
 local function holdingLayout(list, fn)
@@ -436,26 +436,22 @@ local function holdingLayout(list, fn)
 
   list:begin_update()
 
-  -- Not pcall: Lua 5.1 can't yield across one, and an onDismiss may yield. fn runs
-  -- in a coroutine of its own instead, and its yields are passed on to ours.
-  local co = coroutine.create(fn)
-  local results = {coroutine.resume(co)}
-
-  while results[1] and coroutine.status(co) == "suspended" do
-    if not coroutine.running() then
-      results = {false, "attempt to yield from outside a coroutine"}
-      break
-    end
-    local passed = {coroutine.yield(unpack(results, 2, table.maxn(results)))}
-    results = {coroutine.resume(co, unpack(passed, 1, table.maxn(passed)))}
+  -- In a coroutine fn is called directly, as Lua 5.1 can't yield across a pcall and
+  -- an onDismiss that waits resumes coroutine.running() itself, so a raise there
+  -- leaves the update open. Outside one nothing can yield, and pcall is safe.
+  local ok, err = true, nil
+  if coroutine.running() then
+    fn()
+  else
+    ok, err = pcall(fn)
   end
 
   if not wasDeferring then
     list:end_update()
   end
 
-  if not results[1] then
-    error(results[2], 0)
+  if not ok then
+    error(err, 0)
   end
 end
 
