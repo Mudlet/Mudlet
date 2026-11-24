@@ -25,6 +25,7 @@
 
 #include <QAbstractButton>
 #include <QAbstractItemView>
+#include <QAbstractScrollArea>
 #include <QAction>
 #include <QApplication>
 #include <QBoxLayout>
@@ -56,6 +57,7 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QRegularExpression>
+#include <QScrollBar>
 #include <QSpinBox>
 #include <QStandardPaths>
 #include <QtMath>
@@ -687,6 +689,50 @@ QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& to
                "%1 QScrollBar::add-line, %1 QScrollBar::sub-line { width: 0px; height: 0px; }"
                "%1 QScrollBar::add-page, %1 QScrollBar::sub-page { background-color: %2; }")
             .arg(selectorPrefix, groove.name(), blend(groove, tokens.text, 0.22).name(), blend(groove, tokens.text, 0.40).name());
+}
+
+namespace {
+// QScrollBar shows itself whatever its range as a touchpad swipe begins, and on a style change that ends transient
+// bars; neither moves the range, so no rangeChanged comes to hide it again
+class EmptyScrollBarHider : public QObject
+{
+public:
+    explicit EmptyScrollBarHider(QScrollBar* pBar)
+    : QObject(pBar)
+    , mpBar(pBar)
+    {
+        pBar->installEventFilter(this);
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        // Inside the Show event, before the event loop can paint the bar; a queued hide leaves it a frame to show in
+        if (pWatched == mpBar && pEvent->type() == QEvent::Show && mpBar->maximum() <= mpBar->minimum()) {
+            mpBar->hide();
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    QScrollBar* mpBar = nullptr;
+};
+} // namespace
+
+void keepRoomForVerticalScrollBar(QAbstractScrollArea* pArea)
+{
+    // Qt then sizes the viewport as if the bar always shows; it shows and hides only the bar's container
+    pArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    QScrollBar* pBar = pArea->verticalScrollBar();
+    // Otherwise a hidden bar collapses its container to no height, and on showing is drawn a layout pass late
+    QSizePolicy policy = pBar->sizePolicy();
+    policy.setRetainSizeWhenHidden(true);
+    pBar->setSizePolicy(policy);
+    QObject::connect(pBar, &QAbstractSlider::rangeChanged, pBar, [pBar](const int minimum, const int maximum) {
+        pBar->setVisible(maximum > minimum);
+    });
+    new EmptyScrollBarHider(pBar);
+    pBar->setVisible(pBar->maximum() > pBar->minimum());
 }
 
 QString itemRowStyleSheet(const QString& viewSelector, const ThemeTokens& tokens, const QColor& surface, const int rowGutter)

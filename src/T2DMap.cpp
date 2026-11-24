@@ -77,6 +77,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QInputDialog>
+#include <QIntValidator>
 #include <QMessageBox>
 #include <QComboBox>
 
@@ -2139,6 +2140,15 @@ void T2DMap::slot_movePosition()
     auto pLEy = new QLineEdit(dialog);
     auto pLEz = new QLineEdit(dialog);
 
+    // Read back with the locale that validated it: QString::toInt() turns some text this passes,
+    // such as a U+2212 minus sign, into 0, which would silently move the selection to 0 on that axis
+    QLocale coordinateLocale = QLocale::c();
+    coordinateLocale.setNumberOptions(QLocale::RejectGroupSeparator);
+    auto coordinateValidator = new QIntValidator(dialog);
+    coordinateValidator->setLocale(coordinateLocale);
+    for (auto pLineEdit : {pLEx, pLEy, pLEz}) {
+        pLineEdit->setValidator(coordinateValidator);
+    }
     pLEx->setText(QString::number(pR_start->x()));
     pLEy->setText(QString::number(pR_start->y()));
     pLEz->setText(QString::number(pR_start->z()));
@@ -2169,6 +2179,12 @@ void T2DMap::slot_movePosition()
     pB_ok->setText(tr("OK"));
     boxLayout->addWidget(pB_ok);
     connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
+    const auto enableOkWhenAllReadable = [pB_ok, pLEx, pLEy, pLEz]() {
+        pB_ok->setEnabled(pLEx->hasAcceptableInput() && pLEy->hasAcceptableInput() && pLEz->hasAcceptableInput());
+    };
+    for (auto pLineEdit : {pLEx, pLEy, pLEz}) {
+        connect(pLineEdit, &QLineEdit::textChanged, pB_ok, enableOkWhenAllReadable);
+    }
 
     auto pB_abort = new QPushButton(pButtonBar);
     //: dialog (room(s) move) button
@@ -2186,9 +2202,9 @@ void T2DMap::slot_movePosition()
     // The dialog's event loop runs scripts, which may delete the room
     pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
     if (accepted && pR_start) {
-        const int dx = pLEx->text().toInt() - pR_start->x();
-        const int dy = pLEy->text().toInt() - pR_start->y();
-        const int dz = pLEz->text().toInt() - pR_start->z();
+        const int dx = coordinateLocale.toInt(pLEx->text()) - pR_start->x();
+        const int dy = coordinateLocale.toInt(pLEy->text()) - pR_start->y();
+        const int dz = coordinateLocale.toInt(pLEz->text()) - pR_start->z();
 
         mMultiRect = QRect(0, 0, 0, 0);
 

@@ -1364,7 +1364,7 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
 {
     mWindowNotifier.note();
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
-    // A script names a label for screen readers through Host, which tells only the model
+    // A script changes a label's accessibility through Host, which tells only the model
     pLabel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange) {
         mWindowNotifier.note();
     };

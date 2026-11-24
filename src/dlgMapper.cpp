@@ -367,7 +367,6 @@ void dlgMapper::setupEmptyStateOverlay()
     layout->addWidget(startBlankButton);
 
     connect(mpEmptyStateDownloadButton, &QPushButton::clicked, this, [this]() {
-        mEmptyStateDismissed = true;
         if (mpMap) {
             mpMap->downloadMap();
         }
@@ -541,9 +540,6 @@ void dlgMapper::loadMapFromFile()
             success = pHost->loadMapFile(fileName);
         }
         if (success) {
-            if (!isJson) {
-                pHost->mpMap->audit();
-            }
             mEmptyStateDismissed = true;
             MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
@@ -565,7 +561,9 @@ void dlgMapper::updateEmptyStateOverlay()
     if (!mpMap->mpRoomDB->isEmpty()) {
         mEmptyStateDismissed = false;
     }
-    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed;
+    // isHidden(), not isMapProgressVisible(): a download keeps its overlay while the mapper itself is hidden
+    const bool progressShown = mpProgressOverlay && !mpProgressOverlay->isHidden();
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed && !progressShown;
     const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
     if (mpEmptyStateDownloadButton) {
         mpEmptyStateDownloadButton->setVisible(canDownload);
@@ -581,7 +579,7 @@ void dlgMapper::updateEmptyStateOverlay()
         mpEmptyStateOverlay->hide();
     }
     // Don't clobber the progress overlay's own suppression of the empty-state text.
-    if (mp2dMap && !isMapProgressVisible() && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
+    if (mp2dMap && !progressShown && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
         mp2dMap->mSuppressEmptyStateMessage = shouldShow;
         mp2dMap->update();
     }
@@ -1248,6 +1246,7 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
     repaintMaps();
+    mpMap->requestMapRepaint();
 }
 
 void dlgMapper::slot_toggleShowRoomNames(const bool enabled)

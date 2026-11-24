@@ -52,7 +52,7 @@ std::optional<THeadlessSession::Link> THeadlessSession::windowLink(const QString
     }
     link.spoiler = styling.isSpoiler;
     link.revealed = styling.isSpoiler && !buffer.isSpoilerUnrevealed(id);
-    link.disabled = styling.selection.disabled;
+    link.disabled = styling.selection.disabled || buffer.linkIsNote(id);
     link.concealed = model.mHyperlinkVisibilityManager.isLinkConcealed(id);
     link.visited = buffer.isLinkVisited(id);
     link.selected = buffer.isLinkSelected(id);
@@ -94,6 +94,9 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
         return LinkResult::refused;
     }
     TConsoleModel* pModel = windowTextModel(window);
+    // Each console numbers its links apart, so the menu must have opened on this link of this one
+    const MenuOpen menuOpen = std::exchange(mLinkWithMenuOpen, {});
+    const bool selectionApplied = item && pModel && menuOpen.console == &pModel->mNotifier && menuOpen.link == link && menuOpen.issue == pModel->buffer.mLinkStore.issueOf(link);
     if (!pModel || !pModel->buffer.linkHeld(link)) {
         return LinkResult::unknown;
     }
@@ -101,6 +104,8 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     const TLinkStore& store = model.buffer.mLinkStore;
     const QList<TLinkStore::MenuItem> items = store.menuItems(link);
     if (item && (*item < 0 || *item >= items.size())) {
+        // A pick the menu could not have made leaves it open
+        mLinkWithMenuOpen = menuOpen;
         return LinkResult::noSuchItem;
     }
     // Its characters are blanked and carry no link, so no click reaches it
@@ -109,6 +114,10 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     }
     switch (model.linkMayRun(link)) {
     case TConsoleModel::LinkFollowed::ran:
+        // As in the GUI, which takes no click or key on a note
+        if (model.buffer.linkIsNote(link)) {
+            return LinkResult::disabled;
+        }
         break;
     case TConsoleModel::LinkFollowed::revealedSpoiler:
         return LinkResult::revealedSpoiler;
@@ -117,19 +126,27 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     case TConsoleModel::LinkFollowed::unknown:
         return LinkResult::unknown;
     }
-    // A left click runs the first item whatever it holds; the GUI's menu greys out an item with nothing to run
+    // A left click runs the first item whatever it holds, except on a local: link with a menu, where it runs nothing;
+    // the GUI's menu greys out an item with nothing to run
     const bool fromMenu = item && store.opensMenu(link);
     if (fromMenu && !items.at(*item).enabled) {
+        mLinkWithMenuOpen = menuOpen;
         return LinkResult::disabled;
+    }
+    if (model.gmcpCannotSend(link, item.value_or(0), fromMenu)) {
+        return LinkResult::gmcpOff;
     }
     QString errorText;
     const auto errorCapture = connect(mpHost, &Host::signal_errorConsolePrint, this, [&errorText](const QString& text) {
         errorText = text;
     });
     const QPointer<THeadlessSession> self(this);
-    const bool ran = model.runLink(link, item.value_or(0), fromMenu);
+    const bool ran = model.runLink(link, item.value_or(0), fromMenu, selectionApplied);
     disconnect(errorCapture);
     if (ran) {
+        if (self && mpHost && !item && model.buffer.linkOpensItsMenu(link)) {
+            mLinkWithMenuOpen = {&model.mNotifier, link, store.issueOf(link)};
+        }
         return LinkResult::ran;
     }
     if (self) {

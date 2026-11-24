@@ -339,6 +339,22 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
     update();
 }
 
+// A room in an environment with no color of its own: the mapper's default room color where one is set, keeping the
+// transparency this view draws it with. Unset, the room keeps this view's own color for environment 1, as before.
+void GLWidget::applyDefaultRoomColor(float* material) const
+{
+    if (!mpHost || !mpHost->mMapperDefaultRoomColor.isValid()) {
+        return;
+    }
+    const QColor& color = mpHost->mMapperDefaultRoomColor;
+    GLfloat current[4];
+    glGetFloatv(GL_CURRENT_COLOR, current);
+    glColor4f(color.redF(), color.greenF(), color.blueF(), current[3]);
+    material[0] = color.redF();
+    material[1] = color.greenF();
+    material[2] = color.blueF();
+}
+
 void GLWidget::paintGL()
 {
     // Start frame timing
@@ -752,12 +768,14 @@ void GLWidget::paintGL()
 
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 1.0};
+                        bool undefinedEnvironment = false;
                         int env = pExit->environment;
                         if (mpMap->mEnvColors.contains(env)) {
                             env = mpMap->mEnvColors[env];
                         } else {
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
+                                undefinedEnvironment = true;
                             }
                         }
                         switch (env) {
@@ -905,6 +923,9 @@ void GLWidget::paintGL()
                             mc3[1] = _c.greenF();
                             mc3[2] = _c.blueF();
                             mc3[3] = 0.2;
+                        }
+                        if (undefinedEnvironment) {
+                            applyDefaultRoomColor(mc3);
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 1);
@@ -1161,12 +1182,14 @@ void GLWidget::paintGL()
 
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 0.2};
+                        bool undefinedEnvironment = false;
                         int env = pExit->environment;
                         if (mpMap->mEnvColors.contains(env)) {
                             env = mpMap->mEnvColors[env];
                         } else {
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
+                                undefinedEnvironment = true;
                             }
                         }
                         switch (env) {
@@ -1314,6 +1337,9 @@ void GLWidget::paintGL()
                             mc3[1] = _c.greenF();
                             mc3[2] = _c.blueF();
                             mc3[3] = 0.2;
+                        }
+                        if (undefinedEnvironment) {
+                            applyDefaultRoomColor(mc3);
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 36);
@@ -1555,12 +1581,14 @@ void GLWidget::paintGL()
                 glEnd();
 
                 float mc3[] = {0.2, 0.2, 0.6, 0.2};
+                bool undefinedEnvironment = false;
                 int env = pR->environment;
                 if (mpMap->mEnvColors.contains(env)) {
                     env = mpMap->mEnvColors[env];
                 } else {
                     if (!mpMap->mCustomEnvColors.contains(env)) {
                         env = 1;
+                        undefinedEnvironment = true;
                     }
                 }
 
@@ -1710,6 +1738,9 @@ void GLWidget::paintGL()
                     mc3[2] = _c.blueF();
                     mc3[3] = 0.2;
                 }
+                if (undefinedEnvironment) {
+                    applyDefaultRoomColor(mc3);
+                }
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 96);
                 glDisable(GL_DEPTH_TEST);
@@ -1857,12 +1888,14 @@ void GLWidget::paintGL()
 
             glEnd();
 
+            bool undefinedEnvironment = false;
             int env = pR->environment;
             if (mpMap->mEnvColors.contains(env)) {
                 env = mpMap->mEnvColors[env];
             } else {
                 if (!mpMap->mCustomEnvColors.contains(env)) {
                     env = 1;
+                    undefinedEnvironment = true;
                 }
             }
             switch (env) {
@@ -2012,6 +2045,9 @@ void GLWidget::paintGL()
                 mc3[3] = 1.0;
             }
             glDisable(GL_DEPTH_TEST);
+            if (undefinedEnvironment) {
+                applyDefaultRoomColor(mc3);
+            }
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
             glMateriali(GL_FRONT, GL_SHININESS, 6);
             glLoadIdentity();
