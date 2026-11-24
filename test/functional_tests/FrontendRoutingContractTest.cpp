@@ -894,6 +894,24 @@ assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitE
         QCOMPARE(runLua(qsl("function onRoutingReplacedParent() end deleteArea('RoutingReplacedChild') deleteArea('RoutingReplacedParent')")), qsl("ok"));
     }
 
+    // A JSON export writes the fields and the areas' values apart, with timers running in between
+    void test_areaFieldsCannotChangeWhileTheMapIsLoadedOrSaved()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QCOMPARE(runLua(qsl("routingFieldArea = addAreaName('RoutingFieldArea') routingSavedFields = getMapAreaFields() "
+                            "assert(setMapAreaFields({routingNotes = {type = 'text'}}))")),
+                 qsl("ok"));
+        {
+            const TMap::MapOperationScope operation(pMap);
+            QCOMPARE(runLua(qsl("local ok, message = setMapAreaFields({}) assert(ok == nil, 'fields accepted') assert(message:find('saved'), message) "
+                                "ok, message = setAreaFieldValue(routingFieldArea, 'routingNotes', 'x') assert(ok == nil, 'value accepted') assert(message:find('saved'), message)")),
+                     qsl("ok"));
+        }
+        QCOMPARE(runLua(qsl("assert(getMapAreaFields().routingNotes) assert(getAreaFieldValue(routingFieldArea, 'routingNotes') == nil) "
+                            "setMapAreaFields(routingSavedFields) deleteArea('RoutingFieldArea')")),
+                 qsl("ok"));
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(

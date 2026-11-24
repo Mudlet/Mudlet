@@ -3905,6 +3905,11 @@ int TLuaInterpreter::setMapAreaFields(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    // A JSON export runs timers between writing areas, and writes the fields and the areas' values apart: a change then
+    // could save values that do not fit the fields saved
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
 
     // The type of a field definition's entry, which is on the top of the stack
     const auto entryType = [L](const char* name) {
@@ -4024,6 +4029,11 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
     const Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    // A JSON export runs timers between writing areas, and writes the fields and the areas' values apart: a change then
+    // could save values that do not fit the fields saved
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
     }
     const QMap<QString, TAreaFields::Field> fields = TAreaFields::fields(*host.mpMap);
     const auto itField = fields.constFind(key);
