@@ -1230,8 +1230,10 @@ void dlgProfilePreferences::retranslateShell()
 {
     //: Wordmark at the top of the settings dialog's category sidebar, beside the Mudlet icon
     mpLabel_wordmark->setText(tr("Settings"));
-    //: Placeholder text of the search field at the top of the settings dialog
-    mpLineEdit_search->setPlaceholderText(tr("Find in settings"));
+    //: Placeholder text and accessible name of the search field at the top of the settings dialog
+    const QString findInSettings = tr("Find in settings");
+    mpLineEdit_search->setPlaceholderText(findInSettings);
+    mpLineEdit_search->setAccessibleName(findInSettings);
     //: Accessible name of the list that switches between the settings dialog's categories
     mpListWidget_categories->setAccessibleName(tr("Settings categories"));
     //: Button at the left of the "Search results" heading, leading back to the settings category the search was started from
@@ -7229,7 +7231,7 @@ void dlgProfilePreferences::slot_copyMap()
         qsizetype otherProfileRoomCount;
         qsizetype otherProfileAreaCount;
         int otherProfileVersion;
-        int otherProfileCurrentRoomId; // What we are looking for!
+        int otherProfileCurrentRoomId = 0; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(), &otherProfileFileUsed, &otherProfileVersion, &otherProfileCurrentRoomId, &otherProfileAreaCount, &otherProfileRoomCount)) {
             qDebug() << "dlgProfilePreference::slot_copyMap() in other INACTIVE profile:" << itOtherProfile.key() << "\n    the file examined was:" << otherProfileFileUsed
                      << "\n    it was of version:" << otherProfileVersion << "\n    it had an area count of:" << otherProfileAreaCount << "\n    it had a room count of:" << otherProfileRoomCount
@@ -7278,7 +7280,8 @@ void dlgProfilePreferences::slot_copyMap()
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
     const QString sourceMapFolder(MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName()));
-    const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    // A JSON export or another file of the player's can be newer than the save just made
+    const QStringList mProfileList = QDir(sourceMapFolder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
         if (thisProfileLatestMapPathFileName.isEmpty()) {
@@ -7370,8 +7373,8 @@ void dlgProfilePreferences::slot_setLogDir()
         return;
     }
 
-    QSettings& settings = *MudletApp::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    const QString defaultLogDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName());
+    const QString startDir = mLogDirPath.isEmpty() ? defaultLogDir : mLogDirPath;
 
     /*
      * To show the files even though we are looking for a directory so that the
@@ -7393,14 +7396,13 @@ void dlgProfilePreferences::slot_setLogDir()
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
-    const QString currentLogDir = QFileDialog::getExistingDirectory(this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lastDir : mLogDirPath), QFileDialog::DontUseNativeDialog);
+    const QString currentLogDir = QFileDialog::getExistingDirectory(this, tr("Where should Mudlet save log files?"), startDir, QFileDialog::DontUseNativeDialog);
 
     if (!currentLogDir.isEmpty() && currentLogDir != nullptr) {
-        settings.setValue("lastFileDialogLocation", currentLogDir);
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == defaultLogDir) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -7699,7 +7701,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mProxyUsername = lineEdit_proxyUsername->text();
         }
         if (mSnapshot.dirty(lineEdit_proxyPassword)) {
-            pHost->mProxyPassword = lineEdit_proxyPassword->text();
+            pHost->setProxyPassword(lineEdit_proxyPassword->text());
         }
 
         //tab security
@@ -10105,9 +10107,11 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mapper()->mp2dMap->update();
+    if (pHost->mpMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+            pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+        }
+        pHost->mpMap->requestMapRepaint();
     }
     mpMapColourPreview->update();
 }
@@ -10423,9 +10427,8 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
         mpHost->mRoomSize = size / 10.0;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
-            mpHost->mpMap->mapper()->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
         }
         mpMapColourPreview->update();
     }
@@ -10442,8 +10445,8 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
+        if (mpHost->mpMap) {
+            mpHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
         }
         mpMapColourPreview->update();
     }
@@ -10454,9 +10457,11 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
-            mpHost->mpMap->mapper()->update3DView();
+        if (mpHost->mpMap) {
+            if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+                mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+            }
+            mpHost->mpMap->requestMapRepaint();
         }
         mpMapColourPreview->update();
     }

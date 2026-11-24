@@ -98,6 +98,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    DetachedWindowFullScreenTest.cpp
     DetachedWindowToggleStateTest.cpp
     GlobalSettingsFlushTest.cpp
     AppFrontendAsyncTest.cpp
@@ -114,10 +115,12 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WindowStaysOnTopTest.cpp
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollUpShortBufferTest.cpp
+    HorizontalWheelScrollTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
@@ -193,6 +196,7 @@ set(TELNET_GROUP_TEST_SOURCES
     PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
+    ProxyCredentialsTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTerminalTypeCycleTest.cpp
@@ -315,6 +319,7 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
+    MapMoveSelectionDialogTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapPainterTest.cpp
     MapRoomNameVisibilityTest.cpp
@@ -768,6 +773,12 @@ set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DP
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+
+# ActionBarPlacementTest takes 36 to 60s on the macOS arm64 CI runners, around the default 60s
+set_tests_properties(ActionBarPlacementTest PROPERTIES TIMEOUT 300)
+
+# NawsWidthReportTest ran out of the default 60s on a Windows CI runner with every case so far passing
+set_tests_properties(NawsWidthReportTest PROPERTIES TIMEOUT 300)
 
 # AppStartupTeardownTest starts the application eight times over, as far as
 # forwarding a link, and a sanitiser build spends seconds on each of those start-ups

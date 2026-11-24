@@ -404,6 +404,9 @@ private:
     friend class MirrorToStdOutTest;
     friend class NawsWidthReportTest;
 
+    // Reads mAutoReconnect and the failed-connection retry timer, which have no public face
+    friend class ConnectionDialogOpenProfileTest;
+
     // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
     friend class TelnetConnectFailureTest;
     friend class TelnetLatencyMeasurementTest;
@@ -411,7 +414,7 @@ private:
     // Reads a proxy's reply into the dialling socket's proxy engine without running the event loop
     friend class HeadlessSessionTest;
 
-    // Reads how much text Qt holds of a flood
+    // Reads how much text Qt holds of a flood, and holds the reads of a game's last words off until the game has closed
     friend class TelnetLargeBurstTest;
 
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after

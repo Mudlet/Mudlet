@@ -86,6 +86,7 @@ public:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
+    void leaveEvent(QEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void updateScrollBar(int);
@@ -96,6 +97,7 @@ public:
     void endDrag() { mMouseTracking = false; }
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
+    bool hasSelectedText() const;
     int bufferScrollDown(int lines);
     // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a) { mBgColor = QColor(r, g, b, a); }
@@ -145,6 +147,7 @@ public:
 
     friend class AnalyseCharactersTest;
     friend class CopyAsImageTest;
+    friend class CommandLineKeyHandlingTest;
     friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
@@ -232,7 +235,6 @@ private:
     void scheduleUpdate(const QRect& rect = QRect());
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
-    bool hasSelectedText() const;
     std::pair<int, int> visibleLines();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
@@ -402,8 +404,8 @@ private:
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
 #endif
 
-    // We scroll on the basis that one vertical mouse wheel click is one line
-    // (vertically, not really concerned about horizontal stuff at present).
+    // We scroll on the basis that one mouse wheel click is three lines, or
+    // three columns when the horizontal scroll bar is on.
     // According to Qt: "Most mouse types work in steps of 15 degrees, in which
     // case the delta value is a multiple of 120;
     // i.e., 120 units * 1/8 = 15 degrees.
@@ -414,8 +416,8 @@ private:
     // partially scroll the widget in response to each wheel event. But to
     // provide a more native feel, you should prefer pixelDelta() on platforms
     // where it's available."
-    // We use the following to store the remainder (modulus 120):
-    QPoint mMouseWheelRemainder;
+    // Degrees not yet used up by a whole 15 degree step:
+    QPointF mMouseWheelRemainder;
 
     // skip over the following characters when searching for a word
     const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};
