@@ -8659,6 +8659,32 @@ describe("Tests getAreaExploration and getAreaConnections", function()
       assert.is_nil(getAreaConnections(north)[north])
     end)
 
+    it("lists no area whose only way in is a special exit with no name, which a map file can hold", function()
+      local backupPath = getMudletHomeDir() .. "/exploration_spec_backup.dat"
+      local jsonPath = getMudletHomeDir() .. "/exploration_spec_unnamed.json"
+      -- loading replaces the whole map, so the one the rest of the suite uses is put back afterwards
+      assert.is_true(saveMap(backupPath))
+      finally(function()
+        assert.is_true(loadMap(backupPath))
+        os.remove(backupPath)
+        os.remove(jsonPath)
+      end)
+      -- Lua refuses a special exit with no name, so it is renamed in the file
+      assert.is_true(addSpecialExit(l1, i1, "explorationSpecUnnamed"))
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local text = file:read("*a")
+      file:close()
+      local renamed, count = text:gsub('"explorationSpecUnnamed"', '""')
+      assert.are.equal(1, count)
+      file = assert(io.open(jsonPath, "w"))
+      file:write(renamed)
+      file:close()
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.is_nil(getAreaConnections(island)[lonely])
+    end)
+
     it("counts a link into the default area, whose ID is -1, on both sides", function()
       local pit = createRoomID()
       addRoom(pit)
