@@ -5711,10 +5711,13 @@ private slots:
         QVERIFY(addRoomAt(kSpecialRoomId, areaId, 4, 0, 0));
         map()->mpRoomDB->getRoom(kSpecialRoomId)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
         QVERIFY(map()->setExit(kSpecialRoomId, kPlayerRoomId, DIR_UP));
-        const auto restore = qScopeGuard([this]() {
-            mpHost->mMapperShowSpecialExitMarkers = true;
-            mpHost->setMapStyle(qsl("tiles"));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        const QString savedStyle = mpHost->mapStylePreset().id;
+        const auto restore = qScopeGuard([this, savedMarkers, savedStyle]() {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+            mpHost->setMapStyle(savedStyle);
         });
+        mpHost->mMapperShowSpecialExitMarkers = true;
         QVERIFY(mpHost->setMapStyle(qsl("terminal")));
         const auto markersDrawn = [this, areaId]() {
             ModernGLWidget widget(map(), mpHost);
@@ -5742,9 +5745,11 @@ private slots:
         QVERIFY(addRoomAt(kSpecialRoomId, areaId, 4, 0, 0));
         TRoom* pRoom = map()->mpRoomDB->getRoom(kSpecialRoomId);
         pRoom->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
-        const auto restore = qScopeGuard([this]() {
-            mpHost->mBubbleMode = false;
+        const bool savedBubbleMode = mpHost->mBubbleMode;
+        const auto restore = qScopeGuard([this, savedBubbleMode]() {
+            mpHost->mBubbleMode = savedBubbleMode;
         });
+        mpHost->mBubbleMode = false;
         const auto markersDrawn = [this, areaId]() {
             ModernGLWidget widget(map(), mpHost);
             queueFrame(widget, areaId);
