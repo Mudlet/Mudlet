@@ -854,6 +854,23 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
     return static_cast<int>(lua_tointeger(L, pos));
 }
 
+// A widget keeps its geometry as a QRect, which overflows int on reading back the size of a widget
+// placed or sized near INT_MAX or INT_MIN. Bounding every x, y, width and height to 2^29 keeps
+// QRect's sums, and a few parents' offsets on top, in range while leaving any size a script could
+// mean, including ones past QWIDGETSIZE_MAX, as given
+int TLuaInterpreter::boundedGeometry(const double value)
+{
+    constexpr double maximumGeometry = 1 << 29;
+    return static_cast<int>(qBound(-maximumGeometry, value, maximumGeometry));
+}
+
+// No documentation available in wiki - internal function
+// getVerifiedInt() for a widget's x, y, width or height, bounded as boundedGeometry() explains
+int TLuaInterpreter::getVerifiedGeometry(lua_State* L, const char* functionName, const int pos, const char* publicName)
+{
+    return boundedGeometry(getVerifiedInt(L, functionName, pos, publicName));
+}
+
 // No documentation available in wiki - internal function
 // The non-raising counterpart of getVerifiedFloat and getVerifiedDouble - see checkStringArg()
 bool TLuaInterpreter::checkNumberArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
@@ -1038,6 +1055,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         // earlier argument positions keep working
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendHttpRequestId(event, reply);
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -1046,6 +1064,24 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
     }
 
     handleHttpOK(reply);
+}
+
+int TLuaInterpreter::pushHttpRequestResult(lua_State* L, QNetworkReply* reply)
+{
+    // On the reply itself: it is the one object that survives a redirect, which can also change the operation
+    const qint64 id = ++mLastHttpRequestId;
+    reply->setProperty(csmHttpRequestIdProperty, id);
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    lua_pushnumber(L, static_cast<lua_Number>(id));
+    return 3;
+}
+
+void TLuaInterpreter::appendHttpRequestId(TEvent& event, const QNetworkReply* reply)
+{
+    event.mArgumentList << QString::number(reply->property(csmHttpRequestIdProperty).toLongLong());
+    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
 }
 
 // No documentation available in wiki - internal function
@@ -1173,7 +1209,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
     event.mArgumentList << QString::number(createHttpResponseTable(reply));
     event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
-
+    appendHttpRequestId(event, reply);
 
     reply->deleteLater();
     pHost->raiseEvent(event);
@@ -1488,9 +1524,10 @@ int TLuaInterpreter::loadReplayFile(lua_State* L, const char* functionName)
 QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
 {
     // Increment the version - and document below - any changes to the table:
-    const int tableVersion = 1;
+    const int tableVersion = 2;
     // Changes:
     // 1 - Initial version.
+    // 2 - <DC2> corrected to 0x12.
 
     /*
      * Entry grouping
@@ -1550,7 +1587,7 @@ QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
                                                           {QByteArray("<DC1>"), '\x11'},
 
                                                           {QByteArray("<12>"), '\x12'}, // Logout
-                                                          {QByteArray("<DC2"), '\x12'},
+                                                          {QByteArray("<DC2>"), '\x12'},
 
                                                           {QByteArray("<13>"), '\x13'}, // Byte Macro
                                                           {QByteArray("<DC3>"), '\x13'},
@@ -2117,10 +2154,10 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 3, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 4, "label y-coordinate");
-    const int width = getVerifiedInt(L, "createLabel", 5, "label width");
-    const int height = getVerifiedInt(L, "createLabel", 6, "label height");
+    const int x = getVerifiedGeometry(L, "createLabel", 3, "label x-coordinate");
+    const int y = getVerifiedGeometry(L, "createLabel", 4, "label y-coordinate");
+    const int width = getVerifiedGeometry(L, "createLabel", 5, "label width");
+    const int height = getVerifiedGeometry(L, "createLabel", 6, "label height");
 
     bool fillBackground = false;
     if ((!lua_isnumber(L, 7)) && (!lua_isboolean(L, 7))) {
@@ -2162,10 +2199,10 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName,
 int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 2, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 3, "label y-coordinate");
-    const int width = getVerifiedInt(L, "createLabel", 4, "label width");
-    const int height = getVerifiedInt(L, "createLabel", 5, "label height");
+    const int x = getVerifiedGeometry(L, "createLabel", 2, "label x-coordinate");
+    const int y = getVerifiedGeometry(L, "createLabel", 3, "label y-coordinate");
+    const int width = getVerifiedGeometry(L, "createLabel", 4, "label width");
+    const int height = getVerifiedGeometry(L, "createLabel", 5, "label height");
 
     bool fillBackground = false;
     if ((!lua_isnumber(L, 6)) && (!lua_isboolean(L, 6))) {
@@ -2425,7 +2462,13 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
     auto argType = lua_type(L, index);
     TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
-        const int id = qRound(lua_tonumber(L, index));
+        const lua_Number number = lua_tonumber(L, index);
+        const double rounded = std::round(number);
+        // Converting NaN or a value outside int's range is undefined, and no button has such an ID
+        if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+            return {warnArgumentValue(L, func, qsl("no button item with ID %1 found").arg(number, 0, 'g', QLocale::FloatingPointShortest).toUtf8().constData()), pItem};
+        }
+        const int id = static_cast<int>(rounded);
         if (id < 0) {
             return {warnArgumentValue(L, func, qsl("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData()), pItem};
         }
@@ -3792,7 +3835,8 @@ int TLuaInterpreter::sendRaw(lua_State* L)
         return lua_error(L);
     }
     bool wantPrint = true;
-    if (lua_gettop(L) > 1) {
+    // send("command", nil) must behave like send("command"), so a wrapper can pass its own optional argument on
+    if (!lua_isnoneornil(L, 2)) {
         wantPrint = getVerifiedBool(L, "send", 2, "showOnScreen", true);
     }
     const QString text{lua_tostring(L, 1)};
@@ -3811,7 +3855,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
         return lua_error(L);
     }
     bool parseCodes = false;
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
     size_t length = 0;
@@ -4611,11 +4655,22 @@ void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, c
     }
 }
 
+static void pushGlobalTable(lua_State* L, const char* name)
+{
+    lua_getglobal(L, name);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, name);
+    }
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "atcp");
     lua_pushstring(L, var.toUtf8().constData());
     lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);
@@ -5001,9 +5056,17 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 continue;
             }
 
-            // A variable can carry several values, with the default one last
             const QString msspVAR = payloadList.first();
-            const QString msspVAL = payloadList.last();
+            // A variable can carry several values, with the default one last
+            QString msspVAL = payloadList.last();
+            // setMSSPVariables() has already removed every CR. A line break at either end is
+            // not part of the value, and would spoil the HOSTNAME match and the TLS flags below
+            while (msspVAL.startsWith(QChar::LineFeed)) {
+                msspVAL.remove(0, 1);
+            }
+            while (msspVAL.endsWith(QChar::LineFeed)) {
+                msspVAL.chop(1);
+            }
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
@@ -5280,7 +5343,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "channel102"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "channel102");
     lua_pushnumber(L, var);
     lua_pushnumber(L, arg);
     lua_rawset(L, -3);
@@ -7084,9 +7147,12 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         return lua_error(L);
     }
 
-    QString dataToPost;
+    // Sent byte for byte: the data may hold NULs, or bytes that are not UTF-8
+    QByteArray dataToPost;
     if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
+        size_t dataLength = 0;
+        const char* data = lua_tolstring(L, pos + 1, &dataLength);
+        dataToPost = QByteArray(data, static_cast<qsizetype>(dataLength));
     }
     const QString urlString{lua_tostring(L, pos + 2)};
     QString fileLocation;
@@ -7119,25 +7185,24 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
 
+    const QByteArray& payload = fileToUpload.isEmpty() ? dataToPost : fileToUpload;
     QNetworkReply* reply;
     switch (operation) {
     case QNetworkAccessManager::PostOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, payload);
         break;
     case QNetworkAccessManager::PutOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, payload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, payload);
     }
 
     if (TDebug::wants(TDebug::Category::Network)) {
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;
     }
 
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return host.mLuaInterpreter.pushHttpRequestResult(L, reply);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
@@ -9009,23 +9074,24 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
 {
-    TKey* pT;
-    pT = new TKey("a", mpHost);
+    auto* pT = new TKey("a", mpHost);
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerKey();
-    if (!function.isEmpty()) {
-        pT->setScript(function);
-    }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    emit mpHost->signal_keyBoundByScript(pT->getID());
-    return id;
+    if (!function.isEmpty() && !pT->setScript(function)) {
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
+        delete pT;
+        return {-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
+    }
+    emit mpHost->signal_keyBoundByScript(id);
+    return {id, QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -9981,8 +10047,8 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     lua_newtable(L);
 
     // Parse cookies, add them as key-value pairs to the empty table
-    const Host& host = getHostFromLua(L);
-    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    // The reply's own manager: media downloads keep their cookies apart from the scripts' ones
+    QNetworkCookieJar* cookieJar = reply->manager()->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
     for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack

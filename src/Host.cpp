@@ -573,8 +573,9 @@ Host::~Host()
     mStopWatchMap.clear();
 
     // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
-    if (mpMainConsoleModel) {
-        mpMainConsoleModel->buffer.logRemainingOutput();
+    if (mpMainConsoleModel && mpMainConsoleModel->mLogToLogFile) {
+        mpMainConsoleModel->closeLogFile();
+        mpMainConsoleModel->mLogToLogFile = false;
     }
 
     mErrorLogStream.flush();
@@ -991,6 +992,11 @@ void Host::loadMapAndConnect(const bool connect)
     // on the defaults rather than on the profile's own settings
     mTelnet.cacheHostSettings();
 
+    if (!mLoadedOk) {
+        //: Shown after the error saying the profile's save could not be loaded
+        postMessage(QCoreApplication::translate("mudlet", "[ WARN ]  - Profile \"%1\" opened in offline mode, but its profile save could not be loaded.").arg(getName()));
+        return;
+    }
     const QString infoMsg = QCoreApplication::translate("mudlet", "[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(getName());
     postMessage(infoMsg);
 }
@@ -1335,7 +1341,9 @@ void Host::timerEvent(QTimerEvent* event)
 
 void Host::autoSaveMap()
 {
-    if (mpMap->isUnsaved()) {
+    // A map import, export or download pumps events while the map may be only part built; the map stays unsaved,
+    // so the next autosave writes the whole of it
+    if (mpMap->isUnsaved() && !mpMap->mapOperationInProgress()) {
 #if defined(DEBUG_MAPAUTOSAVE)
         QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
 #endif
@@ -3362,6 +3370,7 @@ void Host::refreshMainConsoleColors()
     mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
     mpMainConsoleModel->mFormatCurrent.setColors(mFgColor, mBgColor);
     mpMainConsoleModel->buffer.updateColors();
+    mTriggerUnit.refreshColorPatterns();
     emit mpMainConsoleModel->mNotifier.colorsChanged();
 }
 
@@ -4217,11 +4226,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         --mPackageInstallsInProgress;
     });
 
-    // Every failure below returns a reason, and most callers drop it: the package
-    // manager logs it silently, the repository install names only which packages failed,
-    // and default-package and module-sync installs ignore it. Say it once here instead. Script
-    // installs pass quiet and get the reason back as a return value, so they are
-    // left to report it themselves rather than having it appear unbidden.
+    // Every failure below returns a reason, and default-package installs ignore it,
+    // so say it here too. Script installs pass quiet and get the reason back as a
+    // return value, so they are left to report it themselves.
     // Not for a module sync: it reinstalls the same archive on every save and reloadModule(),
     // so an unreadable source would repeat the message forever.
     auto fail = [this, &fileName, quiet, thing](const QString& reason) -> std::pair<bool, QString> {
@@ -6148,13 +6155,19 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         Discord::self()->setStateText(this, state.toString());
     }
 
-    auto largeImages = discordInfo.value(qsl("largeimage"));
-    if (largeImages != QJsonValue::Undefined) {
-        auto largeImage = largeImages.toArray().first();
-        if (largeImage != QJsonValue::Undefined) {
-            Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
-            Discord::self()->setLargeImage(this, largeImage.toString());
+    // The standard sends an icon key as a one-element array, but a bare string is taken too
+    const auto iconKey = [&discordInfo](const QString& field) -> QJsonValue {
+        const auto value = discordInfo.value(field);
+        if (value.isArray()) {
+            return value.toArray().first();
         }
+        return value.isString() ? value : QJsonValue(QJsonValue::Undefined);
+    };
+
+    const auto largeImage = iconKey(qsl("largeimage"));
+    if (largeImage != QJsonValue::Undefined) {
+        Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+        Discord::self()->setLargeImage(this, largeImage.toString());
     }
 
     auto largeImageText = discordInfo.value(qsl("largeimagetext"));
@@ -6163,13 +6176,10 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         Discord::self()->setLargeImageText(this, largeImageText.toString());
     }
 
-    auto smallImages = discordInfo.value(qsl("smallimage"));
-    if (smallImages != QJsonValue::Undefined) {
-        auto smallImage = smallImages.toArray().first();
-        if (smallImage != QJsonValue::Undefined) {
-            Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
-            Discord::self()->setSmallImage(this, smallImage.toString());
-        }
+    const auto smallImage = iconKey(qsl("smallimage"));
+    if (smallImage != QJsonValue::Undefined) {
+        Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
+        Discord::self()->setSmallImage(this, smallImage.toString());
     }
 
     auto smallImageText = discordInfo.value(qsl("smallimagetext"));
@@ -6589,14 +6599,23 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
     auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
-    if (!mProxyUsername.isEmpty()) {
-        proxy->setUser(mProxyUsername);
-    }
-    if (!mProxyPassword.isEmpty()) {
-        proxy->setPassword(mProxyPassword);
-    }
+    // Unconditionally, as the proxy is kept between connections: credentials the player has since
+    // cleared would otherwise still be offered, to whichever proxy is now set
+    proxy->setUser(mProxyUsername);
+    proxy->setPassword(mProxyPassword);
 
     return mpConnectionProxy;
+}
+
+void Host::setProxyPassword(const QString& password)
+{
+    // The saved profile never holds it, so loading reads secure storage, which would hand back a cleared one. Only
+    // when one was there to clear: an empty field can also be a password that could not be read at load.
+    if (password.isEmpty() && !mProxyPassword.isEmpty() && !CredentialManager::removeCredential(getName(), qsl("proxy"))) {
+        //: Shown in the profile's main window when the player cleared the proxy password but the saved copy of it could not be deleted
+        postMessage(tr("[ WARN ]  - The saved proxy password could not be deleted, so the next time this profile is loaded it will have that password again."));
+    }
+    mProxyPassword = password;
 }
 
 void Host::loadSecuredPassword()
@@ -6999,6 +7018,10 @@ bool Host::parentWindowMissing(const QString& windowname) const
 
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
+    // Nothing could delete it: deleteMiniConsole() refuses the empty name
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a miniconsole cannot have an empty string as its name")};
+    }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -7029,6 +7052,9 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a scrollbox cannot have an empty string as its name")};
+    }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -7054,6 +7080,10 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
+    // Nothing could delete it: deleteLabel() refuses the empty name
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
@@ -8154,6 +8184,7 @@ void Host::setLargeAreaExitArrows(const bool state)
         mLargeAreaExitArrows = state;
         if (mpMap) {
             consoleFrontend()->setMapLargeAreaExitArrows(state);
+            mpMap->requestMapRepaint();
         }
     }
 }
@@ -8202,24 +8233,56 @@ void Host::setCaretEnabled(bool enabled)
     consoleFrontend()->setCaretMode(enabled);
 }
 
+#if defined(Q_OS_MACOS)
+// The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::ControlModifier;
+#endif
+
 // Whether this key press is the one selected in the accessibility preferences
 // to toggle caret mode - such a press must reach the caret-toggling key
 // handlers instead of being swallowed by an application-wide QShortcut,
 // which the user could have remapped onto any of these keys:
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
+    return caretShortcutMatches(mCaretShortcut, ke->keyCombination());
+}
+
+bool Host::caretShortcutMatches(const CaretShortcut shortcut, const QKeyCombination combination)
+{
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
-    switch (mCaretShortcut) {
+    constexpr Qt::KeyboardModifier controlKey = caretControlKey;
+    const Qt::Key key = combination.key();
+    const Qt::KeyboardModifiers modifiers = combination.keyboardModifiers();
+    // A Shift+Tab press arrives as Key_Backtab, so a shortcut spelt with Shift and Tab is never the caret key's
+    const bool tab = key == Qt::Key_Tab && !(modifiers & Qt::ShiftModifier);
+    switch (shortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+        return tab && !(modifiers & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+        return tab && (modifiers & controlKey);
     case CaretShortcut::F6:
-        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+        return key == Qt::Key_F6 && (modifiers & allModifiers) == Qt::NoModifier;
     }
     return false;
+}
+
+QKeyCombination Host::caretShortcutCombination(const CaretShortcut shortcut)
+{
+    switch (shortcut) {
+    case CaretShortcut::None:
+        return QKeyCombination::fromCombined(0);
+    case CaretShortcut::Tab:
+        return QKeyCombination(Qt::Key_Tab);
+    case CaretShortcut::CtrlTab:
+        return QKeyCombination(caretControlKey, Qt::Key_Tab);
+    case CaretShortcut::F6:
+        return QKeyCombination(Qt::Key_F6);
+    }
+    return QKeyCombination::fromCombined(0);
 }
 
 void Host::setFocusOnHostActiveCommandLine()

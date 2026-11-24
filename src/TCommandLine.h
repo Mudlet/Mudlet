@@ -67,6 +67,9 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const;
+    // Copies the last game window, miniconsole or user window selection while that window is visible, else the
+    // one in this line's own console; false when there was nothing to copy
+    bool copyConsoleSelection();
     // Whether everything on the line was typed or pasted by the player, starting
     // from an empty or wholly selected line. A recalled, left-selected or
     // script-written command is not.
@@ -75,6 +78,8 @@ public:
     void restorePlayerTypedLine(const QString& text);
     // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
+    // Called after claiming a ShortcutOverride: macOS sends no key press for a claimed Ctrl+Tab, so this posts one
+    static void pressClaimedControlTab(QObject* receiver, const QKeyEvent* override);
     // For a key pressed in another window of the profile's, such as a floating map, that nothing there used
     bool takeKeyPress(QKeyEvent*);
 
@@ -111,6 +116,8 @@ private:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion(bool forward);
+    bool completionTailSelected() const;
+    bool walkingHistoryCompletion() const;
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();

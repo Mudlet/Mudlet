@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
     AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
+    BringWindowToFrontTest.cpp
     ConsoleFootSeamTest.cpp
     BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
@@ -97,6 +98,8 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    DetachedWindowFullScreenTest.cpp
+    DetachedWindowToggleStateTest.cpp
     GlobalSettingsFlushTest.cpp
     AppFrontendAsyncTest.cpp
     PastedLinkStateTest.cpp
@@ -106,15 +109,18 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     ProfileTabBarStyleTest.cpp
+    ProfileTabLabelTest.cpp
     SubCommandLineLifetimeTest.cpp
     ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WindowStaysOnTopTest.cpp
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollUpShortBufferTest.cpp
+    HorizontalWheelScrollTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
@@ -190,8 +196,10 @@ set(TELNET_GROUP_TEST_SOURCES
     PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
+    ProxyCredentialsTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
+    TelnetTerminalTypeCycleTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MirrorToStdOutTest.cpp
@@ -206,6 +214,7 @@ set(TELNET_GROUP_TEST_SOURCES
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
+    ColorTriggerPaletteTest.cpp
     BigramFilterTest.cpp
     CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
@@ -296,6 +305,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAutosaveTest.cpp
+    MapLabelColourWellTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
@@ -309,6 +319,7 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
+    MapMoveSelectionDialogTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapPainterTest.cpp
     MapRoomNameVisibilityTest.cpp
@@ -338,9 +349,9 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDeletedEditItemTest.cpp
 )
 
-# CameraController and GeometryManager are only compiled into the library with the 3D mapper
+# GLWidget, CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp LegacyMapZoomTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -549,6 +560,8 @@ endforeach()
 # add_test entry, which names the class for the group binary to run.
 macro(add_grouped_test_binary target)
     add_functional_test_binary(${target} GroupedTestMain.cpp ${ARGN})
+    # So a functional group run by hand sets MUDLET_TEST_MODE as ctest does; unit_tests runs without it under ctest too
+    target_compile_definitions(${target} PRIVATE MUDLET_FUNCTIONAL_TEST_GROUP)
     foreach(grouped_test_file ${ARGN})
         get_filename_component(grouped_test_name ${grouped_test_file} NAME_WE)
         add_test(NAME ${grouped_test_name} COMMAND $<TARGET_FILE:${target}> ${grouped_test_name})
@@ -760,6 +773,12 @@ set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DP
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+
+# ActionBarPlacementTest takes 36 to 60s on the macOS arm64 CI runners, around the default 60s
+set_tests_properties(ActionBarPlacementTest PROPERTIES TIMEOUT 300)
+
+# NawsWidthReportTest ran out of the default 60s on a Windows CI runner with every case so far passing
+set_tests_properties(NawsWidthReportTest PROPERTIES TIMEOUT 300)
 
 # AppStartupTeardownTest starts the application eight times over, as far as
 # forwarding a link, and a sanitiser build spends seconds on each of those start-ups

@@ -32,6 +32,7 @@
 #include <limits>
 
 #include <QAction>
+#include <QComboBox>
 #include <QDockWidget>
 #include <QMenu>
 #include <QOpenGLContext>
@@ -137,6 +138,13 @@ protected:
     }
 };
 } // namespace
+
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
 
 class Map3DViewInteractionTest : public QObject
 {
@@ -353,6 +361,16 @@ private:
         for (QMenu* menu : pModern->findChildren<QMenu*>()) {
             if (menu->isVisible()) {
                 return menu;
+            }
+        }
+        return nullptr;
+    }
+
+    static QAction* actionNamed(const QMenu* menu, const QString& text)
+    {
+        for (QAction* action : menu->actions()) {
+            if (action->text() == text) {
+                return action;
             }
         }
         return nullptr;
@@ -707,6 +725,34 @@ private slots:
         QVERIFY(selection().isEmpty());
     }
 
+    // The hidden 2D map behind the menu still holds the area it last showed, which is not the one the player is moving rooms from
+    void test_moveToAreaFromThe3DMenuPreselectsTheArea3DShows()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        T2DMap* p2dMap = map()->mapper()->mp2dMap;
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        QCOMPARE(p2dMap->mAreaID, mPlayerAreaId);
+
+        p2dMap->mMapViewOnly = false;
+        QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, pixelOfRoom(pModern, kOtherAreaRoomId));
+        QMenu* menu = openMenu(pModern);
+        QVERIFY2(menu, "right-clicking a room in the 3D view opened no menu");
+        QAction* moveToArea = actionNamed(menu, qsl("Move to area..."));
+        QVERIFY2(moveToArea, qPrintable(actionTexts(menu).join(qsl(", "))));
+        moveToArea->trigger();
+        menu->close();
+        p2dMap->mMapViewOnly = true;
+
+        QVERIFY(p2dMap->arealist_combobox);
+        auto* pDialog = qobject_cast<QDialog*>(p2dMap->arealist_combobox->window());
+        const QString preselected = p2dMap->arealist_combobox->currentText();
+        if (pDialog) {
+            pDialog->reject();
+        }
+        QCOMPARE(preselected, qsl("Other Area (%1)").arg(mOtherAreaId));
+    }
+
     // As on the 2D map, which changes the selection on the press, a script handling the press reads the selection
     // the click leaves, also for the clicks that the 3D view settles only on the release
     void test_aScriptHandlingThePressSeesTheSelectionTheClickLeaves()
@@ -969,7 +1015,7 @@ private slots:
         mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
         QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
 
-        QKeyEvent caretShortcut(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        QKeyEvent caretShortcut(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
         QVERIFY(mpHost->mainConsoleView()->mpCommandLine->claimsShortcutOverride(&caretShortcut));
         caretShortcut.ignore();
         QCoreApplication::sendEvent(pModern, &caretShortcut);
@@ -986,7 +1032,7 @@ private slots:
         auto* pSearchBox = pModern->findChild<QLineEdit*>();
         QVERIFY(pSearchBox);
         QTRY_VERIFY(pSearchBox->hasFocus());
-        QKeyEvent searching(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        QKeyEvent searching(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
         searching.ignore();
         QCoreApplication::sendEvent(pSearchBox, &searching);
         QVERIFY(!searching.isAccepted());
@@ -1100,7 +1146,7 @@ private slots:
         QTest::addColumn<int>("shortcut");
         QTest::addColumn<int>("modifiers");
         QTest::newRow("Tab") << static_cast<int>(Host::CaretShortcut::Tab) << static_cast<int>(Qt::NoModifier);
-        QTest::newRow("Ctrl+Tab") << static_cast<int>(Host::CaretShortcut::CtrlTab) << static_cast<int>(Qt::ControlModifier);
+        QTest::newRow("Ctrl+Tab") << static_cast<int>(Host::CaretShortcut::CtrlTab) << static_cast<int>(controlKey);
     }
 
     void test_theCaretKeyWorksAfterAClick()
@@ -1125,6 +1171,33 @@ private slots:
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_Tab, static_cast<Qt::KeyboardModifiers>(modifiers));
         QCoreApplication::processEvents();
         QVERIFY2(mpHost->caretEnabled(), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, and a QWidget would take the
+    // press that stands in for it to step the focus while the view's keys pan
+    void test_ctrlTabArrivingOnlyAsAShortcutWorksWhileTheKeysPan()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+        });
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        QVERIFY(focusFromTheKeyboard(pModern));
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QCoreApplication::sendEvent(pModern, &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(mpHost->caretEnabled(), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+#endif
     }
 
     // Keypad keys go on to the command line's key bindings even while the view pans with the other keys
