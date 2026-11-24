@@ -168,6 +168,16 @@ describe("Tests the properties a map gives its areas", function()
       assert.is_truthy(message:find("lots", 1, true))
     end)
 
+    it("keeps a value for an area that so far only has a name, as it reads one", function()
+      local namedOnly = 990000105
+      assert.is_true(setAreaName(namedOnly, "FieldSpecNamedOnly"))
+      finally(function() deleteArea("FieldSpecNamedOnly") end)
+
+      assert.is_true(setAreaFieldValue(namedOnly, "notes", nil))
+      assert.is_true(setAreaFieldValue(namedOnly, "notes", "named, not yet mapped"))
+      assert.are.same({"named, not yet mapped", namedOnly}, {getAreaFieldValue(namedOnly, "notes")})
+    end)
+
     it("returns nil and a message for a field the map does not have, or an area that does not exist", function()
       assert.is_nil(getAreaFieldValue(zone, "unknownField"))
       assert.is_nil(setAreaFieldValue(zone, "unknownField", "x"))

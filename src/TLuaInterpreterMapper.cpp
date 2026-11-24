@@ -4031,12 +4031,17 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("the map has no area field \"%1\"").arg(key));
     }
     const TAreaFields::Field& field = itField.value();
-    TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
-    if (!pA) {
+    // An area that so far only has a name is as valid as for getAreaFieldValue(), and gets a TArea to hold the value
+    if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
         return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
     }
+    TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
 
     if (lua_isnoneornil(L, 3)) {
+        if (!pA) {
+            lua_pushboolean(L, true);
+            return 1;
+        }
         pA->mUserData.remove(key);
         host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
@@ -4095,6 +4100,10 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
             break;
         }
         return warnArgumentValue(L, __func__, qsl("field \"%1\" is a %2, so its value must be %3").arg(key, TAreaFields::typeName(field.type), wanted));
+    }
+    if (!pA) {
+        host.mpMap->mpRoomDB->addArea(areaId);
+        pA = host.mpMap->mpRoomDB->getArea(areaId);
     }
     pA->mUserData.insert(key, TAreaFields::formatValue(field, *value));
     host.mpMap->setUnsaved(__func__);
