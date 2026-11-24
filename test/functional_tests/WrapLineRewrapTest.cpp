@@ -214,6 +214,12 @@ private slots:
 
         TAccessibleTextEdit accessible(console->mUpperPane);
         QCOMPARE(accessible.text(0, accessible.characterCount()), qsl("Control line\nStatus: health is full; mana is low\nHidden line\nNext audible line\n"));
+
+        heard.clear();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                QString::fromUtf8("tempExactMatchTrigger('!ñ😀!!alpha!tail!', function() silenceText('!') end); feedTriggers('!ñ😀!!alpha!tail!\\n')")));
+        QCOMPARE(heard, QStringList{QString::fromUtf8("ñ😀alphatail")});
+        QVERIFY(accessible.text(0, accessible.characterCount()).endsWith(QString::fromUtf8("!ñ😀!!alpha!tail!\n")));
     }
 
     void test_silenceLineUsesTheTriggerContext_data()

@@ -536,10 +536,27 @@ void TTextEdit::showNewLines()
         for (int i = previousOldScrollPos; i < mOldScrollPos; i++) {
             const QString& lineText = mpBuffer->line(i);
             const auto lineStart = newLines.size();
-            for (int column = 0; column < lineText.size(); ++column) {
-                if (!mpBuffer->isCharacterSilenced(i, column)) {
-                    newLines.append(lineText.at(column));
+            const TLineFormat* format = i >= 0 && i < static_cast<int>(mpBuffer->buffer.size()) ? &mpBuffer->buffer.at(i) : nullptr;
+            if (!format) {
+                newLines.append(lineText);
+            } else if (format->uniform() && format->size() >= static_cast<size_t>(lineText.size())) {
+                if (!format->front().isSilenced()) {
+                    newLines.append(lineText);
                 }
+            } else {
+                const QStringView text(lineText);
+                const auto formattedLength = std::min(lineText.size(), static_cast<qsizetype>(format->size()));
+                auto attribute = format->cbegin();
+                qsizetype audibleStart = 0;
+                for (qsizetype column = 0; column < formattedLength; ++column, ++attribute) {
+                    if (attribute->isSilenced()) {
+                        if (column > audibleStart) {
+                            newLines.append(text.sliced(audibleStart, column - audibleStart));
+                        }
+                        audibleStart = column + 1;
+                    }
+                }
+                newLines.append(text.sliced(audibleStart));
             }
             if (newLines.size() > lineStart) {
                 newLines.append('\n');
