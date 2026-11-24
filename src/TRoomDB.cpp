@@ -249,64 +249,60 @@ bool TRoomDB::__removeRoom(int id)
             }
             TRoom* r = getRoom(enteringRoomId);
             if (r) {
-                QList<int> stubDirections;
-                if (exitsBecomeStubs) {
-                    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
-                        if (r->getExit(direction) == id) {
-                            stubDirections << direction;
-                        }
+                // Made a stub before its extras go: removeExitExtras() keeps a door and a lock only on a stub
+                const auto dropExitExtras = [r, exitsBecomeStubs](const int direction) {
+                    if (exitsBecomeStubs) {
+                        r->setExitStub(direction, true);
                     }
-                }
+                    r->removeExitExtras(direction);
+                };
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
-                    r->removeExitExtras(DIR_NORTH);
+                    dropExitExtras(DIR_NORTH);
                 }
                 if (r->getNortheast() == id) {
                     r->setNortheast(-1);
-                    r->removeExitExtras(DIR_NORTHEAST);
+                    dropExitExtras(DIR_NORTHEAST);
                 }
                 if (r->getNorthwest() == id) {
                     r->setNorthwest(-1);
-                    r->removeExitExtras(DIR_NORTHWEST);
+                    dropExitExtras(DIR_NORTHWEST);
                 }
                 if (r->getEast() == id) {
                     r->setEast(-1);
-                    r->removeExitExtras(DIR_EAST);
+                    dropExitExtras(DIR_EAST);
                 }
                 if (r->getWest() == id) {
                     r->setWest(-1);
-                    r->removeExitExtras(DIR_WEST);
+                    dropExitExtras(DIR_WEST);
                 }
                 if (r->getSouth() == id) {
                     r->setSouth(-1);
-                    r->removeExitExtras(DIR_SOUTH);
+                    dropExitExtras(DIR_SOUTH);
                 }
                 if (r->getSoutheast() == id) {
                     r->setSoutheast(-1);
-                    r->removeExitExtras(DIR_SOUTHEAST);
+                    dropExitExtras(DIR_SOUTHEAST);
                 }
                 if (r->getSouthwest() == id) {
                     r->setSouthwest(-1);
-                    r->removeExitExtras(DIR_SOUTHWEST);
+                    dropExitExtras(DIR_SOUTHWEST);
                 }
                 if (r->getUp() == id) {
                     r->setUp(-1);
-                    r->removeExitExtras(DIR_UP);
+                    dropExitExtras(DIR_UP);
                 }
                 if (r->getDown() == id) {
                     r->setDown(-1);
-                    r->removeExitExtras(DIR_DOWN);
+                    dropExitExtras(DIR_DOWN);
                 }
                 if (r->getIn() == id) {
                     r->setIn(-1);
-                    r->removeExitExtras(DIR_IN);
+                    dropExitExtras(DIR_IN);
                 }
                 if (r->getOut() == id) {
                     r->setOut(-1);
-                    r->removeExitExtras(DIR_OUT);
-                }
-                for (const int direction : std::as_const(stubDirections)) {
-                    r->setExitStub(direction, true);
+                    dropExitExtras(DIR_OUT);
                 }
                 r->removeAllSpecialExitsToRoom(id);
                 // The plain setters above do not touch the area exit records,

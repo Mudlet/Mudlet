@@ -8319,6 +8319,20 @@ describe("Tests the exits mapDeletedRoomExitsAsStubs leaves when a room is delet
       deleteRoom(from)
     end
   end)
+
+  it("keeps the door and the lock of an exit left as a stub", function()
+    setConfig("mapDeletedRoomExitsAsStubs", true)
+    local from, to = newRoom(areaId), newRoom(areaId)
+    setExit(from, to, "n")
+    setDoor(from, "n", 2)
+    lockExit(from, "n", true)
+
+    deleteRoom(to)
+
+    assert.are.same({1}, sortedStubs(from))
+    assert.are.equal(2, getDoors(from).n)
+    assert.is_true(hasExitLock(from, "n"))
+  end)
 end)
 
 describe("Tests closing another profile that opened a map widget", function()
