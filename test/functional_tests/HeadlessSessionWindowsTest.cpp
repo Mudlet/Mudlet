@@ -615,6 +615,53 @@ setLabelStyleSheet("lbl", "color: red;")
         QVERIFY(!session.labelContent(qsl("lbl")));
     }
 
+    void test_aLabelsLiveRegionIsItsContent()
+    {
+        using LiveRegion = THeadlessSession::LabelContent::LiveRegion;
+        const QString name = qsl("Headless Label Live Region");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("lbl", 0, 0, 100, 20, 1)
+echo("lbl", "HP 25")
+geyserLabel = Geyser.Label:new({name = "geyserLive", x = 0, y = 40, width = 100, height = 20, liveRegion = "assertive"})
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<THeadlessSession::LabelContent> content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->liveRegion, LiveRegion::off);
+        content = session.labelContent(qsl("geyserLive"));
+        QVERIFY(content);
+        QCOMPARE(content->liveRegion, LiveRegion::assertive);
+
+        // Nothing else about the label changes, so the live region alone names it
+        const auto toldAs = [&](const QString& mode, const LiveRegion expected) {
+            if (!session.runLua(qsl(R"(setLabelLiveRegion("lbl", "%1"))").arg(mode)) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("lbl")};
+            changes.clear();
+            const std::optional<THeadlessSession::LabelContent> now = session.labelContent(qsl("lbl"));
+            return named && now && now->liveRegion == expected;
+        };
+        QVERIFY(toldAs(qsl("polite"), LiveRegion::polite));
+        QVERIFY(toldAs(qsl("assertive"), LiveRegion::assertive));
+        QVERIFY(toldAs(qsl("off"), LiveRegion::off));
+        // The one it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setLabelLiveRegion("lbl", "off"))")));
+        QVERIFY(!changes.wait(200));
+        // A region a script cannot set leaves the label as it was
+        QVERIFY(session.runLua(qsl(R"(setLabelLiveRegion("lbl", "polite") setLabelLiveRegion("lbl", "loud"))")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(session.labelContent(qsl("lbl"))->liveRegion, LiveRegion::polite);
+
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_userWindowsArePlacedAsTheGuisDocksAre()
     {
         const QString name = qsl("Headless User Window Place");
@@ -698,6 +745,93 @@ end)
         QVERIFY(!session.closeUserWindow(qsl("nonesuch")));
         QVERIFY(session.shutdown(false));
         QVERIFY(!session.closeUserWindow(qsl("uw")));
+    }
+
+    void test_aTextBoxsContentIsWhatScriptsSetAndThePlayerTypes()
+    {
+        using TextBoxContent = THeadlessSession::TextBoxContent;
+        const QString name = qsl("Headless Text Box Content");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        // Refused where runLua() is
+        QVERIFY(!session.setTextBoxText(qsl("notes"), qsl("early")));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createTextEdit("notes", 0, 0, 200, 100)
+createLabel("lbl", 0, 200, 100, 20, 1)
+createScrollBox("sb", 300, 0, 200, 100)
+createTextEdit("sb", "inBox", 0, 0, 100, 50)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<TextBoxContent> content = session.textBoxContent(qsl("notes"));
+        QVERIFY(content);
+        QVERIFY(*content == TextBoxContent{});
+        for (const QString& other : {QString(), qsl("lbl"), qsl("sb"), qsl("nope")}) {
+            QVERIFY(!session.textBoxContent(other));
+            QVERIFY(!session.setTextBoxText(other, qsl("x")));
+            QCOMPARE(session.errorString(), qsl("The profile has no text box called \"%1\".").arg(other));
+        }
+
+        // Each setting alone names the box
+        const auto toldBy = [&](const QString& lua) {
+            if (!session.runLua(lua) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("notes")};
+            changes.clear();
+            return named;
+        };
+        QVERIFY(toldBy(qsl(R"(setTextEditText("notes", "line one\nline two"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditPlaceholder("notes", "Your notes"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditStyleSheet("notes", "color: red;"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditTabMovesFocus("notes", true))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditReadOnly("notes", true))")));
+        content = session.textBoxContent(qsl("notes"));
+        QVERIFY(content);
+        QCOMPARE(content->text, qsl("line one\nline two"));
+        QCOMPARE(content->placeholder, qsl("Your notes"));
+        QCOMPARE(content->styleSheet, qsl("color: red;"));
+        QVERIFY(content->tabMovesFocus);
+        QVERIFY(content->readOnly);
+        // What it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setTextEditReadOnly("notes", true) setTextEditPlaceholder("notes", "Your notes"))")));
+        QVERIFY(!changes.wait(200));
+
+        // A player cannot type in a read-only box, so neither can the app; a script still sets its text
+        QVERIFY(!session.setTextBoxText(qsl("notes"), qsl("typed")));
+        QCOMPARE(session.errorString(), qsl("The text box \"notes\" is read-only, so nothing can be typed in it."));
+        QCOMPARE(luaString(session, qsl("getTextEditText('notes')")), qsl("line one\nline two"));
+        QVERIFY(toldBy(qsl(R"(setTextEditReadOnly("notes", false))")));
+
+        // What the player typed is what a script reads, as a line break and a non-breaking space come back from the
+        // GUI's box, and it is not told back
+        QVERIFY(session.setTextBoxText(qsl("notes"), qsl("typed here now")));
+        QCOMPARE(luaString(session, qsl("getTextEditText('notes')")), qsl("typed\nhere now"));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, qsl("typed\nhere now"));
+        QVERIFY(!changes.wait(200));
+        // A script's text is told, though the box had it when last told
+        QVERIFY(toldBy(qsl(R"(setTextEditText("notes", "line one\nline two"))")));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, qsl("line one\nline two"));
+        QVERIFY(toldBy(qsl(R"(clearTextEdit("notes"))")));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, QString());
+
+        // Nor in one hidden, or in a hidden window
+        QVERIFY(session.runLua(qsl("hideWindow('notes') hideWindow('sb')")));
+        for (const QString& hidden : {qsl("notes"), qsl("inBox")}) {
+            QVERIFY(!session.setTextBoxText(hidden, qsl("unseen")));
+            QCOMPARE(session.errorString(), qsl("The text box \"%1\" is not shown, so nothing can be typed in it.").arg(hidden));
+            QCOMPARE(session.textBoxContent(hidden)->text, QString());
+        }
+        QVERIFY(session.runLua(qsl("showWindow('notes') showWindow('sb')")));
+        QVERIFY(session.setTextBoxText(qsl("notes"), qsl("seen")));
+        QVERIFY(session.setTextBoxText(qsl("inBox"), qsl("seen")));
+        QCOMPARE(luaString(session, qsl("getTextEditText('inBox')")), qsl("seen"));
+
+        QVERIFY(session.shutdown(false));
     }
 
     void test_aUserWindowsSheetFindsItsTextByTheGuisName()
@@ -1674,6 +1808,37 @@ setCmdLineAction("own", function(text) headlessActed = {text} deleteCommandLine(
         QCOMPARE(luaString(session, qsl("table.concat(headlessActed, '|')")), qsl("first"));
         QCOMPARE(sent(), sentBeforeReplacement);
         QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aWindowLineWrittenToWhileItIsSentIsLeftAsWritten()
+    {
+        const QString name = qsl("Headless Windows Command Line Prefill");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createCommandLine("own", 0, 300, 200, 30)
+tempAlias([[^t (\w+)$]], [[printCmdLine("own", "tell " .. matches[2] .. " ")]])
+)lua")));
+        for (const bool autoClear : {true, false}) {
+            session.host()->mAutoClearCommandLineAfterSend = autoClear;
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("t bob")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("look")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(autoClear ? QString() : qsl("look")));
+        }
+
+        // Not a setCmdLineAction() field, which writes its value back to be replaced, even one that resets itself first
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        for (const QString& action : {qsl("printCmdLine('own', t .. '0')"), qsl("resetCmdLineAction('own') printCmdLine('own', t .. '0')")}) {
+            QVERIFY(session.runLua(qsl("setCmdLineAction('own', function(t) %1 end)").arg(action)));
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("25")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
+        }
+        QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("t bob")));
+        QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
         QVERIFY(session.shutdown(false));
     }
 };

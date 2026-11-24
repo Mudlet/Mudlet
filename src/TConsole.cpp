@@ -737,7 +737,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+    }
 
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
         // No command line here to take the key and copy for the panes, as the main console's does
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         mLowerPane->setFocusPolicy(Qt::ClickFocus);
@@ -756,6 +758,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
+        // Ctrl+F leads here from a command line, so Escape leads back to it without reaching for the mouse
+        auto* pShortcut_leaveSearch = new QShortcut(QKeySequence(Qt::Key_Escape), mpBufferSearchBox);
+        pShortcut_leaveSearch->setContext(Qt::WidgetShortcut);
+        connect(pShortcut_leaveSearch, &QShortcut::activated, this, [this]() {
+            static_cast<TMainConsole*>(this)->focusActiveCommandLine();
+        });
         layoutButtonLayer->addWidget(mpBufferSearchUp);
         layoutButtonLayer->addWidget(mpBufferSearchDown);
         layoutButtonLayer->addWidget(timeStampButton);
@@ -893,6 +901,14 @@ TConsole::~TConsole()
         // handler looks consoles up by name, which would reach this one half destroyed.
         if (auto pMainConsole = mpHost->mainConsoleView()) {
             pMainConsole->forgetSubConsole(this);
+        }
+    }
+
+    // Only the main console's layout (and the debug console's find bar) adopts these, and a
+    // parentless widget stays reachable through QApplication, so nothing would ever free them
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop}) {
+        if (pWidget && !pWidget->parent()) {
+            delete pWidget;
         }
     }
 
@@ -1434,12 +1450,26 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
    47 bg white
    49 bg black     */
 
-void TConsole::scrollDown(int lines)
+bool TConsole::usesWheel(const bool up)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return;
+        return false;
+    }
+    // scrollUp() queues its scroll back, so a scrollDown() in between can hide the split and leave the pane scrolled back behind it
+    if (!mLowerPane->isHidden() || !mUpperPane->mIsTailMode) {
+        return true;
+    }
+    // At the bottom, only up can go anywhere; and with every line on screen a split would only show them twice
+    return up && mUpperPane->imageTopLine() != 0;
+}
+
+bool TConsole::scrollDown(int lines)
+{
+    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
+        return false;
     }
 
+    const bool scrolledBack = usesWheel(false);
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
@@ -1454,17 +1484,13 @@ void TConsole::scrollDown(int lines)
         mUpperPane->forceUpdate();
     }
     slot_adjustAccessibleNames();
+    return scrolledBack;
 }
 
-void TConsole::scrollUp(int lines)
+bool TConsole::scrollUp(int lines)
 {
-    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return;
-    }
-
-    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
-    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
-        return;
+    if (!usesWheel(true)) {
+        return false;
     }
 
     if (showLowerPane()) {
@@ -1475,6 +1501,7 @@ void TConsole::scrollUp(int lines)
         mUpperPane->scrollUp(lines);
     }
     slot_adjustAccessibleNames();
+    return true;
 }
 
 void TConsole::scrollTo(int line)
@@ -1501,7 +1528,8 @@ bool TConsole::showLowerPane()
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+    // Ctrl+Enter only clears the main console's split, so elsewhere the hint misleads and uses up a showing
+    if (lowerAppears && mType == MainConsole && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
         const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
@@ -2234,10 +2262,6 @@ int TConsole::upperPaneWidthFor(const int containerWidth) const
 
 int TConsole::upperPaneHeightFor(const int containerHeight) const
 {
-    // A scrolled-back console also shows the lower pane, and the user-dragged split can't be predicted.
-    if (!mLowerPane->isHidden()) {
-        return -1;
-    }
     int paneHeight = containerHeight - mpTopToolBar->height();
     const QMargins borders = mpHost->borders();
     paneHeight -= borders.top() + borders.bottom();

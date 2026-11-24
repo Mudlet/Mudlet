@@ -39,7 +39,8 @@ end
 -- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#display
 function display(...)
   local arg = {...}
-  arg.n = table.maxn(arg)
+  -- table.maxn() cannot see a nil at the end, so display(value, nil) would show only the value
+  arg.n = select("#", ...)
   if arg.n > 1 then
     for i = 1, arg.n do
       display(arg[i])
@@ -56,6 +57,18 @@ if getProfileName() ~= "Mudlet self-test" then
   errc = errorc
   _G.errorc = nil       -- and set to nil since it is internal only for the following functions.
 end
+-- Mudlet's own Lua files load from this file's folder and below, so a printError() or
+-- printDebug() they make is reported at the script line that called into them
+local libraryDirectory = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
+
+local function inLibrary(source)
+  return libraryDirectory ~= nil and source:sub(2, #libraryDirectory + 1) == libraryDirectory
+end
+
+local function hasLine(frame)
+  return frame.what ~= "tail" and frame.what ~= "C"
+end
+
 -- undocumented, internal function
 local function printX(options)
   local errorc = errc and errc or errorc
@@ -69,7 +82,21 @@ local function printX(options)
   table.remove(stackTable,2)
   table.remove(stackTable,2)
   local level = #stackTable + 1
-  local dinfo = debug.getinfo(level)
+  -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them;
+  -- a tail call or a C function such as pcall() has no line, so walk out to the nearest Lua caller
+  local callerLevel = 3
+  local nearestLibraryLine
+  local dinfo = debug.getinfo(callerLevel, "Sl")
+  while dinfo and (not hasLine(dinfo) or inLibrary(dinfo.source)) do
+    if not nearestLibraryLine and hasLine(dinfo) then
+      nearestLibraryLine = dinfo
+    end
+    callerLevel = callerLevel + 1
+    dinfo = debug.getinfo(callerLevel, "Sl")
+  end
+  -- no script frame was found (e.g. a trigger that tail calls into Mudlet's own Lua, called
+  -- straight from C++), so name Mudlet's line that reported it, or else the traceback's last level
+  dinfo = dinfo or nearestLibraryLine or debug.getinfo(level, "Sl")
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then
     header = "\n" .. header
