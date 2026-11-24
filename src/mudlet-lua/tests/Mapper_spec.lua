@@ -8272,6 +8272,55 @@ describe("Tests the app-wide mapper options in getConfig and setConfig", functio
   end)
 end)
 
+describe("Tests the exits mapDeletedRoomExitsAsStubs leaves when a room is deleted", function()
+  local areaName, otherAreaName = "DeletedRoomStubsSpec", "DeletedRoomStubsSpecOther"
+  local areaId, otherAreaId, original
+
+  local function newRoom(area)
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    setRoomArea(id, area)
+    return id
+  end
+
+  local function sortedStubs(roomId)
+    local stubs = getExitStubs1(roomId)
+    table.sort(stubs)
+    return stubs
+  end
+
+  before_each(function()
+    original = getConfig("mapDeletedRoomExitsAsStubs")
+    areaId = addAreaName(areaName)
+    otherAreaId = addAreaName(otherAreaName)
+  end)
+
+  after_each(function()
+    setConfig("mapDeletedRoomExitsAsStubs", original)
+    deleteArea(areaName)
+    if getAreaTable()[otherAreaName] then
+      deleteArea(otherAreaName)
+    end
+  end)
+
+  it("leaves the exits to a deleted room as stubs only while turned on, and a special exit to it never", function()
+    for _, keep in ipairs({false, true}) do
+      setConfig("mapDeletedRoomExitsAsStubs", keep)
+      local from, to = newRoom(areaId), newRoom(areaId)
+      setExit(from, to, 1)
+      setExit(from, to, 9)
+      addSpecialExit(from, to, "climb")
+
+      deleteRoom(to)
+
+      assert.are.same(keep and {1, 9} or {}, sortedStubs(from))
+      assert.is_nil(next(getRoomExits(from)), "deleting a room left an exit to it")
+      assert.is_nil(next(getSpecialExitsSwap(from)), "deleting a room left a special exit to it")
+      deleteRoom(from)
+    end
+  end)
+end)
+
 describe("Tests closing another profile that opened a map widget", function()
   local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
   local name = "mudlet-spec-map-widget-close"

@@ -11786,27 +11786,6 @@ local ok, err = pcall(function()
   end
   check("setConfig mapShowRoomBorders", answered(true), setConfig("mapShowRoomBorders", false))
   check("getConfig mapShowRoomBorders", answered(false), getConfig("mapShowRoomBorders"))
-  -- Off, deleting a room takes the exits that led to it along; on, they stay as stubs. A special exit goes either way
-  check("getConfig mapDeletedRoomExitsAsStubs default", answered(false), getConfig("mapDeletedRoomExitsAsStubs"))
-  for _, keep in ipairs({false, true}) do
-    check("setConfig mapDeletedRoomExitsAsStubs", answered(true), setConfig("mapDeletedRoomExitsAsStubs", keep))
-    check("getConfig mapDeletedRoomExitsAsStubs", answered(keep), getConfig("mapDeletedRoomExitsAsStubs"))
-    for _, id in ipairs({9101, 9102}) do
-      addRoom(id)
-      setRoomArea(id, headlessArea)
-    end
-    setExit(9101, 9102, 1)
-    setExit(9101, 9102, 9)
-    addSpecialExit(9101, 9102, "climb")
-    deleteRoom(9102)
-    local stubs = getExitStubs1(9101)
-    table.sort(stubs)
-    local expected = keep and "1,9" or ""
-    assert(table.concat(stubs, ",") == expected, "the stubs left by deleting a room with mapDeletedRoomExitsAsStubs " .. tostring(keep) .. " were {" .. table.concat(stubs, ",") .. "}")
-    assert(next(getRoomExits(9101)) == nil and next(getSpecialExitsSwap(9101)) == nil, "deleting a room left an exit to it")
-    deleteRoom(9101)
-  end
-  setConfig("mapDeletedRoomExitsAsStubs", false)
   check("setConfig showMapInfo", answered(true), setConfig("showMapInfo", "Headless"))
   check("setConfig mapInfoColor", answered(true), setConfig("mapInfoColor", {1, 2, 3}))
   local color = getConfig("mapInfoColor")
