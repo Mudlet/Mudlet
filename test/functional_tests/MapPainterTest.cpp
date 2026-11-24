@@ -471,6 +471,24 @@ private slots:
         checkPairs({DIR_NORTH, DIR_EAST}, {DIR_NORTHEAST, DIR_NORTHWEST});
     }
 
+    // The map and its exported image decide one-way alike: with the east room's one way back, west, paired with the
+    // exit east, the exit north is one-way there too
+    void anExitNoExitBackPairsWithIsOneWay()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::ExitToPaint east;
+        east.destination = roomDB()->getRoom(scmEastRoom);
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint north = east;
+        north.direction = DIR_NORTH;
+        const TRoom& westRoom = *roomDB()->getRoom(scmWestRoom);
+
+        QVERIFY(!TMapPainter::exitIsOneWay(westRoom, east, true));
+        QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, true));
+        QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, false));
+    }
+
     // A line keeps the shape it had: unpaired, the exit north still bends into the east room through its exit back
     void anUnpairedExitStillBendsInThroughAnExitBack()
     {

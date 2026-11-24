@@ -209,7 +209,7 @@ public:
     {
         const TRoom* destination = nullptr;
         int destinationId = 0;
-        // The destination's reverse exit doesn't lead back - with mDirectionalExitLines, none of its compass exits does.
+        // The destination's reverse exit doesn't lead back - with mDirectionalExitLines, no exit back pairs with it (wayBack()).
         // Not the sole arrow test: an exit also gets an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
         // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
@@ -236,6 +236,9 @@ public:
     // Whether exit's destination draws its way back as a custom line reaching room, which then shows the two-way
     // connection a bent plain line would draw again beside it
     static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
+    // Whether exit is drawn as one-way: its destination's reverse exit does not lead back, nor, with directional lines,
+    // an exit that pairs with it. The map and its exported image decide alike
+    static bool exitIsOneWay(const TRoom& room, const ExitToPaint& exit, bool directionalExitLines);
     // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
     static bool directionalExitLinesEnabled();
 
