@@ -1090,7 +1090,9 @@ private slots:
         const QString category = sidebar()->item(rowOf(qsl("general")))->text();
         const QString support = sidebar()->item(sidebar()->count() - 1)->text();
         const QString wordmark = mpPreferences->findChild<QLabel*>(qsl("settingsWordmark"))->text();
-        const QString placeholder = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"))->placeholderText();
+        const auto* pSearchField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        const QString placeholder = pSearchField->placeholderText();
+        const QString searchName = pSearchField->accessibleName();
         const QString cardTitle = mpPreferences->findChild<QGroupBox*>(qsl("card_theme"))->title();
         const QString pageTitle = mpPreferences->findChild<QLabel*>(qsl("settingsPageTitle"))->text();
         QCoreApplication::removeTranslator(&translator);
@@ -1099,6 +1101,7 @@ private slots:
         QCOMPARE(support, qsl("[Mudlet support]"));
         QCOMPARE(wordmark, qsl("[Settings]"));
         QCOMPARE(placeholder, qsl("[Find in settings]"));
+        QCOMPARE(searchName, qsl("[Find in settings]"));
         QCOMPARE(cardTitle, qsl("[Theme]"));
         QCOMPARE(pageTitle, qsl("[General]"));
     }

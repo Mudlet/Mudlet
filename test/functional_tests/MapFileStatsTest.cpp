@@ -211,7 +211,7 @@ private slots:
             return;
         }
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
-        const QString pathFileName = qsl("%1/20260819-01-01-01map").arg(otherProfileMapDir());
+        const QString pathFileName = qsl("%1/20260819-01-01-01map.dat").arg(otherProfileMapDir());
         // An older format than this build's own, so what comes back is read
         // from the file rather than being this map's version by coincidence:
         QVERIFY(writeMapFile(pathFileName, 19));
@@ -258,7 +258,7 @@ private slots:
             return;
         }
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
-        const QString pathFileName = qsl("%1/20260927-01-01-01map").arg(otherProfileMapDir());
+        const QString pathFileName = qsl("%1/20260927-01-01-01map.dat").arg(otherProfileMapDir());
         QVERIFY(writeMapFile(pathFileName));
 
         QFile file(pathFileName);
@@ -295,7 +295,7 @@ private slots:
         QVERIFY(map()->setRoomCoordinates(3, 3, 5, 7777));
         QVERIFY(map()->setRoomCoordinates(4, 4, 6, 7777));
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
-        const QString pathFileName = qsl("%1/20260927-01-01-01map").arg(otherProfileMapDir());
+        const QString pathFileName = qsl("%1/20260927-01-01-01map.dat").arg(otherProfileMapDir());
         QVERIFY(writeMapFile(pathFileName));
         // loaded once intact, so memory the first read maps in is not counted
         map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
@@ -346,8 +346,8 @@ private slots:
             return;
         }
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
-        const QString first = qsl("%1/20260819-01-01-01map").arg(otherProfileMapDir());
-        const QString second = qsl("%1/20260101-01-01-01map").arg(otherProfileMapDir());
+        const QString first = qsl("%1/20260819-01-01-01map.dat").arg(otherProfileMapDir());
+        const QString second = qsl("%1/20260101-01-01-01map.dat").arg(otherProfileMapDir());
         QVERIFY(writeMapFile(first));
         QVERIFY(writeMapFile(second));
 
@@ -363,6 +363,38 @@ private slots:
         QCOMPARE(latestFileName, second);
     }
 
+    // saveJsonMap() with no file name exports into the same folder, and players
+    // keep other files there; this binary reader has to pass over them
+    void test_filesThatAreNotBinaryMapsAreIgnored()
+    {
+        buildMapToSave();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(QDir().mkpath(otherProfileMapDir()));
+        const QString mapPathFileName = qsl("%1/2026-08-19#01-01-01map.dat").arg(otherProfileMapDir());
+        QVERIFY(writeMapFile(mapPathFileName));
+        QFile mapFile(mapPathFileName);
+        QVERIFY(mapFile.open(QIODevice::ReadWrite));
+        QVERIFY(mapFile.setFileTime(QDateTime::currentDateTime().addDays(-1), QFileDevice::FileModificationTime));
+        mapFile.close();
+
+        for (const QString& name : {qsl("2026-08-20#01-01-01map.json"), qsl("notes.txt")}) {
+            QFile other(qsl("%1/%2").arg(otherProfileMapDir(), name));
+            QVERIFY(other.open(QIODevice::WriteOnly));
+            QVERIFY(other.write(R"({ "formatVersion": 1.002, "areas": [] })") > 0);
+            other.close();
+        }
+
+        QString latestFileName;
+        int fileVersion = 0;
+        int roomId = 0;
+        QVERIFY(map()->retrieveMapFileStats(mOtherProfileName, &latestFileName, &fileVersion, &roomId, nullptr, nullptr));
+        QCOMPARE(latestFileName, mapPathFileName);
+        QCOMPARE(fileVersion, map()->mDefaultVersion);
+        QCOMPARE(roomId, scmPlayerRoomId);
+    }
+
     // A map saved by a newer Mudlet than this one: the read stops at the version
     // rather than try to make sense of a layout it does not know, and the caller
     // gets the version so it can say so. Which of the two early returns takes it
@@ -372,7 +404,7 @@ private slots:
     void test_aMapFromANewerMudletIsReportedByVersionAlone()
     {
         QVERIFY(QDir().mkpath(otherProfileMapDir()));
-        const QString pathFileName = qsl("%1/20260819-02-02-02map").arg(otherProfileMapDir());
+        const QString pathFileName = qsl("%1/20260819-02-02-02map.dat").arg(otherProfileMapDir());
         QSaveFile file(pathFileName);
         QVERIFY(file.open(QIODevice::WriteOnly));
         QDataStream out(&file);
