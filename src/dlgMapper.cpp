@@ -754,7 +754,8 @@ std::optional<TMapViewFrontend::MapPoint> dlgMapper::mousePositionOnMap() const
     if (!point) {
         return std::nullopt;
     }
-    return MapPoint{point->x(), point->y(), mp2dMap->getZLevel()};
+    // The level of the frame x and y are read from, not one a level change has gone to before its repaint
+    return MapPoint{point->x(), point->y(), mp2dMap->lastFrameZLevel()};
 }
 
 std::pair<bool, QString> dlgMapper::centerViewOn(const int roomId)

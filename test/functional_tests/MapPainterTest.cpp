@@ -361,6 +361,28 @@ private slots:
         QVERIFY(!mapperMap.mapPointAt(westCentre));
     }
 
+    // Before the next repaint the frame drawn is still the one under the mouse: its level is the one read, not one a
+    // level change has gone to, and an area deleted since reads nothing
+    void theCoordinatesAreOfTheFrameDrawn()
+    {
+        setUpPlayerView();
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        QCOMPARE(mapperMap.lastFrameZLevel(), 0);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 1);
+        QCOMPARE(mapperMap.lastFrameZLevel(), 0);
+
+        const QPoint westCentre = onImage(QPointF(0, 0)).toPoint();
+        QVERIFY(mapperMap.mapPointAt(westCentre));
+        QVERIFY(roomDB()->removeArea(mAreaId));
+        QVERIFY(!mapperMap.mapPointAt(westCentre));
+    }
+
     // An area with no rooms yet is drawn like any other, so the mouse reads coordinates there too, as it does in the
     // frontend with no window: a script may place the area's first room or a label by them
     void anAreaWithNoRoomsReadsCoordinates()

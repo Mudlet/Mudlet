@@ -238,6 +238,7 @@ public:
     int getZLevel() const { return mMapCenterZ; }
     // The map coordinates at a pixel of this widget, as its last frame drew them
     std::optional<QPointF> mapPointAt(const QPoint& pixel) const;
+    int lastFrameZLevel() const { return mLastFrameZLevel; }
 
     // Center view on a room. For secondary views, skips raising sysMapAreaChanged events. The main view is panned
     // there, leaving the player's room alone, and follows the player again once they move.
@@ -313,6 +314,8 @@ public:
     int mLodExitIndexRoomsHandedOver = -1;
     // Whether the last frame laid an area out, so that mapPointAt() reads this frame's scale and origin
     bool mLastFrameLaidOut = false;
+    // The level that frame drew, which mMapCenterZ may have left already, as a level change does before its repaint
+    int mLastFrameZLevel = 0;
     // Test-only: forces the every-room loop so a test can check the index path draws the same frame,
     // i.e. never hands over too few rooms.
     bool mLodExitIndexDisabled = false;
