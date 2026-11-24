@@ -1791,12 +1791,14 @@ int TLuaInterpreter::silenceLine(lua_State* L)
         if (!checkStringArg(L, __func__, 1, "silencing mode")) {
             return lua_error(L);
         }
-        const QLatin1StringView mode(lua_tostring(L, 1), lua_objlen(L, 1));
-        if (mode != qsl("on") && mode != qsl("off")) {
+        size_t modeLength = 0;
+        const char* modeBytes = lua_tolstring(L, 1, &modeLength);
+        const QLatin1StringView mode(modeBytes, static_cast<qsizetype>(modeLength));
+        if (mode != QLatin1StringView("on") && mode != QLatin1StringView("off")) {
             lua_pushfstring(L, "%s: expected 'on' or 'off'!", __func__);
             return lua_error(L);
         }
-        enabled = mode == qsl("on");
+        enabled = mode == QLatin1StringView("on");
     }
 
     auto& host = getHostFromLua(L);
@@ -1831,7 +1833,9 @@ int TLuaInterpreter::silenceText(lua_State* L)
         return lua_error(L);
     }
 
-    const QString text = QString::fromUtf8(lua_tostring(L, 1), lua_objlen(L, 1));
+    size_t textLength = 0;
+    const char* textBytes = lua_tolstring(L, 1, &textLength);
+    const QString text = QString::fromUtf8(textBytes, static_cast<qsizetype>(textLength));
     auto pModel = getHostFromLua(L).mainConsoleModelOrNull();
     if (!pModel) {
         return 0;
