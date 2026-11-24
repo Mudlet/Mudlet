@@ -775,7 +775,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
-    bool mColouredIcons = false;
+    bool mColouredIcons = true;
     QSplitter* mpSplitter_profileContainer = nullptr;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:

@@ -1407,22 +1407,25 @@ Those three stay PNG - they are filled shapes with no stroke, so there is no
 weight to set, and `glyphPixmap()` reads any non-`.svg` file as a raster.
 
 Each window keeps a `QList<uiDesign::ActionGlyph>` of action to file and a
-`restyleToolBarIcons()` that re-inks every entry through
-`tintedIcon(glyphOff, glyphOn, tokens)`. That builds all eight mode/state
-pairs - `Normal`/Off in `mutedText`, `Normal`/On and every `Active` and
+`restyleToolBarIcons()` that re-inks every entry. A grey one - an entry with no
+colour of its own, or any entry while the icons are set to grayscale (below) -
+goes through `tintedIcon(glyphOff, glyphOn, tokens)`. That builds all eight
+mode/state pairs - `Normal`/Off in `mutedText`, `Normal`/On and every `Active` and
 `Selected` in `accentText`, `Disabled` in `disabledText` - so a checkable action
 that is currently doing something reads as lit. Full Screen and the Sound family
 pass a second file for their On state. The split buttons keep Qt's own
 `MenuButtonPopup` arrow and hover frame; nothing is drawn over the glyphs.
 
-### Colored icons (experiment)
+### Colored icons
 
-"Colored icons" on the Experiments card gives the glyphs on the main toolbar and
-in the script editor the colours of the PNG pictures they replaced, for players
-who still find an icon by its colour. It is app-wide - `mudlet::setColouredIcons()`,
-kept in `Mudlet.ini` as `colouredIcons` - because the toolbar belongs to no one
-profile, so the card shows in every build even where the 3D map experiments
-beside it are hidden.
+The glyphs on the main toolbar and in the script editor take the colours of the
+PNG pictures they replaced, for players who still find an icon by its colour.
+"Grayscale icons" on the Experiments card draws them all grey instead. The
+switch is app-wide - `mudlet::setColouredIcons()`, kept in `Mudlet.ini` as
+`greyscaleIcons` - because the toolbar belongs to no one profile, so the card
+shows in every build even where the 3D map experiments beside it are hidden.
+The older `colouredIcons` key is not read: builds that offered the colours as an
+experiment saved it as `false` for every player who never ticked it.
 
 - Each colour is an `IdentityColour` in `src/uiDesign.h` (`scmIdentity_*`),
   measured from the old PNG: the strongest hue among its saturated pixels. A
