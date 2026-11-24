@@ -35,6 +35,7 @@
 
 #include "Host.h"
 #include "HostDialogs.h"
+#include "HostManager.h"
 #include "ProfileSessionTestHelper.h"
 #include "ToolBarOverflow.h"
 #include "dlgModuleManager.h"
@@ -540,7 +541,11 @@ private slots:
     void test_thePackageToolsOpenForTheEditorsProfileWhileAnotherIsActive()
     {
         Host* pEditorHost = mpHost;
-        QVERIFY2(mSession.openProfile(qsl("EditorToolBarOverflow-Test-Other-Profile")), qPrintable(mSession.why()));
+        QVERIFY2(mSession.openProfile(scmOtherProfile), qPrintable(mSession.why()));
+        // Closed again, also when a check fails, so the tests after this one see only the editor's profile
+        const auto closeOther = qScopeGuard([this, pEditorHost]() {
+            closeOtherProfile(pEditorHost);
+        });
         Host* pOtherHost = mSession.host();
         QVERIFY(pOtherHost && pOtherHost != pEditorHost);
         mudlet::self()->activateProfile(pOtherHost);
@@ -567,7 +572,20 @@ private slots:
         // Closing them hands focus back to the editor, a moment later; the profile in front stays the one the player chose
         QTest::qWait(200);
         QCOMPARE(mudlet::self()->getActiveHost(), pOtherHost);
+    }
+
+private:
+    static inline const QString scmOtherProfile = qsl("EditorToolBarOverflow-Test-Other-Profile");
+
+    void closeOtherProfile(Host* pEditorHost)
+    {
         mudlet::self()->activateProfile(pEditorHost);
+        if (Host* pOther = HostManager::self()->getHost(scmOtherProfile)) {
+            // saves without asking
+            pOther->mFORCE_SAVE_ON_EXIT = true;
+            mudlet::self()->slot_closeProfileByName(scmOtherProfile);
+            QTest::qWaitFor([]() { return !HostManager::self()->getHost(scmOtherProfile); }, std::chrono::seconds(15));
+        }
     }
 };
 
