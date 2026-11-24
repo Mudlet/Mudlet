@@ -937,7 +937,9 @@ void dlgRoomProperties::initGeneral()
 
 void dlgRoomProperties::slot_hashChanged(const QString& hash)
 {
-    const int roomId = mRoomIds.size() == 1 ? *mRoomIds.cbegin() : 0;
+    // Counted as initGeneral() counts them when it enables the field, so the room's own game ID is not taken for another's
+    const QSet<int> rooms = liveRoomIds();
+    const int roomId = rooms.size() == 1 ? *rooms.cbegin() : 0;
     const int holder = hash.isEmpty() ? -1 : mpHost->mpMap->mpRoomDB->hashToRoomID.value(hash, -1);
     if (holder < 1 || holder == roomId) {
         label_hashWarning->hide();

@@ -1303,6 +1303,26 @@ private slots:
         QCOMPARE(mEmitted.newHash, qsl("501"));
     }
 
+    // Handed a room that is already gone, the dialog edits the one left, and that room's own game ID is no conflict
+    void theGameIdOfTheOneRoomLeftIsNotTakenForAnotherRoomsId()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmFirstRoom, qsl("17146")));
+        auto* pDlg = new dlgRoomProperties(mpHost);
+        mpDialog = pDlg;
+        QHash<QString, int> usedNames;
+        QHash<int, int> usedColors;
+        QHash<QString, int> usedSymbols;
+        QHash<int, int> usedWeights;
+        QHash<bool, int> usedLockStatus;
+        pDlg->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, 0, {scmFirstRoom, 9999});
+        QVERIFY(pDlg->lineEdit_hash->isEnabled());
+
+        pDlg->lineEdit_hash->setText(qsl("1"));
+        pDlg->lineEdit_hash->setText(qsl("17146"));
+        QVERIFY2(pDlg->label_hashWarning->isHidden(), qPrintable(pDlg->label_hashWarning->text()));
+    }
+
     void theMapperMovesAGameIdToTheRoomItIsGivenTo()
     {
         buildMap();
