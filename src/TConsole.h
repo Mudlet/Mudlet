@@ -131,8 +131,12 @@ public:
     void setCmdVisible(bool);
     int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
-    void scrollDown(int lines);
-    void scrollUp(int lines);
+    // Whether a wheel turn that way is the console's: never with scrolling disabled; always while scrolled back, so it
+    // keeps the wheel until back at its bottom; otherwise only up, with lines above the screen. False lets it go on to the parent
+    bool usesWheel(bool up);
+    // Return what usesWheel() did before the scroll; scrollUp() also does nothing when that was false
+    bool scrollDown(int lines);
+    bool scrollUp(int lines);
     // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
     void scrollTo(int line);
     void print(const QString& msg);
@@ -337,7 +341,8 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
-    // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
+    // MainConsole only: subtract the profile's main window borders. The height spans a
+    // scrollback split as well, since that is what the game is told.
     int upperPaneWidthFor(const int containerWidth) const;
     int upperPaneHeightFor(const int containerHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
