@@ -80,6 +80,9 @@ public:
     int shownAreaId() const override { return mRecentre ? mFollowedAreaId : mView.mAreaID; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
     std::optional<MapPoint> mousePositionOnMap() const override;
+    // Where the mouse moved to over the map with no button held, which the map does nothing for, and that it left
+    void notePointer(const QPointF& position);
+    void forgetPointer();
     std::pair<bool, QString> centerViewOn(int roomId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;

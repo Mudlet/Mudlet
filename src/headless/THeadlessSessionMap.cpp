@@ -113,11 +113,21 @@ bool THeadlessSession::pointMapper(const ScriptWindow& mapper, const WindowPoint
         // T2DMap pans, sizes a selection or moves rooms with the left button and pans with the middle one; with
         // another it moves the label its press took, when the map is being edited
         if (const bool drags = event.buttons.testAnyFlags(Qt::LeftButton | Qt::MiddleButton) || (event.buttons != Qt::NoButton && !mpHost->mMapViewOnly); !drags) {
+            // Nothing for the map to do, but getMapMousePosition() follows the mouse, as it does over the GUI's map
+            if (auto* pView = dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend())) {
+                pView->notePointer(event.position);
+            }
             return true;
         }
         //: Error from a frontend with no window that was given a drag of the mouse, a move with a button held, on the 2D map
         mErrorString = tr("The map's drags are not available with no main window.");
         return false;
+    case WindowPointerEvent::Type::leave:
+        // Off the map, getMapMousePosition() has nothing to read
+        if (auto* pView = dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend())) {
+            pView->forgetPointer();
+        }
+        return true;
     default:
         return true;
     }

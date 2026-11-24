@@ -1079,7 +1079,9 @@ notch of the wheel and for a wheel turn on a map whose last draw showed no area,
 does, and it is refused where `renderMap()` is. Once the map is drawn, and while its window is `shown`,
 `getMousePosition()` follows each `mapPointer()` call, even one the map does nothing for: the `position`
 is taken as that point of the `mapper` window among `scriptWindows()`, which the GUI's map fills from its
-top left, so the app draws the map at that window's size for the two to agree.
+top left, so the app draws the map at that window's size for the two to agree. `getMapMousePosition()` reads
+the map coordinates at the last such point, and at the last `move` over the `mapper` window with no button
+held; a `leave` of that window, hiding the map and a map cleared or loaded make it nil until the next.
 
 `setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
 `mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear

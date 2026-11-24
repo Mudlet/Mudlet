@@ -757,6 +757,54 @@ headlessAfter = said(openMapWidget())
         }
     }
 
+    // As over the GUI's map: getMapMousePosition() follows a move with no button held, and is nil once the mouse has
+    // left the map, or the map it was over is gone
+    void test_getMapMousePositionFollowsTheMouseAndForgetsIt()
+    {
+        const QString name = qsl("Headless Map Mouse Leaves");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createMapper(100, 50, %1, %2)
+headlessArea = addAreaName("Headless Mouse Leaves")
+addRoom(5)
+setRoomArea(5, headlessArea)
+setRoomCoordinates(5, 3, 2, 4)
+setMapZoom(10, headlessArea)
+centerview(5)
+function headlessMapMouse()
+  local x, y, z = getMapMousePosition()
+  if not x then
+    return "nil " .. y
+  end
+  return string.format("%.1f %.1f %d", x, y, z)
+end
+)lua")
+                                       .arg(scmWidth)
+                                       .arg(scmHeight)));
+        QTest::qWait(50);
+        QVERIFY(rendered(session));
+        const auto mapMouse = [&session]() {
+            session.runLua(qsl("headlessMapMouseNow = headlessMapMouse()"));
+            return luaGlobalString(session.host(), "headlessMapMouseNow");
+        };
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        const QPointF centre(scmWidth / 2.0, scmHeight / 2.0);
+
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::move, .position = centre}));
+        QCOMPARE(mapMouse(), qsl("3.0 2.0 4"));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::leave, .position = centre}));
+        QCOMPARE(mapMouse(), qsl("nil the mouse is not over the 2D map"));
+
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::move, .position = centre}));
+        QCOMPARE(mapMouse(), qsl("3.0 2.0 4"));
+        QVERIFY(session.runLua(qsl("deleteMap()")));
+        QCOMPARE(mapMouse(), qsl("nil the mouse is not over the 2D map"));
+        QVERIFY(session.shutdown(false));
+    }
+
     // getMapMousePosition() gives the map coordinates where the app last had the mouse on the map, already in what a
     // press raises
     void test_getMapMousePositionIsWhereTheAppHadTheMouseOnTheMap()

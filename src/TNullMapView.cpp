@@ -47,6 +47,11 @@ TNullMapView::TNullMapView(Host* pHost, QObject* parent)
         mPainter.flushSymbolPixmapCache();
     });
     connect(pMap, &TMap::signal_roomDeleted, this, &TNullMapView::forgetDeletedRoom);
+    // The frame drawn last is of a map that is gone, and the mouse was over it
+    connect(pMap, &TMap::signal_mapCleared, this, [this]() {
+        mLaidOut = false;
+        mLastPointer.reset();
+    });
     // What makes the GUI's dlgMapper repaint its 2D map
     connect(pMap, &TMap::signal_areaChanged, this, &TNullMapView::schedulePaint);
     connect(pMap, &TMap::signal_mapLoaded, this, &TNullMapView::schedulePaint);
@@ -113,6 +118,10 @@ void TNullMapView::setShown(const bool shown)
         return;
     }
     mShown = shown;
+    if (!shown) {
+        // The mouse cannot be over a map that is not shown, nor still be once it shows again
+        mLastPointer.reset();
+    }
     schedulePaint();
     // The GUI paints a widget as it is shown
     if (shown) {
@@ -355,9 +364,20 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
     return result;
 }
 
+void TNullMapView::notePointer(const QPointF& position)
+{
+    mLastPointer = position;
+}
+
+void TNullMapView::forgetPointer()
+{
+    mLastPointer.reset();
+}
+
 std::optional<TMapViewFrontend::MapPoint> TNullMapView::mousePositionOnMap() const
 {
-    if (!mShown || !mLaidOut || !mLastPointer) {
+    // Only while the frame drawn last shows an area that is still there, as its scale and origin are that area's
+    if (!mShown || !showsArea() || !mLastPointer) {
         return std::nullopt;
     }
     const std::optional<QPointF> point = mView.mapPointAt(*mLastPointer);
