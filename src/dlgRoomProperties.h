@@ -27,7 +27,6 @@
 
 #include <QColor>
 #include <QMap>
-#include <QPlainTextEdit>
 
 #include <array>
 #include <optional>
