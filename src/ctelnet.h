@@ -404,6 +404,9 @@ private:
     friend class MirrorToStdOutTest;
     friend class NawsWidthReportTest;
 
+    // Reads mAutoReconnect and the failed-connection retry timer, which have no public face
+    friend class ConnectionDialogOpenProfileTest;
+
     // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
     friend class TelnetConnectFailureTest;
     friend class TelnetLatencyMeasurementTest;
