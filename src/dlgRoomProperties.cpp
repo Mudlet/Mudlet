@@ -33,9 +33,95 @@
 #include "widgetutils.h"
 
 #include <QColorDialog>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
 #include <QPainter>
+#include <QStyledItemDelegate>
+#include <QTextDocument>
+
+#include <limits>
+
+namespace {
+// The map draws from these keys itself, and the dialog edits the border ones elsewhere, so the table neither shows
+// nor writes them
+const QLatin1String scmMudletOwnedUserDataPrefix{"room.ui_"};
+
+// The key the generic mapper keeps a room's description under; the General tab edits it, so the table does not
+const QLatin1String scmDescriptionKey{"description"};
+
+bool editedInUserDataTable(const QString& key)
+{
+    return !key.startsWith(scmMudletOwnedUserDataPrefix) && key != scmDescriptionKey;
+}
+
+// What toPlainText() gives, but with non-breaking spaces kept: it turns them into plain ones, and a mapper script
+// matching the game's description would then miss the room
+QString plainTextKeepingSpaces(const QPlainTextEdit& edit)
+{
+    QString text = edit.document()->toRawText();
+    for (QChar& character : text) {
+        switch (character.unicode()) {
+        case 0xfdd0: // QTextBeginningOfFrame
+        case 0xfdd1: // QTextEndOfFrame
+        case QChar::ParagraphSeparator:
+        case QChar::LineSeparator:
+            character = QLatin1Char('\n');
+            break;
+        default:
+            break;
+        }
+    }
+    return text;
+}
+
+// Set on a value cell that shows the placeholder because the selected rooms do not agree on that key
+constexpr int scmMixedValueRole = Qt::UserRole;
+// Set for good on a value cell that started out mixed: emptied, even after a value was typed in, it goes back to the
+// placeholder rather than writing nothing to every room
+constexpr int scmStartedMixedRole = Qt::UserRole + 1;
+
+// Opens a cell showing the placeholder with an empty editor, and leaves the cell undecided when nothing was typed or
+// it was emptied again, so that only a new value replaces the rooms' differing ones, as on the description field
+class UserDataValueDelegate : public QStyledItemDelegate
+{
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        QWidget* editor = QStyledItemDelegate::createEditor(parent, option, index);
+        // A line edit holds 32767 characters by default and cuts a longer value it is opened on
+        if (auto* lineEdit = qobject_cast<QLineEdit*>(editor)) {
+            lineEdit->setMaxLength(std::numeric_limits<int>::max());
+        }
+        return editor;
+    }
+
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override
+    {
+        auto* lineEdit = qobject_cast<QLineEdit*>(editor);
+        if (lineEdit && index.data(scmMixedValueRole).toBool()) {
+            lineEdit->clear();
+            return;
+        }
+        QStyledItemDelegate::setEditorData(editor, index);
+    }
+
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override
+    {
+        auto* lineEdit = qobject_cast<QLineEdit*>(editor);
+        // Nothing typed, nothing to write back
+        if (lineEdit && !lineEdit->isModified()) {
+            return;
+        }
+        if (lineEdit && index.data(scmMixedValueRole).toBool() && lineEdit->text().isEmpty()) {
+            return;
+        }
+        QStyledItemDelegate::setModelData(editor, model, index);
+    }
+};
+} // namespace
 
 
 dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
@@ -63,8 +149,12 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     mpSymbolColour->setChooseButton(pushButton_setSymbolColor);
     mpBorderColour->setChooseButton(pushButton_setBorderColor);
     // Made after setupUi() set the form's tab order, the colour fields and the opacity box would come after OK and
-    // Cancel, so the whole chain goes here in the order the controls stand on screen
+    // Cancel, so the whole chain goes here: the form's own order, with each tab's controls as they stand on screen.
+    // The tab widget stays out of it: setTabOrder() takes it for all it holds, and Remove would come after the tab bar
     QList<QWidget*> tabOrder{lineEdit_name,
+                             lineEdit_hash,
+                             comboBox_area,
+                             plainTextEdit_description,
                              pushButton_setRoomColor,
                              lineEdit_roomSymbol,
                              comboBox_roomSymbol,
@@ -76,10 +166,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
                              pushButton_setBorderColor,
                              pushButton_resetBorderColor,
                              spinBox_borderThickness,
+                             checkBox_hidden,
                              spinBox_weight,
                              comboBox_weight,
                              checkBox_locked,
-                             checkBox_hidden};
+                             tableWidget_userData,
+                             pushButton_addUserData,
+                             pushButton_removeUserData};
     // OK and Cancel trade places between platforms
     uiDesign::collectFocusableInLayoutOrder(dialogButtonBox->layout(), tabOrder);
     for (int i = 1, total = tabOrder.size(); i < total; ++i) {
@@ -104,6 +197,14 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(pushButton_setBorderColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openBorderColorSelector);
     connect(pushButton_resetBorderColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetBorderColor);
     connect(spinBox_borderThickness, qOverload<int>(&QSpinBox::valueChanged), this, &dlgRoomProperties::slot_borderThicknessChanged);
+    connect(pushButton_addUserData, &QAbstractButton::clicked, this, &dlgRoomProperties::slot_addUserData);
+    connect(pushButton_removeUserData, &QAbstractButton::clicked, this, &dlgRoomProperties::slot_removeUserData);
+    connect(tableWidget_userData, &QTableWidget::itemChanged, this, &dlgRoomProperties::slot_userDataItemChanged);
+    tableWidget_userData->setItemDelegateForColumn(1, new UserDataValueDelegate(tableWidget_userData));
+    connect(lineEdit_hash, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_hashChanged);
+    connect(plainTextEdit_description, &QPlainTextEdit::textChanged, this, [this]() {
+        mDescriptionWasEdited = true;
+    });
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -245,6 +346,13 @@ void dlgRoomProperties::init(
     // Set thickness spinbox
     spinBox_borderThickness->setValue(mBorderThickness);
     initBorderInstructions();
+
+    initGeneral();
+    initUserData();
+
+    // The name is what is most often changed: typed straight away, Enter renames. Set here, as the buttons not in the
+    // tab order would otherwise be the first to take focus
+    lineEdit_name->setFocus(Qt::OtherFocusReason);
 
     // Configure dialog display
     adjustSize();
@@ -421,6 +529,9 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
 
 void dlgRoomProperties::accept()
 {
+    // Leaving the cell commits an edit still open in it: a button on macOS takes no focus when clicked, so the editor
+    // would not have lost it, and what was typed would go unsaved
+    tableWidget_userData->setCurrentIndex(QModelIndex());
     QDialog::accept();
 
     // Find name to return back
@@ -508,6 +619,36 @@ void dlgRoomProperties::accept()
                             changeBorderThickness,
                             newBorderThickness,
                             liveRoomIds());
+
+    QMap<QString, std::optional<QString>> changes = userDataChanges();
+    if (mDescriptionWasEdited) {
+        QString description = plainTextKeepingSpaces(*plainTextEdit_description);
+        // The field reads "\r\n" as one line break and gives back "\n": a description stored with them gets them back,
+        // so that a mapper script matching it as the game sent it still finds the room
+        if (mOriginalDescription.value_or(QString()).contains(qsl("\r\n"))) {
+            description.replace(QLatin1Char('\n'), qsl("\r\n"));
+        }
+        // Rooms that started out with different descriptions keep them unless one is typed in: empty again, the field is
+        // back to its placeholder rather than set to nothing
+        const bool mixedAndLeftEmpty = !mOriginalDescription.has_value() && description.isEmpty();
+        if (!mixedAndLeftEmpty && description != mOriginalDescription) {
+            changes.insert(scmDescriptionKey, description.isEmpty() ? std::nullopt : std::optional<QString>(description));
+        }
+    }
+    if (!changes.isEmpty()) {
+        emit signal_save_userData(changes, liveRoomIds());
+    }
+
+    const QSet<int> rooms = liveRoomIds();
+    if (rooms.size() == 1 && lineEdit_hash->text() != mOriginalHash) {
+        emit signal_save_hash(*rooms.cbegin(), lineEdit_hash->text());
+    }
+
+    // Last, as the map then shows the area the rooms went to
+    const QVariant areaId = comboBox_area->currentData();
+    if (areaId.isValid() && areaId.toInt() != mOriginalAreaId && !rooms.isEmpty()) {
+        emit signal_save_area(areaId.toInt(), rooms);
+    }
 }
 
 
@@ -856,6 +997,294 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
     mBorderThickness = value;
     mBorderThicknessWasChanged = true;
     emitBorderPreview();
+}
+
+void dlgRoomProperties::initGeneral()
+{
+    QList<const TRoom*> rooms;
+    for (const int roomId : std::as_const(mRoomIds)) {
+        if (const TRoom* room = liveRoom(roomId)) {
+            rooms << room;
+        }
+    }
+    const bool single = rooms.size() == 1;
+
+    //: Shown in Configure room's General tab in place of a room ID when several rooms are being configured at once
+    label_roomIdValue->setText(single ? QString::number(rooms.first()->getId()) : tr("%n room(s) selected", nullptr, rooms.size()));
+
+    // A game ID belongs to one room only, so it cannot be given to a selection
+    const QSignalBlocker hashBlocker(lineEdit_hash);
+    mOriginalHash = single ? mpHost->mpMap->mpRoomDB->roomIDToHash.value(rooms.first()->getId()) : QString();
+    lineEdit_hash->setText(mOriginalHash);
+    lineEdit_hash->setEnabled(single);
+    //: Placeholder of Configure room's game ID field, which is disabled when several rooms are being configured, as a game ID belongs to one room
+    lineEdit_hash->setPlaceholderText(single ? QString() : tr("Only for a single room"));
+    label_hashWarning->hide();
+    label_userDataWarning->hide();
+
+    QSet<int> roomAreas;
+    for (const TRoom* room : std::as_const(rooms)) {
+        roomAreas.insert(room->getArea());
+    }
+    mOriginalAreaId = roomAreas.size() == 1 ? std::optional<int>(*roomAreas.cbegin()) : std::nullopt;
+    QList<QPair<QString, int>> areas;
+    const QMap<int, QString>& areaNames = mpHost->mpMap->mpRoomDB->getAreaNamesMap();
+    for (auto it = areaNames.cbegin(); it != areaNames.cend(); ++it) {
+        areas.append({it.value(), it.key()});
+    }
+    std::sort(areas.begin(), areas.end(), [](const auto& left, const auto& right) {
+        const int byName = QString::localeAwareCompare(left.first, right.first);
+        return byName ? byName < 0 : left.second < right.second;
+    });
+    const QSignalBlocker areaBlocker(comboBox_area);
+    comboBox_area->clear();
+    if (!mOriginalAreaId.has_value()) {
+        // No area id, so leaving it picked moves no room
+        comboBox_area->addItem(multipleValuesPlaceholder);
+    }
+    for (const auto& [name, id] : std::as_const(areas)) {
+        comboBox_area->addItem(qsl("%1 (%2)").arg(name, QString::number(id)), id);
+    }
+    comboBox_area->setCurrentIndex(mOriginalAreaId.has_value() ? comboBox_area->findData(*mOriginalAreaId) : 0);
+
+    QSet<QString> descriptions;
+    bool someWithout = false;
+    for (const TRoom* room : std::as_const(rooms)) {
+        const auto it = room->userData.constFind(scmDescriptionKey);
+        if (it == room->userData.cend()) {
+            someWithout = true;
+        } else {
+            descriptions.insert(it.value());
+        }
+    }
+    if (descriptions.isEmpty()) {
+        mOriginalDescription = QString();
+    } else if (descriptions.size() == 1 && !someWithout) {
+        mOriginalDescription = *descriptions.cbegin();
+    } else {
+        mOriginalDescription = std::nullopt;
+    }
+    const QSignalBlocker descriptionBlocker(plainTextEdit_description);
+    plainTextEdit_description->setPlainText(mOriginalDescription.value_or(QString()));
+    //: Placeholder of Configure room's description field while it is empty
+    plainTextEdit_description->setPlaceholderText(mOriginalDescription.has_value() ? tr("Room description...") : multipleValuesPlaceholder);
+    mDescriptionWasEdited = false;
+}
+
+void dlgRoomProperties::slot_hashChanged(const QString& hash)
+{
+    // Counted as initGeneral() counts them when it enables the field, so the room's own game ID is not taken for another's
+    const QSet<int> rooms = liveRoomIds();
+    const int roomId = rooms.size() == 1 ? *rooms.cbegin() : 0;
+    const int holder = hash.isEmpty() ? -1 : mpHost->mpMap->mpRoomDB->hashToRoomID.value(hash, -1);
+    if (holder < 1 || holder == roomId) {
+        label_hashWarning->hide();
+        return;
+    }
+    //: Warning under Configure room's game ID field when the ID typed in already belongs to another room; %1 is that room's ID
+    label_hashWarning->setText(tr("Room %1 has this game ID now and will lose it.").arg(holder));
+    label_hashWarning->show();
+}
+
+void dlgRoomProperties::initUserData()
+{
+    QMap<QString, QSet<QString>> valuesByKey;
+    QMap<QString, int> roomsByKey;
+    int roomCount = 0;
+    for (const int roomId : std::as_const(mRoomIds)) {
+        const TRoom* room = liveRoom(roomId);
+        if (!room) {
+            continue;
+        }
+        ++roomCount;
+        for (auto it = room->userData.cbegin(); it != room->userData.cend(); ++it) {
+            if (!editedInUserDataTable(it.key())) {
+                continue;
+            }
+            valuesByKey[it.key()].insert(it.value());
+            ++roomsByKey[it.key()];
+        }
+    }
+
+    mOriginalUserData.clear();
+    for (auto it = valuesByKey.cbegin(); it != valuesByKey.cend(); ++it) {
+        // A key only some of the rooms hold is as undecided as one they hold different values for
+        const bool agreed = it.value().size() == 1 && roomsByKey.value(it.key()) == roomCount;
+        mOriginalUserData.insert(it.key(), agreed ? std::optional<QString>(*it.value().cbegin()) : std::nullopt);
+    }
+
+    const QSignalBlocker blocker(tableWidget_userData);
+    tableWidget_userData->setRowCount(0);
+    for (auto it = mOriginalUserData.cbegin(); it != mOriginalUserData.cend(); ++it) {
+        addUserDataRow(it.key(), it.value(), false);
+    }
+    tableWidget_userData->resizeColumnToContents(0);
+}
+
+void dlgRoomProperties::addUserDataRow(const QString& key, const std::optional<QString>& value, const bool keyEditable)
+{
+    const int row = tableWidget_userData->rowCount();
+    tableWidget_userData->insertRow(row);
+
+    auto* keyItem = new QTableWidgetItem(key);
+    if (!keyEditable) {
+        // Renaming a key would be a removal and an addition in one, which Remove and Add already say plainly
+        keyItem->setFlags(keyItem->flags() & ~Qt::ItemIsEditable);
+    }
+    tableWidget_userData->setItem(row, 0, keyItem);
+
+    auto* valueItem = new QTableWidgetItem(value.value_or(QString()));
+    if (!value.has_value()) {
+        valueItem->setData(scmStartedMixedRole, true);
+        showUserDataValueMixed(valueItem, true);
+    }
+    tableWidget_userData->setItem(row, 1, valueItem);
+}
+
+void dlgRoomProperties::showUserDataValueMixed(QTableWidgetItem* item, const bool mixed)
+{
+    item->setData(scmMixedValueRole, mixed);
+    if (mixed) {
+        item->setText(multipleValuesPlaceholder);
+    }
+    QFont font = item->font();
+    font.setItalic(mixed);
+    item->setFont(font);
+    item->setData(Qt::ForegroundRole, mixed ? QVariant(palette().placeholderText()) : QVariant());
+}
+
+QMap<QString, std::optional<QString>> dlgRoomProperties::userDataChanges() const
+{
+    QMap<QString, std::optional<QString>> changes;
+    QSet<QString> keysLeft;
+    for (int row = 0; row < tableWidget_userData->rowCount(); ++row) {
+        const QTableWidgetItem* keyItem = tableWidget_userData->item(row, 0);
+        const QTableWidgetItem* valueItem = tableWidget_userData->item(row, 1);
+        if (!valueItem) {
+            continue;
+        }
+        // A row listed from the rooms, whose key cannot be edited, is kept whatever its key: setRoomUserData()
+        // accepts blank ones. Only an added row needs a key worth saving, and one typed with a space around it is
+        // the key without
+        const bool addedRow = keyItem && keyItem->flags().testFlag(Qt::ItemIsEditable);
+        const QString key = !keyItem ? QString() : addedRow ? keyItem->text().trimmed() : keyItem->text();
+        // The rows listed from the rooms come first, so an added row repeating a key is the one left out
+        if (addedRow && (key.isEmpty() || !editedInUserDataTable(key) || keysLeft.contains(key))) {
+            continue;
+        }
+        keysLeft.insert(key);
+        if (valueItem->data(scmMixedValueRole).toBool()) {
+            continue;
+        }
+        const auto original = mOriginalUserData.constFind(key);
+        if (original != mOriginalUserData.cend() && original.value() == valueItem->text()) {
+            continue;
+        }
+        changes.insert(key, valueItem->text());
+    }
+    for (auto it = mOriginalUserData.cbegin(); it != mOriginalUserData.cend(); ++it) {
+        if (!keysLeft.contains(it.key())) {
+            changes.insert(it.key(), std::nullopt);
+        }
+    }
+    return changes;
+}
+
+void dlgRoomProperties::slot_addUserData()
+{
+    {
+        const QSignalBlocker blocker(tableWidget_userData);
+        addUserDataRow(QString(), QString(), true);
+    }
+    const int row = tableWidget_userData->rowCount() - 1;
+    tableWidget_userData->setCurrentCell(row, 0);
+    tableWidget_userData->editItem(tableWidget_userData->item(row, 0));
+}
+
+void dlgRoomProperties::slot_removeUserData()
+{
+    QList<int> rows;
+    const auto selected = tableWidget_userData->selectionModel()->selectedRows();
+    for (const QModelIndex& index : selected) {
+        rows << index.row();
+    }
+    // From the bottom up, so removing a row does not move the ones still to go
+    std::sort(rows.begin(), rows.end(), std::greater<int>());
+    for (const int row : std::as_const(rows)) {
+        tableWidget_userData->removeRow(row);
+    }
+    updateUserDataKeyWarning();
+}
+
+void dlgRoomProperties::updateUserDataKeyWarning()
+{
+    QStringList fieldKeys;
+    QStringList repeatedKeys;
+    bool mapKey = false;
+    // Read the way userDataChanges() reads them, which saves the first row of a key and leaves the others out
+    QSet<QString> keysSeen;
+    for (int row = 0; row < tableWidget_userData->rowCount(); ++row) {
+        const QTableWidgetItem* keyItem = tableWidget_userData->item(row, 0);
+        if (!keyItem) {
+            continue;
+        }
+        // Only an added row's key can be typed; one listed from the rooms is shown only if the table edits it
+        if (!keyItem->flags().testFlag(Qt::ItemIsEditable)) {
+            keysSeen.insert(keyItem->text());
+            continue;
+        }
+        const QString key = keyItem->text().trimmed();
+        if (key.isEmpty()) {
+            continue;
+        }
+        if (key.startsWith(scmMudletOwnedUserDataPrefix)) {
+            mapKey = true;
+        } else if (!editedInUserDataTable(key)) {
+            if (!fieldKeys.contains(key)) {
+                fieldKeys << key;
+            }
+        } else if (keysSeen.contains(key)) {
+            if (!repeatedKeys.contains(key)) {
+                repeatedKeys << key;
+            }
+        } else {
+            keysSeen.insert(key);
+        }
+    }
+    QStringList warnings;
+    for (const QString& key : std::as_const(fieldKeys)) {
+        //: Warning under the table on Configure room's User data tab; %1 is a key typed into a new row, such as "description", which has a field of its own on the General tab
+        warnings << tr("\"%1\" is edited on the General tab, so this row will not be saved.").arg(key);
+    }
+    for (const QString& key : std::as_const(repeatedKeys)) {
+        //: Warning under the table on Configure room's User data tab; %1 is a key typed into a new row that an earlier row already has
+        warnings << tr("\"%1\" is already in the table, so this row will not be saved.").arg(key);
+    }
+    if (mapKey) {
+        //: Warning under the table on Configure room's User data tab, when a key typed into a new row starts with room.ui_, which the map keeps for itself; do not translate room.ui_
+        warnings << tr("Keys starting with room.ui_ belong to the map, so such a row will not be saved.");
+    }
+    label_userDataWarning->setText(warnings.join(QLatin1Char(' ')));
+    label_userDataWarning->setVisible(!warnings.isEmpty());
+}
+
+void dlgRoomProperties::slot_userDataItemChanged(QTableWidgetItem* item)
+{
+    if (item && item->column() == 0) {
+        updateUserDataKeyWarning();
+        return;
+    }
+    if (!item || item->column() != 1 || !item->data(scmStartedMixedRole).toBool()) {
+        return;
+    }
+    const QSignalBlocker blocker(tableWidget_userData);
+    if (item->text().isEmpty()) {
+        // Emptied again, as on the description field: the rooms keep their differing values
+        showUserDataValueMixed(item, true);
+    } else if (item->data(scmMixedValueRole).toBool()) {
+        // Typed over, the cell now holds one value for every room rather than the placeholder
+        showUserDataValueMixed(item, false);
+    }
 }
 
 // The dialog is not modal, so a script may have deleted any of these rooms,

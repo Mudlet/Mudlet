@@ -7909,6 +7909,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetRoomArea", TLuaInterpreter::resetRoomArea);
     lua_register(pGlobalLua, "setAreaName", TLuaInterpreter::setAreaName);
     lua_register(pGlobalLua, "getAreaGraph", TLuaInterpreter::getAreaGraph);
+    lua_register(pGlobalLua, "getAreaExploration", TLuaInterpreter::getAreaExploration);
+    lua_register(pGlobalLua, "getAreaConnections", TLuaInterpreter::getAreaConnections);
     lua_register(pGlobalLua, "setAreaGraphPosition", TLuaInterpreter::setAreaGraphPosition);
     lua_register(pGlobalLua, "resetAreaGraphLayout", TLuaInterpreter::resetAreaGraphLayout);
     lua_register(pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked);
@@ -10309,6 +10311,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->requestMapRepaint();
             return success();
         }
+        if (key == qsl("mapDeletedRoomExitsAsStubs")) {
+            host.mMapperDeletedRoomExitsAsStubs = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
         if (key == qsl("showUpperLowerLevels")) {
             TAppFrontend::instance()->setDrawUpperLowerLevels(getVerifiedBool(L, __func__, 2, "value"));
             host.mpMap->requestMapRepaint();
@@ -10948,6 +10954,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapStitchAreas"),
              [&]() {
                  lua_pushboolean(L, host.mMapperStitchAreas);
+             }},
+            {qsl("mapDeletedRoomExitsAsStubs"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapperDeletedRoomExitsAsStubs);
              }},
             {qsl("editorAutoComplete"),
              [&]() {
