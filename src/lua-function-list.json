@@ -238,6 +238,7 @@
     "getMapLabel": "labelinfo = getMapLabel(areaID, labelID or labelText)",
     "getMapLabels": "arealabels = getMapLabels(areaID[, enableFullErrorReporting])",
     "getMapMenus": "getMapMenus()",
+    "getMapMousePosition": "x, y, z = getMapMousePosition()",
     "getMapSelection": "getMapSelection()",
     "getMapUserData": "getMapUserData(key)",
     "getMapWidgetGeometry": "getMapWidgetGeometry()",
