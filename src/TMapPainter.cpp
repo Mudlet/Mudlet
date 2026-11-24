@@ -647,7 +647,9 @@ void TMapPainter::drawRoom(QPainter& painter,
     // Not below the level of detail threshold, where the rooms drawn in bulk show none and only the player's room
     // would still get one
     if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty() && mRoomWidth >= cLodPixelThreshold) {
-        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), !isGridMode, mBubbleMode);
+        // Rooms are drawn one by one, so a neighbour drawn later covers whatever of the dot reaches it
+        const qreal gap = isGridMode ? 0.0 : qMin(mRoomWidth, mRoomHeight) * (1.0 - rSize);
+        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), gap, mBubbleMode);
     }
 }
 
@@ -1251,7 +1253,7 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
 
     for (const auto& [room, roomRect] : specialExitRooms) {
         const QPointF center = roomRect.center();
-        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), false, mBubbleMode);
+        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), 0.0, mBubbleMode);
     }
 
     const qreal timeCollision = timer.nsecsElapsed() / 1000000.0;

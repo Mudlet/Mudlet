@@ -63,6 +63,8 @@ void paintExitMarkers(QPainter& painter, QPen& pen, const TRoom& room, float rx,
 // The dot that says a room roomWidth by roomHeight centered on rx, ry has special exits: centered on its
 // top right corner where rooms have space between them, or else just inside that corner. A round room's corner is
 // where its edge crosses the diagonal, so the dot stays on the room.
-void paintSpecialExitMarker(QPainter& painter, float rx, float ry, qreal roomWidth, qreal roomHeight, bool onCorner, bool round);
+// gap is the space between the room and its neighbours, 0 where they touch: the dot goes on the corner only where it
+// fits into that space, and just inside the corner elsewhere
+void paintSpecialExitMarker(QPainter& painter, float rx, float ry, qreal roomWidth, qreal roomHeight, qreal gap, bool round);
 
 } // namespace ExitAppearance

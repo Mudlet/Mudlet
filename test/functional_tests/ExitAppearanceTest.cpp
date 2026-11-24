@@ -171,6 +171,14 @@ private slots:
         QCOMPARE(specialExitDotPixelsOutside(QRectF(30, 30, 3, 3), 0.0), 0);
     }
 
+    // On the corner only where the space to the neighbouring rooms holds it; else a neighbour drawn later covers part
+    void test_aSpecialExitDotGoesOnTheCornerOnlyWhereThereIsRoom()
+    {
+        const QRectF room(20, 20, 20, 20);
+        QVERIFY2(specialExitDotPixelsOutside(room, 10.0) > 0, "with room to spare the dot is expected on the corner, or this proves nothing");
+        QCOMPARE(specialExitDotPixelsOutside(room, 1.0), 0);
+    }
+
     void test_markerShowsTheDoorOnIt_data()
     {
         QTest::addColumn<int>("direction");

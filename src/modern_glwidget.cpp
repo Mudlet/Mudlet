@@ -1499,7 +1499,7 @@ QImage ModernGLWidget::exitMarkerImage(const TRoom& room, const QColor& roomColo
         ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
     }
     if (specialExitMarker) {
-        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, false, round);
+        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, 0.0, round);
     }
     painter.end();
     return image;
