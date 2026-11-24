@@ -230,8 +230,8 @@ public:
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
     static int customLineDestination(const TRoom& room, const QString& key);
     static bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other);
-    // The compass exit by which exit's destination leads back to room, preferring the reverse direction so both rooms of
-    // a two-way exit draw the same path; 0 if none does
+    // The compass exit of exit's destination that pairs with exit, the same pair seen from either room: a reverse exit
+    // first, then the others in direction order, each exit back pairing once; 0 if none is left for it
     static int wayBack(const TRoom& room, const ExitToPaint& exit);
     // Whether exit's destination draws its way back as a custom line reaching room, which then shows the two-way
     // connection a bent plain line would draw again beside it

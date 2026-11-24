@@ -54,6 +54,7 @@
 #include <QVector3D>
 
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cmath>
 #include <numbers>
@@ -143,18 +144,48 @@ static QVarLengthArray<int, 8> exitsLeadingBack(const TRoom& from, const int dir
 
 int TMapPainter::wayBack(const TRoom& room, const ExitToPaint& exit)
 {
-    if (!exit.destination) {
+    if (!exit.destination || exit.direction < DIR_NORTH || exit.direction > DIR_SOUTHWEST) {
         return 0;
     }
-    // Only an exit back that takes this one as its own way back pairs with it: with two exits into the same room, the
-    // way back belongs to one of them, and the other would otherwise lose its line under that one's custom line
-    for (const int back : exitsLeadingBack(room, exit.direction, *exit.destination)) {
-        const QVarLengthArray<int, 8> ownWaysBack = exitsLeadingBack(*exit.destination, back, room);
-        if (!ownWaysBack.isEmpty() && ownWaysBack.first() == exit.direction) {
-            return back;
+    // Worked out from the room with the lower ID, so that both rooms come to the same pairs whichever one asks
+    const bool roomFirst = room.getId() <= exit.destination->getId();
+    const TRoom& first = roomFirst ? room : *exit.destination;
+    const TRoom& second = roomFirst ? *exit.destination : room;
+    QVarLengthArray<int, 8> firstExits;
+    QVarLengthArray<int, 8> secondExits;
+    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+        if (first.getExit(direction) == second.getId()) {
+            firstExits.append(direction);
+        }
+        if (second.getExit(direction) == first.getId()) {
+            secondExits.append(direction);
         }
     }
-    return 0;
+    std::array<int, DIR_SOUTHWEST + 1> partnerOfFirst{};
+    std::array<int, DIR_SOUTHWEST + 1> partnerOfSecond{};
+    // An exit and its reverse pair first, then the others in direction order, each exit back taken once
+    for (const int direction : std::as_const(firstExits)) {
+        const int reverse = TMap::scmReverseDirections.value(direction);
+        if (secondExits.contains(reverse)) {
+            partnerOfFirst[direction] = reverse;
+            partnerOfSecond[reverse] = direction;
+        }
+    }
+    auto itSecond = secondExits.cbegin();
+    for (const int direction : std::as_const(firstExits)) {
+        if (partnerOfFirst[direction]) {
+            continue;
+        }
+        while (itSecond != secondExits.cend() && partnerOfSecond[*itSecond]) {
+            ++itSecond;
+        }
+        if (itSecond == secondExits.cend()) {
+            break;
+        }
+        partnerOfFirst[direction] = *itSecond;
+        partnerOfSecond[*itSecond] = direction;
+    }
+    return roomFirst ? partnerOfFirst[exit.direction] : partnerOfSecond[exit.direction];
 }
 
 bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)

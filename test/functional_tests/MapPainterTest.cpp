@@ -438,6 +438,39 @@ private slots:
         QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, north), "the custom line for the exit east hid the exit north");
     }
 
+    // Each exit back pairs with one exit, and both rooms come to the same pairs: otherwise one room draws a two-way line
+    // the other draws again as a one-way arrow, or a pair both rooms could walk is left with two arrows
+    void bothRoomsComeToTheSamePairs()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        const auto exitTo = [](TRoom* pDestination, const int direction) {
+            TMapPainter::ExitToPaint exit;
+            exit.destination = pDestination;
+            exit.destinationId = pDestination->getId();
+            exit.direction = direction;
+            return exit;
+        };
+        const auto checkPairs = [&](const QList<int>& westExits, const QList<int>& eastExits) {
+            for (const int direction : {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST}) {
+                QVERIFY(map()->setExit(scmWestRoom, westExits.contains(direction) ? scmEastRoom : -1, direction));
+                QVERIFY(map()->setExit(scmEastRoom, eastExits.contains(direction) ? scmWestRoom : -1, direction));
+            }
+            for (const int direction : westExits) {
+                const int back = TMapPainter::wayBack(*pWestRoom, exitTo(pEastRoom, direction));
+                QVERIFY2(back, qPrintable(qsl("west exit %1 has no pair").arg(direction)));
+                QCOMPARE(TMapPainter::wayBack(*pEastRoom, exitTo(pWestRoom, back)), direction);
+            }
+            for (const int direction : eastExits) {
+                const int back = TMapPainter::wayBack(*pEastRoom, exitTo(pWestRoom, direction));
+                QVERIFY2(back, qPrintable(qsl("east exit %1 has no pair").arg(direction)));
+                QCOMPARE(TMapPainter::wayBack(*pWestRoom, exitTo(pEastRoom, back)), direction);
+            }
+        };
+        checkPairs({DIR_NORTH, DIR_SOUTHWEST}, {DIR_NORTHEAST, DIR_NORTHWEST});
+        checkPairs({DIR_NORTH, DIR_EAST}, {DIR_NORTHEAST, DIR_NORTHWEST});
+    }
+
     // The export decides alike: the exit north is drawn there, so the export with it differs from one without it
     void anExportDrawsAnExitTheCustomLineBackDoesNotPairWith()
     {
