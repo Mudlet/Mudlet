@@ -4411,7 +4411,8 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     roomID = roomID or speedWalkPath[#speedWalkPath]
     -- a walk chosen during a hold sets off when the hold ends
     if walk_hold then
-        walk_destination = roomID
+        -- with no room given and no route left to take one from, the walk goes on to where it was going
+        walk_destination = roomID or walk_destination
         walking = true
         return
     end
