@@ -2462,7 +2462,13 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
     auto argType = lua_type(L, index);
     TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
-        const int id = qRound(lua_tonumber(L, index));
+        const lua_Number number = lua_tonumber(L, index);
+        const double rounded = std::round(number);
+        // Converting NaN or a value outside int's range is undefined, and no button has such an ID
+        if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+            return {warnArgumentValue(L, func, qsl("no button item with ID %1 found").arg(number, 0, 'g', QLocale::FloatingPointShortest).toUtf8().constData()), pItem};
+        }
+        const int id = static_cast<int>(rounded);
         if (id < 0) {
             return {warnArgumentValue(L, func, qsl("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData()), pItem};
         }
@@ -3829,7 +3835,8 @@ int TLuaInterpreter::sendRaw(lua_State* L)
         return lua_error(L);
     }
     bool wantPrint = true;
-    if (lua_gettop(L) > 1) {
+    // send("command", nil) must behave like send("command"), so a wrapper can pass its own optional argument on
+    if (!lua_isnoneornil(L, 2)) {
         wantPrint = getVerifiedBool(L, "send", 2, "showOnScreen", true);
     }
     const QString text{lua_tostring(L, 1)};
@@ -3848,7 +3855,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
         return lua_error(L);
     }
     bool parseCodes = false;
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
     size_t length = 0;
@@ -4648,11 +4655,22 @@ void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, c
     }
 }
 
+static void pushGlobalTable(lua_State* L, const char* name)
+{
+    lua_getglobal(L, name);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, name);
+    }
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "atcp");
     lua_pushstring(L, var.toUtf8().constData());
     lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);
@@ -5038,9 +5056,17 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 continue;
             }
 
-            // A variable can carry several values, with the default one last
             const QString msspVAR = payloadList.first();
-            const QString msspVAL = payloadList.last();
+            // A variable can carry several values, with the default one last
+            QString msspVAL = payloadList.last();
+            // setMSSPVariables() has already removed every CR. A line break at either end is
+            // not part of the value, and would spoil the HOSTNAME match and the TLS flags below
+            while (msspVAL.startsWith(QChar::LineFeed)) {
+                msspVAL.remove(0, 1);
+            }
+            while (msspVAL.endsWith(QChar::LineFeed)) {
+                msspVAL.chop(1);
+            }
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
@@ -5317,7 +5343,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "channel102"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "channel102");
     lua_pushnumber(L, var);
     lua_pushnumber(L, arg);
     lua_rawset(L, -3);
@@ -7121,9 +7147,12 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         return lua_error(L);
     }
 
-    QString dataToPost;
+    // Sent byte for byte: the data may hold NULs, or bytes that are not UTF-8
+    QByteArray dataToPost;
     if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
+        size_t dataLength = 0;
+        const char* data = lua_tolstring(L, pos + 1, &dataLength);
+        dataToPost = QByteArray(data, static_cast<qsizetype>(dataLength));
     }
     const QString urlString{lua_tostring(L, pos + 2)};
     QString fileLocation;
@@ -7156,16 +7185,17 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
 
+    const QByteArray& payload = fileToUpload.isEmpty() ? dataToPost : fileToUpload;
     QNetworkReply* reply;
     switch (operation) {
     case QNetworkAccessManager::PostOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, payload);
         break;
     case QNetworkAccessManager::PutOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, payload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, payload);
     }
 
     if (TDebug::wants(TDebug::Category::Network)) {
@@ -9042,23 +9072,24 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
 {
-    TKey* pT;
-    pT = new TKey("a", mpHost);
+    auto* pT = new TKey("a", mpHost);
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerKey();
-    if (!function.isEmpty()) {
-        pT->setScript(function);
-    }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    emit mpHost->signal_keyBoundByScript(pT->getID());
-    return id;
+    if (!function.isEmpty() && !pT->setScript(function)) {
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
+        delete pT;
+        return {-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
+    }
+    emit mpHost->signal_keyBoundByScript(id);
+    return {id, QString()};
 }
 
 // No documentation available in wiki - internal function
