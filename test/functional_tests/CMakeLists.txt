@@ -98,6 +98,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    DetachedWindowFullScreenTest.cpp
     DetachedWindowToggleStateTest.cpp
     GlobalSettingsFlushTest.cpp
     AppFrontendAsyncTest.cpp
