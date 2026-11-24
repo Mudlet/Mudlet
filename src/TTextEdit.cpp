@@ -372,8 +372,9 @@ void TTextEdit::applyPendingScrollBarUpdate()
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar) {
-        updateHorizontalScrollBar();
+        // Move first: the bar update resets the bar to mCursorX
         scrollH(offset);
+        updateHorizontalScrollBar();
     }
 }
 
@@ -3293,13 +3294,12 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // per click:
     delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
     delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
-    // Add on any previously stored (integer) remainder:
     delta += mMouseWheelRemainder;
     // Convert to 15 degree steps and record them:
     int xDelta = qRound(delta.x() / 15.0);
     int yDelta = qRound(delta.y() / 15.0);
-    // Store the (rounded) remainder
-    mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
+    // Kept fractional: a high-resolution wheel or touchpad sends steps of under a degree
+    mMouseWheelRemainder = delta - QPointF(15 * xDelta, 15 * yDelta);
 
     // Left unaccepted, a turn the console has no use for scrolls what holds it, such as a scroll box. A touchpad turn
     // too small for a whole line is still the console's when it would take a whole one
@@ -3312,7 +3312,12 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
         used = mpConsole->usesWheel(e->angleDelta().y() > 0);
     }
 
-    // Space for future use of xDelta
+    QScrollBar* hScrollBar = mpConsole->mpHScrollBar;
+    if (xDelta != 0 && mpConsole->mHScrollBarEnabled && !hScrollBar->isHidden()) {
+        // Qt's convention: a positive x delta scrolls towards the start of the line
+        hScrollBar->setValue(hScrollBar->value() - xDelta);
+        used = true;
+    }
 
     e->setAccepted(used);
 }
