@@ -248,6 +248,8 @@ public:
     static int auditAreas(lua_State*);
     static int getAreaExits(lua_State*);
     static int getAreaGraph(lua_State*);
+    static int getAreaExploration(lua_State*);
+    static int getAreaConnections(lua_State*);
     static int setMergeTables(lua_State*);
     static int addSupportedTelnetOption(lua_State*);
     static int setDoor(lua_State*);
