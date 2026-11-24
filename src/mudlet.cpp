@@ -104,6 +104,7 @@
 #include <QMessageBox>
 #include <QPoint>
 #include <QScopeGuard>
+#include <QScopedValueRollback>
 #include <QScreen>
 #include <QScrollBar>
 #include <QSettings>
@@ -3066,17 +3067,19 @@ void mudlet::slot_reattachAllDetachedWindows()
 
 void mudlet::slot_toggleAlwaysOnTop()
 {
-    Qt::WindowFlags flags = windowFlags();
-    if (flags & Qt::WindowStaysOnTopHint) {
-        // Remove always on top flag
-        setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
-        dactionToggleAlwaysOnTop->setChecked(false);
-    } else {
-        // Add always on top flag
-        setWindowFlags(flags | Qt::WindowStaysOnTopHint);
-        dactionToggleAlwaysOnTop->setChecked(true);
+    const bool onTop = !(windowFlags() & Qt::WindowStaysOnTopHint);
+    setWindowStaysOnTop(this, onTop);
+    dactionToggleAlwaysOnTop->setChecked(onTop);
+}
+
+// setWindowFlags() would destroy and recreate the native window, leaving floating docks no longer tied to it, so they
+// drop behind it; the platform window can change this flag in place
+void mudlet::setWindowStaysOnTop(QWidget* window, const bool onTop)
+{
+    window->overrideWindowFlags(window->windowFlags().setFlag(Qt::WindowStaysOnTopHint, onTop));
+    if (QWindow* pWindow = window->windowHandle()) {
+        pWindow->setFlags(window->windowFlags());
     }
-    show(); // Required after changing window flags
 }
 
 void mudlet::slot_minimize()
@@ -3713,6 +3716,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
                 if (!pH->mpDlgIRC) {
                     pH->mpDlgIRC = new dlgIRC(pH);
                 }
+                // show() leaves a minimized window minimized
+                pH->mpDlgIRC->setWindowState(pH->mpDlgIRC->windowState() & ~Qt::WindowMinimized);
                 pH->mpDlgIRC->raise();
                 pH->mpDlgIRC->show();
             },
@@ -4498,7 +4503,48 @@ int mudlet::profileTabIndex(const QString& profileName) const
 
 bool mudlet::setActiveProfileTab(const QString& profileName)
 {
-    mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+    Host* pHost = mHostManager.getHost(profileName);
+    // A focus-change handler asking for this same switch would otherwise raise its event again, without end
+    if (pHost && pHost == mpProfileBeingActivated) {
+        return true;
+    }
+    const QScopedValueRollback<QPointer<Host>> activating(mpProfileBeingActivated, pHost);
+
+    // A detached profile's tab is in its own window, not the main tab bar
+    if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        // show() leaves a minimised window minimised
+        pDetachedWindow->setWindowState(pDetachedWindow->windowState() & ~Qt::WindowMinimized);
+        pDetachedWindow->show();
+        pDetachedWindow->raise();
+        pDetachedWindow->activateWindow();
+        pDetachedWindow->switchToProfile(profileName);
+        // The main tab bar's change of tab is what does this for a profile in the main window
+        activateProfile(pHost);
+        // The profile left behind may have sent the window to another of its tabs from a focus handler before this one took over
+        if (pHost && pHost == mpCurrentActiveHost) {
+            pDetachedWindow->switchToProfile(profileName);
+        }
+        // Queued after activateProfile()'s own hand-off, which could give the keyboard to a user window left in the main window
+        QTimer::singleShot(0ms, pDetachedWindow, [this, pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
+            // A focus-change handler may have moved on to another profile since
+            if (!pDetachedHost || pDetachedHost != mpCurrentActiveHost) {
+                return;
+            }
+            pDetachedWindow->raise();
+            pDetachedWindow->activateWindow();
+            if (TMainConsole* pConsole = pDetachedHost->mainConsoleView()) {
+                pConsole->focusActiveCommandLine(pDetachedWindow);
+            }
+        });
+        return true;
+    }
+    const int index = mpTabBar->tabIndex(profileName);
+    // While a detached profile is active the main tab bar keeps its tab current, so selecting that tab again changes nothing
+    if (index >= 0 && index == mpTabBar->currentIndex() && mpCurrentActiveHost && mpTabBar->tabIndex(mpCurrentActiveHost->getName()) < 0) {
+        activateProfile(pHost);
+        return true;
+    }
+    mpTabBar->setCurrentIndex(index);
     return true;
 }
 
@@ -6622,17 +6668,16 @@ void mudlet::slot_replay()
         return;
     }
 
-    QSettings& settings = *MudletApp::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    // Recordings always go to the profile's default log folder, never a custom log folder
+    const QString startDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName());
 
-
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), lastDir, tr("*.dat"));
+    //: File type filter in the dialog for choosing a replay to play back; keep "(*.dat)" untranslated
+    const QString replayFilter = tr("Mudlet replays (*.dat)");
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), startDir, replayFilter);
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
-    lastDir = QFileInfo(fileName).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
     mHostManager.replay().load(pHost, fileName);
@@ -7111,6 +7156,12 @@ void mudlet::slot_multiView(const bool state)
         // If there IS at least one profile still active, but none of them WAS
         // the active one then make one (the first) the active one:
         slot_tabChanged(0);
+    }
+    // Every profile in the main window is now on show, so no tab there has text waiting unseen
+    if (mMultiView) {
+        for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+            mpTabBar->clearActivity(i);
+        }
     }
 }
 
