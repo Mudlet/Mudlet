@@ -846,6 +846,20 @@ private slots:
         QCOMPARE(consoleOccurrences(host, qsl("signed in automatically next time")), 1);
     }
 
+    // No script or package may read a reconnect token from gmcp. The event still fires, so a script can tell the game sent one.
+    void testATokenNeverReachesTheGmcpTable()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        markSignInOffered(host);
+        host->mLuaInterpreter.compileAndExecuteScript(qsl("registerAnonymousEventHandler('gmcp.Char.Login.Token', function() "
+                                                          "echo(next(gmcp.Char.Login.Token) == nil and 'TOKEN_UNREADABLE\\n' or 'TOKEN_READABLE\\n') end)"));
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
+        QVERIFY2(waitForConsoleContains(host, qsl("TOKEN_")), "the gmcp.Char.Login.Token event did not fire");
+        QVERIFY2(consoleContains(host, qsl("TOKEN_UNREADABLE")), "a script could read the reconnect token from gmcp");
+        QVERIFY2(waitForStoredToken(host, qsl("opaque-token")), "the token should still be stored for the next sign-in");
+    }
+
     // A token is kept only from a game that offered Char.Login on this connection: from any other,
     // nothing would ever replay it, so keeping it - and promising an automatic sign-in - would put a
     // value of the server's choosing in the profile's store for nothing (#10963).
