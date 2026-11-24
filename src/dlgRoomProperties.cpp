@@ -466,6 +466,9 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
 
 void dlgRoomProperties::accept()
 {
+    // Leaving the cell commits an edit still open in it: a button on macOS takes no focus when clicked, so the editor
+    // would not have lost it, and what was typed would go unsaved
+    tableWidget_userData->setCurrentIndex(QModelIndex());
     QDialog::accept();
 
     // Find name to return back

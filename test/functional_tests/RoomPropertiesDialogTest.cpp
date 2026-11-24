@@ -1477,6 +1477,24 @@ private slots:
         QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
     }
 
+    // OK, clicked with the cell still being edited, saves what was typed: a macOS button takes no focus from the editor
+    void aValueStillBeingEditedIsSavedByOk()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("old")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        // Double-clicking a cell makes it the current one, as here
+        pDlg->tableWidget_userData->setCurrentItem(userDataValue(pDlg, qsl("notes")));
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        pEditor->selectAll();
+        QTest::keyClicks(pEditor, qsl("new"));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("new")}}));
+    }
+
     // A line edit holds 32767 characters unless told otherwise, and would cut a longer value it is opened on
     void aLongValueOpenedInItsEditorIsKeptWhole()
     {
