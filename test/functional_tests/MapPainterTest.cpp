@@ -958,6 +958,26 @@ private slots:
         QVERIFY2(qFuzzyCompare(result.view.mMapCenterX, 51.0), qPrintable(qsl("panned to the label, the view was held at x %1. %2").arg(result.view.mMapCenterX).arg(saved(image, qsl("pan-label")))));
     }
 
+    // A level with neither rooms nor labels, which a script can still show, is not held to the rooms of other levels
+    void viewingALevelWithNothingOnItIsNotHeldToOtherLevels()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapViewOnly = true;
+        panned.mMapCenterZ = 3;
+        panned.mMapCenterX = 102.0;
+        panned.mMapCenterY = 0.0;
+        map()->mNewMove = false;
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, panned, result);
+        QVERIFY2(qFuzzyCompare(result.view.mMapCenterX, 102.0), qPrintable(qsl("on an empty level the view was held at x %1. %2").arg(result.view.mMapCenterX).arg(saved(image, qsl("pan-empty-level")))));
+    }
+
     // Viewing, the level buttons go to the next level with rooms and no further; editing, a level at a time
     void viewingTheLevelButtonsGoOnlyToLevelsWithRooms()
     {

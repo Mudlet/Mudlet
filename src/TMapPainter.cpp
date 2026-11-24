@@ -2514,7 +2514,8 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
     }
 
     // Viewing, the map cannot be panned so far that none of the level's rooms and labels are left: their extent stays
-    // at least a room into the view. Editing may go anywhere, to map into empty space.
+    // at least a room into the view. Editing may go anywhere, to map into empty space. A level with neither, reached
+    // by a script, is not held to the rooms of other levels.
     const int shownLevel = mMapCenterZ;
     // The y bounds are kept in screen coordinates, running southward as mMapCenterY does
     std::optional<QRectF> levelExtent;
@@ -2528,11 +2529,8 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
         levelExtent->setRight(qMax(levelExtent->right(), east));
         levelExtent->setBottom(qMax(levelExtent->bottom(), south));
     };
-    if (mMapViewOnly && !pDrawnArea->rooms.isEmpty()) {
-        include(pDrawnArea->xminForZ.value(shownLevel, pDrawnArea->min_x),
-                pDrawnArea->yminForZ.value(shownLevel, pDrawnArea->min_y),
-                pDrawnArea->xmaxForZ.value(shownLevel, pDrawnArea->max_x),
-                pDrawnArea->ymaxForZ.value(shownLevel, pDrawnArea->max_y));
+    if (mMapViewOnly && pDrawnArea->xminForZ.contains(shownLevel)) {
+        include(pDrawnArea->xminForZ.value(shownLevel), pDrawnArea->yminForZ.value(shownLevel), pDrawnArea->xmaxForZ.value(shownLevel), pDrawnArea->ymaxForZ.value(shownLevel));
     }
     if (mMapViewOnly) {
         for (const TMapLabel& label : pDrawnArea->mMapLabels) {
