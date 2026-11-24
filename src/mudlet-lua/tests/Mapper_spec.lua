@@ -8450,6 +8450,92 @@ describe("Tests the app-wide mapper options in getConfig and setConfig", functio
     assert.is_true(setConfig("mapStitchAreas", true))
     assert.is_true(getConfig("mapStitchAreas"))
   end)
+
+  it("round-trips mapDeletedRoomExitsAsStubs, which is off unless turned on", function()
+    local original = getConfig("mapDeletedRoomExitsAsStubs")
+    finally(function() setConfig("mapDeletedRoomExitsAsStubs", original) end)
+
+    assert.are.equal("boolean", type(original))
+    assert.is_true(setConfig("mapDeletedRoomExitsAsStubs", true))
+    assert.is_true(getConfig("mapDeletedRoomExitsAsStubs"))
+    assert.is_true(getConfig().mapDeletedRoomExitsAsStubs)
+    assert.is_true(setConfig("mapDeletedRoomExitsAsStubs", false))
+    assert.is_false(getConfig("mapDeletedRoomExitsAsStubs"))
+  end)
+end)
+
+describe("Tests the exits mapDeletedRoomExitsAsStubs leaves when a room is deleted", function()
+  local areaName, otherAreaName = "DeletedRoomStubsSpec", "DeletedRoomStubsSpecOther"
+  local areaId, otherAreaId, original
+
+  local function newRoom(area)
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    setRoomArea(id, area)
+    return id
+  end
+
+  local function sortedStubs(roomId)
+    local stubs = getExitStubs1(roomId)
+    table.sort(stubs)
+    return stubs
+  end
+
+  before_each(function()
+    original = getConfig("mapDeletedRoomExitsAsStubs")
+    areaId = addAreaName(areaName)
+    otherAreaId = addAreaName(otherAreaName)
+  end)
+
+  after_each(function()
+    setConfig("mapDeletedRoomExitsAsStubs", original)
+    deleteArea(areaName)
+    if getAreaTable()[otherAreaName] then
+      deleteArea(otherAreaName)
+    end
+  end)
+
+  it("leaves the exits to a deleted room as stubs only while turned on, and a special exit to it never", function()
+    for _, keep in ipairs({false, true}) do
+      setConfig("mapDeletedRoomExitsAsStubs", keep)
+      local from, to = newRoom(areaId), newRoom(areaId)
+      setExit(from, to, 1)
+      setExit(from, to, 9)
+      addSpecialExit(from, to, "climb")
+
+      deleteRoom(to)
+
+      assert.are.same(keep and {1, 9} or {}, sortedStubs(from))
+      assert.is_nil(next(getRoomExits(from)), "deleting a room left an exit to it")
+      assert.is_nil(next(getSpecialExitsSwap(from)), "deleting a room left a special exit to it")
+      deleteRoom(from)
+    end
+  end)
+
+  it("keeps the door and the lock of an exit left as a stub", function()
+    setConfig("mapDeletedRoomExitsAsStubs", true)
+    local from, to = newRoom(areaId), newRoom(areaId)
+    setExit(from, to, "n")
+    setDoor(from, "n", 2)
+    lockExit(from, "n", true)
+
+    deleteRoom(to)
+
+    assert.are.same({1}, sortedStubs(from))
+    assert.are.equal(2, getDoors(from).n)
+    assert.is_true(hasExitLock(from, "n"))
+  end)
+
+  it("removes rather than stubs the exits into an area that is deleted", function()
+    setConfig("mapDeletedRoomExitsAsStubs", true)
+    local from, to = newRoom(areaId), newRoom(otherAreaId)
+    setExit(from, to, "n")
+
+    deleteArea(otherAreaName)
+
+    assert.are.same({}, sortedStubs(from))
+    assert.is_nil(next(getRoomExits(from)))
+  end)
 end)
 
 describe("Tests closing another profile that opened a map widget", function()

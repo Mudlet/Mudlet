@@ -10311,6 +10311,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->requestMapRepaint();
             return success();
         }
+        if (key == qsl("mapDeletedRoomExitsAsStubs")) {
+            host.mMapperDeletedRoomExitsAsStubs = getVerifiedBool(L, __func__, 2, "value");
+            return success();
+        }
         if (key == qsl("showUpperLowerLevels")) {
             TAppFrontend::instance()->setDrawUpperLowerLevels(getVerifiedBool(L, __func__, 2, "value"));
             host.mpMap->requestMapRepaint();
@@ -10950,6 +10954,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapStitchAreas"),
              [&]() {
                  lua_pushboolean(L, host.mMapperStitchAreas);
+             }},
+            {qsl("mapDeletedRoomExitsAsStubs"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapperDeletedRoomExitsAsStubs);
              }},
             {qsl("editorAutoComplete"),
              [&]() {
