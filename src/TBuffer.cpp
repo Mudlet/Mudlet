@@ -4530,6 +4530,7 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 case 0:
                     mIsDefaultColor = true;
                     mForeGroundColor = hostForeground();
+                    mForeGroundColorLight = mForeGroundColor;
                     mBackGroundColor = hostBackground();
                     mBold = false;
                     mBoldAsked = false;
