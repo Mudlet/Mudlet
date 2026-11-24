@@ -1251,11 +1251,6 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
         painter.restore();
     }
 
-    for (const auto& [room, roomRect] : specialExitRooms) {
-        const QPointF center = roomRect.center();
-        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), 0.0, mBubbleMode);
-    }
-
     const qreal timeCollision = timer.nsecsElapsed() / 1000000.0;
     timer.start();
     // Decoration pass: symbols and V-numbers for rooms that need them.
@@ -1289,6 +1284,12 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
             painter.drawText(roomRect, Qt::AlignCenter, QString::number(room->getId()));
             painter.restore();
         }
+    }
+
+    // After the symbols and room ids, which drawRoom() paints the dot over as well
+    for (const auto& [room, roomRect] : specialExitRooms) {
+        const QPointF center = roomRect.center();
+        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), 0.0, mBubbleMode);
     }
 
     const qreal timeDecor = timer.nsecsElapsed() / 1000000.0;
