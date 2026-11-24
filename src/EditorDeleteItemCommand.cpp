@@ -331,11 +331,10 @@ void EditorDeleteItemCommand::redo()
         }
     }
 
-    // Now manually unregister and delete all items.
-    // We nullify mpHost right before deleting each item to prevent destructors from
-    // trying to unregister. Only delete items whose parent is not also being deleted
-    // (parent deletion handles children), and only if they still match the recorded
-    // name to avoid deleting unrelated items.
+    // Except for a script, each item is unregistered by its own destructor, as in the
+    // editor's own delete, and that also frees its compiled function. Only delete items
+    // whose parent is not also being deleted (parent deletion handles children), and only
+    // if they still match the recorded name to avoid deleting unrelated items.
     QSet<int> deletedIDs;
     deletedIDs.reserve(mDeletedItems.size());
     for (const auto& info : std::as_const(mDeletedItems)) {
@@ -360,8 +359,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getTriggerUnit()->unregisterTrigger(trigger);
-            trigger->mpHost = nullptr;
             delete trigger;
             break;
         }
@@ -376,8 +373,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getAliasUnit()->unregisterAlias(alias);
-            alias->mpHost = nullptr;
             delete alias;
             break;
         }
@@ -392,8 +387,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getTimerUnit()->unregisterTimer(timer);
-            timer->mpHost = nullptr;
             delete timer;
             break;
         }
@@ -424,8 +417,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getKeyUnit()->unregisterKey(key);
-            key->mpHost = nullptr;
             delete key;
             break;
         }
@@ -440,8 +431,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getActionUnit()->unregisterAction(action);
-            action->mpHost = nullptr;
             delete action;
             break;
         }

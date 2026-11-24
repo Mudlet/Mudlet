@@ -4265,11 +4265,12 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
     // The symbols were drawn at the export's room size, which the view's next frame would otherwise reuse as its own
     flushSymbolPixmapCache();
 
+    // A QImage, as only the GUI thread may use a QPixmap
+    const TBackgroundResult save = TBackgroundTask::runForReason([image = pixmap.toImage(), filePath, format = TMap::exportImageFormat(filePath)]() {
+        return performImageSave(image, filePath, format);
+    });
     // Each export has a watcher of its own: several can be in flight at once,
     // from calls made back to back or one per z level
-    const TBackgroundResult save = TBackgroundTask::runForReason([pixmap, filePath, format = TMap::exportImageFormat(filePath)]() {
-        return performImageSave(pixmap, filePath, format);
-    });
     save.whenFinished(saveOwner, QString(), [save, pHost = QPointer<Host>(mpHost), profileName = mpHost->getName()]() {
         const QString errorMessage = save.reason();
         if (!errorMessage.isEmpty()) {
@@ -4285,9 +4286,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
     return {true, {}};
 }
 
-QString TMapPainter::performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format)
+QString TMapPainter::performImageSave(const QImage& image, const QString& filePath, const QString& format)
 {
-    if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
+    if (!image.save(filePath, format.toLocal8Bit().data())) {
         return qsl("Failed to save image to %1").arg(filePath);
     }
 
