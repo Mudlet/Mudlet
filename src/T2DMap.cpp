@@ -694,7 +694,8 @@ void T2DMap::slot_shiftRight()
     mMapCenterX++;
     update();
 }
-// The nearest levels above and below the one shown that hold rooms of the area shown
+// The nearest levels above and below the one shown that hold rooms or labels of the area shown: a label on a level of
+// its own, such as a legend, is as much worth going to
 std::pair<std::optional<int>, std::optional<int>> T2DMap::roomLevelsBeside() const
 {
     const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(mAreaID) : nullptr;
@@ -703,13 +704,18 @@ std::pair<std::optional<int>, std::optional<int>> T2DMap::roomLevelsBeside() con
     }
     std::optional<int> above;
     std::optional<int> below;
-    // zLevels is in ascending order
-    for (const int zLevel : pArea->zLevels) {
-        if (zLevel < mMapCenterZ) {
+    const auto consider = [this, &above, &below](const int zLevel) {
+        if (zLevel < mMapCenterZ && (!below || zLevel > *below)) {
             below = zLevel;
-        } else if (zLevel > mMapCenterZ && !above) {
+        } else if (zLevel > mMapCenterZ && (!above || zLevel < *above)) {
             above = zLevel;
         }
+    };
+    for (const int zLevel : pArea->zLevels) {
+        consider(zLevel);
+    }
+    for (const TMapLabel& label : pArea->mMapLabels) {
+        consider(static_cast<int>(label.pos.z()));
     }
     return {above, below};
 }

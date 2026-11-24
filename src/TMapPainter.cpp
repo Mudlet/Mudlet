@@ -2513,15 +2513,46 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
         }
     }
 
-    // Viewing, the map cannot be panned so far that none of the level's rooms are left: the level's extent stays at
-    // least a room into the view. Editing may go anywhere, to map into empty space.
+    // Viewing, the map cannot be panned so far that none of the level's rooms and labels are left: their extent stays
+    // at least a room into the view. Editing may go anywhere, to map into empty space.
+    const int shownLevel = mMapCenterZ;
+    // The y bounds are kept in screen coordinates, running southward as mMapCenterY does
+    std::optional<QRectF> levelExtent;
+    const auto include = [&levelExtent](const qreal west, const qreal north, const qreal east, const qreal south) {
+        if (!levelExtent) {
+            levelExtent = QRectF(QPointF(west, north), QPointF(east, south));
+            return;
+        }
+        levelExtent->setLeft(qMin(levelExtent->left(), west));
+        levelExtent->setTop(qMin(levelExtent->top(), north));
+        levelExtent->setRight(qMax(levelExtent->right(), east));
+        levelExtent->setBottom(qMax(levelExtent->bottom(), south));
+    };
     if (mMapViewOnly && !pDrawnArea->rooms.isEmpty()) {
-        const int zLevel = mMapCenterZ;
-        // The y bounds are kept in screen coordinates, running southward as mMapCenterY does
-        const qreal westmost = pDrawnArea->xminForZ.value(zLevel, pDrawnArea->min_x);
-        const qreal eastmost = pDrawnArea->xmaxForZ.value(zLevel, pDrawnArea->max_x);
-        const qreal northmost = pDrawnArea->yminForZ.value(zLevel, pDrawnArea->min_y);
-        const qreal southmost = pDrawnArea->ymaxForZ.value(zLevel, pDrawnArea->max_y);
+        include(pDrawnArea->xminForZ.value(shownLevel, pDrawnArea->min_x),
+                pDrawnArea->yminForZ.value(shownLevel, pDrawnArea->min_y),
+                pDrawnArea->xmaxForZ.value(shownLevel, pDrawnArea->max_x),
+                pDrawnArea->ymaxForZ.value(shownLevel, pDrawnArea->max_y));
+    }
+    if (mMapViewOnly) {
+        for (const TMapLabel& label : pDrawnArea->mMapLabels) {
+            if (static_cast<int>(label.pos.z()) == shownLevel) {
+                // A label hangs down and to the east from its position, by as many rooms as it is drawn across
+                // The room size this frame is drawn at, worked out below as well
+                const qreal roomWidth = widgetWidth / xspan;
+                const qreal roomHeight = widgetHeight / yspan;
+                const QSize drawn = drawnLabelSize(label, roomWidth, roomHeight);
+                const qreal width = roomWidth > 0 ? drawn.width() / roomWidth : 0.0;
+                const qreal height = roomHeight > 0 ? drawn.height() / roomHeight : 0.0;
+                include(label.pos.x(), -label.pos.y(), label.pos.x() + width, -label.pos.y() + height);
+            }
+        }
+    }
+    if (levelExtent) {
+        const qreal westmost = levelExtent->left();
+        const qreal eastmost = levelExtent->right();
+        const qreal northmost = levelExtent->top();
+        const qreal southmost = levelExtent->bottom();
         const qreal reachX = qMax(0.0, xspan / 2.0 - 1.0);
         const qreal reachY = qMax(0.0, yspan / 2.0 - 1.0);
         mMapCenterX = std::clamp<qreal>(mMapCenterX, westmost - reachX, eastmost + reachX);

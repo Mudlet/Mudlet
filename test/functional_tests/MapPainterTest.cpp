@@ -907,6 +907,57 @@ private slots:
         }
     }
 
+    // A label shows on a level of its own, such as a legend, and far off from the rooms, so it is as much worth reaching
+    void viewingAMapLabelIsAsMuchWorthReachingAsARoom()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+        const auto removeLabels = qScopeGuard([pArea]() {
+            pArea->mMapLabels.clear();
+        });
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 2, 0, 5));
+        TMapLabel legend;
+        legend.pos = QVector3D(0, 0, 1);
+        legend.size = QSizeF(1, 1);
+        pArea->mMapLabels.insert(1, legend);
+        TMapLabel farOff;
+        farOff.pos = QVector3D(50, 0, 0);
+        farOff.size = QSizeF(2, 1);
+        pArea->mMapLabels.insert(2, farOff);
+
+        // The level buttons stop at the label's level
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        mpHost->mMapViewOnly = true;
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        QCOMPARE(mapperMap.getZLevel(), 0);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 1);
+
+        // and panning reaches the label far off on the rooms' level
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapViewOnly = true;
+        panned.mMapCenterX = 51.0;
+        panned.mMapCenterY = 0.0;
+        map()->mNewMove = false;
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, panned, result);
+        QVERIFY2(qFuzzyCompare(result.view.mMapCenterX, 51.0), qPrintable(qsl("panned to the label, the view was held at x %1. %2").arg(result.view.mMapCenterX).arg(saved(image, qsl("pan-label")))));
+    }
+
     // Viewing, the level buttons go to the next level with rooms and no further; editing, a level at a time
     void viewingTheLevelButtonsGoOnlyToLevelsWithRooms()
     {
