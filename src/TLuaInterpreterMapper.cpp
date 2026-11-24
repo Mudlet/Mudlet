@@ -1737,7 +1737,9 @@ int TLuaInterpreter::getAreaConnections(lua_State* L)
             if (!pFrom || pFrom->getArea() == areaId) {
                 continue;
             }
-            QList<Passage>& passages = neighbours[pFrom->getArea()].entrances;
+            // The entrance map may still file a room none of whose exits leads here any more, or one whose way here is
+            // a special exit with no name: such a room is no neighbour
+            QList<Passage> passages;
             for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
                 if (pFrom->getExit(direction) == toRoomId) {
                     passages << Passage{pFrom->getId(), toRoomId, TRoom::dirCodeToString(direction)};
@@ -1748,6 +1750,9 @@ int TLuaInterpreter::getAreaConnections(lua_State* L)
                 if (itSpecial.value() == toRoomId && !itSpecial.key().isEmpty()) {
                     passages << Passage{pFrom->getId(), toRoomId, itSpecial.key()};
                 }
+            }
+            if (!passages.isEmpty()) {
+                neighbours[pFrom->getArea()].entrances << passages;
             }
         }
     }
