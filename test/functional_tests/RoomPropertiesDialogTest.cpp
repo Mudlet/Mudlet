@@ -1171,6 +1171,23 @@ private slots:
         QVERIFY2(pDlg->label_userDataWarning->isHidden(), "the warning outlived the row it was about");
     }
 
+    void aKeyTypedWithSpacesAroundItIsSavedWithout()
+    {
+        buildMap();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        for (const auto& [key, value] : {std::pair{qsl(" shop "), qsl("yes")}, std::pair{qsl("description "), qsl("lost")}}) {
+            pDlg->pushButton_addUserData->click();
+            const int row = pDlg->tableWidget_userData->rowCount() - 1;
+            pDlg->tableWidget_userData->item(row, 0)->setText(key);
+            pDlg->tableWidget_userData->item(row, 1)->setText(value);
+        }
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("\"description\"")), qPrintable(pDlg->label_userDataWarning->text()));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
+    }
+
     void aKeyTheRoomsDisagreeOnShowsThePlaceholder()
     {
         buildMap();

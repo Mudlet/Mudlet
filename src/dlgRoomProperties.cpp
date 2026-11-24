@@ -1030,14 +1030,15 @@ QMap<QString, std::optional<QString>> dlgRoomProperties::userDataChanges() const
     for (int row = 0; row < tableWidget_userData->rowCount(); ++row) {
         const QTableWidgetItem* keyItem = tableWidget_userData->item(row, 0);
         const QTableWidgetItem* valueItem = tableWidget_userData->item(row, 1);
-        const QString key = keyItem ? keyItem->text() : QString();
         if (!valueItem) {
             continue;
         }
         // A row listed from the rooms, whose key cannot be edited, is kept whatever its key: setRoomUserData()
-        // accepts blank ones. Only an added row needs a key worth saving
+        // accepts blank ones. Only an added row needs a key worth saving, and one typed with a space around it is
+        // the key without
         const bool addedRow = keyItem && keyItem->flags().testFlag(Qt::ItemIsEditable);
-        if (addedRow && (key.trimmed().isEmpty() || !editedInUserDataTable(key))) {
+        const QString key = !keyItem ? QString() : addedRow ? keyItem->text().trimmed() : keyItem->text();
+        if (addedRow && (key.isEmpty() || !editedInUserDataTable(key))) {
             continue;
         }
         keysLeft.insert(key);
@@ -1094,8 +1095,8 @@ void dlgRoomProperties::updateUserDataKeyWarning()
         if (!keyItem || !keyItem->flags().testFlag(Qt::ItemIsEditable)) {
             continue;
         }
-        const QString key = keyItem->text();
-        if (key.trimmed().isEmpty() || editedInUserDataTable(key)) {
+        const QString key = keyItem->text().trimmed();
+        if (key.isEmpty() || editedInUserDataTable(key)) {
             continue;
         }
         if (key.startsWith(scmMudletOwnedUserDataPrefix)) {
