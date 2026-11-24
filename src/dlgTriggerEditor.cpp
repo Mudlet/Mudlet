@@ -1214,6 +1214,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
                             "<p>Its arrow opens the Package Exporter, to make a package to share, and the Package and Module Managers</p>")));
     connect(mpCreateModuleAction, &QAction::triggered, this, &dlgTriggerEditor::slot_createModule);
 
+    //: Item in the menu of the script editor's Create Module button, opening the tool that makes a package to share
     mpPackageExporterAction = new QAction(tr("Package Exporter"), this);
     connect(mpPackageExporterAction, &QAction::triggered, this, [this]() {
         if (auto* pDialog = mudlet::self()->showPackageExporter(mpHost, this)) {
@@ -1221,6 +1222,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
         }
     });
 
+    //: Item in the menu of the script editor's Create Module button, opening the manager of the profile's packages
     mpPackageManagerAction = new QAction(tr("Package Manager"), this);
     connect(mpPackageManagerAction, &QAction::triggered, this, [this]() {
         mudlet::self()->showPackageManager(mpHost, this);
@@ -1228,6 +1230,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
             widgetutils::positionDialogOnParentScreen(pDialog, this);
         }
     });
+    //: Item in the menu of the script editor's Create Module button, opening the manager of the profile's modules
     mpModuleManagerAction = new QAction(tr("Module Manager"), this);
     connect(mpModuleManagerAction, &QAction::triggered, this, [this]() {
         mudlet::self()->showModuleManager(mpHost, this);
