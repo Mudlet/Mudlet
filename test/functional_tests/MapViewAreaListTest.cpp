@@ -222,8 +222,6 @@ private slots:
         QCOMPARE(doomedView->getCurrentAreaId(), firstTwin);
     }
 
-    // Once the application palette carries a resolve mask, the view's own
-    // setPalette() pins it, so the view has to be told when the scheme changes.
     // Viewing, a map view's level buttons are off where there is no level with rooms to go to, as the main mapper's are
     void test_aViewsLevelButtonsGoOnlyToLevelsWithRooms()
     {
@@ -261,6 +259,8 @@ private slots:
         QVERIFY2(pDown->isEnabled(), "level 0 has a room to go down to");
     }
 
+    // Once the application palette carries a resolve mask, the view's own
+    // setPalette() pins it, so the view has to be told when the scheme changes.
     void test_aColourSchemeChangeReachesEveryMapView()
     {
         const QPalette original = QApplication::palette();
