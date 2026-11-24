@@ -1388,6 +1388,23 @@ private slots:
         QCOMPARE(room(scmThirdRoom)->getArea(), mAreaId);
     }
 
+    // Configure room is not modal, so by its OK the map may have another room selected, or none
+    void theMapLandsOnTheMovedRoomsWhateverIsSelectedNow()
+    {
+        buildMap();
+        const int otherArea = roomDB()->addArea(qsl("Other area"));
+        QVERIFY(map()->setRoomCoordinates(scmFirstRoom, 20, 5, 0));
+        QVERIFY(map()->setRoomCoordinates(scmThirdRoom, -30, 7, 2));
+        mp2dMap->mMultiSelectionSet = {scmThirdRoom};
+
+        mp2dMap->slot_setRoomsArea(otherArea, {scmFirstRoom});
+        mp2dMap->mMultiSelectionSet.clear();
+
+        QCOMPARE(mp2dMap->mMapCenterX, 20.0);
+        QCOMPARE(mp2dMap->mMapCenterY, -5.0);
+        QCOMPARE(mp2dMap->mMapCenterZ, 0);
+    }
+
     void theMapperMovesTheRoomsIntoAnAreaThatSoFarHasOnlyAName()
     {
         buildMap();
