@@ -863,8 +863,6 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
     emitBorderPreview();
 }
 
-// The dialog is not modal, so a script may have deleted any of these rooms,
-// or replaced one with a new room under the same id, while it was open
 void dlgRoomProperties::initGeneral()
 {
     QList<const TRoom*> rooms;
@@ -1120,6 +1118,8 @@ void dlgRoomProperties::slot_userDataItemChanged(QTableWidgetItem* item)
     item->setData(Qt::ForegroundRole, QVariant());
 }
 
+// The dialog is not modal, so a script may have deleted any of these rooms,
+// or replaced one with a new room under the same id, while it was open
 TRoom* dlgRoomProperties::liveRoom(const int roomId) const
 {
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomId);
