@@ -256,8 +256,10 @@ void paintExitMarkers(QPainter& painter, QPen& pen, const TRoom& room, const flo
 
 void paintSpecialExitMarker(QPainter& painter, const float rx, const float ry, const qreal roomWidth, const qreal roomHeight, const bool onCorner, const bool round)
 {
-    // White ringed in black stands out on any room color and on the map background alike
-    const qreal radius = qMax(qMin(roomWidth, roomHeight) * 0.14, 2.5);
+    // White ringed in black stands out on any room color and on the map background alike. Never under a few pixels
+    // to be seen, nor, on a room smaller than that, so large that it hides the room and spills onto its neighbours
+    const qreal side = qMin(roomWidth, roomHeight);
+    const qreal radius = qMin(qMax(side * 0.14, 2.5), side * 0.3);
     // Toward the center along the diagonal on a round room, the same distance in from its edge
     const qreal toCorner = round ? 1.0 / std::numbers::sqrt2 : 1.0;
     const qreal inset = onCorner ? 0.0 : radius * 1.3 * toCorner;

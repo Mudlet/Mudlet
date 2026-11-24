@@ -146,6 +146,31 @@ private slots:
         }
     }
 
+    // How many pixels a special exit dot paints outside a room drawn at roomRect, with margin pixels of antialiasing allowed
+    static int specialExitDotPixelsOutside(const QRectF& roomRect, const qreal gap)
+    {
+        QImage image(64, 64, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        {
+            QPainter painter(&image);
+            ExitAppearance::paintSpecialExitMarker(painter, roomRect.center().x(), roomRect.center().y(), roomRect.width(), roomRect.height(), gap, false);
+        }
+        const QRect allowed = roomRect.toAlignedRect().adjusted(-1, -1, 1, 1);
+        int outside = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                outside += image.pixelColor(x, y).alpha() > 0 && !allowed.contains(x, y);
+            }
+        }
+        return outside;
+    }
+
+    // Zoomed out, the dot shrinks with the room rather than covering it and its neighbours
+    void test_aSpecialExitDotStaysInsideATinyRoom()
+    {
+        QCOMPARE(specialExitDotPixelsOutside(QRectF(30, 30, 3, 3), 0.0), 0);
+    }
+
     void test_markerShowsTheDoorOnIt_data()
     {
         QTest::addColumn<int>("direction");
