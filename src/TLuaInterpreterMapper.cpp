@@ -1333,6 +1333,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     const int deletedAreaId = id ? id : host.mpMap->mpRoomDB->getAreaNamesMap().key(name);
+    // A sysAreaParentChanged handler for a child moved up may load another map or delete this one, and what follows
+    // would then mark that map unsaved, or move the views off an area of the same ID in it
+    const unsigned int generation = host.mpMap->mpRoomDB->mapGeneration();
     bool result = false;
     if (!id) {
         result = host.mpMap->mpRoomDB->removeArea(name);
@@ -1340,7 +1343,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         result = host.mpMap->mpRoomDB->removeArea(id);
     }
 
-    if (result) {
+    if (result && host.mpMap->mpRoomDB && host.mpMap->mpRoomDB->mapGeneration() == generation) {
         host.mpMap->announceAreaListChanged();
         auto* viewManager = host.mpMap->mapViewsFrontend();
         viewManager->updateAllViews();

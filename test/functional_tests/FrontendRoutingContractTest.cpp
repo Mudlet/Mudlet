@@ -868,6 +868,32 @@ assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitE
         QCOMPARE(runLua(qsl("assert(deleteArea('RoutingGuardedArea') == true)")), qsl("ok"));
     }
 
+    // A handler for a child moved up by the delete loads another map: the delete then leaves that map alone
+    void test_aDeleteWhoseHandlerLoadsAnotherMapLeavesThatMapAlone()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("replaced.json"));
+        QCOMPARE(runLua(qsl("routingReplacedParent = addAreaName('RoutingReplacedParent') "
+                            "assert(setAreaParent(addAreaName('RoutingReplacedChild'), routingReplacedParent)) "
+                            "assert(saveJsonMap([[%1]])) routingReplacedLoaded = nil "
+                            "function onRoutingReplacedParent() if routingReplacedLoaded == nil then routingReplacedLoaded = loadJsonMap([[%1]]) end end")
+                                .arg(path)),
+                 qsl("ok"));
+        mpHost->registerAnonymousEventHandler(qsl("sysAreaParentChanged"), qsl("onRoutingReplacedParent"));
+        // What a load announces by itself, to tell it from what the delete goes on to announce
+        QSignalSpy areaListChanges(pMap, &TMap::signal_areaListChanged);
+        QCOMPARE(runLua(qsl("assert(loadJsonMap([[%1]]))").arg(path)), qsl("ok"));
+        const qsizetype announcedByALoad = areaListChanges.count();
+        areaListChanges.clear();
+
+        QCOMPARE(runLua(qsl("assert(deleteArea(routingReplacedParent)) assert(routingReplacedLoaded == true, tostring(routingReplacedLoaded))")), qsl("ok"));
+        QVERIFY2(areaListChanges.count() == announcedByALoad, "the delete went on as if the map loaded were the one it deleted from");
+
+        QCOMPARE(runLua(qsl("function onRoutingReplacedParent() end deleteArea('RoutingReplacedChild') deleteArea('RoutingReplacedParent')")), qsl("ok"));
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(
