@@ -230,6 +230,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     });
     mView = result.view;
     mLaidOut = mView.mRoomWidth > 0.0f;
+    mDrawnZLevel = mView.mMapCenterZ;
     if (result.areaChanged) {
         raiseAreaChanged(result.areaChanged->first, result.areaChanged->second);
     }
@@ -384,7 +385,8 @@ std::optional<TMapViewFrontend::MapPoint> TNullMapView::mousePositionOnMap() con
     if (!point) {
         return std::nullopt;
     }
-    return MapPoint{point->x(), point->y(), mView.mMapCenterZ};
+    // The level of the frame x and y are read from: centerViewOn() moves mView to another before the next frame
+    return MapPoint{point->x(), point->y(), mDrawnZLevel};
 }
 
 // As T2DMap::centerview() for the main view: the view pans to the room as a drag would, so paint() leaves it there

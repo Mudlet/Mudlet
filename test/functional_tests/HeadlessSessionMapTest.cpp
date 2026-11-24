@@ -800,6 +800,9 @@ end
 
         QVERIFY(session.pointer(qsl("mapper"), {.type = Type::move, .position = centre}));
         QCOMPARE(mapMouse(), qsl("3.0 2.0 4"));
+        // Panned to another level and not drawn again yet: still the level of the frame the mouse is over
+        QVERIFY(session.runLua(qsl("addRoom(6) setRoomArea(6, headlessArea) setRoomCoordinates(6, 0, 0, 7) assert(centerview(6, false))")));
+        QCOMPARE(mapMouse(), qsl("3.0 2.0 4"));
         QVERIFY(session.runLua(qsl("deleteMap()")));
         QCOMPARE(mapMouse(), qsl("nil the mouse is not over the 2D map"));
         QVERIFY(session.shutdown(false));

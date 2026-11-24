@@ -112,6 +112,8 @@ private:
     int mFollowedRoomId = 0;
     int mFollowedAreaId = 0;
     bool mLaidOut = false;
+    // The level the frame drawn last showed, which mView may have left already
+    int mDrawnZLevel = 0;
     // Where the app last said the mouse was on the map, at a press, double-click or wheel turn: it reports no other move
     std::optional<QPointF> mLastPointer;
     // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn
