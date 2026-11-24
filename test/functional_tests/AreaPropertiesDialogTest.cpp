@@ -253,6 +253,17 @@ private slots:
         QCOMPARE(zone()->mUserData, (QMap<QString, QString>{{qsl("population"), qsl(" 1200 ")}, {qsl("noMagic"), qsl("yes")}}));
     }
 
+    void aTextValueKeepsItsSpaces()
+    {
+        buildMap();
+        TAreaFields::setFields(*map(), {{qsl("notes"), TAreaFields::Field{qsl("notes"), qsl("Notes"), TAreaFields::Type::Text, false, {}}}});
+        openDialog();
+        lineFor(qsl("notes"))->setText(qsl("  indented"));
+        mpDialog->accept();
+
+        QCOMPARE(zone()->mUserData, (QMap<QString, QString>{{qsl("notes"), qsl("  indented")}}));
+    }
+
     // A map loaded or deleted while the dialog is open may hold an area of the same ID, which is another area: OK
     // writes nothing to it, and says so
     void okWritesNothingOnceTheMapIsReplaced()

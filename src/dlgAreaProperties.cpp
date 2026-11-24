@@ -178,7 +178,8 @@ std::optional<QString> dlgAreaProperties::rowText(const Row& row, QString& error
         }
         text = row.pList->currentData().toString();
     } else {
-        text = row.pLine->text().trimmed();
+        // Spaces belong to a text value, as setAreaFieldValue() keeps them; only a number or a range is read without
+        text = row.field.type == TAreaFields::Type::Text ? row.pLine->text() : row.pLine->text().trimmed();
         if (text.isEmpty()) {
             return std::nullopt;
         }
