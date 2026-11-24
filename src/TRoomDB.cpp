@@ -593,6 +593,10 @@ TRoomDB::AreaParentResult TRoomDB::setAreaParent(const int areaId, const std::op
         return AreaParentResult::NoSuchArea;
     }
     if (parentId.has_value()) {
+        if (areaId < 1) {
+            // It holds the rooms of no area, and belongs under none either
+            return AreaParentResult::DefaultAreaNested;
+        }
         if (!areaNamesMap.contains(*parentId)) {
             return AreaParentResult::NoSuchParent;
         }

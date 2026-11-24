@@ -70,7 +70,7 @@ public:
     bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
 
-    enum class AreaParentResult { Changed, Unchanged, NoSuchArea, NoSuchParent, OwnParent, ParentInside, DefaultAreaAsParent };
+    enum class AreaParentResult { Changed, Unchanged, NoSuchArea, NoSuchParent, OwnParent, ParentInside, DefaultAreaAsParent, DefaultAreaNested };
     // Nests an area in another, or puts it back at the top level for std::nullopt; raises sysAreaParentChanged
     // on a change. Either area may so far have only a name
     AreaParentResult setAreaParent(int areaId, std::optional<int> parentId);

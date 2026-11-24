@@ -1665,6 +1665,8 @@ int TLuaInterpreter::setAreaParent(lua_State* L)
         return warnArgumentValue(L, __func__, "an area cannot be its own parent");
     case TRoomDB::AreaParentResult::DefaultAreaAsParent:
         return warnArgumentValue(L, __func__, "the default area cannot have other areas nested in it");
+    case TRoomDB::AreaParentResult::DefaultAreaNested:
+        return warnArgumentValue(L, __func__, "the default area cannot be nested in another area");
     case TRoomDB::AreaParentResult::ParentInside:
         return warnArgumentValue(L, __func__, qsl("area %1 is inside area %2, so it cannot be its parent").arg(QString::number(parentId.value_or(0)), QString::number(areaId)));
     }
