@@ -1548,6 +1548,36 @@ private slots:
         QVERIFY2(withoutDot != QColor(Qt::white), qPrintable(qsl("the dot is drawn with the setting off, frame saved at %1").arg(withoutDotFrame)));
     }
 
+    // Below the threshold the rooms drawn in bulk show no dot, so the player's room, drawn in full, shows none either
+    void test_thePlayersRoomShowsNoSpecialExitDotBelowTheThreshold()
+    {
+        const int areaId = freshArea(qsl("Special Exit Tier Area"));
+        QVERIFY(areaId > 0);
+        constexpr int playerRoomId = 1;
+        QVERIFY(addRoomAt(playerRoomId, areaId, 0, 0, kEnvRoom));
+        map()->mpRoomDB->getRoom(playerRoomId)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        const int savedPlayerRoom = map()->mRoomIdHash.value(map()->mProfileName);
+        auto restore = qScopeGuard([this, savedMarkers, savedPlayerRoom] {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+            map()->mRoomIdHash[map()->mProfileName] = savedPlayerRoom;
+        });
+
+        const auto frameWith = [this, areaId](const bool markers) {
+            mpHost->mMapperShowSpecialExitMarkers = markers;
+            T2DMap* p2dMap = prepareWidget(areaId, kZoomJustInsideTier, 1.0, 10.0);
+            map()->mRoomIdHash[map()->mProfileName] = playerRoomId;
+            p2dMap->mRoomID = playerRoomId;
+            p2dMap->mMapCenterX = 0;
+            p2dMap->mMapCenterY = 0;
+            return renderFrame(p2dMap);
+        };
+
+        const QImage without = frameWith(false);
+        const QImage with = frameWith(true);
+        QVERIFY2(with == without, qPrintable(qsl("the player's room got a dot, frame saved at %1").arg(saveFrame(with, qsl("tier-special-exit")))));
+    }
+
     // The tier starts below four pixels a room, not at it. A room drawn
     // exactly four pixels across keeps its border; the next zoom out loses it.
     void test_fullDetailIsKeptAtTheThresholdAndDroppedBelowIt()

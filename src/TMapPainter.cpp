@@ -644,7 +644,9 @@ void TMapPainter::drawRoom(QPainter& painter,
 
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
 
-    if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty()) {
+    // Not below the level of detail threshold, where the rooms drawn in bulk show none and only the player's room
+    // would still get one
+    if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty() && mRoomWidth >= cLodPixelThreshold) {
         ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), !isGridMode, mBubbleMode);
     }
 }
