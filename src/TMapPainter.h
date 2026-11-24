@@ -351,7 +351,7 @@ private:
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
     void spendClick();
     // Why the save failed, empty when it did not
-    static QString performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    static QString performImageSave(const QImage& image, const QString& filePath, const QString& format);
     int width() const { return mSize.width(); }
     int height() const { return mSize.height(); }
 

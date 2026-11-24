@@ -48,6 +48,7 @@ class TMxpFrameWidgets;
 class TPasswordEntry;
 class TScrollBox;
 class TTextBox;
+class TTextEdit;
 class TToolBar;
 class QDialog;
 class QDockWidget;
@@ -363,6 +364,10 @@ public:
     // nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
+    // The game window, miniconsole or user window pane the player last selected in: miniconsoles and user
+    // windows hand their focus to the main command line, and older highlights elsewhere are left in place,
+    // so a command line's Ctrl+C cannot otherwise tell which selection is the newest.
+    QPointer<TTextEdit> mpLastSelectedPane;
 
 
 public slots:
