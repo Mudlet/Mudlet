@@ -4512,6 +4512,8 @@ end
 
 function map.resumeSpeedwalk(delay)
     if #speedWalkDir ~= 0 or walk_destination then
+        -- resumed now, not once a hold still running ends
+        release_walk_hold()
         map.find_me(nil, nil, nil, true)
         raiseEvent("sysSpeedwalkResumed")
         map.echo("Speedwalking resumed.")
