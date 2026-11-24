@@ -145,7 +145,7 @@ private:
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
     // Appends areaId and everything nested in it to subtree, skipping areas already in listed
-    void appendAreaSubtree(int areaId, QList<int>& subtree, QSet<int>& listed) const;
+    static void appendAreaSubtree(int areaId, const QHash<int, QList<int>>& childrenOf, QList<int>& subtree, QSet<int>& listed);
     // After an area is gone: its parent may have lost its last child, and each of its children moved up a level
     void afterAreaRemoved(int areaId, std::optional<int> parentId, const QList<int>& movedChildren);
     // Static, as a handler may delete the database that raised it

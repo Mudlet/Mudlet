@@ -667,18 +667,25 @@ QList<int> TRoomDB::getAreaChildren(const std::optional<int> areaId, const bool 
     if (!recursive) {
         return children;
     }
+    // Every area's children in one pass, rather than a scan of all areas for each area in the subtree
+    QHash<int, QList<int>> childrenOf;
+    for (auto it = areaNamesMap.cbegin(); it != areaNamesMap.cend(); ++it) {
+        if (const std::optional<int> parentId = getAreaParent(it.key())) {
+            childrenOf[*parentId] << it.key();
+        }
+    }
     QList<int> subtree;
     QSet<int> listed;
     if (areaId.has_value()) {
         listed.insert(*areaId);
     }
     for (const int child : std::as_const(children)) {
-        appendAreaSubtree(child, subtree, listed);
+        appendAreaSubtree(child, childrenOf, subtree, listed);
     }
     return subtree;
 }
 
-void TRoomDB::appendAreaSubtree(const int areaId, QList<int>& subtree, QSet<int>& listed) const
+void TRoomDB::appendAreaSubtree(const int areaId, const QHash<int, QList<int>>& childrenOf, QList<int>& subtree, QSet<int>& listed)
 {
     // setAreaParent() refuses a loop, but a map file could still hold one: an area already listed ends it
     if (listed.contains(areaId)) {
@@ -686,8 +693,8 @@ void TRoomDB::appendAreaSubtree(const int areaId, QList<int>& subtree, QSet<int>
     }
     listed.insert(areaId);
     subtree << areaId;
-    for (const int child : getAreaChildren(areaId, false)) {
-        appendAreaSubtree(child, subtree, listed);
+    for (const int child : childrenOf.value(areaId)) {
+        appendAreaSubtree(child, childrenOf, subtree, listed);
     }
 }
 
