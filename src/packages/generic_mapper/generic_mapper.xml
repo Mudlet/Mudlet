@@ -4774,6 +4774,13 @@ function map.eventHandler(event, ...)
         map.set("mapping", false)
         walking = false
         release_walk_hold()
+        -- stopped as map.stopSpeedwalk() stops it, so no resume walks on to the old destination
+        if timerID then
+            killTimer(timerID)
+            timerID = nil
+        end
+        walk_destination, finished_destination = nil, nil
+        map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
         map.echo("Mapping and speedwalking stopped.")
     elseif event == "sysManualLocationSetEvent" then
       set_room(arg1)
