@@ -1038,7 +1038,8 @@ QMap<QString, std::optional<QString>> dlgRoomProperties::userDataChanges() const
         // the key without
         const bool addedRow = keyItem && keyItem->flags().testFlag(Qt::ItemIsEditable);
         const QString key = !keyItem ? QString() : addedRow ? keyItem->text().trimmed() : keyItem->text();
-        if (addedRow && (key.isEmpty() || !editedInUserDataTable(key))) {
+        // The rows listed from the rooms come first, so an added row repeating a key is the one left out
+        if (addedRow && (key.isEmpty() || !editedInUserDataTable(key) || keysLeft.contains(key))) {
             continue;
         }
         keysLeft.insert(key);
@@ -1088,27 +1089,46 @@ void dlgRoomProperties::slot_removeUserData()
 void dlgRoomProperties::updateUserDataKeyWarning()
 {
     QStringList fieldKeys;
+    QStringList repeatedKeys;
     bool mapKey = false;
+    // Read the way userDataChanges() reads them, which saves the first row of a key and leaves the others out
+    QSet<QString> keysSeen;
     for (int row = 0; row < tableWidget_userData->rowCount(); ++row) {
         const QTableWidgetItem* keyItem = tableWidget_userData->item(row, 0);
+        if (!keyItem) {
+            continue;
+        }
         // Only an added row's key can be typed; one listed from the rooms is shown only if the table edits it
-        if (!keyItem || !keyItem->flags().testFlag(Qt::ItemIsEditable)) {
+        if (!keyItem->flags().testFlag(Qt::ItemIsEditable)) {
+            keysSeen.insert(keyItem->text());
             continue;
         }
         const QString key = keyItem->text().trimmed();
-        if (key.isEmpty() || editedInUserDataTable(key)) {
+        if (key.isEmpty()) {
             continue;
         }
         if (key.startsWith(scmMudletOwnedUserDataPrefix)) {
             mapKey = true;
-        } else if (!fieldKeys.contains(key)) {
-            fieldKeys << key;
+        } else if (!editedInUserDataTable(key)) {
+            if (!fieldKeys.contains(key)) {
+                fieldKeys << key;
+            }
+        } else if (keysSeen.contains(key)) {
+            if (!repeatedKeys.contains(key)) {
+                repeatedKeys << key;
+            }
+        } else {
+            keysSeen.insert(key);
         }
     }
     QStringList warnings;
     for (const QString& key : std::as_const(fieldKeys)) {
         //: Warning under the table on Configure room's User data tab; %1 is a key typed into a new row, such as "description", which has a field of its own on the General tab
         warnings << tr("\"%1\" is edited on the General tab, so this row will not be saved.").arg(key);
+    }
+    for (const QString& key : std::as_const(repeatedKeys)) {
+        //: Warning under the table on Configure room's User data tab; %1 is a key typed into a new row that an earlier row already has
+        warnings << tr("\"%1\" is already in the table, so this row will not be saved.").arg(key);
     }
     if (mapKey) {
         //: Warning under the table on Configure room's User data tab, when a key typed into a new row starts with room.ui_, which the map keeps for itself; do not translate room.ui_

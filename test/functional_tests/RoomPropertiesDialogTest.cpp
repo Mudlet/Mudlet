@@ -1188,6 +1188,27 @@ private slots:
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
     }
 
+    // Only the first row of a key is saved, and one added after it says it will not be
+    void anAddedRowRepeatingAKeyIsLeftOutAndSaysSo()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}};
+        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        for (const auto& [key, value] : {std::pair{qsl("zone"), qsl("a")}, std::pair{qsl("shop"), qsl("yes")}, std::pair{qsl("shop"), qsl("no")}}) {
+            pDlg->pushButton_addUserData->click();
+            const int row = pDlg->tableWidget_userData->rowCount() - 1;
+            pDlg->tableWidget_userData->item(row, 0)->setText(key);
+            pDlg->tableWidget_userData->item(row, 1)->setText(value);
+        }
+        const QString warning = pDlg->label_userDataWarning->text();
+        QVERIFY2(!pDlg->label_userDataWarning->isHidden() && warning.contains(qsl("\"zone\"")) && warning.contains(qsl("\"shop\"")), qPrintable(warning));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
+    }
+
     void aKeyTheRoomsDisagreeOnShowsThePlaceholder()
     {
         buildMap();
