@@ -39,11 +39,11 @@ namespace {
 const QList<std::pair<Type, QString>>& typeNames()
 {
     static const QList<std::pair<Type, QString>> names{
-            {Type::Text, QStringLiteral("text")},
-            {Type::Number, QStringLiteral("number")},
-            {Type::Range, QStringLiteral("range")},
-            {Type::YesNo, QStringLiteral("yesno")},
-            {Type::Choice, QStringLiteral("choice")},
+            {Type::Text, qsl("text")},
+            {Type::Number, qsl("number")},
+            {Type::Range, qsl("range")},
+            {Type::YesNo, qsl("yesno")},
+            {Type::Choice, qsl("choice")},
     };
     return names;
 }
@@ -93,26 +93,26 @@ std::optional<Type> typeFromName(const QString& name)
 QString definitionError(const Field& field)
 {
     if (field.key.trimmed().isEmpty()) {
-        return QStringLiteral("a field needs a key");
+        return qsl("a field needs a key");
     }
     // Those are Mudlet's own, which it keeps beside an area's values
     if (field.key.startsWith(QLatin1String("system."))) {
-        return QStringLiteral("field \"%1\": keys starting with \"system.\" are Mudlet's own").arg(field.key);
+        return qsl("field \"%1\": keys starting with \"system.\" are Mudlet's own").arg(field.key);
     }
     if (field.type == Type::Choice) {
         if (field.choices.isEmpty()) {
-            return QStringLiteral("field \"%1\": a choice needs at least one value to choose from").arg(field.key);
+            return qsl("field \"%1\": a choice needs at least one value to choose from").arg(field.key);
         }
         for (const QString& choice : field.choices) {
             if (choice.isEmpty()) {
-                return QStringLiteral("field \"%1\": a choice cannot be empty").arg(field.key);
+                return qsl("field \"%1\": a choice cannot be empty").arg(field.key);
             }
         }
         if (QSet<QString>(field.choices.cbegin(), field.choices.cend()).size() != field.choices.size()) {
-            return QStringLiteral("field \"%1\": a choice is listed twice").arg(field.key);
+            return qsl("field \"%1\": a choice is listed twice").arg(field.key);
         }
     } else if (!field.choices.isEmpty()) {
-        return QStringLiteral("field \"%1\": only a choice has values to choose from").arg(field.key);
+        return qsl("field \"%1\": only a choice has values to choose from").arg(field.key);
     }
     return QString();
 }
@@ -180,7 +180,7 @@ std::optional<QVariant> parseValue(const Field& field, const QString& text)
         // "10-20", "-5-5" for one starting below zero and "1e-08-1e-07" as numberText() writes very small ones: each
         // bound is a whole number, a decimal or either with an exponent, so the dash between them is the one left over
         static const QRegularExpression rangeText(
-                QStringLiteral(R"(^\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*-\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*$)"));
+                qsl(R"(^\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*-\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*$)"));
         const QRegularExpressionMatch match = rangeText.match(text);
         if (!match.hasMatch()) {
             return std::nullopt;
@@ -221,10 +221,10 @@ QString formatValue(const Field& field, const QVariant& value)
         return numberText(value.toDouble());
     case Type::Range: {
         const QVariantList bounds = value.toList();
-        return QStringLiteral("%1-%2").arg(numberText(bounds.value(0).toDouble()), numberText(bounds.value(1).toDouble()));
+        return qsl("%1-%2").arg(numberText(bounds.value(0).toDouble()), numberText(bounds.value(1).toDouble()));
     }
     case Type::YesNo:
-        return value.toBool() ? QStringLiteral("true") : QStringLiteral("false");
+        return value.toBool() ? qsl("true") : qsl("false");
     }
     Q_UNREACHABLE();
 }
@@ -242,7 +242,7 @@ Lookup valueFor(const TMap& map, const int areaId, const Field& field)
             if (const std::optional<QVariant> value = parseValue(field, text)) {
                 return {value, *id, QString()};
             }
-            return {std::nullopt, *id, QStringLiteral("area %1 holds \"%2\" for field \"%3\", which is not a valid %4").arg(QString::number(*id), text, field.key, typeName(field.type))};
+            return {std::nullopt, *id, qsl("area %1 holds \"%2\" for field \"%3\", which is not a valid %4").arg(QString::number(*id), text, field.key, typeName(field.type))};
         }
         if (!field.inherit) {
             break;
