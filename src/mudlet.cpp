@@ -5144,7 +5144,9 @@ bool mudlet::sheetStylesMenus(const QString& sheet)
 void mudlet::restyleMenuBar()
 {
     const QString scriptSheets = qApp->styleSheet() + mMainToolBarProfileStyleSheet;
-    const bool washSwitchedOnGlyphs = sheetStylesMenus(scriptSheets) && !scriptSheets.contains(qsl("QMenu::icon"), Qt::CaseInsensitive);
+    // Within one selector, so an object name or a property between the two is still the script's icon rule
+    static const QRegularExpression menuIconSelector(qsl("\\bQMenu\\b[^,{}]*::icon"), QRegularExpression::CaseInsensitiveOption);
+    const bool washSwitchedOnGlyphs = sheetStylesMenus(scriptSheets) && !scriptSheets.contains(menuIconSelector);
     const QString sheet = washSwitchedOnGlyphs ? uiDesign::menuIconWashStyleSheet(uiDesign::themeTokens()) + mMainToolBarProfileStyleSheet : mMainToolBarProfileStyleSheet;
     if (menuBar()->styleSheet() != sheet) {
         menuBar()->setStyleSheet(sheet);

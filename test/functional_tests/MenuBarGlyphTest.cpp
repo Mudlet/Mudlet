@@ -637,6 +637,8 @@ private slots:
         // The second is less specific than a design rule for a switched-on icon would be, so it shows whether one is set
         addBothRoads(qsl("switched-on icon"), paddedRowsSheet() + qsl(" QMenu::icon:checked { background-color: %1; }").arg(scriptsWash().name()));
         addBothRoads(qsl("every icon"), paddedRowsSheet() + qsl(" QMenu::icon { background-color: %1; }").arg(scriptsWash().name()));
+        addBothRoads(qsl("switched-on icon of a named menu"), paddedRowsSheet() + qsl(" QMenu#menuEditor::icon:checked { background-color: %1; }").arg(scriptsWash().name()));
+        addBothRoads(qsl("switched-on icon of menus with a property"), paddedRowsSheet() + qsl(" QMenu[enabled=\"true\"]::icon:checked { background-color: %1; }").arg(scriptsWash().name()));
     }
 
     void test_aScriptsOwnIconRuleIsKept()
