@@ -60,6 +60,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QSet>
 #include <QStringEncoder>
 #include <QStringMatcher>
 #include <QVector>
@@ -1654,8 +1655,19 @@ int TLuaInterpreter::getAreaExploration(lua_State* L)
     QList<int> roomsWithOpenExits;
     for (const int roomId : pA->getAreaRooms()) {
         const TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
-        if (pR && !pR->exitStubs.isEmpty()) {
-            openExits += pR->exitStubs.size();
+        if (!pR) {
+            continue;
+        }
+        // A map file can hold a stub twice, or one where the room has the exit by now: each way out counts once, and
+        // only while it is still unmapped
+        QSet<int> unmapped;
+        for (const int direction : pR->exitStubs) {
+            if (pR->getExit(direction) < 1) {
+                unmapped.insert(direction);
+            }
+        }
+        if (!unmapped.isEmpty()) {
+            openExits += unmapped.size();
             roomsWithOpenExits << roomId;
         }
     }
