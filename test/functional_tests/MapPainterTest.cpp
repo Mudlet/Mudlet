@@ -471,6 +471,28 @@ private slots:
         checkPairs({DIR_NORTH, DIR_EAST}, {DIR_NORTHEAST, DIR_NORTHWEST});
     }
 
+    // A line keeps the shape it had: unpaired, the exit north still bends into the east room through its exit back
+    void anUnpairedExitStillBendsInThroughAnExitBack()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::View pathView = view();
+        pathView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(pathView);
+        TMapPainter::ExitToPaint north;
+        north.destination = roomDB()->getRoom(scmEastRoom);
+        north.destinationId = scmEastRoom;
+        north.direction = DIR_NORTH;
+        const QPointF from = onImage(QPointF(0, 0));
+        const QPointF to = onImage(QPointF(2, 0));
+
+        const QVector<QPointF> path = painter.exitLinePath(*roomDB()->getRoom(scmWestRoom), north, from, to);
+
+        // Out of the west room's north stub, in through the east room's west stub
+        QCOMPARE(path.size(), 4);
+        QCOMPARE(path.at(2), onImage(QPointF(1.5, 0)));
+    }
+
     // The export decides alike: the exit north is drawn there, so the export with it differs from one without it
     void anExportDrawsAnExitTheCustomLineBackDoesNotPairWith()
     {
