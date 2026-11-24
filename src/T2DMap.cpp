@@ -48,6 +48,7 @@
 #include "TMapViewManager.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
+#include "dlgAreaProperties.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "dlgRoomProperties.h"
@@ -2847,6 +2848,9 @@ void T2DMap::slot_configureAreas()
     auto* createBtn = new QPushButton(tr("Create"), buttonBar);
     //: "Configure Areas" buttons: rename existing area
     auto* renameBtn = new QPushButton(tr("Rename"), buttonBar);
+    //: "Configure Areas" buttons: edit the properties the map gives its areas, for the chosen area
+    auto* propertiesBtn = new QPushButton(tr("Properties..."), buttonBar);
+    propertiesBtn->setObjectName(qsl("configureAreasProperties"));
     //: "Configure Areas" buttons: delete existing area
     auto* deleteBtn = new QPushButton(tr("Delete"), buttonBar);
     //: "Configure Areas" buttons: close the dialog
@@ -2857,19 +2861,24 @@ void T2DMap::slot_configureAreas()
     const bool initialDeleteEnabled = initialHasSelection && initialAreaId != -1;
     renameBtn->setEnabled(initialRenameEnabled);
     deleteBtn->setEnabled(initialDeleteEnabled);
+    // An area that so far only has a name has nowhere to keep values
+    propertiesBtn->setEnabled(initialHasSelection && mpMap->mpRoomDB->getArea(initialAreaId));
     hbox->addStretch(1);
     hbox->addWidget(createBtn);
     hbox->addWidget(renameBtn);
+    hbox->addWidget(propertiesBtn);
     hbox->addWidget(deleteBtn);
     hbox->addWidget(closeBtn);
     layout->addWidget(buttonBar);
 
-    connect(listWidget, &QListWidget::currentItemChanged, this, [renameBtn, deleteBtn, this](QListWidgetItem* current, QListWidgetItem*) {
+    connect(listWidget, &QListWidget::currentItemChanged, this, [renameBtn, deleteBtn, propertiesBtn, this](QListWidgetItem* current, QListWidgetItem*) {
         if (!current) {
             renameBtn->setEnabled(false);
             deleteBtn->setEnabled(false);
+            propertiesBtn->setEnabled(false);
             return;
         }
+        propertiesBtn->setEnabled(mpMap && mpMap->mpRoomDB->getArea(current->data(Qt::UserRole).toInt()));
 
         const int areaId = current->data(Qt::UserRole).toInt();
         // default area (-1) must not be renamed or deleted
@@ -2930,6 +2939,15 @@ void T2DMap::slot_configureAreas()
         if (mpMap && mpMap->getViewManager()) {
             mpMap->getViewManager()->updateAllViews();
         }
+    });
+
+    connect(propertiesBtn, &QPushButton::clicked, this, [this, dialog, listWidget]() {
+        auto* item = listWidget->currentItem();
+        if (!item || !mpMap || !mpMap->mpRoomDB->getArea(item->data(Qt::UserRole).toInt())) {
+            return;
+        }
+        auto* pProperties = new dlgAreaProperties(mpMap, item->data(Qt::UserRole).toInt(), dialog);
+        pProperties->open();
     });
 
     connect(createBtn, &QPushButton::clicked, this, [this, dialog, listWidget, repopulate]() {

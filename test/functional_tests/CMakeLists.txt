@@ -304,6 +304,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLabelColourWellTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
+    MapAreaNestingTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
@@ -331,6 +332,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapLockNoOpTest.cpp
     MapLabelDeleteTest.cpp
     MapRevisionTest.cpp
+    AreaPropertiesDialogTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp

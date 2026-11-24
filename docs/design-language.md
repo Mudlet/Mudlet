@@ -1857,6 +1857,19 @@ pressed.
 ...and one dynamic property of its own, `exporterCountEmpty`, which the count chip carries
 while nothing is ticked and which needs `uiDesign::repolish()` after every change.
 
+...and the area properties dialog's, with an `areaProperties*` prefix. `dlgAreaProperties` is
+built in code, a form with one row per field the map defines (`TAreaFields`), and
+`applyAreaPropertiesStyle()` sets one sheet on its shell - the page, the input and button
+recipes scoped to it, and the labels in the chrome tone - again on every appearance change.
+
+| Name | What it is |
+| --- | --- |
+| `areaPropertiesShell` | The runtime-built root widget the sheet is set on |
+| `areaPropertiesForm` | The form of fields |
+| `areaPropertiesField` | Every field's editor: a line for text, a number or a range, a list for yes/no or a choice. Which field it edits is in its `areaField` property, the field's key |
+| `areaPropertiesNoFields` | What the dialog says in place of the form when the map defines no fields |
+| `areaPropertiesButtons` | OK and Cancel, or Close when there is nothing to edit. OK carries `uiDesign::scmProp_primaryButton` |
+
 Three of the `settings*` names are not the settings dialog's alone.
 `settingsRail` and `settingsFocused` are the contract `SidebarItemDelegate` and
 `sidebarStyleSheet()` are written against, and `settingsSurface` - which

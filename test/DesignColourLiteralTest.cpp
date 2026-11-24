@@ -106,6 +106,8 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("AboutSupporterBanner.h"),
                           QStringLiteral("dlgConnectionProfiles.cpp"),
                           QStringLiteral("dlgConnectionProfiles.h"),
+                          QStringLiteral("dlgAreaProperties.cpp"),
+                          QStringLiteral("dlgAreaProperties.h"),
                           QStringLiteral("dlgNotepad.cpp"),
                           QStringLiteral("dlgNotepad.h"),
                           QStringLiteral("dlgPackageManager.cpp"),

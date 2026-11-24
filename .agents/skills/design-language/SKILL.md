@@ -240,6 +240,11 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   widget; guarded by `MainToolBarStyleTest`. While an update waits, About is `aboutUpdateButton`:
   the Lucide "!" in a circle and the word "Update", both in `scmStateHue_update` walked to
   `scmTextMinimumRatio`, with no menu arrow; guarded by `AboutMenuReleaseNoticeTest`
+- Area properties `dlgAreaProperties` - opened from the mapper's Configure Areas: a form of the
+  fields the map defines, a line or a list per field, through `inputStyleSheet()` and
+  `buttonStyleSheet()` scoped to `areaPropertiesShell`, OK as the primary button; built in
+  code, with no `.ui` file to shell. The Configure Areas dialog it is opened from is still
+  platform drawn
 - Debug filter bar `TDebugFilterBar`
 - The console's foot `TConsole` (main window, user windows and miniconsoles with a command
   line) - one 1px seam along its top mixed from the profile's command-line colours at
