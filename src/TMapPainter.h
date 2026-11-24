@@ -209,7 +209,7 @@ public:
     {
         const TRoom* destination = nullptr;
         int destinationId = 0;
-        // The destination's reverse exit doesn't lead back - with mDirectionalExitLines, none of its compass exits does.
+        // The destination's reverse exit doesn't lead back - with mDirectionalExitLines, no exit back pairs with it (wayBack()).
         // Not the sole arrow test: an exit also gets an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
         // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
@@ -230,12 +230,15 @@ public:
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
     static int customLineDestination(const TRoom& room, const QString& key);
     static bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other);
-    // The compass exit by which exit's destination leads back to room, preferring the reverse direction so both rooms of
-    // a two-way exit draw the same path; 0 if none does
+    // The compass exit of exit's destination that pairs with exit, the same pair seen from either room: a reverse exit
+    // first, then the others in direction order, each exit back pairing once; 0 if none is left for it
     static int wayBack(const TRoom& room, const ExitToPaint& exit);
     // Whether exit's destination draws its way back as a custom line reaching room, which then shows the two-way
     // connection a bent plain line would draw again beside it
     static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
+    // Whether exit is drawn as one-way: its destination's reverse exit does not lead back, nor, with directional lines,
+    // an exit that pairs with it. The map and its exported image decide alike
+    static bool exitIsOneWay(const TRoom& room, const ExitToPaint& exit, bool directionalExitLines);
     // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
     static bool directionalExitLinesEnabled();
 

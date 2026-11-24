@@ -438,6 +438,79 @@ private slots:
         QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, north), "the custom line for the exit east hid the exit north");
     }
 
+    // Each exit back pairs with one exit, and both rooms come to the same pairs: otherwise one room draws a two-way line
+    // the other draws again as a one-way arrow, or a pair both rooms could walk is left with two arrows
+    void bothRoomsComeToTheSamePairs()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        const auto exitTo = [](TRoom* pDestination, const int direction) {
+            TMapPainter::ExitToPaint exit;
+            exit.destination = pDestination;
+            exit.destinationId = pDestination->getId();
+            exit.direction = direction;
+            return exit;
+        };
+        const auto checkPairs = [&](const QList<int>& westExits, const QList<int>& eastExits) {
+            for (const int direction : {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST}) {
+                QVERIFY(map()->setExit(scmWestRoom, westExits.contains(direction) ? scmEastRoom : -1, direction));
+                QVERIFY(map()->setExit(scmEastRoom, eastExits.contains(direction) ? scmWestRoom : -1, direction));
+            }
+            for (const int direction : westExits) {
+                const int back = TMapPainter::wayBack(*pWestRoom, exitTo(pEastRoom, direction));
+                QVERIFY2(back, qPrintable(qsl("west exit %1 has no pair").arg(direction)));
+                QCOMPARE(TMapPainter::wayBack(*pEastRoom, exitTo(pWestRoom, back)), direction);
+            }
+            for (const int direction : eastExits) {
+                const int back = TMapPainter::wayBack(*pEastRoom, exitTo(pWestRoom, direction));
+                QVERIFY2(back, qPrintable(qsl("east exit %1 has no pair").arg(direction)));
+                QCOMPARE(TMapPainter::wayBack(*pWestRoom, exitTo(pEastRoom, back)), direction);
+            }
+        };
+        checkPairs({DIR_NORTH, DIR_SOUTHWEST}, {DIR_NORTHEAST, DIR_NORTHWEST});
+        checkPairs({DIR_NORTH, DIR_EAST}, {DIR_NORTHEAST, DIR_NORTHWEST});
+    }
+
+    // The map and its exported image decide one-way alike: with the east room's one way back, west, paired with the
+    // exit east, the exit north is one-way there too
+    void anExitNoExitBackPairsWithIsOneWay()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::ExitToPaint east;
+        east.destination = roomDB()->getRoom(scmEastRoom);
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint north = east;
+        north.direction = DIR_NORTH;
+        const TRoom& westRoom = *roomDB()->getRoom(scmWestRoom);
+
+        QVERIFY(!TMapPainter::exitIsOneWay(westRoom, east, true));
+        QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, true));
+        QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, false));
+    }
+
+    // A line keeps the shape it had: unpaired, the exit north still bends into the east room through its exit back
+    void anUnpairedExitStillBendsInThroughAnExitBack()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::View pathView = view();
+        pathView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(pathView);
+        TMapPainter::ExitToPaint north;
+        north.destination = roomDB()->getRoom(scmEastRoom);
+        north.destinationId = scmEastRoom;
+        north.direction = DIR_NORTH;
+        const QPointF from = onImage(QPointF(0, 0));
+        const QPointF to = onImage(QPointF(2, 0));
+
+        const QVector<QPointF> path = painter.exitLinePath(*roomDB()->getRoom(scmWestRoom), north, from, to);
+
+        // Out of the west room's north stub, in through the east room's west stub
+        QCOMPARE(path.size(), 4);
+        QCOMPARE(path.at(2), onImage(QPointF(1.5, 0)));
+    }
+
     // The export decides alike: the exit north is drawn there, so the export with it differs from one without it
     void anExportDrawsAnExitTheCustomLineBackDoesNotPairWith()
     {
