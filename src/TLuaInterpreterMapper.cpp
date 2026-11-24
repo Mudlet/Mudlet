@@ -4054,6 +4054,8 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
         }
         pA->mUserData.remove(key);
         host.mpMap->setUnsaved(__func__);
+        // As setAreaUserData() does: whatever shows the area reads its values again
+        host.mpMap->updateArea(areaId);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -4117,6 +4119,7 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
     }
     pA->mUserData.insert(key, TAreaFields::formatValue(field, *value));
     host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(areaId);
     lua_pushboolean(L, true);
     return 1;
 }

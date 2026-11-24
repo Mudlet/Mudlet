@@ -912,6 +912,22 @@ assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitE
                  qsl("ok"));
     }
 
+    // As setAreaUserData() does, so a view showing the area draws its values again
+    void test_anAreaFieldValueSetOrRemovedUpdatesTheArea()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QCOMPARE(runLua(qsl("routingFieldArea = addAreaName('RoutingFieldArea') routingSavedFields = getMapAreaFields() "
+                            "assert(setMapAreaFields({routingNotes = {type = 'text'}}))")),
+                 qsl("ok"));
+        const quint64 beforeSetting = pMap->appearanceRevision();
+        QCOMPARE(runLua(qsl("assert(setAreaFieldValue(routingFieldArea, 'routingNotes', 'x'))")), qsl("ok"));
+        QVERIFY2(pMap->appearanceRevision() > beforeSetting, "setting a value left the area as it was drawn");
+        const quint64 beforeRemoving = pMap->appearanceRevision();
+        QCOMPARE(runLua(qsl("assert(setAreaFieldValue(routingFieldArea, 'routingNotes', nil))")), qsl("ok"));
+        QVERIFY2(pMap->appearanceRevision() > beforeRemoving, "removing a value left the area as it was drawn");
+        QCOMPARE(runLua(qsl("setMapAreaFields(routingSavedFields) deleteArea('RoutingFieldArea')")), qsl("ok"));
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(
