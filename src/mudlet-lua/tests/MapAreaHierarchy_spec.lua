@@ -82,6 +82,13 @@ describe("Tests nesting areas under parent areas", function()
       assert.is_nil(getAreaParent(zone))
     end)
 
+    it("refuses to nest the default area", function()
+      local ok, message = setAreaParent(-1, continent)
+      assert.is_nil(ok)
+      assert.are.equal("the default area cannot be nested in another area", message)
+      assert.is_nil(getAreaParent(-1))
+    end)
+
     it("raises an error for arguments that are not area IDs", function()
       assert.has_error(function() setAreaParent("zone", continent) end)
       assert.has_error(function() setAreaParent(zone, "continent") end)
@@ -164,6 +171,26 @@ describe("Tests nesting areas under parent areas", function()
       deleteArea("HierarchySpecMiddle")
 
       assert.are.same({{zone, middle, continent}, {subzone, middle, continent}}, seen)
+    end)
+
+    it("does not report a child as moved up once a handler has moved it elsewhere", function()
+      local middle = addAreaName("HierarchySpecMiddle")
+      setAreaParent(middle, continent)
+      setAreaParent(zone, middle)
+      setAreaParent(subzone, middle)
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysAreaParentChanged", function(_, areaId, oldParent, newParent)
+        seen[#seen + 1] = {areaId, oldParent, newParent}
+        if areaId == zone then
+          setAreaParent(subzone, other)
+        end
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      deleteArea("HierarchySpecMiddle")
+
+      assert.are.same({{zone, middle, continent}, {subzone, continent, other}}, seen)
+      assert.are.equal(other, getAreaParent(subzone))
     end)
   end)
 end)
