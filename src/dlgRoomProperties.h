@@ -104,6 +104,7 @@ private:
     void initUserDataTextField(UserDataTextField&, const QList<const TRoom*>&);
     void initUserData();
     void addUserDataRow(const QString& key, const std::optional<QString>& value, const bool keyEditable);
+    void showUserDataValueMixed(QTableWidgetItem*, const bool mixed);
     QMap<QString, std::optional<QString>> userDataChanges() const;
     // Says which keys typed into added rows are kept elsewhere and so will not be saved from the table
     void updateUserDataKeyWarning();

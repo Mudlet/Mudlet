@@ -2493,9 +2493,11 @@ void T2DMap::moveRoomsToArea(const QSet<int>& roomIds, const int areaId)
             mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
         }
         switchArea(targetAreaName);
-        // The rooms are still selected, so land on them rather than on
-        // whichever room switchArea() would otherwise have picked:
-        TRoom* pCenterRoom = getCenterSelection() ? mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId) : nullptr;
+        // Land on the rooms moved rather than on whichever room switchArea()
+        // would otherwise have picked. Found from roomIds, not the selection:
+        // Configure room is not modal, and the map's selection may have moved
+        // on by the time its OK sends the rooms here
+        TRoom* pCenterRoom = mpMap->mpRoomDB->getRoom(TMapPainter::selectionCentreRoom(mpMap, roomIds));
         if (pCenterRoom) {
             mMapCenterX = pCenterRoom->x();
             mMapCenterY = -pCenterRoom->y();
