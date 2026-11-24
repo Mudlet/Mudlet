@@ -8670,7 +8670,8 @@ describe("Tests getAreaExploration and getAreaConnections", function()
       addSpecialExit(s1, pit, "fall")
 
       assert.are.same({{from = s1, to = pit, exit = "fall"}}, getAreaConnections(south)[-1].exits)
-      assert.are.same({[south] = {exits = {}, entrances = {{from = s1, to = pit, exit = "fall"}}}}, getAreaConnections(-1))
+      -- Only the entry for this link: the default area is shared, and may link to other areas besides
+      assert.are.same({exits = {}, entrances = {{from = s1, to = pit, exit = "fall"}}}, getAreaConnections(-1)[south])
     end)
 
     it("returns an empty table for an area with no links to others", function()
