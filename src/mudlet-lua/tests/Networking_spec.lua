@@ -128,6 +128,12 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "not connected to game server"))
     end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendATCP("Char.Login", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not connected to game server"), tostring(err))
+    end)
   end)
 
   describe("sendTelnetChannel102", function()
@@ -157,6 +163,16 @@ describe("Networking send functions honour their disconnected/offline contracts"
       local ok, err = sendSocket("noop")
       assert.is_nil(ok)
       assert.is_true(contains(err, "unable to send"))
+    end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendSocket("noop", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unable to send"), tostring(err))
+    end)
+
+    it("still raises a Lua error when the second argument is not a boolean", function()
+      assertArgError(function() sendSocket("noop", "yes") end, "sendSocket: bad argument #2 type")
     end)
   end)
 end)
@@ -807,6 +823,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       local event, _, body = waitForEvent("sysPostHttpDone", 2000)
       assert.equals("sysPostHttpDone", event)
       assert.is_true(contains(body, "body=file body with no data argument"), body)
+    end)
+
+    it("sends data holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      -- a binary part of a multipart form, say
+      assert.is_true(postHTTP("a\0b\255c", fixtureUrl("/echo")))
+
+      local event, _, body = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.is_true(contains(body, "bodyhex=610062ff63\n"), body)
     end)
 
     it("raises sysPostHttpError when the endpoint refuses the verb", function()
@@ -3741,6 +3769,21 @@ describe("sending protocol data to a game server that has not negotiated", funct
       local seen = capture()
       return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
     end, 2000), "the bytes after the NUL never reached the wire, saw: " .. tostring(wireHex()))
+  end)
+
+  it("sends telnet code tokens unparsed when sendSocket's second argument is nil", function()
+    if serverUnavailable() then return end
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendSocket("SendSocketNilRaw<SOH>|", nil)
+    assert.is_true(ok, "sendSocket refused a connected socket: " .. tostring(err))
+    local wanted = ("SendSocketNilRaw<SOH>|"):gsub(".", function(c) return string.format("%02x", c:byte()) end)
+    assert.is_true(waitUntil(function()
+      local seen = capture()
+      return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
+    end, 2000), "the <SOH> token did not reach the wire as typed, saw: " .. tostring(wireHex()))
   end)
 
   local function hex(text)
