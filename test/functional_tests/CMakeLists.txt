@@ -769,6 +769,9 @@ set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DP
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
+# ActionBarPlacementTest takes 36 to 60s on the macOS arm64 CI runners, around the default 60s
+set_tests_properties(ActionBarPlacementTest PROPERTIES TIMEOUT 300)
+
 # AppStartupTeardownTest starts the application eight times over, as far as
 # forwarding a link, and a sanitiser build spends seconds on each of those start-ups
 set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
