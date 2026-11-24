@@ -1452,6 +1452,31 @@ private slots:
         QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
     }
 
+    // Once typed over the cell holds a value, but emptied in a later edit it is still the rooms' differing ones it held
+    void aMixedValueTypedInAndEmptiedInALaterEditChangesNothing()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QTest::keyClicks(pEditor, qsl("x"));
+        commitUserDataValueEditor(pEditor);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), qsl("x"));
+
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QTest::keyClick(pEditor, Qt::Key_Backspace);
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
+    }
+
     // A line edit holds 32767 characters unless told otherwise, and would cut a longer value it is opened on
     void aLongValueOpenedInItsEditorIsKeptWhole()
     {

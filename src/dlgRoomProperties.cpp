@@ -73,6 +73,9 @@ QString plainTextKeepingSpaces(const QPlainTextEdit& edit)
 
 // Set on a value cell that shows the placeholder because the selected rooms do not agree on that key
 constexpr int scmMixedValueRole = Qt::UserRole;
+// Set for good on a value cell that started out mixed: emptied, even after a value was typed in, it goes back to the
+// placeholder rather than writing nothing to every room
+constexpr int scmStartedMixedRole = Qt::UserRole + 1;
 
 // Opens a cell showing the placeholder with an empty editor, and leaves the cell undecided when nothing was typed or
 // it was emptied again, so that only a new value replaces the rooms' differing ones, as on the description field
@@ -997,15 +1000,24 @@ void dlgRoomProperties::addUserDataRow(const QString& key, const std::optional<Q
     }
     tableWidget_userData->setItem(row, 0, keyItem);
 
-    auto* valueItem = new QTableWidgetItem(value.value_or(multipleValuesPlaceholder));
+    auto* valueItem = new QTableWidgetItem(value.value_or(QString()));
     if (!value.has_value()) {
-        valueItem->setData(scmMixedValueRole, true);
-        QFont font = valueItem->font();
-        font.setItalic(true);
-        valueItem->setFont(font);
-        valueItem->setForeground(palette().placeholderText());
+        valueItem->setData(scmStartedMixedRole, true);
+        showUserDataValueMixed(valueItem, true);
     }
     tableWidget_userData->setItem(row, 1, valueItem);
+}
+
+void dlgRoomProperties::showUserDataValueMixed(QTableWidgetItem* item, const bool mixed)
+{
+    item->setData(scmMixedValueRole, mixed);
+    if (mixed) {
+        item->setText(multipleValuesPlaceholder);
+    }
+    QFont font = item->font();
+    font.setItalic(mixed);
+    item->setFont(font);
+    item->setData(Qt::ForegroundRole, mixed ? QVariant(palette().placeholderText()) : QVariant());
 }
 
 QMap<QString, std::optional<QString>> dlgRoomProperties::userDataChanges() const
@@ -1108,16 +1120,17 @@ void dlgRoomProperties::slot_userDataItemChanged(QTableWidgetItem* item)
         updateUserDataKeyWarning();
         return;
     }
-    if (!item || item->column() != 1 || !item->data(scmMixedValueRole).toBool()) {
+    if (!item || item->column() != 1 || !item->data(scmStartedMixedRole).toBool()) {
         return;
     }
-    // Typed over, the cell now holds one value for every room rather than the placeholder
     const QSignalBlocker blocker(tableWidget_userData);
-    item->setData(scmMixedValueRole, false);
-    QFont font = item->font();
-    font.setItalic(false);
-    item->setFont(font);
-    item->setData(Qt::ForegroundRole, QVariant());
+    if (item->text().isEmpty()) {
+        // Emptied again, as on the description field: the rooms keep their differing values
+        showUserDataValueMixed(item, true);
+    } else if (item->data(scmMixedValueRole).toBool()) {
+        // Typed over, the cell now holds one value for every room rather than the placeholder
+        showUserDataValueMixed(item, false);
+    }
 }
 
 // The dialog is not modal, so a script may have deleted any of these rooms,
