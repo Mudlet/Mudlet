@@ -220,7 +220,7 @@ public:
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, const QString&);
+    std::pair<int, QString> startTempKey(int&, int&, const QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -248,6 +248,8 @@ public:
     static int auditAreas(lua_State*);
     static int getAreaExits(lua_State*);
     static int getAreaGraph(lua_State*);
+    static int getAreaExploration(lua_State*);
+    static int getAreaConnections(lua_State*);
     static int setMergeTables(lua_State*);
     static int addSupportedTelnetOption(lua_State*);
     static int setDoor(lua_State*);

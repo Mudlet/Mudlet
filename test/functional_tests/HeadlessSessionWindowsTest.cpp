@@ -615,6 +615,53 @@ setLabelStyleSheet("lbl", "color: red;")
         QVERIFY(!session.labelContent(qsl("lbl")));
     }
 
+    void test_aLabelsLiveRegionIsItsContent()
+    {
+        using LiveRegion = THeadlessSession::LabelContent::LiveRegion;
+        const QString name = qsl("Headless Label Live Region");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("lbl", 0, 0, 100, 20, 1)
+echo("lbl", "HP 25")
+geyserLabel = Geyser.Label:new({name = "geyserLive", x = 0, y = 40, width = 100, height = 20, liveRegion = "assertive"})
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<THeadlessSession::LabelContent> content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QCOMPARE(content->liveRegion, LiveRegion::off);
+        content = session.labelContent(qsl("geyserLive"));
+        QVERIFY(content);
+        QCOMPARE(content->liveRegion, LiveRegion::assertive);
+
+        // Nothing else about the label changes, so the live region alone names it
+        const auto toldAs = [&](const QString& mode, const LiveRegion expected) {
+            if (!session.runLua(qsl(R"(setLabelLiveRegion("lbl", "%1"))").arg(mode)) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("lbl")};
+            changes.clear();
+            const std::optional<THeadlessSession::LabelContent> now = session.labelContent(qsl("lbl"));
+            return named && now && now->liveRegion == expected;
+        };
+        QVERIFY(toldAs(qsl("polite"), LiveRegion::polite));
+        QVERIFY(toldAs(qsl("assertive"), LiveRegion::assertive));
+        QVERIFY(toldAs(qsl("off"), LiveRegion::off));
+        // The one it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setLabelLiveRegion("lbl", "off"))")));
+        QVERIFY(!changes.wait(200));
+        // A region a script cannot set leaves the label as it was
+        QVERIFY(session.runLua(qsl(R"(setLabelLiveRegion("lbl", "polite") setLabelLiveRegion("lbl", "loud"))")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(session.labelContent(qsl("lbl"))->liveRegion, LiveRegion::polite);
+
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_userWindowsArePlacedAsTheGuisDocksAre()
     {
         const QString name = qsl("Headless User Window Place");
@@ -1761,6 +1808,37 @@ setCmdLineAction("own", function(text) headlessActed = {text} deleteCommandLine(
         QCOMPARE(luaString(session, qsl("table.concat(headlessActed, '|')")), qsl("first"));
         QCOMPARE(sent(), sentBeforeReplacement);
         QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aWindowLineWrittenToWhileItIsSentIsLeftAsWritten()
+    {
+        const QString name = qsl("Headless Windows Command Line Prefill");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createCommandLine("own", 0, 300, 200, 30)
+tempAlias([[^t (\w+)$]], [[printCmdLine("own", "tell " .. matches[2] .. " ")]])
+)lua")));
+        for (const bool autoClear : {true, false}) {
+            session.host()->mAutoClearCommandLineAfterSend = autoClear;
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("t bob")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("look")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(autoClear ? QString() : qsl("look")));
+        }
+
+        // Not a setCmdLineAction() field, which writes its value back to be replaced, even one that resets itself first
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        for (const QString& action : {qsl("printCmdLine('own', t .. '0')"), qsl("resetCmdLineAction('own') printCmdLine('own', t .. '0')")}) {
+            QVERIFY(session.runLua(qsl("setCmdLineAction('own', function(t) %1 end)").arg(action)));
+            QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("25")));
+            QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
+        }
+        QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("t bob")));
+        QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
         QVERIFY(session.shutdown(false));
     }
 };

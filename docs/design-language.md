@@ -400,7 +400,8 @@ three things on `::menu-button`, which is `scmInputDropDownWidth` (18px) wide at
   takes, because the body's hover fills the whole button, the half included:
   where the body lights to `hoverSoft` the half lights to `accentSoft` - the
   same wash a row of the menu it opens takes under the pointer - and where the
-  body is pressed to `accentSoft` the half takes twice that. A half washed in
+  body is pressed to `accentSoft` under a tenth of black, so that a press
+  sinks past the hover on both appearances, the half takes twice `accentSoft`. A half washed in
   what the body is already washed in never reads as its own target.
 
   **It says the half is a target, not that it is the one under the pointer**,
@@ -1074,6 +1075,31 @@ seam across its whole width, `blend()` of the profile's command-line background
 towards its text colour at `scmConsoleFootSeamStrength` (20%), with no frame on
 the input or on the password box laid over it, so a border a profile sets with
 `setCmdLineStyleSheet()` is the only one drawn there (`ConsoleFootSeamTest`).
+
+### What scrolls keeps its width
+
+A view that starts to scroll takes its vertical bar's width out of its
+viewport, and Qt lays the content out again that much narrower: a form's
+fields shrink, a tree's rows are elided a few letters earlier, and it all
+moves back when the bar goes. `uiDesign::keepRoomForVerticalScrollBar()`
+stops that: the bar's policy is `Qt::ScrollBarAlwaysOn`, so the viewport gives
+the bar's width up at all times, and the bar itself is hidden while its range
+is empty, with `retainSizeWhenHidden` so it still takes its place. Only the
+bar comes and goes; the content is never laid out again.
+
+- Call it once on a tree, list or scroll area as it is built. The editor's
+  item trees, its search results and `ContentScrollArea` (the pattern list)
+  do.
+- Do not reach for the same result by switching a viewport margin or a layout
+  margin when the bar shows or hides. The margin is applied after the bar has
+  already changed the viewport, so one frame is painted at the wrong width,
+  which reads as a flicker.
+- Leave it off where width is short and a bar is rare, as in the editor's
+  sidebar rail: there the strip kept for the bar is worth more as content.
+- A test for it records every `QEvent::Resize` of the content across the
+  change, not only the widths before and after, as an in-between width is the
+  failure (`test_aPatternFieldKeepsItsWidthAsTheListStartsAndStopsScrolling`
+  in `EditorChromeTest`).
 
 ### Shell over .ui
 
@@ -2118,8 +2144,8 @@ readable-but-wrong tone would otherwise pass.
 connection dialog's two tabs and its buttons to the recipes: both containers
 holding a button carry a sheet with the push button rules in it, Copy carries
 `uiMenuButton` and is named by a rule of its own, Connect is still the dialog's
-default button and carries `uiPrimaryButton`, which the row's sheet has a rule
-for, and the New button's top edge is read off a grab of the window and has to
+default button, is drawn on the same face as Offline with only its word in
+semibold and does not carry `uiPrimaryButton`, and the New button's top edge is read off a grab of the window and has to
 be the design's hairline rather than a platform bevel. Both pages carry a sheet built on
 the `field` surface, the three Connect-to fields are at the dialog's own font
 rather than the 9pt the `.ui` pinned them at, the port field is wide enough for

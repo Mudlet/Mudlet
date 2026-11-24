@@ -49,10 +49,13 @@
 #include <QPushButton>
 #include <QScopeGuard>
 #include <QSpinBox>
+#include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTextCursor>
 #include <QTimer>
 #include <QtTest/QtTest>
 
+#include "AlphaColourWell.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -98,6 +101,18 @@ struct EmittedProperties
     bool changeBorderThickness = false;
     int newBorderThickness = 0;
     QList<int> roomIds;
+    // signal_save_userData, which is only emitted when a key changed
+    int userDataEmitCount = 0;
+    QMap<QString, std::optional<QString>> userDataChanges;
+    QList<int> userDataRoomIds;
+    // signal_save_hash, only emitted for one room whose game ID changed
+    int hashEmitCount = 0;
+    int hashRoomId = 0;
+    QString newHash;
+    // signal_save_area, only emitted when another area was picked
+    int areaEmitCount = 0;
+    int newAreaId = 0;
+    QList<int> areaRoomIds;
 };
 
 class RoomPropertiesDialogTest : public QObject
@@ -227,9 +242,64 @@ private:
                     mEmitted.changeBorderThickness = changeBorderThickness;
                     mEmitted.newBorderThickness = newBorderThickness;
                 });
+        connect(pDlg, &dlgRoomProperties::signal_save_area, this, [this](int areaId, QSet<int> roomIds) {
+            ++mEmitted.areaEmitCount;
+            mEmitted.newAreaId = areaId;
+            mEmitted.areaRoomIds = QList<int>(roomIds.cbegin(), roomIds.cend());
+            std::sort(mEmitted.areaRoomIds.begin(), mEmitted.areaRoomIds.end());
+        });
+        connect(pDlg, &dlgRoomProperties::signal_save_hash, this, [this](int roomId, QString hash) {
+            ++mEmitted.hashEmitCount;
+            mEmitted.hashRoomId = roomId;
+            mEmitted.newHash = hash;
+        });
+        connect(pDlg, &dlgRoomProperties::signal_save_userData, this, [this](QMap<QString, std::optional<QString>> changes, QSet<int> roomIds) {
+            ++mEmitted.userDataEmitCount;
+            mEmitted.userDataChanges = changes;
+            mEmitted.userDataRoomIds = QList<int>(roomIds.cbegin(), roomIds.cend());
+            std::sort(mEmitted.userDataRoomIds.begin(), mEmitted.userDataRoomIds.end());
+        });
         pDlg->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, rooms);
         mpDialog = pDlg;
         return pDlg;
+    }
+
+    // The keys the user data table lists, top to bottom
+    static QStringList userDataKeys(dlgRoomProperties* pDlg)
+    {
+        QStringList keys;
+        for (int row = 0; row < pDlg->tableWidget_userData->rowCount(); ++row) {
+            keys << pDlg->tableWidget_userData->item(row, 0)->text();
+        }
+        return keys;
+    }
+
+    static QTableWidgetItem* userDataValue(dlgRoomProperties* pDlg, const QString& key)
+    {
+        for (int row = 0; row < pDlg->tableWidget_userData->rowCount(); ++row) {
+            if (pDlg->tableWidget_userData->item(row, 0)->text() == key) {
+                return pDlg->tableWidget_userData->item(row, 1);
+            }
+        }
+        return nullptr;
+    }
+
+    // Opens the cell's real editor, the way a double-click does, so the delegate decides what is written back
+    static QLineEdit* openUserDataValueEditor(dlgRoomProperties* pDlg, const QString& key)
+    {
+        QTableWidgetItem* pItem = userDataValue(pDlg, key);
+        if (!pItem) {
+            return nullptr;
+        }
+        pDlg->tableWidget_userData->editItem(pItem);
+        return pDlg->tableWidget_userData->viewport()->findChild<QLineEdit*>();
+    }
+
+    // Return commits through a queued call, so the event loop has to run before the cell holds what was typed
+    static void commitUserDataValueEditor(QLineEdit* pEditor)
+    {
+        QTest::keyClick(pEditor, Qt::Key_Return);
+        QCoreApplication::processEvents();
     }
 
     struct ColorSelectorOutcome
@@ -451,6 +521,32 @@ private slots:
         QVERIFY(!pDlg->checkBox_hidden->isTristate());
     }
 
+    // The picker offers an alpha channel, so the button has to show it rather
+    // than paint the colour opaque behind its own words
+    void aBorderColorIsShownWithItsOpacity()
+    {
+        buildMap();
+        room(scmFirstRoom)->mBorderColor = QColor(200, 0, 0, 128);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QPushButton* pButton = pDlg->pushButton_setBorderColor;
+        const QString words = pButton->accessibleName();
+        QVERIFY2(!words.isEmpty(), "the border colour button has no name to say what it sets");
+
+        const uiDesign::AlphaColourWell* pWell = uiDesign::AlphaColourWell::find(pButton);
+        QVERIFY2(pWell, "the border colour is not shown in an alpha colour well");
+        QCOMPARE(pWell->colour(), QColor(200, 0, 0, 128));
+        QVERIFY2(pButton->text().contains(qsl("50%")), qPrintable(qsl("the well does not say the colour is half opaque: \"%1\"").arg(pButton->text())));
+
+        QVERIFY(QMetaObject::invokeMethod(pDlg, "slot_borderColorSelected", Q_ARG(QColor, QColor(0, 0, 200, 255))));
+        QCOMPARE(pWell->colour(), QColor(0, 0, 200, 255));
+        QVERIFY2(pButton->text().contains(qsl("100%")), qPrintable(pButton->text()));
+
+        QVERIFY(QMetaObject::invokeMethod(pDlg, "slot_resetBorderColor"));
+        QCOMPARE(pButton->text(), words);
+        QVERIFY2(pButton->styleSheet().isEmpty(), "with no colour chosen the button still carries the well's sheet");
+    }
+
     void aSelectionThatDisagreesShowsPlaceholdersAndTristates()
     {
         buildMap();
@@ -484,7 +580,7 @@ private slots:
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
 
-        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_roomSymbol, pDlg->spinBox_weight, pDlg->spinBox_borderThickness};
+        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_hash, pDlg->plainTextEdit_description, pDlg->lineEdit_roomSymbol, pDlg->spinBox_weight, pDlg->spinBox_borderThickness};
         for (QWidget* pField : fields) {
             QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pField);
             QVERIFY(pInterface);
@@ -492,7 +588,7 @@ private slots:
         }
         // Everywhere but Windows, Qt reports a combo box's current text as its
         // name, so only the property itself can be checked here
-        for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
+        for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_area), static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
             QVERIFY2(!pCombo->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has no accessible name").arg(pCombo->objectName())));
         }
     }
@@ -1007,6 +1103,552 @@ private slots:
 
         QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing was drawn for the missing character");
         QVERIFY2(missing == replacement, "the missing character was not previewed as the replacement character");
+    }
+
+    void userDataOfOneRoomIsListedSortedByKeyWithoutMudletsOwnKeys()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("area"), qsl("Omelos")}, {qsl("room.ui_showName"), qsl("false")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+
+        QCOMPARE(userDataKeys(pDlg), QStringList({qsl("area"), qsl("zone")}));
+        QCOMPARE(userDataValue(pDlg, qsl("zone"))->text(), qsl("Orcland"));
+    }
+
+    void okWithoutEditsSendsNoUserData()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
+    void anEditedValueIsSentAlone()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("notes"), qsl("old")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        userDataValue(pDlg, qsl("notes"))->setText(qsl("new"));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 1);
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("new")}}));
+        QCOMPARE(mEmitted.userDataRoomIds, QList<int>({scmFirstRoom}));
+    }
+
+    void aRemovedRowRemovesItsKey()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->tableWidget_userData->selectRow(0);
+        pDlg->pushButton_removeUserData->click();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("zone"), std::nullopt}}));
+    }
+
+    // An added row with no key, or with a key of Mudlet's own, is left out rather than written
+    void anAddedRowIsSentUnlessItsKeyIsEmptyOrMudletsOwn()
+    {
+        buildMap();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        for (const auto& [key, value] : {std::pair{qsl("shop"), qsl("yes")}, std::pair{QString(), qsl("lost")}, std::pair{qsl("room.ui_nameColor"), qsl("red")}}) {
+            pDlg->pushButton_addUserData->click();
+            const int row = pDlg->tableWidget_userData->rowCount() - 1;
+            pDlg->tableWidget_userData->item(row, 0)->setText(key);
+            pDlg->tableWidget_userData->item(row, 1)->setText(value);
+        }
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
+    }
+
+    // Such a row is not saved, so typing its key says so, rather than the row going without a word on OK
+    void anAddedRowWithAKeyKeptElsewhereSaysItWillNotBeSaved()
+    {
+        buildMap();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(pDlg->label_userDataWarning->isHidden());
+        pDlg->pushButton_addUserData->click();
+        QTableWidgetItem* pKey = pDlg->tableWidget_userData->item(pDlg->tableWidget_userData->rowCount() - 1, 0);
+
+        pKey->setText(qsl("description"));
+        QVERIFY(!pDlg->label_userDataWarning->isHidden());
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("\"description\"")), qPrintable(pDlg->label_userDataWarning->text()));
+
+        pKey->setText(qsl("room.ui_nameColor"));
+        QVERIFY(!pDlg->label_userDataWarning->isHidden());
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("room.ui_")), qPrintable(pDlg->label_userDataWarning->text()));
+
+        pKey->setText(qsl("shop"));
+        QVERIFY(pDlg->label_userDataWarning->isHidden());
+
+        pKey->setText(qsl("description"));
+        pDlg->tableWidget_userData->selectRow(pKey->row());
+        pDlg->pushButton_removeUserData->click();
+        QVERIFY2(pDlg->label_userDataWarning->isHidden(), "the warning outlived the row it was about");
+    }
+
+    void aKeyTypedWithSpacesAroundItIsSavedWithout()
+    {
+        buildMap();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        for (const auto& [key, value] : {std::pair{qsl(" shop "), qsl("yes")}, std::pair{qsl("description "), qsl("lost")}}) {
+            pDlg->pushButton_addUserData->click();
+            const int row = pDlg->tableWidget_userData->rowCount() - 1;
+            pDlg->tableWidget_userData->item(row, 0)->setText(key);
+            pDlg->tableWidget_userData->item(row, 1)->setText(value);
+        }
+        QVERIFY2(pDlg->label_userDataWarning->text().contains(qsl("\"description\"")), qPrintable(pDlg->label_userDataWarning->text()));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
+    }
+
+    // Only the first row of a key is saved, and one added after it says it will not be
+    void anAddedRowRepeatingAKeyIsLeftOutAndSaysSo()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}};
+        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        for (const auto& [key, value] : {std::pair{qsl("zone"), qsl("a")}, std::pair{qsl("shop"), qsl("yes")}, std::pair{qsl("shop"), qsl("no")}}) {
+            pDlg->pushButton_addUserData->click();
+            const int row = pDlg->tableWidget_userData->rowCount() - 1;
+            pDlg->tableWidget_userData->item(row, 0)->setText(key);
+            pDlg->tableWidget_userData->item(row, 1)->setText(value);
+        }
+        const QString warning = pDlg->label_userDataWarning->text();
+        QVERIFY2(!pDlg->label_userDataWarning->isHidden() && warning.contains(qsl("\"zone\"")) && warning.contains(qsl("\"shop\"")), qPrintable(warning));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("shop"), qsl("yes")}}));
+    }
+
+    void aKeyTheRoomsDisagreeOnShowsThePlaceholder()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("shop"), qsl("yes")}};
+        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}, {qsl("area"), qsl("Omelos")}};
+        room(scmThirdRoom)->userData = {{qsl("area"), qsl("Omelos")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        // A key only some rooms have is as undecided as one they hold different values for
+        QCOMPARE(userDataKeys(pDlg), QStringList({qsl("area"), qsl("shop"), qsl("zone")}));
+        for (const QString& key : {qsl("area"), qsl("shop"), qsl("zone")}) {
+            QCOMPARE(userDataValue(pDlg, key)->text(), scmMultipleValues);
+        }
+    }
+
+    void okLeavesAnUntouchedMixedKeyAloneAndWritesAnEditedOneToEveryRoom()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}, {qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        userDataValue(pDlg, qsl("notes"))->setText(qsl("same"));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("same")}}));
+        QCOMPARE(mEmitted.userDataRoomIds, QList<int>({scmFirstRoom, scmSecondRoom}));
+    }
+
+    void theMapperAppliesUserDataChangesToEveryRoom()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("old"), qsl("x")}};
+        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}};
+
+        mp2dMap->slot_setRoomUserData({{qsl("zone"), qsl("Omelos")}, {qsl("old"), std::nullopt}}, {scmFirstRoom, scmSecondRoom});
+
+        QCOMPARE(room(scmFirstRoom)->userData, (QMap<QString, QString>{{qsl("zone"), qsl("Omelos")}}));
+        QCOMPARE(room(scmSecondRoom)->userData, (QMap<QString, QString>{{qsl("zone"), qsl("Omelos")}}));
+    }
+
+    void oneRoomShowsItsIdGameIdAndDescription()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmFirstRoom, qsl("17146")));
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.\nCandles line the walls.")}, {qsl("zone"), qsl("Orcland")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+
+        QCOMPARE(pDlg->label_roomIdValue->text(), QString::number(scmFirstRoom));
+        QCOMPARE(pDlg->lineEdit_hash->text(), qsl("17146"));
+        QVERIFY(pDlg->lineEdit_hash->isEnabled());
+        QCOMPARE(pDlg->plainTextEdit_description->toPlainText(), qsl("A dim hall.\nCandles line the walls."));
+        // The description has its own field, so the table leaves it out
+        QCOMPARE(userDataKeys(pDlg), QStringList({qsl("zone")}));
+    }
+
+    void aSelectionCannotShareAGameIdAndShowsTheirDescriptionsAsMixed()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        QCOMPARE(pDlg->label_roomIdValue->text(), qsl("2 room(s) selected"));
+        QVERIFY(!pDlg->lineEdit_hash->isEnabled());
+        QVERIFY(pDlg->plainTextEdit_description->toPlainText().isEmpty());
+        QCOMPARE(pDlg->plainTextEdit_description->placeholderText(), scmMultipleValues);
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(mEmitted.hashEmitCount, 0);
+    }
+
+    // Typed in and backspaced away again, the mixed field is back to its placeholder: the rooms keep their own
+    // descriptions, and a description typed in does reach them all
+    void aMixedDescriptionTypedInAndEmptiedAgainLeavesTheRoomsAlone()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.")}};
+        room(scmSecondRoom)->userData = {{qsl("description"), qsl("A bright yard.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->plainTextEdit_description->setPlainText(qsl("x"));
+        pDlg->plainTextEdit_description->clear();
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+
+        cleanup();
+        mEmitted = EmittedProperties();
+        pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->plainTextEdit_description->setPlainText(qsl("A room."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A room.")}}));
+    }
+
+    void anEditedDescriptionIsSavedAndAClearedOneRemoved()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("old")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->plainTextEdit_description->setPlainText(qsl("new"));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("new")}}));
+
+        cleanup();
+        mEmitted = EmittedProperties();
+        pDlg = openDialogOn({scmFirstRoom});
+        pDlg->plainTextEdit_description->clear();
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), std::nullopt}}));
+    }
+
+    void aChangedGameIdIsSentAndWarnsWhenAnotherRoomHasIt()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmSecondRoom, qsl("500")));
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_hash->setText(qsl("500"));
+        QVERIFY(!pDlg->label_hashWarning->isHidden());
+        QVERIFY(pDlg->label_hashWarning->text().contains(QString::number(scmSecondRoom)));
+        pDlg->lineEdit_hash->setText(qsl("501"));
+        QVERIFY(pDlg->label_hashWarning->isHidden());
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.hashEmitCount, 1);
+        QCOMPARE(mEmitted.hashRoomId, scmFirstRoom);
+        QCOMPARE(mEmitted.newHash, qsl("501"));
+    }
+
+    // Handed a room that is already gone, the dialog edits the one left, and that room's own game ID is no conflict
+    void theGameIdOfTheOneRoomLeftIsNotTakenForAnotherRoomsId()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmFirstRoom, qsl("17146")));
+        auto* pDlg = new dlgRoomProperties(mpHost);
+        mpDialog = pDlg;
+        QHash<QString, int> usedNames;
+        QHash<int, int> usedColors;
+        QHash<QString, int> usedSymbols;
+        QHash<int, int> usedWeights;
+        QHash<bool, int> usedLockStatus;
+        pDlg->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, 0, {scmFirstRoom, 9999});
+        QVERIFY(pDlg->lineEdit_hash->isEnabled());
+
+        pDlg->lineEdit_hash->setText(qsl("1"));
+        pDlg->lineEdit_hash->setText(qsl("17146"));
+        QVERIFY2(pDlg->label_hashWarning->isHidden(), qPrintable(pDlg->label_hashWarning->text()));
+    }
+
+    void theMapperMovesAGameIdToTheRoomItIsGivenTo()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmSecondRoom, qsl("500")));
+
+        mp2dMap->slot_setRoomHash(scmFirstRoom, qsl("500"));
+
+        QCOMPARE(roomDB()->hashToRoomID.value(qsl("500")), scmFirstRoom);
+        QCOMPARE(roomDB()->roomIDToHash.value(scmFirstRoom), qsl("500"));
+        QVERIFY(!roomDB()->roomIDToHash.contains(scmSecondRoom));
+    }
+
+    void theRoomsAreaIsPickedAndOkWithoutAChangeMovesNothing()
+    {
+        buildMap();
+        const int otherArea = roomDB()->addArea(qsl("Other area"));
+        QVERIFY(otherArea > 0);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+
+        QCOMPARE(pDlg->comboBox_area->currentData().toInt(), mAreaId);
+        QVERIFY(pDlg->comboBox_area->findData(otherArea) >= 0);
+        pDlg->accept();
+        QCOMPARE(mEmitted.areaEmitCount, 0);
+    }
+
+    void aSelectionInDifferentAreasStartsOnThePlaceholder()
+    {
+        buildMap();
+        const int otherArea = roomDB()->addArea(qsl("Other area"));
+        QVERIFY(map()->setRoomArea(scmSecondRoom, otherArea));
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        QCOMPARE(pDlg->comboBox_area->currentText(), scmMultipleValues);
+        pDlg->accept();
+        QCOMPARE(mEmitted.areaEmitCount, 0);
+    }
+
+    void pickingAnotherAreaSendsItForEveryRoom()
+    {
+        buildMap();
+        const int otherArea = roomDB()->addArea(qsl("Other area"));
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->comboBox_area->setCurrentIndex(pDlg->comboBox_area->findData(otherArea));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.areaEmitCount, 1);
+        QCOMPARE(mEmitted.newAreaId, otherArea);
+        QCOMPARE(mEmitted.areaRoomIds, QList<int>({scmFirstRoom, scmSecondRoom}));
+    }
+
+    void theMapperMovesTheRoomsIntoTheArea()
+    {
+        buildMap();
+        const int otherArea = roomDB()->addArea(qsl("Other area"));
+
+        mp2dMap->slot_setRoomsArea(otherArea, {scmFirstRoom, scmSecondRoom});
+
+        QCOMPARE(room(scmFirstRoom)->getArea(), otherArea);
+        QCOMPARE(room(scmSecondRoom)->getArea(), otherArea);
+        QCOMPARE(room(scmThirdRoom)->getArea(), mAreaId);
+    }
+
+    // Configure room is not modal, so by its OK the map may have another room selected, or none
+    void theMapLandsOnTheMovedRoomsWhateverIsSelectedNow()
+    {
+        buildMap();
+        const int otherArea = roomDB()->addArea(qsl("Other area"));
+        QVERIFY(map()->setRoomCoordinates(scmFirstRoom, 20, 5, 0));
+        QVERIFY(map()->setRoomCoordinates(scmThirdRoom, -30, 7, 2));
+        mp2dMap->mMultiSelectionSet = {scmThirdRoom};
+
+        mp2dMap->slot_setRoomsArea(otherArea, {scmFirstRoom});
+        mp2dMap->mMultiSelectionSet.clear();
+
+        QCOMPARE(mp2dMap->mMapCenterX, 20.0);
+        QCOMPARE(mp2dMap->mMapCenterY, -5.0);
+        QCOMPARE(mp2dMap->mMapCenterZ, 0);
+    }
+
+    void theMapperMovesTheRoomsIntoAnAreaThatSoFarHasOnlyAName()
+    {
+        buildMap();
+        // setAreaName() names an area without making it; the first room moved there does
+        const int namedArea = 4242;
+        QVERIFY(roomDB()->setAreaName(namedArea, qsl("Named only")));
+        QVERIFY(!roomDB()->getArea(namedArea));
+
+        mp2dMap->slot_setRoomsArea(namedArea, {scmFirstRoom});
+
+        QCOMPARE(room(scmFirstRoom)->getArea(), namedArea);
+    }
+
+    void okKeepsKeysThatAreBlankButAlreadyThere()
+    {
+        buildMap();
+        // setRoomUserData() accepts an empty key, so a room can hold one
+        room(scmFirstRoom)->userData = {{QString(), qsl("a")}, {qsl("  "), qsl("b")}, {qsl("zone"), qsl("Orcland")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QCOMPARE(userDataKeys(pDlg).size(), 3);
+        // nor does a row added and left without a key take the place of the blank one
+        pDlg->pushButton_addUserData->click();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
+    // As on the description field: emptied again, the mixed cell is back to its placeholder and the rooms keep theirs
+    void aMixedValueTypedInAndEmptiedAgainChangesNothing()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QTest::keyClicks(pEditor, qsl("x"));
+        QTest::keyClick(pEditor, Qt::Key_Backspace);
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
+    }
+
+    // Once typed over the cell holds a value, but emptied in a later edit it is still the rooms' differing ones it held
+    void aMixedValueTypedInAndEmptiedInALaterEditChangesNothing()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QTest::keyClicks(pEditor, qsl("x"));
+        commitUserDataValueEditor(pEditor);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), qsl("x"));
+
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QTest::keyClick(pEditor, Qt::Key_Backspace);
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
+    }
+
+    // OK, clicked with the cell still being edited, saves what was typed: a macOS button takes no focus from the editor
+    void aValueStillBeingEditedIsSavedByOk()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("old")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        // Double-clicking a cell makes it the current one, as here
+        pDlg->tableWidget_userData->setCurrentItem(userDataValue(pDlg, qsl("notes")));
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        pEditor->selectAll();
+        QTest::keyClicks(pEditor, qsl("new"));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("new")}}));
+    }
+
+    // A line edit holds 32767 characters unless told otherwise, and would cut a longer value it is opened on
+    void aLongValueOpenedInItsEditorIsKeptWhole()
+    {
+        buildMap();
+        const QString longValue(40000, QLatin1Char('a'));
+        room(scmFirstRoom)->userData = {{qsl("notes"), longValue}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QCOMPARE(pEditor->text().size(), longValue.size());
+        commitUserDataValueEditor(pEditor);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text().size(), longValue.size());
+
+        // The closed editor is only deleted later, and would otherwise be found again
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        pEditor->end(false);
+        QTest::keyClicks(pEditor, qsl("b"));
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+        // Sizes rather than the values, which a failure would print in full
+        QVERIFY(mEmitted.userDataChanges.contains(qsl("notes")));
+        const QString saved = mEmitted.userDataChanges.value(qsl("notes")).value_or(QString());
+        QCOMPARE(saved.size(), longValue.size() + 1);
+        QVERIFY(saved.endsWith(qsl("ab")));
+    }
+
+    // Games use them to lay out a description, and mapper scripts match it as the game sent it
+    void anEditedDescriptionKeepsItsNonBreakingSpaces()
+    {
+        buildMap();
+        const QString nbsp(QChar::Nbsp);
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A%1dim hall.\nCandles.").arg(nbsp)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QTextCursor cursor = pDlg->plainTextEdit_description->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pDlg->plainTextEdit_description->setTextCursor(cursor);
+        QTest::keyClicks(pDlg->plainTextEdit_description, qsl(" Lit."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A%1dim hall.\nCandles. Lit.").arg(nbsp)}}));
+    }
+
+    void anEditedDescriptionKeepsItsLineEndings()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.\r\nCandles.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QTextCursor cursor = pDlg->plainTextEdit_description->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pDlg->plainTextEdit_description->setTextCursor(cursor);
+        QTest::keyClicks(pDlg->plainTextEdit_description, qsl(" Lit."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A dim hall.\r\nCandles. Lit.")}}));
+    }
+
+    // The dialog opens on the name, so a name typed straight away and Enter rename the room
+    void typingANameAndPressingEnterRenamesTheRoom()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowActive(pDlg));
+        QCOMPARE(QApplication::focusWidget(), pDlg->lineEdit_name);
+
+        QTest::keyClicks(QApplication::focusWidget(), qsl("Armoury"));
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        QCOMPARE(mEmitted.emitCount, 1);
+        QVERIFY(mEmitted.changeName);
+        QCOMPARE(mEmitted.newName, qsl("Armoury"));
+    }
+
+    void aMixedValueOpenedAndLeftAloneInItsEditorChangesNothing()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
     }
 };
 
