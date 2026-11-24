@@ -4226,9 +4226,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         --mPackageInstallsInProgress;
     });
 
-    // Every failure below returns a reason, and some callers drop it: the repository
-    // install names only which packages failed, and default-package installs ignore
-    // it. Say it here too. Script installs pass quiet and get the reason back as a
+    // Every failure below returns a reason, and default-package installs ignore it,
+    // so say it here too. Script installs pass quiet and get the reason back as a
     // return value, so they are left to report it themselves.
     // Not for a module sync: it reinstalls the same archive on every save and reloadModule(),
     // so an unreadable source would repeat the message forever.
@@ -6600,14 +6599,23 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
     auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
-    if (!mProxyUsername.isEmpty()) {
-        proxy->setUser(mProxyUsername);
-    }
-    if (!mProxyPassword.isEmpty()) {
-        proxy->setPassword(mProxyPassword);
-    }
+    // Unconditionally, as the proxy is kept between connections: credentials the player has since
+    // cleared would otherwise still be offered, to whichever proxy is now set
+    proxy->setUser(mProxyUsername);
+    proxy->setPassword(mProxyPassword);
 
     return mpConnectionProxy;
+}
+
+void Host::setProxyPassword(const QString& password)
+{
+    // The saved profile never holds it, so loading reads secure storage, which would hand back a cleared one. Only
+    // when one was there to clear: an empty field can also be a password that could not be read at load.
+    if (password.isEmpty() && !mProxyPassword.isEmpty() && !CredentialManager::removeCredential(getName(), qsl("proxy"))) {
+        //: Shown in the profile's main window when the player cleared the proxy password but the saved copy of it could not be deleted
+        postMessage(tr("[ WARN ]  - The saved proxy password could not be deleted, so the next time this profile is loaded it will have that password again."));
+    }
+    mProxyPassword = password;
 }
 
 void Host::loadSecuredPassword()
@@ -8176,6 +8184,7 @@ void Host::setLargeAreaExitArrows(const bool state)
         mLargeAreaExitArrows = state;
         if (mpMap) {
             consoleFrontend()->setMapLargeAreaExitArrows(state);
+            mpMap->requestMapRepaint();
         }
     }
 }

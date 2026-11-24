@@ -68,6 +68,7 @@
 #include <QStringDecoder>
 #include <QtGlobal>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <memory>
@@ -750,7 +751,7 @@ void cTelnet::connectIt(const QString& address, int port)
         if (mDecompressionRecursionDepth > 0) {
             // A trigger on the last words of the connection that ended: tearing
             // it down from inside their read would reset the parse it is in
-            QTimer::singleShot(0ms, this, [this, address, port]() {
+            QTimer::singleShot(10ms, this, [this, address, port]() {
                 connectIt(address, port);
             });
             return;
@@ -1497,6 +1498,13 @@ void cTelnet::slot_socketDisconnected()
 {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
+#endif
+#if !defined(QT_NO_SSL)
+    // A failed handshake would fail the same way on the other address family's attempt to the same
+    // game, which would then be reported as a second disconnection; a mere drop may be one path's fault
+    if (!mpSocket && mSslHandshakeFailed && mPendingConnectionAttempts > 1) {
+        abortLosingSocket(sender() == &mSocket_ipV4 ? &mSocket_ipV6 : &mSocket_ipV4);
+    }
 #endif
     mLookingUpHost = false;
     mPendingConnectionAttempts = 0;
@@ -3101,6 +3109,16 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
+QString cTelnet::getNewEnvironOSCHyperlinksGmcp()
+{
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksLocal()
+{
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
+}
+
 bool cTelnet::oscHyperlinkConfigFeatureEnabled()
 {
     return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
@@ -3184,6 +3202,8 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SELECTION"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSelection()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SPOILER"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSpoiler()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_DISABLED"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksDisabled()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_GMCP"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksGmcp()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_LOCAL"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksLocal()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
@@ -4597,6 +4617,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             raiseProtocolEvent("sysProtocolDisabled", "channel102");
         }
 
+        // MTTS: a game sends DONT then DO TTYPE around a copyover to restart the
+        // cycle, and its first SEND after that expects the client name again
+        if (option == OPT_TERMINAL_TYPE) {
+            mCycleCountMTTS = 0;
+        }
+
         if (myOptionState.test(idxOption) || (!announcedState.test(idxOption))) {
             sendTelnetOption(TN_WONT, option);
             announcedState.set(idxOption);
@@ -5274,14 +5300,14 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         msg = normalisedMsg;
     }
 
-    const qsizetype firstNewline = msg.indexOf('\n');
-    const qsizetype firstSpace = msg.indexOf(' ');
-
-    // if we see a space before a newline, or no newlines at all,
-    // then that's the separator for message and data
-    const qsizetype separator = Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1) ? firstSpace : firstNewline;
-    QString packageMessage = fromUtf8KeepingBom(separator == -1 ? msg : msg.first(separator));
-    QByteArray data = separator == -1 ? QByteArray() : msg.sliced(separator + 1).toByteArray();
+    // A package name holds no whitespace; a CR left on the name of "Package\r\n{...}"
+    // would file the data under a name no script asks for
+    const auto separatorAt = std::ranges::find_if(msg, [](const char ch) {
+        return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+    });
+    const qsizetype nameLength = separatorAt - msg.begin();
+    QString packageMessage = fromUtf8KeepingBom(msg.first(nameLength));
+    QByteArray data = separatorAt == msg.end() ? QByteArray() : msg.sliced(nameLength + 1).toByteArray();
 
     if (onlyWhitespace(data)) { // Example: Core.Ping
         QString emptyObject = qsl("{}");
@@ -5295,7 +5321,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         return;
     }
 
-    // The package name holds neither separator, so these match it exactly when they would the whole message
+    // The package name holds no separator, so these match it exactly when they would the whole message
     bool serverDeclinedBaseUi = false;
     if (packageMessage.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
@@ -5406,10 +5432,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
         transcodedMsg = msg;
     }
 
-    transcodedMsg.remove(QChar::LineFeed);
-    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-    transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-    // remove \r's from the data, as yajl doesn't like it
+    // A multi-line value such as DESCRIPTION arrives with telnet's CR LF line ends
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
@@ -5636,6 +5659,10 @@ void cTelnet::setChannel102Variables(const QString& msg)
 void cTelnet::setAutoReconnect(bool status)
 {
     mAutoReconnect = status;
+    // A retry already waiting after a failed connection would otherwise still run
+    if (!status) {
+        mTimerFailedConnectionRetry->stop();
+    }
 }
 
 void cTelnet::atcpComposerCancel()
@@ -5959,7 +5986,8 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            mMudData.assign(mud_data, i + 1, std::string::npos);
+            // Appended, as a feedTelnet() from a trigger in that post can have left a partial line ahead of this
+            mMudData.append(mud_data, i + 1, std::string::npos);
             mPartialLineHeldSince.start();
         } else {
             if (mMudData.empty()) {
@@ -6002,9 +6030,10 @@ void cTelnet::slot_timerPosting()
     // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
 
-    postData();
-    mMudData = "";
+    // Ahead of the post, with mMudData left alone after it: during a trigger on this line, a read
+    // in its nested event loop or a feedTelnet() can leave a partial line of its own for this timer
     mIsTimerPosting = false;
+    postData();
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
@@ -6461,9 +6490,13 @@ void cTelnet::endReplay(const QString& message)
 void cTelnet::slot_processReplayChunk()
 {
     mReplayChunkPending = false;
+    // Counted as processSocketData() counts: a read in a trigger's nested event loop
+    // would land ahead of the rest of the chunk
+    ++mDecompressionRecursionDepth;
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
+    int forcedOffPrompts = 0;
     for (int i = 0; i < datalen; ++i) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
@@ -6537,12 +6570,18 @@ void cTelnet::slot_processReplayChunk()
         }
 
         if (recvdGA) {
-            mGA_Driver = true;
-            cleandata.push_back('\n');
             recvdGA = false;
-            gotPrompt(cleandata);
-            cleandata = "";
-            emit signal_promptReceived();
+            if (!mFORCE_GA_OFF) {
+                mGA_Driver = true;
+                // '\xff' marks the line as a prompt for isPrompt() and prompt triggers, as on the socket path
+                cleandata.push_back('\xff');
+                gotPrompt(cleandata);
+                cleandata = "";
+                emit signal_promptReceived();
+            } else {
+                cleandata.push_back('\n');
+                ++forcedOffPrompts;
+            }
         }
     } //for
 
@@ -6550,10 +6589,14 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
     mPromptStartPosted = false;
+    for (int prompt = 0; prompt < forcedOffPrompts; ++prompt) {
+        emit signal_promptReceived();
+    }
 
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
+    --mDecompressionRecursionDepth;
     if (loadingReplay) {
         loadReplayChunk();
     }
@@ -6576,7 +6619,7 @@ void cTelnet::slot_socketReadyToBeRead()
     }
 
     // One read to an event-loop turn however long a flood lasts, or input, timers and painting wait for
-    // them all. The queued read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
+    // them all. The pending read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
     if (mReadPending) {
         return;
     }
@@ -6600,20 +6643,15 @@ void cTelnet::readPendingSocketData()
     if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect || mDisconnectionPending) {
         return;
     }
-    // Qt never emits a socket's readyRead() from inside its handler, but a trigger's nested event loop can take up a
-    // transport's report; read then, it would be parsed in the middle of the read the trigger is part of
-    if (!mpSocket && mDecompressionRecursionDepth > 0) {
-        if (!mTransportReadDeferred) {
-            mTransportReadDeferred = true;
-            QTimer::singleShot(10ms, this, [this]() {
-                mTransportReadDeferred = false;
-                readPendingSocketData();
-            });
-        }
+    // A trigger is running a nested event loop: a read now, from a socket or a transport, would land
+    // in the middle of the one it is part of. mReadPending keeps it to one retry at a time
+    if (mDecompressionRecursionDepth > 0) {
+        mReadPending = true;
+        QTimer::singleShot(10ms, this, &cTelnet::readPendingSocketData);
         return;
     }
 
-    // A trigger's nested event loop can have queued one during that read
+    // A trigger's nested event loop can have postponed one during that read
     if (readSocketDataOnce() && !mReadPending) {
         mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
