@@ -732,6 +732,17 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
     assert.equals(0, #timers)
   end)
 
+  it("walks a last step the game refused again", function()
+    map.speedwalk(rooms[2])
+    assert.equals(1, #sent)
+
+    assert.equals(1, map.customwalkdelay(1))
+    local live = liveTimers()
+    live[#live].fn()
+    assert.equals(2, #sent)
+    assert.equals(sent[1], sent[2])
+  end)
+
   it("refuses seconds that are not a number of 0 or more", function()
     assert.has_error(function() map.customwalkdelay("2") end)
     assert.has_error(function() map.customwalkdelay(-1) end)

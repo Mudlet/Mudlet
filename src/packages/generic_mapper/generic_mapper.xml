@@ -4317,6 +4317,9 @@ end
 -- where the walk is going, for a hold and a resume to walk on to: speedWalkPath is global, and looking up any other
 -- route in the meantime replaces it
 local continue_walk, timerID, walk_hold, walk_destination
+-- where a walk just ended by sending its last step was going, until the character gets to a room: the game may yet
+-- refuse that step, and map.customwalkdelay() then walks it again
+local finished_destination
 continue_walk = function(new_room)
     if not walking or walk_hold then return end
     -- calculate wait time until next command, with randomness
@@ -4340,6 +4343,7 @@ continue_walk = function(new_room)
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
+            finished_destination = walk_destination
             walk_destination = nil
             speedWalkPath, speedWalkWeight = {}, {}
             raiseEvent("sysSpeedwalkFinished")
@@ -4368,6 +4372,12 @@ function map.customwalkdelay(seconds, maxSeconds)
     if maxSeconds ~= nil and (type(maxSeconds) ~= "number" or not (maxSeconds &gt;= seconds)) then
         error("map.customwalkdelay: bad argument #2 (maxSeconds as a number no less than seconds expected, got " .. tostring(maxSeconds) .. ")", 2)
     end
+    if not walking and finished_destination then
+        -- the last step sent, and not yet followed by a room: held, it is walked again from wherever the character is
+        walking = true
+        walk_destination = finished_destination
+    end
+    finished_destination = nil
     if not walking then
         return nil, "not speedwalking step by step - with speedwalk_delay 0 and speedwalk_wait off the whole path is sent at once"
     end
@@ -4450,6 +4460,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
         end
     end
     -- perform walk, kept only while one is under way, so a lookup that found no path leaves no walk to resume
+    finished_destination = nil
     walk_destination = roomID
     walking = true
     if map.configs.speedwalk_wait or map.configs.speedwalk_delay &gt; 0 then
@@ -4513,6 +4524,7 @@ end
 function map.stopSpeedwalk()
     local held = walk_hold ~= nil
     release_walk_hold()
+    finished_destination = nil
     if #speedWalkDir ~= 0 or held or walk_destination then
         walking = false
         walk_destination = nil
@@ -4686,6 +4698,7 @@ function map.eventHandler(event, ...)
     end
     local arg1, arg2 = ...
     if event == "onNewRoom" then
+        finished_destination = nil
         handle_exits(arg1)
         if walking and map.configs.speedwalk_wait then
             continue_walk(true)
