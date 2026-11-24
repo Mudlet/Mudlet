@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "utils.h"
+
 #include <QList>
 #include <QMap>
 #include <QString>
@@ -36,7 +38,7 @@ class TMap;
 // script that already sets them with setAreaUserData() fills the fields in.
 namespace TAreaFields {
 
-inline const QString scmMapUserDataKey = QStringLiteral("system.areaFields");
+inline const QString scmMapUserDataKey = qsl("system.areaFields");
 
 enum class Type { Text, Number, Range, YesNo, Choice };
 

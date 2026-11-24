@@ -578,18 +578,6 @@ QString TRoomDB::unusedUnnamedAreaName() const
     return newAreaName;
 }
 
-// Deliberately does not hand back an ID an area used to have but no longer
-// does: rescanning from 1 every call to find the lowest free ID made bulk
-// area creation quadratic in the area count (a script creating areas one at a
-// time was the common way to hit it). Unlike TMap::createNewRoomID(), which
-// always hands back the lowest free ID, mNextAreaIdHint resumes
-// from just past the last ID it handed out here, resetting to 1 whenever
-// clearMapDB() runs (map load or clear) - below the hint, within one loaded
-// map, an ID is not revisited by this function. Other paths that take an
-// explicit ID - restoreSingleArea() on binary load, addArea(int)/addArea(int,
-// QString) from XML import, TRoom::setArea(), and addArea(TArea*, id, name)
-// from JSON - don't move the hint, so an ID they use can still be handed out
-// again by a later call here.
 std::optional<int> TRoomDB::getAreaParent(const int areaId) const
 {
     const TArea* pA = areas.value(areaId);
@@ -605,6 +593,10 @@ TRoomDB::AreaParentResult TRoomDB::setAreaParent(const int areaId, const std::op
         return AreaParentResult::NoSuchArea;
     }
     if (parentId.has_value()) {
+        if (areaId < 1) {
+            // It holds the rooms of no area, and belongs under none either
+            return AreaParentResult::DefaultAreaNested;
+        }
         if (!areaNamesMap.contains(*parentId)) {
             return AreaParentResult::NoSuchParent;
         }
@@ -675,18 +667,25 @@ QList<int> TRoomDB::getAreaChildren(const std::optional<int> areaId, const bool 
     if (!recursive) {
         return children;
     }
+    // Every area's children in one pass, rather than a scan of all areas for each area in the subtree
+    QHash<int, QList<int>> childrenOf;
+    for (auto it = areaNamesMap.cbegin(); it != areaNamesMap.cend(); ++it) {
+        if (const std::optional<int> parentId = getAreaParent(it.key())) {
+            childrenOf[*parentId] << it.key();
+        }
+    }
     QList<int> subtree;
     QSet<int> listed;
     if (areaId.has_value()) {
         listed.insert(*areaId);
     }
     for (const int child : std::as_const(children)) {
-        appendAreaSubtree(child, subtree, listed);
+        appendAreaSubtree(child, childrenOf, subtree, listed);
     }
     return subtree;
 }
 
-void TRoomDB::appendAreaSubtree(const int areaId, QList<int>& subtree, QSet<int>& listed) const
+void TRoomDB::appendAreaSubtree(const int areaId, const QHash<int, QList<int>>& childrenOf, QList<int>& subtree, QSet<int>& listed)
 {
     // setAreaParent() refuses a loop, but a map file could still hold one: an area already listed ends it
     if (listed.contains(areaId)) {
@@ -694,8 +693,8 @@ void TRoomDB::appendAreaSubtree(const int areaId, QList<int>& subtree, QSet<int>
     }
     listed.insert(areaId);
     subtree << areaId;
-    for (const int child : getAreaChildren(areaId, false)) {
-        appendAreaSubtree(child, subtree, listed);
+    for (const int child : childrenOf.value(areaId)) {
+        appendAreaSubtree(child, childrenOf, subtree, listed);
     }
 }
 
@@ -729,6 +728,11 @@ void TRoomDB::afterAreaRemoved(const int areaId, const std::optional<int> parent
         if (pMap->mpRoomDB.get() != pThisRoomDB || pMap->mpRoomDB->mapGeneration() != generation) {
             return;
         }
+        // A handler may have moved this child on already, and that move was reported by itself
+        const TArea* pChild = areas.value(childId);
+        if (!pChild || pChild->zoneAreaRef != parentId.value_or(0)) {
+            continue;
+        }
         raiseAreaParentChanged(pMap, childId, areaId, parentId);
     }
 }
@@ -739,6 +743,32 @@ void TRoomDB::updateIsZone(const int areaId)
         pA->isZone = std::any_of(areas.cbegin(), areas.cend(), [areaId](const TArea* pOther) {
             return pOther && pOther->zoneAreaRef == areaId;
         });
+    }
+}
+
+void TRoomDB::repairAreaParents()
+{
+    // Left as they are, an area later given a missing parent's ID would adopt the children, and the areas in a loop
+    // would be listed under no top level area
+    for (TArea* pA : std::as_const(areas)) {
+        if (pA && pA->zoneAreaRef > 0 && !areaNamesMap.contains(pA->zoneAreaRef)) {
+            pA->zoneAreaRef = 0;
+        }
+    }
+    // By ID, so the same link of a loop is cut each time the map is read
+    for (auto it = areas.cbegin(); it != areas.cend(); ++it) {
+        QSet<int> seen{it.key()};
+        for (std::optional<int> ancestor = getAreaParent(it.key()); ancestor.has_value(); ancestor = getAreaParent(*ancestor)) {
+            if (*ancestor == it.key()) {
+                it.value()->zoneAreaRef = 0;
+                break;
+            }
+            // A loop above this area, cut when its own turn comes
+            if (seen.contains(*ancestor)) {
+                break;
+            }
+            seen.insert(*ancestor);
+        }
     }
 }
 
@@ -758,6 +788,18 @@ void TRoomDB::updateAllIsZone()
     }
 }
 
+// Deliberately does not hand back an ID an area used to have but no longer
+// does: rescanning from 1 every call to find the lowest free ID made bulk
+// area creation quadratic in the area count (a script creating areas one at a
+// time was the common way to hit it). Unlike TMap::createNewRoomID(), which
+// always hands back the lowest free ID, mNextAreaIdHint resumes
+// from just past the last ID it handed out here, resetting to 1 whenever
+// clearMapDB() runs (map load or clear) - below the hint, within one loaded
+// map, an ID is not revisited by this function. Other paths that take an
+// explicit ID - restoreSingleArea() on binary load, addArea(int)/addArea(int,
+// QString) from XML import, TRoom::setArea(), and addArea(TArea*, id, name)
+// from JSON - don't move the hint, so an ID they use can still be handed out
+// again by a later call here.
 int TRoomDB::createNewAreaID()
 {
     // An area named by setAreaName() has no TArea until a room moves into it

@@ -2976,10 +2976,16 @@ void T2DMap::slot_configureAreas()
         }
 
         // Delete immediately without confirmation
+        // A sysAreaParentChanged handler may load another map or delete this one while the area goes, as in deleteArea()
+        const unsigned int generation = mpMap->mpRoomDB->mapGeneration();
         const bool removed = mpMap->mpRoomDB->removeArea(areaId);
         if (!removed) {
             //: Warning message shown when trying to delete an area fails.
             QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
+            return;
+        }
+        if (!mpMap->mpRoomDB || mpMap->mpRoomDB->mapGeneration() != generation) {
+            repopulate();
             return;
         }
         mpMap->setUnsaved(__func__);

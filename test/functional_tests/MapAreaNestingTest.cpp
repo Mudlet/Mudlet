@@ -237,6 +237,32 @@ private slots:
         QCOMPARE(roomDB()->getAreaChildren(second, true), QList<int>{first});
     }
 
+    // Left in place, an area later given the missing parent's ID would adopt the child, and a loop is under no top level
+    void aMapFilesBrokenParentsAreClearedWhenItIsRead()
+    {
+        const int orphan = newArea(qsl("Orphan"));
+        const int ownParent = newArea(qsl("Own parent"));
+        const int first = newArea(qsl("First"));
+        const int second = newArea(qsl("Second"));
+        area(orphan)->zoneAreaRef = 9999;
+        area(ownParent)->zoneAreaRef = ownParent;
+        area(first)->zoneAreaRef = second;
+        area(second)->zoneAreaRef = first;
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("broken.json"));
+
+        QVERIFY(map()->writeJsonMapFile(path).first);
+        QVERIFY(map()->readJsonMapFile(path).first);
+
+        QCOMPARE(area(orphan)->zoneAreaRef, 0);
+        QCOMPARE(area(ownParent)->zoneAreaRef, 0);
+        // One link of the loop is cut, by ID, and the other kept
+        QCOMPARE(area(first)->zoneAreaRef, 0);
+        QCOMPARE(area(second)->zoneAreaRef, first);
+        QVERIFY(roomDB()->getAreaChildren(std::nullopt, true).contains(second));
+    }
+
     void aJsonMapStoresTheParentAndTheZonesFollowFromIt()
     {
         const int continent = newArea(qsl("Continent"));

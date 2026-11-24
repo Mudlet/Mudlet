@@ -1303,6 +1303,11 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     if (host.mpMap->scriptCallbackInProgress()) {
         return warnArgumentValue(L, __func__, csmMapInUseByCallback);
     }
+    // As for setAreaParent(): the area's children move up, and moving them between areas being written could save
+    // parents that contradict each other
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
 
     if (lua_isnumber(L, 1)) {
         id = static_cast<int>(lua_tonumber(L, 1));
@@ -1329,6 +1334,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     const int deletedAreaId = id ? id : host.mpMap->mpRoomDB->getAreaNamesMap().key(name);
+    // A sysAreaParentChanged handler for a child moved up may load another map or delete this one, and what follows
+    // would then mark that map unsaved, or move the views off an area of the same ID in it
+    const unsigned int generation = host.mpMap->mpRoomDB->mapGeneration();
     bool result = false;
     if (!id) {
         result = host.mpMap->mpRoomDB->removeArea(name);
@@ -1336,7 +1344,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         result = host.mpMap->mpRoomDB->removeArea(id);
     }
 
-    if (result) {
+    if (result && host.mpMap->mpRoomDB && host.mpMap->mpRoomDB->mapGeneration() == generation) {
         host.mpMap->announceAreaListChanged();
         auto* viewManager = host.mpMap->mapViewsFrontend();
         viewManager->updateAllViews();
@@ -1666,6 +1674,8 @@ int TLuaInterpreter::setAreaParent(lua_State* L)
         return warnArgumentValue(L, __func__, "an area cannot be its own parent");
     case TRoomDB::AreaParentResult::DefaultAreaAsParent:
         return warnArgumentValue(L, __func__, "the default area cannot have other areas nested in it");
+    case TRoomDB::AreaParentResult::DefaultAreaNested:
+        return warnArgumentValue(L, __func__, "the default area cannot be nested in another area");
     case TRoomDB::AreaParentResult::ParentInside:
         return warnArgumentValue(L, __func__, qsl("area %1 is inside area %2, so it cannot be its parent").arg(QString::number(parentId.value_or(0)), QString::number(areaId)));
     }
@@ -3895,6 +3905,11 @@ int TLuaInterpreter::setMapAreaFields(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    // A JSON export runs timers between writing areas, and writes the fields and the areas' values apart: a change then
+    // could save values that do not fit the fields saved
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
 
     // The type of a field definition's entry, which is on the top of the stack
     const auto entryType = [L](const char* name) {
@@ -4015,20 +4030,32 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    // A JSON export runs timers between writing areas, and writes the fields and the areas' values apart: a change then
+    // could save values that do not fit the fields saved
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
     const QMap<QString, TAreaFields::Field> fields = TAreaFields::fields(*host.mpMap);
     const auto itField = fields.constFind(key);
     if (itField == fields.cend()) {
         return warnArgumentValue(L, __func__, qsl("the map has no area field \"%1\"").arg(key));
     }
     const TAreaFields::Field& field = itField.value();
-    TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
-    if (!pA) {
+    // An area that so far only has a name is as valid as for getAreaFieldValue(), and gets a TArea to hold the value
+    if (!host.mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
         return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
     }
+    TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
 
     if (lua_isnoneornil(L, 3)) {
+        if (!pA) {
+            lua_pushboolean(L, true);
+            return 1;
+        }
         pA->mUserData.remove(key);
         host.mpMap->setUnsaved(__func__);
+        // As setAreaUserData() does: whatever shows the area reads its values again
+        host.mpMap->updateArea(areaId);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -4086,8 +4113,13 @@ int TLuaInterpreter::setAreaFieldValue(lua_State* L)
         }
         return warnArgumentValue(L, __func__, qsl("field \"%1\" is a %2, so its value must be %3").arg(key, TAreaFields::typeName(field.type), wanted));
     }
+    if (!pA) {
+        host.mpMap->mpRoomDB->addArea(areaId);
+        pA = host.mpMap->mpRoomDB->getArea(areaId);
+    }
     pA->mUserData.insert(key, TAreaFields::formatValue(field, *value));
     host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(areaId);
     lua_pushboolean(L, true);
     return 1;
 }

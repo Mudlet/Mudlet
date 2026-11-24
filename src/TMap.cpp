@@ -2292,6 +2292,7 @@ bool TMap::restore(QString location)
         }
 
         areasAboutToBeDeleted();
+        pNewRoomDB->repairAreaParents();
         pNewRoomDB->updateAllIsZone();
         std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
         mpRoomDB->continueGenerationOf(*previousRoomDB);
@@ -4068,6 +4069,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
+    pNewRoomDB->repairAreaParents();
     pNewRoomDB->updateAllIsZone();
     std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
     mpRoomDB->continueGenerationOf(*previousRoomDB);
