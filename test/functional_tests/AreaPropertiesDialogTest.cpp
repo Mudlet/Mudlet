@@ -264,6 +264,55 @@ private slots:
         QCOMPARE(zone()->mUserData, (QMap<QString, QString>{{qsl("notes"), qsl("  indented")}}));
     }
 
+    // Says what it was told on OK, answering the message box from its own event loop
+    QString textOfTheMessageOnOk()
+    {
+        QString told;
+        QTimer answer;
+        answer.setInterval(20ms);
+        connect(&answer, &QTimer::timeout, this, [&]() {
+            if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                told = box->text();
+                answer.stop();
+                box->accept();
+            }
+        });
+        answer.start();
+        mpDialog->accept();
+        return told;
+    }
+
+    // The area deleted, and another made under its ID, while the dialog is open: that one is not the area edited
+    void okWritesNothingOnceTheAreaIsReplaced()
+    {
+        buildMap();
+        openDialog();
+        mpDialog->show();
+        lineFor(qsl("population"))->setText(qsl("1200"));
+        QVERIFY(roomDB()->removeArea(mZoneId));
+        QVERIFY(roomDB()->addArea(mZoneId, qsl("Another zone")));
+
+        const QString told = textOfTheMessageOnOk();
+
+        QVERIFY2(told.contains(qsl("changed")), qPrintable(told));
+        QVERIFY(zone()->mUserData.isEmpty());
+    }
+
+    // The fields defined anew while the dialog is open: its rows were checked against the old ones
+    void okWritesNothingOnceTheFieldsAreRedefined()
+    {
+        buildMap();
+        openDialog();
+        mpDialog->show();
+        lineFor(qsl("population"))->setText(qsl("1200"));
+        TAreaFields::setFields(*map(), {{qsl("population"), TAreaFields::Field{qsl("population"), qsl("Population"), TAreaFields::Type::Choice, false, {qsl("few"), qsl("many")}}}});
+
+        const QString told = textOfTheMessageOnOk();
+
+        QVERIFY2(told.contains(qsl("changed")), qPrintable(told));
+        QVERIFY(zone()->mUserData.isEmpty());
+    }
+
     // A map loaded or deleted while the dialog is open may hold an area of the same ID, which is another area: OK
     // writes nothing to it, and says so
     void okWritesNothingOnceTheMapIsReplaced()

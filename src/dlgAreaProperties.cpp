@@ -90,7 +90,9 @@ void dlgAreaProperties::buildRows(QWidget* pForm)
     auto* pFormLayout = new QFormLayout(pForm);
     pFormLayout->setContentsMargins(0, 0, 0, 0);
     const TArea* pArea = mpMap->mpRoomDB->getArea(mAreaId);
-    for (const TAreaFields::Field& field : TAreaFields::fields(*mpMap)) {
+    mAreaSerial = pArea ? pArea->serial() : 0;
+    mFields = TAreaFields::fields(*mpMap);
+    for (const TAreaFields::Field& field : std::as_const(mFields)) {
         Row row;
         row.field = field;
         if (pArea && pArea->mUserData.contains(field.key)) {
@@ -217,6 +219,16 @@ void dlgAreaProperties::accept()
     }
     TArea* pArea = mpMap->mpRoomDB->getArea(mAreaId);
     if (!pArea) {
+        QDialog::reject();
+        return;
+    }
+    // The dialog is not modal: a script may have deleted the area and made another under its ID, or defined the
+    // fields anew, and the rows would then be written to the wrong area, or checked against types no longer the map's
+    if (pArea->serial() != mAreaSerial || TAreaFields::fields(*mpMap) != mFields) {
+        //: Title of the message listing area properties that could not be kept
+        QMessageBox::warning(this, tr("Area properties"),
+                             //: Shown on OK when a script replaced the area or redefined the area properties while the area properties dialog was open
+                             tr("The area or its properties were changed while this was open, so nothing was kept."));
         QDialog::reject();
         return;
     }

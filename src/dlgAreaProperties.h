@@ -75,6 +75,9 @@ private:
     int mAreaId = 0;
     // A map loaded or deleted while the dialog is open moves this on, and its area of the same ID is another area
     unsigned int mMapGeneration = 0;
+    // The area and the field definitions the rows were made from, 0 for an area that so far only has a name
+    quint64 mAreaSerial = 0;
+    QMap<QString, TAreaFields::Field> mFields;
     QWidget* mpShell = nullptr;
     QList<Row> mRows;
 };

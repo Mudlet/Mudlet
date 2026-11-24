@@ -54,6 +54,8 @@ public:
     TArea(TMap*, TRoomDB*);
     ~TArea();
     int getAreaID();
+    // Tells this area from one made later under the same ID, as TRoom::serial() does for rooms
+    quint64 serial() const { return mSerial; }
     void addRoom(int id);
     // Rebuilds the indexes and extents once at the end, rather than updating them per room
     void addRooms(const QSet<int>& ids);
@@ -223,6 +225,8 @@ private:
     // gap between a new TArea existing and its first bumpRoomsVersion() call.
     quint32 mRoomsVersion = ++smRoomsVersionCounter;
     static inline quint32 smRoomsVersionCounter = 0;
+    static inline quint64 smLastSerial = 0;
+    quint64 mSerial = ++smLastSerial;
 
     // 16 bytes, so a lookup costs one cache line where the room database costs several.
     struct LodRoomPos
