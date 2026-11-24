@@ -7,6 +7,11 @@ TESTS_DIRECTORY, prints a busted summary, records what it was given and exits.
 It misbehaves when that file is named for it (MarkFails, Errors, Exits3,
 NoSummary, Sleeps, Stubborn, Holds). Every stub holds a file under running/ while
 it runs, so a count of that folder never exceeds the processes alive at the time.
+
+The self-test is a POSIX program: its stubs are shell scripts and it sends
+signals. The runner's Windows branches are tested here too, on POSIX, by loading
+the runner in-process with its WINDOWS switch set and subprocess and os.killpg
+replaced.
 """
 
 import importlib.util
@@ -179,6 +184,31 @@ class FakeGroup:
         return 0
 
 
+class FakeTree:
+    """A Windows process and what it started: taskkill ends them unless they hold on, kill() always does."""
+
+    def __init__(self, pid, running=True, holds_on=False):
+        self.pid = pid
+        self.alive = running
+        self.holds_on = holds_on
+        self.killed = False
+
+    def poll(self):
+        return None if self.alive else 0
+
+    def wait(self, timeout=None):
+        if self.alive:
+            if timeout is None:
+                raise AssertionError(f"waited without a time limit for {self.pid}, which is still running")
+            raise subprocess.TimeoutExpired(str(self.pid), timeout)
+        return 0
+
+    def kill(self):
+        self.alive = False
+        self.killed = True
+
+
+@unittest.skipIf(os.name == "nt", "the self-test is a POSIX program (shell script stubs, signals); CI runs it on Linux")
 class RunLuaSpecs(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -441,6 +471,93 @@ class RunLuaSpecs(unittest.TestCase):
         self.assertIn((102, signal.SIGKILL), sent)
         self.assertNotIn((101, signal.SIGKILL), sent)
         self.assertTrue(all(group.waited for group in groups.values()))
+
+    def windows_seam(self, processes):
+        runner = load_runner()
+        runner.WINDOWS = True
+        runner.STOP_GRACE_SECONDS = 0.2
+        taskkills = []
+        signalled = []
+        by_pid = {process.pid: process for process in processes}
+
+        def run(arguments, **options):
+            taskkills.append(list(arguments))
+            process = by_pid.get(int(arguments[-1]))
+            if process and not process.holds_on:
+                process.alive = False
+            return subprocess.CompletedProcess(arguments, 0)
+
+        for patch in (mock.patch.object(runner.subprocess, "run", run), mock.patch.object(runner.os, "killpg", lambda pid, signum: signalled.append((pid, signum)))):
+            patch.start()
+            self.addCleanup(patch.stop)
+        return runner, taskkills, signalled
+
+    def test_starts_a_windows_process_in_a_process_group_of_its_own(self):
+        runner = load_runner()
+        given = []
+
+        def popen(command, **options):
+            given.append(options)
+            return FakeTree(4242)
+
+        spec = runner.Spec(1, self.spec("Alpha_spec.lua"), "Alpha_spec.lua", False)
+        work = os.path.join(self.directory.name, "work")
+        with mock.patch.object(runner.subprocess, "Popen", popen):
+            runner.WINDOWS = True
+            runner.start(spec, 1, ["mudlet"], work, None, [])
+            runner.WINDOWS = False
+            runner.start(spec, 1, ["mudlet"], work, None, [])
+        on_windows, on_posix = given
+        self.assertTrue(on_windows["creationflags"] & 0x00000200, on_windows)
+        self.assertNotIn("start_new_session", on_windows)
+        self.assertIs(on_posix["start_new_session"], True)
+        self.assertNotIn("creationflags", on_posix)
+
+    def test_stops_a_windows_process_and_what_it_started_with_taskkill(self):
+        running = FakeTree(301)
+        ended = FakeTree(302, running=False)
+        holding_on = FakeTree(303, holds_on=True)
+        processes = [running, ended, holding_on]
+        runner, taskkills, signalled = self.windows_seam(processes)
+        runner.LIVE.update(processes)
+        runner.stop_groups(processes)
+        self.assertEqual(sorted(call[1:] for call in taskkills), [["/F", "/T", "/PID", "301"], ["/F", "/T", "/PID", "303"]])
+        self.assertEqual(signalled, [])
+        self.assertTrue(holding_on.killed, "a process taskkill did not end was not killed after the grace period")
+        self.assertFalse(running.killed)
+        self.assertEqual(runner.LIVE, set())
+
+    def test_runs_taskkill_from_system_root_when_it_is_there(self):
+        runner, taskkills, _ = self.windows_seam([])
+        root = os.path.join(self.directory.name, "Windows")
+        os.makedirs(os.path.join(root, "System32"))
+        open(os.path.join(root, "System32", "taskkill.exe"), "w").close()
+        with mock.patch.dict(os.environ, {"SystemRoot": root}):
+            runner.taskkill(FakeTree(401))
+        with mock.patch.dict(os.environ, {"SystemRoot": os.path.join(self.directory.name, "nowhere")}):
+            runner.taskkill(FakeTree(402))
+        self.assertEqual([call[0] for call in taskkills], [os.path.join(root, "System32", "taskkill.exe"), "taskkill"])
+
+    def test_a_second_signal_on_windows_taskkills_every_running_process(self):
+        running = FakeTree(501)
+        ended = FakeTree(502, running=False)
+        runner, taskkills, signalled = self.windows_seam([running, ended])
+        runner.LIVE.update([running, ended])
+        runner.kill_all_started()
+        self.assertEqual([call[1:] for call in taskkills], [["/F", "/T", "/PID", "501"]])
+        self.assertEqual(signalled, [])
+
+    def test_names_the_folder_by_index_alone_on_windows(self):
+        runner = load_runner()
+        work = os.path.join(self.directory.name, "work")
+        spec = runner.Spec(37, self.spec("Alpha_spec.lua"), "Alpha_spec.lua", False)
+        names = []
+        for windows in (True, False):
+            runner.WINDOWS = windows
+            runner.prepare(spec, work)
+            names.append(os.path.basename(spec.folder))
+            self.assertTrue(os.path.isdir(os.path.join(spec.folder, "config", "mudlet", "profiles")))
+        self.assertEqual(names, ["037", "037-Alpha_spec"])
 
     def test_prints_the_logs_asked_for(self):
         self.specs("Alpha_spec.lua", "MarkFails_spec.lua")

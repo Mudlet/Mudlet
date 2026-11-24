@@ -33,7 +33,8 @@ part way still leaves what ran. The slowest spec files, every failure with its
 reasons and the totals follow at the end, and the last line printed is always a
 summary in busted's own wording. Exits 0 when every spec file passed, 1 when any
 failed, and 2 on a setup problem. A second SIGINT or SIGTERM kills every process
-the runner started and ends it at once.
+the runner started and ends it at once. On Windows, which has no process groups to
+signal, a process and what it started are stopped with taskkill.
 """
 
 import argparse
@@ -48,6 +49,9 @@ import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# Read where it is used, so the self-test can drive the Windows branches on POSIX
+WINDOWS = os.name == "nt"
 
 # Each of these fixtures serves one client: the HTTP server is single-threaded, the
 # telnet fixture and the MMCP peer keep one connection and one capture, and the fake
@@ -201,6 +205,8 @@ def signal_group(process, signum):
 
 
 def group_alive(process):
+    if WINDOWS:
+        return process.poll() is None
     try:
         os.killpg(process.pid, 0)
     except (ProcessLookupError, PermissionError):
@@ -208,7 +214,43 @@ def group_alive(process):
     return True
 
 
+def taskkill(process):
+    system_root = os.environ.get("SystemRoot")
+    program = os.path.join(system_root, "System32", "taskkill.exe") if system_root else ""
+    try:
+        subprocess.run([program if os.path.isfile(program) else "taskkill", "/F", "/T", "/PID", str(process.pid)],
+                       stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=STOP_GRACE_SECONDS)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def stop_trees(processes):
+    for process in processes:
+        if group_alive(process):
+            taskkill(process)
+    give_up = time.monotonic() + STOP_GRACE_SECONDS
+    for process in processes:
+        try:
+            process.wait(timeout=max(0.0, give_up - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+        LIVE.discard(process)
+
+
+def kill_all_started():
+    for process in list(LIVE):
+        if group_alive(process):
+            if WINDOWS:
+                taskkill(process)
+            else:
+                signal_group(process, signal.SIGKILL)
+
+
 def stop_groups(processes):
+    if WINDOWS:
+        stop_trees(processes)
+        return
     for process in processes:
         signal_group(process, signal.SIGTERM)
     give_up = time.monotonic() + STOP_GRACE_SECONDS
@@ -269,7 +311,11 @@ def start_x_servers(jobs, work_dir, interrupted):
 
 
 def prepare(spec, work_dir):
-    spec.folder = os.path.join(work_dir, f"{spec.index:03d}-{os.path.basename(spec.path)[:-len('.lua')]}")
+    if WINDOWS:
+        # Lua and the libraries it calls stop at 260 characters on Windows; this keeps a profile's paths as short as they are today
+        spec.folder = os.path.join(work_dir, f"{spec.index:03d}")
+    else:
+        spec.folder = os.path.join(work_dir, f"{spec.index:03d}-{os.path.basename(spec.path)[:-len('.lua')]}")
     if os.path.lexists(spec.folder):
         shutil.rmtree(spec.folder)
     # Mudlet only adopts $XDG_CONFIG_HOME/mudlet when it already holds a profiles folder
@@ -303,6 +349,10 @@ def start(spec, slot, command, work_dir, server, fixture_env):
     spec.slot = slot
     prepare(spec, work_dir)
     spec.started = time.monotonic()
+    if WINDOWS:
+        separate = {"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)}
+    else:
+        separate = {"start_new_session": True}
     with open(spec.file("output.log"), "wb") as log:
         try:
             spec.process = subprocess.Popen(
@@ -311,7 +361,7 @@ def start(spec, slot, command, work_dir, server, fixture_env):
                 stdin=subprocess.DEVNULL,
                 stdout=log,
                 stderr=subprocess.STDOUT,
-                start_new_session=True,
+                **separate,
             )
             LIVE.add(spec.process)
         except OSError as error:
@@ -471,15 +521,14 @@ def run(arguments, specs, work_dir):
 
     def note(signum, frame):
         if interrupted:
-            for process in list(LIVE):
-                if group_alive(process):
-                    signal_group(process, signal.SIGKILL)
+            kill_all_started()
             os.write(2, f"run-lua-specs.py: got {signal.Signals(signum).name} again, so every process it started was killed\n".encode())
             os._exit(128 + signum)
         interrupted.append(signal.Signals(signum).name)
 
-    signal.signal(signal.SIGINT, note)
-    signal.signal(signal.SIGTERM, note)
+    for name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), note)
 
     on_github = os.environ.get("GITHUB_ACTIONS") == "true"
     which = arguments.logs or ("all" if on_github else "failed")
@@ -515,6 +564,9 @@ def run(arguments, specs, work_dir):
 
 
 def main(argv):
+    if hasattr(sys.stdout, "reconfigure"):
+        # A name the Windows console's code page cannot show would otherwise raise
+        sys.stdout.reconfigure(errors="backslashreplace")
     arguments = parse_arguments(argv)
     try:
         tests_dir, specs = check_setup(arguments)
