@@ -400,7 +400,8 @@ three things on `::menu-button`, which is `scmInputDropDownWidth` (18px) wide at
   takes, because the body's hover fills the whole button, the half included:
   where the body lights to `hoverSoft` the half lights to `accentSoft` - the
   same wash a row of the menu it opens takes under the pointer - and where the
-  body is pressed to `accentSoft` the half takes twice that. A half washed in
+  body is pressed to `accentSoft` under a tenth of black, so that a press
+  sinks past the hover on both appearances, the half takes twice `accentSoft`. A half washed in
   what the body is already washed in never reads as its own target.
 
   **It says the half is a target, not that it is the one under the pointer**,
@@ -2104,8 +2105,8 @@ readable-but-wrong tone would otherwise pass.
 connection dialog's two tabs and its buttons to the recipes: both containers
 holding a button carry a sheet with the push button rules in it, Copy carries
 `uiMenuButton` and is named by a rule of its own, Connect is still the dialog's
-default button and carries `uiPrimaryButton`, which the row's sheet has a rule
-for, and the New button's top edge is read off a grab of the window and has to
+default button, is drawn on the same face as Offline with only its word in
+semibold and does not carry `uiPrimaryButton`, and the New button's top edge is read off a grab of the window and has to
 be the design's hairline rather than a platform bevel. Both pages carry a sheet built on
 the `field` surface, the three Connect-to fields are at the dialog's own font
 rather than the 9pt the `.ui` pinned them at, the port field is wide enough for
