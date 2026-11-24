@@ -489,6 +489,40 @@ private slots:
         QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, false));
     }
 
+    // The export's own drawing, not only the decision it shares: with the east room's one way back paired with the exit
+    // east, the exit north is one-way there, dashed, as the map draws it with an arrow
+    void anExportDrawsAnExitNoExitBackPairsWithAsOneWay()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::View exportView = view();
+        exportView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(exportView);
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/one-way-north.png").arg(mConfigDir.path());
+        const auto [started, message] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+        QVERIFY2(started, qPrintable(message));
+        const QImage image = exported(&saveOwner, exportFile);
+        // Three rooms across at 50 pixels each, with two rooms' padding around: the west room's centre at 100,100 and
+        // the east room's at 200,100
+        QCOMPARE(image.size(), QSize(350, 250));
+        const QColor background = image.pixelColor(5, 5);
+        // The bent stretch from the west room's north stub to the east room's west stub, clear of both rooms
+        const QPointF from(100, 75);
+        const QPointF to(175, 100);
+        // Pixel by pixel along it: a dash's gap is only a few pixels long
+        int samples = 0;
+        int gaps = 0;
+        const int steps = qRound(QLineF(from, to).length() * 2);
+        for (int step = steps / 5; step <= steps * 4 / 5; ++step) {
+            const QPointF point = from + (to - from) * (static_cast<qreal>(step) / steps);
+            ++samples;
+            gaps += image.pixelColor(point.toPoint()) == background;
+        }
+        QVERIFY2(gaps < samples, qPrintable(qsl("the exit north was not drawn at all. %1").arg(saved(image, qsl("export-one-way")))));
+        QVERIFY2(gaps > samples / 10, qPrintable(qsl("the exit north was drawn solid, as two-way. %1").arg(saved(image, qsl("export-one-way")))));
+    }
+
     // A line keeps the shape it had: unpaired, the exit north still bends into the east room through its exit back
     void anUnpairedExitStillBendsInThroughAnExitBack()
     {
