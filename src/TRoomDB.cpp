@@ -578,18 +578,6 @@ QString TRoomDB::unusedUnnamedAreaName() const
     return newAreaName;
 }
 
-// Deliberately does not hand back an ID an area used to have but no longer
-// does: rescanning from 1 every call to find the lowest free ID made bulk
-// area creation quadratic in the area count (a script creating areas one at a
-// time was the common way to hit it). Unlike TMap::createNewRoomID(), which
-// always hands back the lowest free ID, mNextAreaIdHint resumes
-// from just past the last ID it handed out here, resetting to 1 whenever
-// clearMapDB() runs (map load or clear) - below the hint, within one loaded
-// map, an ID is not revisited by this function. Other paths that take an
-// explicit ID - restoreSingleArea() on binary load, addArea(int)/addArea(int,
-// QString) from XML import, TRoom::setArea(), and addArea(TArea*, id, name)
-// from JSON - don't move the hint, so an ID they use can still be handed out
-// again by a later call here.
 std::optional<int> TRoomDB::getAreaParent(const int areaId) const
 {
     const TArea* pA = areas.value(areaId);
@@ -758,6 +746,18 @@ void TRoomDB::updateAllIsZone()
     }
 }
 
+// Deliberately does not hand back an ID an area used to have but no longer
+// does: rescanning from 1 every call to find the lowest free ID made bulk
+// area creation quadratic in the area count (a script creating areas one at a
+// time was the common way to hit it). Unlike TMap::createNewRoomID(), which
+// always hands back the lowest free ID, mNextAreaIdHint resumes
+// from just past the last ID it handed out here, resetting to 1 whenever
+// clearMapDB() runs (map load or clear) - below the hint, within one loaded
+// map, an ID is not revisited by this function. Other paths that take an
+// explicit ID - restoreSingleArea() on binary load, addArea(int)/addArea(int,
+// QString) from XML import, TRoom::setArea(), and addArea(TArea*, id, name)
+// from JSON - don't move the hint, so an ID they use can still be handed out
+// again by a later call here.
 int TRoomDB::createNewAreaID()
 {
     // An area named by setAreaName() has no TArea until a room moves into it
