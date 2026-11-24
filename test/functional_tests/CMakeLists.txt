@@ -114,10 +114,12 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WindowStaysOnTopTest.cpp
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollUpShortBufferTest.cpp
+    HorizontalWheelScrollTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
@@ -193,8 +195,10 @@ set(TELNET_GROUP_TEST_SOURCES
     PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
+    ProxyCredentialsTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
+    TelnetTerminalTypeCycleTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MirrorToStdOutTest.cpp
@@ -314,6 +318,7 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
+    MapMoveSelectionDialogTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapPainterTest.cpp
     MapRoomNameVisibilityTest.cpp
@@ -343,9 +348,9 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDeletedEditItemTest.cpp
 )
 
-# CameraController and GeometryManager are only compiled into the library with the 3D mapper
+# GLWidget, CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp LegacyMapZoomTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them

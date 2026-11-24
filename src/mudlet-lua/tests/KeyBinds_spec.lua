@@ -112,6 +112,14 @@ describe("Tests keybind-related functions", function()
       killKey(id)
     end)
 
+    it("returns only the id for a string body that compiles", function()
+      -- select("#") rather than a table's length, which would not count a trailing nil
+      local function countAndFirst(...) return select("#", ...), ... end
+      local count, id = countAndFirst(tempKey(mudlet.key.F5, [[echo("hi")]]))
+      killKey(id)
+      assert.are.equal(1, count)
+    end)
+
     it("creates a key from the two-argument (key code, body) form", function()
       local id = tempKey(mudlet.key.F6, [[echo("hi")]])
       assert.is_number(id)
@@ -127,6 +135,18 @@ describe("Tests keybind-related functions", function()
       assert.is_number(id)
       assert.are.equal(1, exists(id, "keybind"))
       killKey(id)
+    end)
+
+    it("returns -1 and the reason for a body that does not compile, as tempTimer does", function()
+      local probe = tempKey(mudlet.key.F9, "")
+      killKey(probe)
+      local id, message = tempKey(mudlet.key.F9, [[send("kick"]])
+      assert.are.equal(-1, id, "a key that can never run must not be created")
+      -- IDs are handed out in sequence, so the failed key had the next one
+      assert.are.equal(0, exists(probe + 1, "keybind"), "the key that failed to compile must be removed")
+      assert.is_string(message)
+      assert.truthy(message:find("unable to compile", 1, true), message)
+      assert.truthy(message:find("')' expected", 1, true), "the reason the body did not compile is missing: " .. message)
     end)
 
     it("rejects a non-string, non-function body", function()
