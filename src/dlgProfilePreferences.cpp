@@ -6961,7 +6961,7 @@ void dlgProfilePreferences::slot_copyMap()
         qsizetype otherProfileRoomCount;
         qsizetype otherProfileAreaCount;
         int otherProfileVersion;
-        int otherProfileCurrentRoomId; // What we are looking for!
+        int otherProfileCurrentRoomId = 0; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(), &otherProfileFileUsed, &otherProfileVersion, &otherProfileCurrentRoomId, &otherProfileAreaCount, &otherProfileRoomCount)) {
             qDebug() << "dlgProfilePreference::slot_copyMap() in other INACTIVE profile:" << itOtherProfile.key() << "\n    the file examined was:" << otherProfileFileUsed
                      << "\n    it was of version:" << otherProfileVersion << "\n    it had an area count of:" << otherProfileAreaCount << "\n    it had a room count of:" << otherProfileRoomCount
@@ -7010,7 +7010,8 @@ void dlgProfilePreferences::slot_copyMap()
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
     const QString sourceMapFolder(MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName()));
-    const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    // A JSON export or another file of the player's can be newer than the save just made
+    const QStringList mProfileList = QDir(sourceMapFolder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
         if (thisProfileLatestMapPathFileName.isEmpty()) {
