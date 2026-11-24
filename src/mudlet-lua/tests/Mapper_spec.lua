@@ -1293,8 +1293,13 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(30, b)
     end)
 
-    it("setRoomCharColor hard-errors on an out-of-range component", function()
-      assert.has_error(function() setRoomCharColor(rSandA, 256, 0, 0) end)
+    it("setRoomCharColor hard-errors naming the out-of-range component and its value", function()
+      assert.has_error(function() setRoomCharColor(rSandA, 256, 0, 0) end,
+        "setRoomCharColor: bad argument #2 value (red component 256 is out of range 0 to 255)")
+      assert.has_error(function() setRoomCharColor(rSandA, 10, 300, 0) end,
+        "setRoomCharColor: bad argument #3 value (green component 300 is out of range 0 to 255)")
+      assert.has_error(function() setRoomCharColor(rSandA, 10, 20, -1) end,
+        "setRoomCharColor: bad argument #4 value (blue component -1 is out of range 0 to 255)")
     end)
 
     it("unsetRoomCharColor returns true and clears the stored colour", function()
@@ -1578,6 +1583,27 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("setExitStub hard-errors on an unparseable direction", function()
       assert.has_error(function() setExitStub(rSandA, "sideways", true) end)
+    end)
+
+    it("setExitStub returns true when it sets or clears a stub", function()
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      assert.is_true(setExitStub(a, "east", true))
+      assert.are.same({4}, getExitStubs1(a)) -- DIR_EAST
+      assert.is_true(setExitStub(a, "east", false))
+      assert.are.same({}, getExitStubs1(a))
+      deleteRoom(a)
+    end)
+
+    it("setExitStub returns nil and a message where the room already has an exit", function()
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      local b = createRoomID(); addRoom(b); setRoomArea(b, areaAlpha)
+      setExit(a, b, "east")
+      local ok, err = setExitStub(a, "east", true)
+      assert.is_nil(ok)
+      assert.are.equal("roomID " .. a .. " already has an exit in direction 'east', so it cannot have a stub there too", err)
+      assert.are.same({}, getExitStubs1(a))
+      assert.is_true(setExitStub(a, "east", false))
+      deleteRoom(a); deleteRoom(b)
     end)
 
     it("connectExitStub turns a stub into a real exit", function()
@@ -2785,7 +2811,7 @@ describe("Tests mapper functions against a shared fixture", function()
     -- key; a map info contributor is asked again on every paint, so it counts them
     describe("repaints the map when the room name font changes", function()
       local nameFont = "Sans,11,-1,5,50,0,0,0,0,0"
-      local paints
+      local paints, painted
 
       local function waitForPaint(ms)
         local waitedMs = 0
@@ -2804,7 +2830,9 @@ describe("Tests mapper functions against a shared fixture", function()
         end))
         assert.is_true(enableMapInfo("MapperSpecNameFontPaints"))
         assert.is_true(centerview(rA1))
-        assert.is_true(waitForPaint(5000), "the map was never painted")
+        -- Asserted in each test, not here: mudlet-headless never paints the map, and
+        -- CI can list a failing test as known but not a failing hook
+        painted = waitForPaint(5000)
         -- let the paints this set off settle, so only the change under test is counted
         pumpEvents(100)
         paints = 0
@@ -2816,11 +2844,13 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       it("in setMapUserData", function()
+        assert.is_true(painted, "the map was never painted")
         assert.is_true(setMapUserData("room.ui_nameFont", nameFont))
         assert.is_true(waitForPaint(1000))
       end)
 
       it("in clearMapUserDataItem", function()
+        assert.is_true(painted, "the map was never painted")
         setMapUserData("room.ui_nameFont", nameFont)
         pumpEvents(100)
         paints = 0
@@ -2829,6 +2859,7 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       it("in clearMapUserData", function()
+        assert.is_true(painted, "the map was never painted")
         setMapUserData("room.ui_nameFont", nameFont)
         pumpEvents(100)
         paints = 0
@@ -3060,6 +3091,31 @@ describe("Tests mapper functions against a shared fixture", function()
         assert.is_true(getPath(from, north))
       end)
     end
+
+    it("keeps its routing graph when a room is set to the area it is already in", function()
+      -- the filter only runs while the graph is being rebuilt
+      local builds = 0
+      setExitWeightFilter(function() builds = builds + 1 end)
+      assert.is_true(getPath(rA1, rA3))
+      builds = 0
+      assert.is_true(setRoomArea(rA2, areaAlpha))
+      assert.is_true(setRoomArea({rA1, rA3}, "MapperSpecAlpha"))
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(0, builds)
+      assert.are.equal(areaAlpha, getRoomArea(rA2))
+
+      -- moving a room to another area still rebuilds it, as the filter may route by area
+      local moved = createRoomID(); addRoom(moved)
+      finally(function() deleteRoom(moved) end)
+      -- a new room says it is in -1 before that area holds it, so this must still file it
+      assert.is_true(table.contains(getAreaRooms1(-1) or {}, moved))
+      setRoomArea(moved, areaAlpha)
+      assert.is_true(getPath(rA1, rA3))
+      builds = 0
+      assert.is_true(setRoomArea(moved, areaBeta))
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_true(builds > 0)
+    end)
 
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
@@ -8700,5 +8756,16 @@ describe("Tests setMapMenuPriority and getMapMenuPriority", function()
     assert.error_matches(function() setMapMenuPriority("specPriorityEvent") end, "setMapMenuPriority: bad argument #2 type", nil, true)
     assert.error_matches(function() setMapMenuPriority("specPriorityEvent", "high") end, "setMapMenuPriority: bad argument #2 type", nil, true)
     assert.error_matches(function() setMapMenuPriority("specPriorityEvent", 2^40) end, "setMapMenuPriority: integer over/under-flow in argument #2", nil, true)
+  end)
+
+  it("should refuse NaN, infinite and out-of-int-range priorities, and truncate fractions at the boundaries", function()
+    addMapEvent("specPriorityEvent", "specPriorityEvent", "", "Spec priority event")
+    for _, value in ipairs({0/0, math.huge, -math.huge, 2^31, -2^31 - 1}) do
+      assert.error_matches(function() setMapMenuPriority("specPriorityEvent", value) end, "setMapMenuPriority: integer over/under-flow in argument #2", nil, true)
+    end
+    assert.is_true(setMapMenuPriority("specPriorityEvent", 2147483647.5))
+    assert.equals(2147483647, getMapMenuPriority("specPriorityEvent"))
+    assert.is_true(setMapMenuPriority("specPriorityEvent", -2147483648.5))
+    assert.equals(-2147483648, getMapMenuPriority("specPriorityEvent"))
   end)
 end)

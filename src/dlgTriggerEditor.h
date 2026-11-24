@@ -55,6 +55,7 @@
 
 #include <QDialog>
 #include <QDockWidget>
+#include <QElapsedTimer>
 #include <QFlag>
 #include <QHash>
 #include <QIcon>
@@ -1077,6 +1078,8 @@ private:
     uiDesign::SearchResultDelegate* mpSearchResultDelegate = nullptr;
     // Its length is how much of each snippet the marker covers
     QString mSearchTerm;
+    // The second click of a double-click on "Search variables too" lands on whichever result its search put there
+    QElapsedTimer mSearchVariablesOfferTaken;
 
     // This has a menu which the following QActions are inserted into:
     QAction* mpAction_searchOptions = nullptr;
@@ -1133,6 +1136,8 @@ private:
     bool mCleanResetQueued = false;
     // A reset that arrived before the editor was ever shown, run on first show unless a view switch populated the trees first
     bool mCleanResetDeferred = false;
+    // A reset saves an edit nobody asked to commit, so a trigger it does not compile for stays switched on
+    bool mSavingForReset = false;
     // Trigger IDs whose tree row is stale; refreshed in one tree walk on the
     // next event-loop turn, or when the editor is next shown, rather than one
     // O(tree) lookup per Lua toggle.

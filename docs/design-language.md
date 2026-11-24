@@ -1048,6 +1048,31 @@ towards its text colour at `scmConsoleFootSeamStrength` (20%), with no frame on
 the input or on the password box laid over it, so a border a profile sets with
 `setCmdLineStyleSheet()` is the only one drawn there (`ConsoleFootSeamTest`).
 
+### What scrolls keeps its width
+
+A view that starts to scroll takes its vertical bar's width out of its
+viewport, and Qt lays the content out again that much narrower: a form's
+fields shrink, a tree's rows are elided a few letters earlier, and it all
+moves back when the bar goes. `uiDesign::keepRoomForVerticalScrollBar()`
+stops that: the bar's policy is `Qt::ScrollBarAlwaysOn`, so the viewport gives
+the bar's width up at all times, and the bar itself is hidden while its range
+is empty, with `retainSizeWhenHidden` so it still takes its place. Only the
+bar comes and goes; the content is never laid out again.
+
+- Call it once on a tree, list or scroll area as it is built. The editor's
+  item trees, its search results and `ContentScrollArea` (the pattern list)
+  do.
+- Do not reach for the same result by switching a viewport margin or a layout
+  margin when the bar shows or hides. The margin is applied after the bar has
+  already changed the viewport, so one frame is painted at the wrong width,
+  which reads as a flicker.
+- Leave it off where width is short and a bar is rare, as in the editor's
+  sidebar rail: there the strip kept for the bar is worth more as content.
+- A test for it records every `QEvent::Resize` of the content across the
+  change, not only the widths before and after, as an in-between width is the
+  failure (`test_aPatternFieldKeepsItsWidthAsTheListStartsAndStopsScrolling`
+  in `EditorChromeTest`).
+
 ### Shell over .ui
 
 The `.ui` file is not rewritten. Existing widgets are detached from their

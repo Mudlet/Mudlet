@@ -148,6 +148,9 @@ public:
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
+    static QString keySequenceForProse(const QKeySequence&);
+    // What the balloon says when a second game opens: the keys that switch games for this profile
+    QString profileSwitchingTip(const Host*) const;
     bool profileSwitchShortcutMatches(const Qt::Key, const Qt::KeyboardModifiers) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
@@ -516,6 +519,7 @@ public slots:
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
     static void bringWindowToFront(QWidget* window);
+    static void setWindowStaysOnTop(QWidget* window, const bool onTop);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
@@ -907,6 +911,7 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    QPointer<Host> mpProfileBeingActivated;
     // Every profile in main tab bar order, with each detached one kept behind
     // the tab it followed, so that a reattach can put it back there
     QStringList mMainTabOrder;
