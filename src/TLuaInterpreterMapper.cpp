@@ -1302,6 +1302,11 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     if (host.mpMap->scriptCallbackInProgress()) {
         return warnArgumentValue(L, __func__, csmMapInUseByCallback);
     }
+    // As for setAreaParent(): the area's children move up, and moving them between areas being written could save
+    // parents that contradict each other
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded or saved");
+    }
 
     if (lua_isnumber(L, 1)) {
         id = static_cast<int>(lua_tonumber(L, 1));

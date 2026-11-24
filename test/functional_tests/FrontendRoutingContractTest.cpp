@@ -856,6 +856,18 @@ assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitE
         QCOMPARE(runLua(qsl("deleteArea('RoutingNestedChild') deleteArea('RoutingNestedParent')")), qsl("ok"));
     }
 
+    // Deleting an area moves its children up, which written between other areas could save contradicting parents
+    void test_anAreaCannotBeDeletedWhileTheMapIsLoadedOrSaved()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QCOMPARE(runLua(qsl("addAreaName('RoutingGuardedArea')")), qsl("ok"));
+        {
+            const TMap::MapOperationScope operation(pMap);
+            QCOMPARE(runLua(qsl("local ok, message = deleteArea('RoutingGuardedArea') assert(ok == nil, 'accepted') assert(message:find('saved'), message)")), qsl("ok"));
+        }
+        QCOMPARE(runLua(qsl("assert(deleteArea('RoutingGuardedArea') == true)")), qsl("ok"));
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(
