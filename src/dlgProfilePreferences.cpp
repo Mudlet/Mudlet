@@ -9866,9 +9866,11 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mapper()->mp2dMap->update();
+    if (pHost->mpMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+            pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+        }
+        pHost->mpMap->requestMapRepaint();
     }
 }
 
@@ -10181,9 +10183,8 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
         mpHost->mRoomSize = size / 10.0;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
-            mpHost->mpMap->mapper()->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
         }
     }
 }
@@ -10199,8 +10200,8 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
+        if (mpHost->mpMap) {
+            mpHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
         }
     }
 }
@@ -10210,9 +10211,11 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
-            mpHost->mpMap->mapper()->update3DView();
+        if (mpHost->mpMap) {
+            if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+                mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+            }
+            mpHost->mpMap->requestMapRepaint();
         }
     }
 }
