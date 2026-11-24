@@ -242,6 +242,9 @@ public:
     std::pair<bool, QString> centerview(int roomId);
     // The nearest levels above and below the one shown that hold rooms of the area shown
     std::pair<std::optional<int>, std::optional<int>> roomLevelsBeside() const;
+    // Set by the mapper while its 3D view shows, which its level buttons step a level at a time: this map then steps
+    // with it, viewing or not, so both show the same level when the 2D map comes back
+    bool mStepsWith3DView = false;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 

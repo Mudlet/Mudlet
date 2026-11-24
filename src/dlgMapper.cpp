@@ -987,6 +987,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 #if defined(INCLUDE_3DMAPPER)
     const bool was3DMode = glWidget && !glWidget->isHidden();
     mIs3DMode = is3DMode;
+    mp2dMap->mStepsWith3DView = is3DMode;
     if (glWidget) {
         glWidget->update();
     } else {

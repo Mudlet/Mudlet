@@ -722,7 +722,7 @@ std::pair<std::optional<int>, std::optional<int>> T2DMap::roomLevelsBeside() con
 
 void T2DMap::slot_shiftZup()
 {
-    if (mMapViewOnly) {
+    if (mMapViewOnly && !mStepsWith3DView) {
         const std::optional<int> above = roomLevelsBeside().first;
         if (!above) {
             return;
@@ -737,7 +737,7 @@ void T2DMap::slot_shiftZup()
 
 void T2DMap::slot_shiftZdown()
 {
-    if (mMapViewOnly) {
+    if (mMapViewOnly && !mStepsWith3DView) {
         const std::optional<int> below = roomLevelsBeside().second;
         if (!below) {
             return;

@@ -978,6 +978,29 @@ private slots:
         QVERIFY2(qFuzzyCompare(result.view.mMapCenterX, 102.0), qPrintable(qsl("on an empty level the view was held at x %1. %2").arg(result.view.mMapCenterX).arg(saved(image, qsl("pan-empty-level")))));
     }
 
+    // While the mapper's 3D view shows, its level buttons step it a level at a time, and the 2D map steps with it
+    void viewingTheLevelButtonsStepWithTheThreeDView()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 2, 0, 5));
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        mpHost->mMapViewOnly = true;
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        mapperMap.mStepsWith3DView = true;
+
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 1);
+    }
+
     // Viewing, the level buttons go to the next level with rooms and no further; editing, a level at a time
     void viewingTheLevelButtonsGoOnlyToLevelsWithRooms()
     {
