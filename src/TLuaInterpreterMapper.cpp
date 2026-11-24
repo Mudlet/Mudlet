@@ -53,6 +53,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <tuple>
 #include <math.h>
 
