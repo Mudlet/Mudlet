@@ -739,6 +739,32 @@ void TRoomDB::updateIsZone(const int areaId)
     }
 }
 
+void TRoomDB::repairAreaParents()
+{
+    // Left as they are, an area later given a missing parent's ID would adopt the children, and the areas in a loop
+    // would be listed under no top level area
+    for (TArea* pA : std::as_const(areas)) {
+        if (pA && pA->zoneAreaRef > 0 && !areaNamesMap.contains(pA->zoneAreaRef)) {
+            pA->zoneAreaRef = 0;
+        }
+    }
+    // By ID, so the same link of a loop is cut each time the map is read
+    for (auto it = areas.cbegin(); it != areas.cend(); ++it) {
+        QSet<int> seen{it.key()};
+        for (std::optional<int> ancestor = getAreaParent(it.key()); ancestor.has_value(); ancestor = getAreaParent(*ancestor)) {
+            if (*ancestor == it.key()) {
+                it.value()->zoneAreaRef = 0;
+                break;
+            }
+            // A loop above this area, cut when its own turn comes
+            if (seen.contains(*ancestor)) {
+                break;
+            }
+            seen.insert(*ancestor);
+        }
+    }
+}
+
 void TRoomDB::updateAllIsZone()
 {
     for (TArea* pA : std::as_const(areas)) {

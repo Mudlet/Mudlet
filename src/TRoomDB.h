@@ -98,6 +98,9 @@ public:
     void updateIsZone(int areaId);
     // After a whole map is read in: isZone follows from the zoneAreaRefs, so it is worked out rather than trusted
     void updateAllIsZone();
+    // After a whole map is read in, before updateAllIsZone(): clears a parent that is not in the map or is the area
+    // itself, and cuts a loop of parents
+    void repairAreaParents();
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
