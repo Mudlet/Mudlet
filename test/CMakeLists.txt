@@ -342,6 +342,23 @@ set_property(SOURCE DiscordTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_S
 # XmlImportReaderTest reads every package, profile and map XML in the source tree
 set_property(SOURCE XmlImportReaderTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 
+# Whether a distribution package's Mudlet notices a newer one installed over it.
+# Built from the one source it covers, which the library only contains when
+# configured without USE_UPDATER. utils.h reaches QEnterEvent, hence Qt6::Gui.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_executable(ReplacedBinaryWatcherTest
+        ReplacedBinaryWatcherTest.cpp
+        ${CMAKE_SOURCE_DIR}/src/ReplacedBinaryWatcher.cpp
+    )
+    target_include_directories(ReplacedBinaryWatcherTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    target_link_libraries(ReplacedBinaryWatcherTest PRIVATE Qt6::Test Qt6::Gui)
+    add_test(NAME ReplacedBinaryWatcherTest COMMAND $<TARGET_FILE:ReplacedBinaryWatcherTest>)
+    set_tests_properties(ReplacedBinaryWatcherTest PROPERTIES
+        ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+        TIMEOUT 60
+    )
+endif()
+
 # Which stores move the bundled Lua's write barrier, through the C API and the
 # sites no spec reaches. Links that Lua and nothing of Mudlet's.
 if(TARGET lua51)

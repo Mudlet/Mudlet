@@ -594,6 +594,9 @@ private slots:
     void slot_updateAvailable(const int);
     void slot_updateInstalled();
 #endif
+#if defined(Q_OS_LINUX) && !defined(INCLUDE_UPDATER)
+    void slot_newVersionInstalled(const QString& version);
+#endif
     void slot_updateShortcuts();
     void slot_windowStateChanged(const Qt::WindowStates);
     void slot_applicationStateChanged(const Qt::ApplicationState);

@@ -697,6 +697,12 @@ if(USE_UPDATER)
   list(APPEND mudlet_UIS updater/update_dialog.ui)
 endif(USE_UPDATER)
 
+# Distribution packages, which build without the updater, can replace the binary while it runs
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT USE_UPDATER)
+  list(APPEND mudlet_SRCS ReplacedBinaryWatcher.cpp)
+  list(APPEND mudlet_HDRS ReplacedBinaryWatcher.h)
+endif()
+
 if(USE_3DMAPPER)
   list(APPEND mudlet_app_SRCS glwidget.cpp)
   list(APPEND mudlet_app_HDRS glwidget.h)

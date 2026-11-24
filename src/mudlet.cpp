@@ -35,6 +35,9 @@
 #include "DarkTheme.h"
 #include "FontManager.h"
 #include "HostDialogs.h"
+#if defined(Q_OS_LINUX) && !defined(INCLUDE_UPDATER)
+#include "ReplacedBinaryWatcher.h"
+#endif
 #include "TBuffer.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -2021,6 +2024,10 @@ void mudlet::init()
     connect(pUpdater, &Updater::signal_updateInstalled, this, &mudlet::slot_updateInstalled);
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
+#if defined(Q_OS_LINUX) && !defined(INCLUDE_UPDATER)
+    auto pReplacedBinaryWatcher = new ReplacedBinaryWatcher(QCoreApplication::applicationFilePath(), qsl("/proc/self/exe"), QString(APP_VERSION) + MudletApp::buildSuffix(), this);
+    connect(pReplacedBinaryWatcher, &ReplacedBinaryWatcher::signal_newVersionInstalled, this, &mudlet::slot_newVersionInstalled);
+#endif
 
     if (!mToolbarIconSize) {
         // If the button size has not been previously set - on the first run
@@ -7759,6 +7766,19 @@ bool mudlet::ensureEdbeeTheme(const QString& themeName, const QString& themeFile
 {
     return edbee::Edbee::instance()->themeManager()->theme(themeName) || loadEdbeeTheme(themeName, themeFile);
 }
+
+#if defined(Q_OS_LINUX) && !defined(INCLUDE_UPDATER)
+void mudlet::slot_newVersionInstalled(const QString& version)
+{
+    //: Shown in each open game when the system's package manager installs a newer Mudlet while this one runs. %1 is the installed version, %2 the running one, e.g. 5.1.0 and 5.0.2
+    const QString message = tr("Mudlet %1 has been installed. Restart Mudlet to use it; until then you are still running %2.\n").arg(version, QString(APP_VERSION) + MudletApp::buildSuffix());
+    for (const auto& pHost : mHostManager.hostList()) {
+        if (pHost && !pHost->isClosingDown() && pHost->mainConsoleView()) {
+            pHost->mainConsoleView()->printSystemMessage(message);
+        }
+    }
+}
+#endif
 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
