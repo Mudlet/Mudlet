@@ -1676,6 +1676,22 @@ private slots:
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A dim hall.\r\nCandles. Lit.")}}));
     }
 
+    // Edited like the description, so kept like it
+    void editedNotesKeepTheirNonBreakingSpacesAndLineEndings()
+    {
+        buildMap();
+        const QString nbsp(QChar::Nbsp);
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("Shop%1opens.\r\nAsk Grim.").arg(nbsp)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QTextCursor cursor = pDlg->plainTextEdit_notes->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pDlg->plainTextEdit_notes->setTextCursor(cursor);
+        QTest::keyClicks(pDlg->plainTextEdit_notes, qsl(" Twice."));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("Shop%1opens.\r\nAsk Grim. Twice.").arg(nbsp)}}));
+    }
+
     // The dialog opens on the name, so a name typed straight away and Enter rename the room
     void typingANameAndPressingEnterRenamesTheRoom()
     {
