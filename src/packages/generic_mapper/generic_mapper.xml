@@ -4366,11 +4366,12 @@ end
 -- Holds the walk for seconds, or a random time from seconds to maxSeconds, then walks on from wherever the character
 -- got to, so a move the game refused in the meantime is tried again
 function map.customwalkdelay(seconds, maxSeconds)
-    if type(seconds) ~= "number" or not (seconds &gt;= 0) then
-        error("map.customwalkdelay: bad argument #1 (seconds as a number of 0 or more expected, got " .. tostring(seconds) .. ")", 2)
+    -- a delay without end would hold the walk for good while it still counts as walking
+    if type(seconds) ~= "number" or not (seconds &gt;= 0 and seconds &lt; math.huge) then
+        error("map.customwalkdelay: bad argument #1 (seconds as a finite number of 0 or more expected, got " .. tostring(seconds) .. ")", 2)
     end
-    if maxSeconds ~= nil and (type(maxSeconds) ~= "number" or not (maxSeconds &gt;= seconds)) then
-        error("map.customwalkdelay: bad argument #2 (maxSeconds as a number no less than seconds expected, got " .. tostring(maxSeconds) .. ")", 2)
+    if maxSeconds ~= nil and (type(maxSeconds) ~= "number" or not (maxSeconds &gt;= seconds and maxSeconds &lt; math.huge)) then
+        error("map.customwalkdelay: bad argument #2 (maxSeconds as a finite number no less than seconds expected, got " .. tostring(maxSeconds) .. ")", 2)
     end
     if not walking and finished_destination then
         -- the last step sent, and not yet followed by a room: held, it is walked again from wherever the character is

@@ -782,6 +782,8 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
   end)
 
   it("refuses seconds that are not a number of 0 or more", function()
+    assert.has_error(function() map.customwalkdelay(math.huge) end)
+    assert.has_error(function() map.customwalkdelay(1, math.huge) end)
     assert.has_error(function() map.customwalkdelay("2") end)
     assert.has_error(function() map.customwalkdelay(-1) end)
     assert.has_error(function() map.customwalkdelay(0 / 0) end)
