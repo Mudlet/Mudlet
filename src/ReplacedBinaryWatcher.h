@@ -66,8 +66,11 @@ private:
     FileId mRunningId;
     // The installed file whose version is being, or has been, read, so it is asked only once
     FileId mQueriedId;
+    FileId mFailingId;
+    int mFailures = 0;
     QFileSystemWatcher mWatcher;
     QTimer mSettleTimer;
+    QTimer mRetryTimer;
     QProcess* mpVersionQuery = nullptr;
 };
 

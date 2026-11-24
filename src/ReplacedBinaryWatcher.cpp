@@ -31,6 +31,10 @@
 
 using namespace std::chrono_literals;
 
+// Asked again 5s, 10s, 20s, 40s and 80s after failing, then given up on until it is replaced again
+static constexpr int csMaxFailures = 6;
+static constexpr std::chrono::seconds csFirstRetryDelay = 5s;
+
 ReplacedBinaryWatcher::ReplacedBinaryWatcher(const QString& installedPath, const QString& runningBinary, const QString& runningVersion, QObject* parent)
 : QObject(parent)
 , mInstalledPath(installedPath)
@@ -46,6 +50,8 @@ ReplacedBinaryWatcher::ReplacedBinaryWatcher(const QString& installedPath, const
     mSettleTimer.setSingleShot(true);
     mSettleTimer.setInterval(1s);
     connect(&mSettleTimer, &QTimer::timeout, this, &ReplacedBinaryWatcher::checkInstalled);
+    mRetryTimer.setSingleShot(true);
+    connect(&mRetryTimer, &QTimer::timeout, this, &ReplacedBinaryWatcher::checkInstalled);
 
     // The directory, not the file: a watch on the file is lost when another is renamed over it
     mWatcher.addPath(QFileInfo(installedPath).absolutePath());
@@ -117,6 +123,13 @@ void ReplacedBinaryWatcher::versionReplied()
 void ReplacedBinaryWatcher::abandonQuery()
 {
     std::exchange(mpVersionQuery, nullptr)->deleteLater();
-    // An install still unpacking may not run yet, so it is asked again on the next change
+    if (mQueriedId != mFailingId) {
+        mFailingId = mQueriedId;
+        mFailures = 0;
+    }
     mQueriedId = {};
+    // An install still unpacking may not run yet, and what it waits for can land outside the watched directory
+    if (++mFailures < csMaxFailures) {
+        mRetryTimer.start(csFirstRetryDelay * (1 << (mFailures - 1)));
+    }
 }
