@@ -4898,11 +4898,13 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
+    // A reconnect token signs in without the password, so gmcp gets none of this message
+    const bool loginToken = !packageMessage.compare(qsl("Char.Login.Token"), Qt::CaseInsensitive);
     if (packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive)) {
         mpHost->mpAuth->handleAuthGMCP(packageMessage, data);
     }
 
-    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, loginToken ? qsl("{}") : data);
 
     // A game that brings its own interface can decline the built-in starter UI
     // up front with Client.GUI {"baseui": false}. The same event an installed
@@ -5713,6 +5715,92 @@ void cTelnet::recordReplayChunk(const qint32 interval, const char* data, const q
 #endif
 }
 
+// A reconnect token signs in without the password and replays get shared, so a Char.Login.Token is
+// recorded as its name alone. A name that could still be one is held back, as a message can be split across reads.
+QByteArray cTelnet::redactedForReplay(const char* data, const qint32 length)
+{
+    static constexpr QLatin1StringView loginToken("Char.Login.Token");
+    // setGMCPVariables() drops a leading BOM, so a token named after one still reaches the authenticator
+    static constexpr QByteArrayView bom("\xEF\xBB\xBF");
+    QByteArray recorded;
+    recorded.reserve(length);
+    for (const char ch : QByteArrayView(data, length)) {
+        switch (mReplayRedaction) {
+        case ReplayRedaction::Text:
+            recorded += ch;
+            if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::Iac;
+            }
+            break;
+        case ReplayRedaction::WithheldIac:
+            if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::Withheld;
+                break;
+            }
+            // Any IAC but IAC IAC ends what is withheld, as processSocketData() takes it for a missing SE
+            recorded += TN_IAC;
+            [[fallthrough]];
+        case ReplayRedaction::Iac:
+            recorded += ch;
+            if (ch == TN_SB) {
+                mReplayRedaction = ReplayRedaction::SubnegotiationOption;
+            } else if (ch == TN_WILL || ch == TN_WONT || ch == TN_DO || ch == TN_DONT) {
+                mReplayRedaction = ReplayRedaction::NegotiatedOption;
+            } else {
+                mReplayRedaction = ReplayRedaction::Text;
+            }
+            break;
+        case ReplayRedaction::NegotiatedOption:
+            // The option, even an IAC, as processSocketData() takes it
+            recorded += ch;
+            mReplayRedaction = ReplayRedaction::Text;
+            break;
+        case ReplayRedaction::SubnegotiationOption:
+            recorded += ch;
+            if (static_cast<unsigned char>(ch) == OPT_GMCP) {
+                mReplayGmcpName.clear();
+                mReplayRedaction = ReplayRedaction::GmcpName;
+            } else if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::Iac;
+            } else {
+                mReplayRedaction = ReplayRedaction::Text;
+            }
+            break;
+        case ReplayRedaction::GmcpName: {
+            const bool nameEnds = ch == TN_IAC || ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '\0';
+            if (!nameEnds) {
+                mReplayGmcpName += ch;
+            }
+            QByteArrayView name(mReplayGmcpName);
+            if (name.startsWith(bom)) {
+                name = name.sliced(bom.size());
+            }
+            if (!nameEnds) {
+                if (!bom.startsWith(mReplayGmcpName) && !loginToken.startsWith(QLatin1StringView(name), Qt::CaseInsensitive)) {
+                    recorded += mReplayGmcpName;
+                    mReplayRedaction = ReplayRedaction::Text;
+                }
+                break;
+            }
+            recorded += mReplayGmcpName;
+            if (!loginToken.compare(QLatin1StringView(name), Qt::CaseInsensitive)) {
+                mReplayRedaction = ch == TN_IAC ? ReplayRedaction::WithheldIac : ReplayRedaction::Withheld;
+            } else {
+                recorded += ch;
+                mReplayRedaction = ch == TN_IAC ? ReplayRedaction::Iac : ReplayRedaction::Text;
+            }
+            break;
+        }
+        case ReplayRedaction::Withheld:
+            if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::WithheldIac;
+            }
+            break;
+        }
+    }
+    return recorded;
+}
+
 bool cTelnet::startReplayRecording(const QString& fileName)
 {
     if (mRecordReplay) {
@@ -5725,6 +5813,14 @@ bool cTelnet::startReplayRecording(const QString& fileName)
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
     mRecordingChunkCount = 0;
+    // Started partway through a subnegotiation, the recording would play its rest back as text, and it could be a token
+    if (insb) {
+        mReplayRedaction = iac ? ReplayRedaction::WithheldIac : ReplayRedaction::Withheld;
+    } else if (iac2) {
+        mReplayRedaction = ReplayRedaction::NegotiatedOption;
+    } else {
+        mReplayRedaction = iac ? ReplayRedaction::Iac : ReplayRedaction::Text;
+    }
     mRecordReplay = true;
     return true;
 }
@@ -6208,8 +6304,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // went through out_buffer above):
     cleandata.reserve(static_cast<size_t>(datalen));
 
-    // A compressed read can inflate to nothing. Older Mudlets refuse a replay
-    // holding an empty chunk, so its wait carries over to the next chunk.
+    // A read can come to nothing once inflated, or once redacted below. Older Mudlets
+    // refuse a replay holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
     // Replays play back without a decompressor, so what follows an MCCP start
     // sequence in a plain read is held back until parsing shows whether
@@ -6228,9 +6324,12 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     const auto recordPart = [this, &waitToRecord, &waitRecorded](const char* data, const qint32 length) {
         // Processing can end the recording, e.g. a script disconnecting
         if (length > 0 && mRecordReplay) {
-            recordReplayChunk(waitToRecord, data, length);
-            waitToRecord = 0;
-            waitRecorded = true;
+            const QByteArray recorded = redactedForReplay(data, length);
+            if (!recorded.isEmpty()) {
+                recordReplayChunk(waitToRecord, recorded.constData(), static_cast<qint32>(recorded.size()));
+                waitToRecord = 0;
+                waitRecorded = true;
+            }
         }
     };
     if (recordingThisRead) {
