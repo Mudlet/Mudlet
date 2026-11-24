@@ -545,8 +545,9 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
   end)
 
   after_each(function()
-    -- speedWalkDir is nil until the profile's first path
-    if speedWalkDir and #speedWalkDir > 0 then
+    -- also a walk left held, or with a destination and no directions, which would hold up the next test's walk;
+    -- speedWalkDir is nil until the profile's first path, and there is no walk to stop before one
+    if speedWalkDir then
       map.stopSpeedwalk()
     end
     send:revert()
