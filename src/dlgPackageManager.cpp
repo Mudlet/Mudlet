@@ -775,13 +775,17 @@ void dlgPackageManager::slot_installPackageFromRepository()
                     readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (!readyToInstall) {
                         // Installing over a still-listed package fails as "already installed", so the update would vanish unreported
-                        failedPackages << packageName;
+                        //: Package manager - one line of the notice listing packages from the repository that failed to install. %1 is the package name
+                        failedPackages << tr("Failed to install %1: the installed version could not be removed to make way for the new one").arg(packageName).toHtmlEscaped();
                         qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
                     }
                 }
-                if (readyToInstall && !mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
-                    failedPackages << packageName;
-                    qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
+                if (readyToInstall) {
+                    if (const auto [installed, reason] = mpHost->installPackage(filePath, enums::PackageModuleType::Package); !installed) {
+                        //: Package manager - one line of the notice listing packages from the repository that failed to install. %1 is the package name, %2 the reason it was refused
+                        failedPackages << tr("Failed to install %1: %2").arg(packageName, reason).toHtmlEscaped();
+                        qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
+                    }
                 }
             }
             QFile::remove(filePath);
@@ -798,8 +802,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
         comeBackToFront();
 
         if (!failedPackages.isEmpty()) {
-            //: Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a comma-separated list of package names
-            showImportStatus(tr("Failed to install: %1").arg(failedPackages.join(qsl(", "))));
+            // The notice shows rich text
+            showImportStatus(failedPackages.join(qsl("<br>")));
         }
     };
 

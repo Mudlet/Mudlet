@@ -308,7 +308,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
     connect_button->setObjectName(qsl("connectButton"));
-    connect_button->setProperty(uiDesign::scmProp_primaryButton, true);
     connect_button->setAccessibleDescription(btn_connOrLoad_disabled_accessDesc);
     offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
     offline_button->setObjectName(qsl("offlineButton"));
@@ -404,7 +403,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
         const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
-        offline_button->setIcon(QIcon(qsl(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
         remove_profile_button->setIcon(QIcon::fromTheme(qsl("edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))));
@@ -578,7 +576,8 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
     const QString buttonSheet = uiDesign::buttonStyleSheet(tokens);
     // The Copy menu is parented under this row, so the row's sheet reaches it
     profileAdminArea->setStyleSheet(buttonSheet + uiDesign::menuStyleSheet(tokens));
-    widget_bottom->setStyleSheet(buttonSheet);
+    // Marked by weight alone: an accent fill beside two plain buttons reads as a button held down
+    widget_bottom->setStyleSheet(buttonSheet + qsl("QPushButton#connectButton { font-weight: 600; }"));
     uiDesign::letPopupsTakeTheFieldsCorner(profileAdminArea);
 
     uiDesign::keepClickFocusOffControls(tabWidget_connectionInfo);
