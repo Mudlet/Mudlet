@@ -2528,6 +2528,29 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     return width - innerWidth, height - innerHeight
   end
 
+  -- In a compact main window the starter UI's bars and chat buttons hold the top and
+  -- bottom borders, which the exact comparisons here need to themselves, and it lays
+  -- itself out again on every resize made here
+  local starterFitDock
+  setup(function()
+    if type(BaseUI) == "table" and type(BaseUI.fitDock) == "function" then
+      starterFitDock = BaseUI.fitDock
+      BaseUI.fitDock = function() end
+      for _, strip in ipairs({ "vitalsBar", "chatButtonRow", "chatSheet" }) do
+        if BaseUI[strip] then
+          BaseUI[strip]:hide()
+        end
+      end
+    end
+  end)
+
+  teardown(function()
+    if starterFitDock then
+      BaseUI.fitDock = starterFitDock
+      BaseUI.fitDock()
+    end
+  end)
+
   before_each(function()
     containers = {}
     borderBefore = getBorderLeft()
