@@ -132,7 +132,7 @@ FAKE_XVFB_RUN = """#!/bin/sh
 echo "$$ $2" >> "$XVFB_RECORD"
 number="${2#--server-num=}"
 DISPLAY=":$number"
-XAUTHORITY="/tmp/fake-xauthority-$number"
+XAUTHORITY="fake-xauthority-$number"
 export DISPLAY XAUTHORITY
 shift 2
 exec "$@"
@@ -277,7 +277,7 @@ class RunLuaSpecs(unittest.TestCase):
         path = os.path.join(folder, "xvfb-run")
         with open(path, "w", encoding="utf-8") as out:
             out.write(script)
-        os.chmod(path, 0o755)
+        os.chmod(path, 0o700)
         self.xvfb_record = os.path.join(self.directory.name, "xvfb-run.txt")
         # A runner that fails to stop its servers would otherwise leave them running for good
         self.addCleanup(self.kill_recorded_servers)
@@ -496,7 +496,7 @@ class RunLuaSpecs(unittest.TestCase):
         self.assertEqual(len(records), 6)
         self.assertEqual({record["display"] for record in records}, {":210", ":220"})
         for record in records:
-            self.assertEqual(record["xauthority"], "/tmp/fake-xauthority-" + record["display"][1:])
+            self.assertEqual(record["xauthority"], "fake-xauthority-" + record["display"][1:])
         for one in records:
             for other in records:
                 if one is not other and one["started"] < other["ended"] and other["started"] < one["ended"]:
