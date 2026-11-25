@@ -2269,6 +2269,8 @@ function BaseUI.serverGuiRemoved(_, packageName)
     if BaseUI.container and not BaseUI.compactWindow() then
       BaseUI.container:show()
       BaseUI.container:adjustBorder()
+    elseif BaseUI.container then
+      BaseUI.dockAwayForCompact = true
     end
     BaseUI.layoutDock()
   end)
@@ -2297,7 +2299,7 @@ end
 -- room exists (made by a mapping script, a map download or a manual load).
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
 function BaseUI.checkMapData(event)
-  if not BaseUI.container or BaseUI.map or BaseUI.dormant() or BaseUI.laidOutCompact then
+  if not BaseUI.container or BaseUI.map or BaseUI.dormant() or (BaseUI.laidOutCompact and BaseUI.dockAwayForCompact) then
     return
   end
   if not BaseUI.mapHasData() then
@@ -2521,6 +2523,7 @@ function BaseUI.build()
       BaseUI.container:attachToBorder("right")
     end
   end
+  BaseUI.dockAwayForCompact = compact and not BaseUI.dormant()
   BaseUI.layoutDock()
   BaseUI.maybeAnnounce()
 end
@@ -2581,7 +2584,7 @@ end
 
 -- In the compact layout a tab is only on screen while its button has it open
 function BaseUI.chatShowing(key)
-  if BaseUI.laidOutCompact then
+  if BaseUI.laidOutCompact and BaseUI.dockAwayForCompact then
     return BaseUI.openChat == key
   end
   return BaseUI.activeChatTab == key
@@ -2792,8 +2795,11 @@ function BaseUI.layoutDock()
     return
   end
   if BaseUI.leaveCompact() then
-    -- not made while the window was compact
-    BaseUI.checkMapData()
+    -- not made while the window was compact; a mapper made in a dock still away
+    -- would take over the profile's map widget if that is closed
+    if not BaseUI.container.hidden then
+      BaseUI.checkMapData()
+    end
     if BaseUI.usedGaugeSlots &gt; 0 then
       -- puts the bars back in their places in the vitals panel, which lays the dock out
       BaseUI.layoutGauges()
@@ -3122,6 +3128,7 @@ local function arrangeCompact()
   BaseUI.laidOutCompact = true
   if not BaseUI.container.hidden then
     BaseUI.container:hide()
+    BaseUI.dockAwayForCompact = true
   end
   -- a section dragged out of the dock is no longer its child to hide
   for _, key in ipairs(sectionOrder) do
@@ -3130,7 +3137,8 @@ local function arrangeCompact()
       section:hide()
     end
   end
-  if BaseUI.dormant() then
+  -- a dock something else hid is not on screen to stand in for, as on a roomy window
+  if BaseUI.dormant() or not BaseUI.dockAwayForCompact then
     for _, widget in ipairs({ BaseUI.vitalsBar, BaseUI.chatButtonRow, BaseUI.chatSheet }) do
       widget:hide()
     end
@@ -3166,13 +3174,15 @@ function BaseUI.layoutCompact()
   end
 end
 
--- Puts the bars and the panes back in the dock and shows it, and says whether
--- there was anything to put back
+-- Puts the bars and the panes back in the dock, shows it if the compact layout
+-- was standing in for it, and says whether there was anything to put back
 function BaseUI.leaveCompact()
   if not BaseUI.laidOutCompact then
     return false
   end
   BaseUI.laidOutCompact = false
+  local dockBack = BaseUI.dockAwayForCompact and not BaseUI.dormant()
+  BaseUI.dockAwayForCompact = nil
   BaseUI.openChat = nil
   for _, gauge in pairs(BaseUI.gauges) do
     gauge:changeContainer(BaseUI.sections.vitals)
@@ -3189,7 +3199,7 @@ function BaseUI.leaveCompact()
     BaseUI.chatButtonRow:hide()
     BaseUI.chatSheet:hide()
   end
-  if not BaseUI.dormant() then
+  if dockBack then
     BaseUI.container:show()
   end
   BaseUI.selectChatTab(BaseUI.activeChatTab)
@@ -3632,6 +3642,8 @@ function BaseUI.show()
       if not BaseUI.container.attached then
         BaseUI.container:attachToBorder("right")
       end
+    else
+      BaseUI.dockAwayForCompact = true
     end
     -- the window may have changed size class while it was hidden
     BaseUI.fitDock()
