@@ -5164,7 +5164,14 @@ void mudlet::restyleToolBarIcons()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens, mColouredIcons);
-    uiDesign::restyleMenuGlyphs(mMenuGlyphs, tokens, mColouredIcons, sheetStylesMenus(qApp->styleSheet() + mMainToolBarProfileStyleSheet));
+    // A native bar ignores every sheet
+    uiDesign::MenuDrawnBy menusDrawnBy = uiDesign::MenuDrawnBy::BaseStyle;
+    if (menuBar()->isNativeMenuBar()) {
+        menusDrawnBy = uiDesign::MenuDrawnBy::NativeMenuBar;
+    } else if (sheetStylesMenus(qApp->styleSheet() + mMainToolBarProfileStyleSheet)) {
+        menusDrawnBy = uiDesign::MenuDrawnBy::ScriptSheet;
+    }
+    uiDesign::restyleMenuGlyphs(mMenuGlyphs, tokens, mColouredIcons, menusDrawnBy);
     // Outside mToolBarGlyphs: its own green stays whether or not the bar is coloured
     if (mpButtonAbout) {
         mpButtonAbout->setIcon(aboutUpdateIcon(tokens));

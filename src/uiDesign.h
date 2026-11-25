@@ -474,9 +474,13 @@ void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& to
 // For actions on a toolbar: unavailable, the glyph takes disabledBarText as the bar's words do. Coloured, a glyph with
 // an identity colour keeps it at rest, under the pointer and switched on.
 void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured = false);
-// For actions in a menu the base style draws: unavailable, disabledText; under the pointer, the menu palette's
-// HighlightedText walked to read on its Highlight, or as at rest while a script's sheet styles the menus.
-void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const bool scriptSheetStylesMenus);
+// A native menu bar draws its own tick beside an entry's picture and a script's sheet draws menuIconWashStyleSheet()'s
+// outline round it; a base style draws neither
+enum class MenuDrawnBy { NativeMenuBar, BaseStyle, ScriptSheet };
+// For actions in a menu: unavailable, disabledText; under the pointer, the menu palette's HighlightedText walked to read
+// on its Highlight, or as at rest under a script's sheet. On a base style's menu a switched-on entry's picture carries
+// the outline itself: the accent over its wash at rest, the glyph's own ink under the pointer and unavailable.
+void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const MenuDrawnBy drawnBy);
 
 struct CardMetrics
 {

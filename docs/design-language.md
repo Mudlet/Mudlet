@@ -481,7 +481,21 @@ instead, which fills the row under the pointer with `Highlight`: there
 both read from the `QMenu` class palette, which a platform theme may set apart
 from the application's (Windows), or from one set on the menu itself, rather
 than from a menu's `palette()`, which takes an appearance change only once
-events run. A script's sheet naming `QMenu` hands those rows to the stylesheet
+events run. A base style draws a switched-on entry's icon in the tick's place
+too, and Fusion puts only a sunken box behind it, its fill near 1.3:1 against a
+light menu and its edge 2.3:1, so on those menus `restyleMenuGlyphs()` draws the
+mark into every switch's `On` pictures: a 1px outline round the picture's edge,
+`scmRadiusChip` round, in `accent` over `accentWash` at rest, in the row's ink
+with no wash under the pointer, and in `disabledText` while it is unavailable.
+Each keeps the glyph's own raster, as a style scales whatever it is handed down to
+its icon size, glyph and all; the outline's width is the menu's pixel, measured
+from the style's `PM_SmallIconSize`, so it stands in the margin Lucide leaves round
+a glyph, and a glyph drawn out to the 2-unit line (the speaker, the pin) touches it.
+Who draws the menus is `MenuDrawnBy`, which `mudlet::restyleToolBarIcons()` passes:
+`NativeMenuBar` while `QMenuBar::isNativeMenuBar()`, as a native menu draws its own
+tick beside the picture it copies, `ScriptSheet` while a script's sheet names
+`QMenu`, and `BaseStyle` otherwise; only `BaseStyle` gets the outline in the
+picture. A script's sheet naming `QMenu` hands those rows to the stylesheet
 style, so `mudlet::restyleMenuBar()` puts `menuIconWashStyleSheet()` on the menu
 bar ahead of the profile's sheet - this wash, with every glyph given its room,
 as a script's row may start the icon at the edge the row is clipped to, and a
@@ -1474,7 +1488,9 @@ experiment saved it as `false` for every player who never ticked it.
   or a `menu-*.svg` of their own. Unavailable, the glyph is `disabledText`, which
   is walked to read on the card and the field, rather than the bar's
   `disabledBarText`, walked on the page alone. On the row under the pointer the
-  colour gives way to `HighlightedText` (see Menus). Whether a menu shows the glyphs at all is
+  colour gives way to `HighlightedText`, and on a menu the base style draws a
+  switched-on entry's picture carries its outline, so it is no longer the toolbar
+  button's picture in that state (see Menus). Whether a menu shows the glyphs at all is
   `Qt::AA_DontShowIconsInMenus`, which the "Show icons on menus" setting sets.
 - The Connect button's menu takes Lucide glyphs too, so its four entries match:
   Disconnect (`unplug`) is grey, its picture being under 30% coloured, Close

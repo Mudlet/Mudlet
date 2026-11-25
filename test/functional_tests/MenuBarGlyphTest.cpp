@@ -22,7 +22,9 @@
  * entry that does what a toolbar button does carries that button's picture, in colour by default
  * and grey once the icons are set to grayscale, and an unavailable one takes the menu's disabled
  * ink rather than the bar's. A switched-on entry shows its glyph where the tick would be, so it
- * has to be told from one that is off by something else, under a script's sheet too. Under the
+ * has to be told from one that is off by something else, under a script's sheet too; on a menu the
+ * base style draws, that is an outline in the picture itself, which a native menu, drawing its own
+ * tick, never gets. Under the
  * pointer the glyph takes the ink of the menus' own palette, or stays as at rest while a script's
  * sheet, whose colours for that row are unknown, styles the menus. Changing "Show icons on menus"
  * tells every entry, so a native menu takes or drops its icon at once.
@@ -32,6 +34,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QHash>
 #include <QImage>
 #include <QMenu>
 #include <QMenuBar>
@@ -40,6 +43,7 @@
 #include <QSet>
 #include <QSignalBlocker>
 #include <QtTest/QtTest>
+#include <tuple>
 
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
@@ -62,6 +66,8 @@ private:
     static constexpr int scmComparisonSize = 24;
     // A wash is composited rather than blitted, so it agrees with the token mix to a level or two
     static constexpr int scmInkTolerance = 2;
+    // A faint wash is stored premultiplied, at a fraction of its levels, so each channel comes back a few levels off
+    static constexpr int scmWashTolerance = 8;
     // Summed over the channels: a line about a pixel wide is scaled down onto the row, so no pixel of it is solid ink
     static constexpr int scmDrawnInkTolerance = 60;
     // Clear of the cursor, which offscreen rests at the top left and would light a row it lands on
@@ -93,6 +99,66 @@ private:
             }
         }
         return apart;
+    }
+
+    // At the glyph's own raster: scaled down to a menu's size, no pixel of a line 1.5px wide is covered whole
+    static QImage drawnWhole(const QIcon& icon, const QIcon::Mode mode, const QIcon::State state)
+    {
+        return icon.pixmap(QSize(uiDesign::scmGlyphRasterSize, uiDesign::scmGlyphRasterSize), 1.0, mode, state).toImage().convertToFormat(QImage::Format_ARGB32);
+    }
+
+    // Where a glyph's line covers a pixel whole, nothing drawn under the glyph can show
+    static int solidPixelsOf(const QImage& glyph)
+    {
+        int solid = 0;
+        for (int y = 0; y < glyph.height(); ++y) {
+            for (int x = 0; x < glyph.width(); ++x) {
+                solid += qAlpha(glyph.pixel(x, y)) == 255 ? 1 : 0;
+            }
+        }
+        return solid;
+    }
+
+    static int solidPixelsChanged(const QImage& glyph, const QImage& drawnOver)
+    {
+        if (glyph.size() != drawnOver.size()) {
+            return glyph.width() * glyph.height();
+        }
+        int changed = 0;
+        for (int y = 0; y < glyph.height(); ++y) {
+            for (int x = 0; x < glyph.width(); ++x) {
+                if (const QColor line = glyph.pixelColor(x, y); line.alpha() == 255) {
+                    const QColor over = drawnOver.pixelColor(x, y);
+                    changed += over.alpha() != 255 || !TestPixels::readsAs(over, line, scmInkTolerance) ? 1 : 0;
+                }
+            }
+        }
+        return changed;
+    }
+
+    // The middle of each side of a picture, where an outline round the glyph runs and no glyph reaches
+    static QList<QColor> sideMiddlesOf(const QImage& image)
+    {
+        return {image.pixelColor(image.width() / 2, 0),
+                image.pixelColor(image.width() - 1, image.height() / 2),
+                image.pixelColor(image.width() / 2, image.height() - 1),
+                image.pixelColor(0, image.height() / 2)};
+    }
+
+    // Clear of the outline, corners included, so what is drawn here round a glyph is a wash
+    static QRect insideTheOutline(const QImage& image) { return image.rect().adjusted(3, 3, -3, -3); }
+
+    static int washedPixels(const QImage& off, const QImage& on, const QColor& wash)
+    {
+        int washed = 0;
+        const QRect inside = insideTheOutline(off);
+        for (int y = inside.top(); y <= inside.bottom(); ++y) {
+            for (int x = inside.left(); x <= inside.right(); ++x) {
+                const QColor over = on.pixelColor(x, y);
+                washed += qAlpha(off.pixel(x, y)) == 0 && std::abs(over.alpha() - wash.alpha()) <= scmInkTolerance && TestPixels::readsAs(over, wash, scmWashTolerance) ? 1 : 0;
+            }
+        }
+        return washed;
     }
 
     static int inkedPixels(const QImage& image)
@@ -200,6 +266,67 @@ private:
             }
         }
         return turning;
+    }
+
+    // On a row it is the surface the words stand on
+    static QColor mostCommonColour(const QImage& shot, const QRect& within)
+    {
+        QHash<QRgb, int> seen;
+        QRgb most = 0;
+        int mostSeen = 0;
+        for (int y = within.top(); y <= within.bottom(); ++y) {
+            for (int x = within.left(); x <= within.right(); ++x) {
+                const QColor pixel = TestPixels::sampled(shot, QPoint(x, y));
+                if (!pixel.isValid()) {
+                    continue;
+                }
+                if (const int count = ++seen[pixel.rgb()]; count > mostSeen) {
+                    mostSeen = count;
+                    most = pixel.rgb();
+                }
+            }
+        }
+        return mostSeen > 0 ? QColor::fromRgb(most) : QColor();
+    }
+
+    struct Outline
+    {
+        int pixels = 0;
+        qreal weakestRatio = 0.0;
+    };
+    // The pixels pixelsTurning() counts, and the faintest of them against the surface as the shot has it
+    static Outline outlineIn(const QImage& before, const QImage& after, const QRect& within, const QColor& ink, const QColor& surface)
+    {
+        Outline outline;
+        for (int y = within.top(); y <= within.bottom(); ++y) {
+            for (int x = within.left(); x <= within.right(); ++x) {
+                const QColor was = TestPixels::sampled(before, QPoint(x, y));
+                const QColor is = TestPixels::sampled(after, QPoint(x, y));
+                if (is.isValid() && TestPixels::readsAs(is, ink, scmInkTolerance) && !TestPixels::readsAs(was, ink, scmInkTolerance)) {
+                    const qreal ratio = uiDesign::contrastRatio(is, surface);
+                    outline.weakestRatio = outline.pixels == 0 ? ratio : qMin(outline.weakestRatio, ratio);
+                    ++outline.pixels;
+                }
+            }
+        }
+        return outline;
+    }
+
+    // Of the pixels showing the surface switched off, the one switching on changes most against it: what a reader sees
+    // of the mark at its strongest
+    static qreal strongestMarkRatio(const QImage& off, const QImage& on, const QRect& within, const QColor& surface)
+    {
+        qreal strongest = 1.0;
+        for (int y = within.top(); y <= within.bottom(); ++y) {
+            for (int x = within.left(); x <= within.right(); ++x) {
+                const QColor was = TestPixels::sampled(off, QPoint(x, y));
+                const QColor is = TestPixels::sampled(on, QPoint(x, y));
+                if (is.isValid() && TestPixels::readsAs(was, surface, scmInkTolerance)) {
+                    strongest = qMax(strongest, uiDesign::contrastRatio(is, surface));
+                }
+            }
+        }
+        return strongest;
     }
 
     // On its own, a sheet that colours only the row under the pointer leaves the rows to the base style; one giving the rows a box
@@ -349,7 +476,13 @@ private slots:
                 for (const QIcon::State state : {QIcon::Off, QIcon::On}) {
                     const QImage inTheMenu = drawnAt(pEntry->icon(), QIcon::Normal, state);
                     const QImage onTheBar = drawnAt(pTwin->icon(), QIcon::Normal, state);
-                    QVERIFY2(inTheMenu == onTheBar,
+                    // Switched on, the entry's picture carries the outline round the glyph, so only the glyph's line is the bar's
+                    const bool outlined = state == QIcon::On && pEntry->isCheckable();
+                    const QImage lineOnTheBar = outlined ? drawnWhole(pTwin->icon(), QIcon::Normal, state) : QImage();
+                    const int apart = outlined ? solidPixelsChanged(lineOnTheBar, drawnWhole(pEntry->icon(), QIcon::Normal, state)) : pixelsApart(inTheMenu, onTheBar);
+                    QVERIFY2(!outlined || solidPixelsOf(lineOnTheBar) > 0,
+                             qPrintable(qsl("%1: the toolbar's %2 has no pixel its line covers whole, so nothing of it was compared").arg(said, twinName)));
+                    QVERIFY2(apart == 0,
                              qPrintable(qsl("%1: %2 %3 is not the picture of the toolbar's %4: inked %5 where the toolbar's is %6, and %7 pixels differ")
                                                 .arg(said,
                                                      saidAs(pEntry),
@@ -357,7 +490,7 @@ private slots:
                                                      twinName,
                                                      TestPixels::inkOf(inTheMenu),
                                                      TestPixels::inkOf(onTheBar),
-                                                     QString::number(pixelsApart(inTheMenu, onTheBar)))));
+                                                     QString::number(apart))));
                 }
             }
         }
@@ -508,7 +641,8 @@ private slots:
             qApp->setAttribute(Qt::AA_DontShowIconsInMenus, iconsHidden);
         });
         // Coloured, the glyph is the same picture either way, so whatever differs is the state drawn round it
-        QVERIFY2(drawnAt(pEntry->icon(), QIcon::Normal, QIcon::Off) == drawnAt(pEntry->icon(), QIcon::Normal, QIcon::On),
+        const QImage glyphOff = drawnWhole(pEntry->icon(), QIcon::Normal, QIcon::Off);
+        QVERIFY2(solidPixelsOf(glyphOff) > 0 && solidPixelsChanged(glyphOff, drawnWhole(pEntry->icon(), QIcon::Normal, QIcon::On)) == 0,
                  "Compact input line's glyph changes with its state, so this case would pass on the glyph alone");
 
         pEntry->setChecked(false);
@@ -523,6 +657,194 @@ private slots:
                 << qsl("  %1 of the %2 pixels of Compact input line's leading column change as it is switched on").arg(QString::number(differing), QString::number(column.width() * column.height()));
         QVERIFY2(differing > column.height(),
                  qPrintable(qsl("Compact input line looks the same switched on as off: %1 pixels of its leading column at %2 differ").arg(QString::number(differing), TestPixels::describe(column))));
+    }
+
+    // The box Fusion sinks behind a switched-on entry's icon reads near 1.3:1 against a light menu, its edge near 2.3:1,
+    // so the outline is drawn into the picture and held to the floor a state mark is held to
+    void test_aSwitchedOnEntryIsOutlinedOnTheBaseStylesMenu()
+    {
+        mudlet* pMudlet = mudlet::self();
+        const QList<QAction*> switches = switchesOfTheMenuBar();
+        QList<bool> wereChecked;
+        QList<bool> wereEnabled;
+        for (const QAction* pSwitch : switches) {
+            wereChecked << pSwitch->isChecked();
+            wereEnabled << pSwitch->isEnabled();
+        }
+        const bool iconsHidden = qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, false);
+        auto restore = qScopeGuard([switches, wereChecked, wereEnabled, iconsHidden]() {
+            for (qsizetype i = 0; i < switches.size(); ++i) {
+                const QSignalBlocker quiet(switches.at(i));
+                switches.at(i)->setChecked(wereChecked.at(i));
+                switches.at(i)->setEnabled(wereEnabled.at(i));
+            }
+            qApp->setAttribute(Qt::AA_DontShowIconsInMenus, iconsHidden);
+            mudlet::self()->setColouredIcons(true);
+            TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
+        });
+        // MultiView is unavailable with one profile open, and an unavailable entry is outlined in the disabled ink
+        for (QAction* pSwitch : switches) {
+            const QSignalBlocker quiet(pSwitch);
+            pSwitch->setEnabled(true);
+        }
+
+        QStringList unoutlined;
+        QStringList faintMarks;
+        QStringList faintOutlines;
+        QStringList alikeUnderThePointer;
+        QStringList unoutlinedUnderThePointer;
+        for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light}) {
+            TestPixels::setAppearanceAndWait(appearance);
+            const QColor accent = uiDesign::themeTokens().accent;
+            for (const bool coloured : {true, false}) {
+                pMudlet->setColouredIcons(coloured);
+                const QString said = qsl("%1, %2").arg(appearanceSaidAs(appearance), coloured ? qsl("in colour") : qsl("grey"));
+                qreal weakestMark = 0.0;
+                qreal weakestOutline = 0.0;
+                qreal weakestOutlineUnderThePointer = 0.0;
+                QColor surface;
+                QColor surfaceUnderThePointer;
+                for (QAction* pSwitch : switches) {
+                    QMenu* pMenu = menuHolding(pSwitch);
+                    const QColor chosenInk = chosenRowInk(QApplication::palette(pMenu));
+                    // Blocked, so switching Full Screen or Always on Top here changes nothing but the mark
+                    const QSignalBlocker quiet(pSwitch);
+                    pSwitch->setChecked(false);
+                    const QImage off = shotOf(pMenu);
+                    const QImage offUnderThePointer = shotOf(pMenu, pSwitch);
+                    pSwitch->setChecked(true);
+                    const QImage on = shotOf(pMenu);
+                    const QImage onUnderThePointer = shotOf(pMenu, pSwitch);
+                    QVERIFY2(!off.isNull() && !offUnderThePointer.isNull() && !on.isNull() && !onUnderThePointer.isNull(),
+                             qPrintable(qsl("the menu holding %1 never came up to be grabbed").arg(saidAs(pSwitch))));
+                    const QRect row = pMenu->actionGeometry(pSwitch);
+                    const QRect column = leadingColumnOf(row);
+                    const QString entry = saidAs(pSwitch);
+                    surface = mostCommonColour(off, row);
+                    surfaceUnderThePointer = mostCommonColour(offUnderThePointer, row);
+
+                    const Outline atRest = outlineIn(off, on, column, accent, surface);
+                    const qreal mark = strongestMarkRatio(off, on, column, surface);
+                    weakestMark = weakestMark == 0.0 ? mark : qMin(weakestMark, mark);
+                    if (atRest.pixels <= column.height()) {
+                        unoutlined << qsl("%1, %2 (%3 pixels)").arg(said, entry, QString::number(atRest.pixels));
+                    } else {
+                        weakestOutline = weakestOutline == 0.0 ? atRest.weakestRatio : qMin(weakestOutline, atRest.weakestRatio);
+                        if (atRest.weakestRatio < uiDesign::scmQuietMinimumRatio) {
+                            faintOutlines << qsl("%1, %2 at %3:1").arg(said, entry, QString::number(atRest.weakestRatio, 'f', 2));
+                        }
+                    }
+                    if (mark < uiDesign::scmQuietMinimumRatio) {
+                        faintMarks << qsl("%1, %2 at %3:1").arg(said, entry, QString::number(mark, 'f', 2));
+                    }
+
+                    if (const int differing = differingPixels(offUnderThePointer, onUnderThePointer, column); differing <= column.height()) {
+                        alikeUnderThePointer << qsl("%1, %2 (%3 pixels differ)").arg(said, entry, QString::number(differing));
+                    }
+                    const Outline underThePointer = outlineIn(offUnderThePointer, onUnderThePointer, column, chosenInk, surfaceUnderThePointer);
+                    if (underThePointer.pixels <= column.height()) {
+                        unoutlinedUnderThePointer << qsl("%1, %2 (%3 pixels in %4)").arg(said, entry, QString::number(underThePointer.pixels), chosenInk.name());
+                    } else {
+                        weakestOutlineUnderThePointer = weakestOutlineUnderThePointer == 0.0 ? underThePointer.weakestRatio : qMin(weakestOutlineUnderThePointer, underThePointer.weakestRatio);
+                    }
+                }
+                qInfo().noquote() << qsl("  %1: on the menu's %2 the switched-on mark reads at %3:1 at its strongest and the outline in %4 at %5:1, at the weakest of %6 switches; "
+                                         "under the pointer, on %7, the outline reads at %8:1")
+                                             .arg(said,
+                                                  surface.name(),
+                                                  QString::number(weakestMark, 'f', 2),
+                                                  accent.name(),
+                                                  QString::number(weakestOutline, 'f', 2),
+                                                  QString::number(switches.size()),
+                                                  surfaceUnderThePointer.name(),
+                                                  QString::number(weakestOutlineUnderThePointer, 'f', 2));
+            }
+        }
+
+        QVERIFY2(!switches.isEmpty(), "the six menus hold no entry that switches on and off, so nothing below was checked");
+        QVERIFY2(unoutlined.isEmpty(), qPrintable(qsl("switched on, these entries show no outline in the accent beside their glyph: %1").arg(unoutlined.join(qsl(", ")))));
+        QVERIFY2(faintMarks.isEmpty(), qPrintable(qsl("switched on, these entries are marked by nothing reading at 3:1 against the menu: %1").arg(faintMarks.join(qsl(", ")))));
+        QVERIFY2(faintOutlines.isEmpty(), qPrintable(qsl("these entries' outline reads under 3:1 against the menu: %1").arg(faintOutlines.join(qsl(", ")))));
+        QVERIFY2(alikeUnderThePointer.isEmpty(), qPrintable(qsl("under the pointer, these entries look the same switched on as off: %1").arg(alikeUnderThePointer.join(qsl(", ")))));
+        QVERIFY2(unoutlinedUnderThePointer.isEmpty(), qPrintable(qsl("under the pointer, these entries show no outline in the row's ink: %1").arg(unoutlinedUnderThePointer.join(qsl(", ")))));
+    }
+
+    // Read off the picture: the outline is the accent's at rest and the glyph's own ink under the pointer and unavailable,
+    // and only at rest is there a wash
+    void test_aSwitchedOnEntrysPictureIsOutlinedInEveryMode()
+    {
+        const QList<QAction*> switches = switchesOfTheMenuBar();
+        auto restore = qScopeGuard([]() {
+            TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
+        });
+
+        QStringList astray;
+        for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light}) {
+            TestPixels::setAppearanceAndWait(appearance);
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            for (QAction* pSwitch : switches) {
+                const QColor chosenInk = chosenRowInk(QApplication::palette(menuHolding(pSwitch)));
+                for (const auto& [mode, ink, modeSaidAs] : QList<std::tuple<QIcon::Mode, QColor, QString>>{{QIcon::Normal, tokens.accent, qsl("at rest")},
+                                                                                                           {QIcon::Active, chosenInk, qsl("Active")},
+                                                                                                           {QIcon::Selected, chosenInk, qsl("Selected")},
+                                                                                                           {QIcon::Disabled, tokens.disabledText, qsl("unavailable")}}) {
+                    const QImage off = drawnAt(pSwitch->icon(), mode, QIcon::Off);
+                    const QImage on = drawnAt(pSwitch->icon(), mode, QIcon::On);
+                    const QString said = qsl("%1, %2 %3").arg(appearanceSaidAs(appearance), saidAs(pSwitch), modeSaidAs);
+                    const QList<QColor> middlesOff = sideMiddlesOf(off);
+                    const QList<QColor> middlesOn = sideMiddlesOf(on);
+                    for (qsizetype side = 0; side < middlesOn.size(); ++side) {
+                        if (middlesOff.at(side).alpha() > scmInkTolerance || middlesOn.at(side).alpha() != 255 || !TestPixels::readsAs(middlesOn.at(side), ink, scmInkTolerance)) {
+                            astray << qsl("%1: side %2 reads %3 at alpha %4 switched on and alpha %5 switched off, rather than the outline in %6")
+                                              .arg(said,
+                                                   QString::number(side),
+                                                   middlesOn.at(side).name(),
+                                                   QString::number(middlesOn.at(side).alpha()),
+                                                   QString::number(middlesOff.at(side).alpha()),
+                                                   ink.name());
+                        }
+                    }
+                    const int washed = washedPixels(off, on, tokens.accentWash);
+                    if (mode == QIcon::Normal ? washed <= scmComparisonSize : washed > 0) {
+                        astray << qsl("%1: %2 pixels round the glyph take the accent's wash").arg(said, QString::number(washed));
+                    }
+                }
+            }
+        }
+        qInfo().noquote() << qsl("  %1 switches in four modes, %2 findings").arg(QString::number(switches.size()), QString::number(astray.size()));
+
+        QVERIFY2(!switches.isEmpty(), "the six menus hold no entry that switches on and off, so nothing below was checked");
+        QVERIFY2(astray.isEmpty(), qPrintable(astray.join(qsl("; "))));
+    }
+
+    // A native menu - the macOS menu bar, a desktop's global menu - draws its own tick beside the picture it copies, and a
+    // script's sheet draws the outline round it, so an outline in the picture as well would be a second one
+    void test_aMenuDrawingItsOwnMarkGetsNoOutlineInThePicture()
+    {
+        QMenu menu;
+        QAction* pEntry = menu.addAction(qsl("Compact input line"));
+        pEntry->setCheckable(true);
+        const QString glyphFile = qsl(":/icons/settings-input.svg");
+        const QList<uiDesign::ActionGlyph> ledger{{pEntry, glyphFile, QString(), uiDesign::scmIdentity_input}};
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+
+        uiDesign::restyleMenuGlyphs(ledger, tokens, true, uiDesign::MenuDrawnBy::BaseStyle);
+        QVERIFY2(drawnAt(pEntry->icon(), QIcon::Normal, QIcon::On) != drawnAt(pEntry->icon(), QIcon::Normal, QIcon::Off),
+                 "on a base style's menu the switched-on picture is the switched-off one, so this case cannot tell an outline from none");
+
+        QStringList outlined;
+        for (const auto& [drawnBy, drawnBySaidAs] :
+             QList<std::pair<uiDesign::MenuDrawnBy, QString>>{{uiDesign::MenuDrawnBy::NativeMenuBar, qsl("a native menu bar")}, {uiDesign::MenuDrawnBy::ScriptSheet, qsl("a script's sheet")}}) {
+            uiDesign::restyleMenuGlyphs(ledger, tokens, true, drawnBy);
+            for (const auto& [mode, modeSaidAs] :
+                 QList<std::pair<QIcon::Mode, QString>>{{QIcon::Normal, qsl("at rest")}, {QIcon::Active, qsl("Active")}, {QIcon::Selected, qsl("Selected")}, {QIcon::Disabled, qsl("unavailable")}}) {
+                if (const int apart = pixelsApart(drawnAt(pEntry->icon(), mode, QIcon::On), drawnAt(pEntry->icon(), mode, QIcon::Off)); apart > 0) {
+                    outlined << qsl("%1, %2 (%3 pixels differ)").arg(drawnBySaidAs, modeSaidAs, QString::number(apart));
+                }
+            }
+        }
+        QVERIFY2(outlined.isEmpty(), qPrintable(qsl("switched on, the picture differs from the one switched off in these menus, which draw their own mark: %1").arg(outlined.join(qsl(", ")))));
     }
 
     // Any menu drawn by menuStyleSheet() - the toolbar's overflow menu holds Full Screen and MultiView
@@ -813,7 +1135,7 @@ private slots:
         menu.setPalette(own);
         QAction* pEntry = menu.addAction(qsl("Play"));
         const QString glyphFile = qsl(":/icons/toolbar-connect.svg");
-        uiDesign::restyleMenuGlyphs({{pEntry, glyphFile, QString(), uiDesign::scmIdentity_connect}}, uiDesign::themeTokens(), true, false);
+        uiDesign::restyleMenuGlyphs({{pEntry, glyphFile, QString(), uiDesign::scmIdentity_connect}}, uiDesign::themeTokens(), true, uiDesign::MenuDrawnBy::BaseStyle);
 
         const QColor wanted = chosenRowInk(menu.palette());
         const QColor applications = chosenRowInk(QApplication::palette());
