@@ -6458,7 +6458,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                 heldBackRecorded = true;
                             }
                             // The parser starts the compressed stream clean, and the start sequence that got it there is not recorded
+                            const bool gmcpNameHeld = mReplayRedaction == ReplayRedaction::GmcpName;
                             mReplayRedaction = ReplayRedaction::Text;
+                            if (heldBackToRecord && gmcpNameHeld) {
+                                // Even a whole token name has no data with it here, as the parser ended its subnegotiation
+                                const QByteArray name = std::exchange(mReplayGmcpName, {});
+                                recordPart(name.constData(), static_cast<qint32>(name.size()));
+                            }
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;
 
