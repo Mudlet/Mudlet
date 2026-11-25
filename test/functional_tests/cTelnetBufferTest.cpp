@@ -1014,6 +1014,20 @@ private slots:
         QVERIFY2(!recorded.contains("SECRET"), "the reconnect token was recorded");
     }
 
+    void unterminatedGmcpNameBeforeACompressionStartIsKept()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray read = gmcp + "Char.Lo" + QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0") + qCompress("You see a room.\r\n", 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({read}, 0, StreamStart::PlainOfferingMccp2);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, gmcp + "Char.Lo" + "You see a room.\r\n");
+    }
+
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
     // which aborts the process, so anything after it would never report. The
     // sentinels give it teeth on Windows too, where CI builds without ASan.
