@@ -733,6 +733,20 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
     assert.equals(0, #timers)
   end)
 
+  it("drops the moves still queued when a hold ends, as a refused step brings no room", function()
+    local moveMap = upvalue(upvalue(upvalue(map.eventHandler, "handle_exits"), "capture_room_info"), "move_map")
+    local _, queueIndex = upvalue(moveMap, "move_queue")
+    local function queue()
+      return select(2, debug.getupvalue(moveMap, queueIndex))
+    end
+    map.speedwalk(rooms[3])
+    table.insert(queue(), "n")
+    map.customwalkdelay(1)
+    liveTimers()[1].fn()
+    assert.same({}, queue())
+    assert.equals(2, #sent, "the walk did not go on after the hold")
+  end)
+
   it("leaves a walk that sent its last step finished", function()
     local finished = 0
     local handler = registerAnonymousEventHandler("sysSpeedwalkFinished", function() finished = finished + 1 end)

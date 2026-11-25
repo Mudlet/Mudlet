@@ -4384,6 +4384,9 @@ function map.customwalkdelay(seconds, maxSeconds)
     walk_hold = tempTimer(seconds, function()
         walk_hold = nil
         if walking then
+            -- by now a step the game took has brought its room, so a move still queued is one it refused and brings
+            -- none; following it with the next room would map that room twice. map.resumeSpeedwalk() drops them too
+            clear_move_queue("Walking on after a hold")
             map.speedwalk(walk_destination)
             -- no way on from where the character got to: the walk is over, rather than left walking on its old
             -- directions where nothing can stop it
