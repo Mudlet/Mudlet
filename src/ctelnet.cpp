@@ -5813,14 +5813,7 @@ bool cTelnet::startReplayRecording(const QString& fileName)
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
     mRecordingChunkCount = 0;
-    // Started partway through a subnegotiation, the recording would play its rest back as text, and it could be a token
-    if (insb) {
-        mReplayRedaction = iac ? ReplayRedaction::WithheldIac : ReplayRedaction::Withheld;
-    } else if (iac2) {
-        mReplayRedaction = ReplayRedaction::NegotiatedOption;
-    } else {
-        mReplayRedaction = iac ? ReplayRedaction::Iac : ReplayRedaction::Text;
-    }
+    mReplayRedactionUnseeded = true;
     mRecordReplay = true;
     return true;
 }
@@ -6333,6 +6326,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         }
     };
     if (recordingThisRead) {
+        if (mReplayRedactionUnseeded) {
+            // Seeded here rather than when recording starts: that can be partway through a read, or before connecting resets the parser.
+            // Started inside a subnegotiation, the recording would play its rest back as text, and it could be a token.
+            if (insb) {
+                mReplayRedaction = iac ? ReplayRedaction::WithheldIac : ReplayRedaction::Withheld;
+            } else if (iac2) {
+                mReplayRedaction = ReplayRedaction::NegotiatedOption;
+            } else {
+                mReplayRedaction = iac ? ReplayRedaction::Iac : ReplayRedaction::Text;
+            }
+            mReplayRedactionUnseeded = false;
+        }
         recordPart(buffer, heldBackToRecord ? compressionStartAt : datalen);
     }
 

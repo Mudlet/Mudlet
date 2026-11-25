@@ -175,8 +175,10 @@ private:
     // stream, each after a pause, and returns the chunks written to it.
     enum class StreamStart { Compressed, PlainOfferingMccp1, PlainOfferingMccp2, PlainNotNegotiated };
 
-    // Recording starts after the first unrecordedReads reads.
-    QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const StreamStart start = StreamStart::Compressed, const qsizetype unrecordedReads = 0)
+    // Recording starts after the first unrecordedReads reads, or with startAtPrompt at the
+    // first prompt after them, while that read is still being parsed.
+    QList<RecordedChunk>
+    recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const StreamStart start = StreamStart::Compressed, const qsizetype unrecordedReads = 0, const bool startAtPrompt = false)
     {
         cTelnet& telnet = mpHost->mTelnet;
         QTemporaryDir dir;
@@ -217,17 +219,38 @@ private:
         for (const QByteArray& read : reads.first(unrecordedReads)) {
             process(read);
         }
-        if (!telnet.startReplayRecording(fileName)) {
-            return {};
+        bool started = false;
+        if (startAtPrompt) {
+            const QMetaObject::Connection startOnPrompt = connect(
+                    &telnet,
+                    &cTelnet::signal_promptReceived,
+                    &telnet,
+                    [&telnet, &fileName, &started] {
+                        started = telnet.startReplayRecording(fileName);
+                    },
+                    Qt::SingleShotConnection);
+            for (const QByteArray& read : reads.sliced(unrecordedReads)) {
+                process(read);
+            }
+            disconnect(startOnPrompt);
+        } else {
+            started = telnet.startReplayRecording(fileName);
+            for (const QByteArray& read : reads.sliced(unrecordedReads)) {
+                process(read);
+            }
         }
-        for (const QByteArray& read : reads.sliced(unrecordedReads)) {
-            process(read);
+        if (!started) {
+            return {};
         }
         // a disconnect while the reads were processed has already saved it
         if (telnet.mRecordReplay && !telnet.stopReplayRecording()) {
             return {};
         }
+        return readRecording(fileName);
+    }
 
+    QList<RecordedChunk> readRecording(const QString& fileName)
+    {
         QFile file(fileName);
         if (!file.open(QIODevice::ReadOnly)) {
             return {};
@@ -907,6 +930,48 @@ private slots:
 
         QCOMPARE(chunks.size(), 1);
         QCOMPARE(chunks.first().bytes, end + "after\r\n");
+    }
+
+    // Recording can start from a nested event loop while a read is parsed, and the rest of that read can open a token
+    void recordingStartedMidReadLeavesOutATokenOpenedLaterInIt()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QByteArray ga = QByteArrayLiteral("\xFF\xF9");
+        const QList<QByteArray> reads{
+                "prompt" + ga + gmcp + "Char.Login.Token {\"account\": \"acct:char\", \"to",
+                "ken\": \"SECRET\"}" + end + "after\r\n",
+        };
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, 0, StreamStart::PlainNotNegotiated, 0, true);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, end + "after\r\n");
+    }
+
+    // Connecting resets the parser, so a recording started offline inside a subnegotiation does not stay inside it
+    void recordingStartedBeforeConnectingKeepsWhatTheGameSends()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString fileName = dir.filePath(qsl("recording.dat"));
+        QByteArray unfinished = QByteArrayLiteral("\xFF\xFA\xC9") + "Char.Vitals {";
+        const auto unfinishedSize = static_cast<int>(unfinished.size());
+        unfinished.append(scmTerminatorSlot);
+        telnet.processSocketData(unfinished.data(), unfinishedSize, false);
+        QVERIFY(telnet.startReplayRecording(fileName));
+        telnet.reset();
+        const QByteArray banner = QByteArrayLiteral("Welcome\r\n");
+        QByteArray read = banner;
+        read.append(scmTerminatorSlot);
+        telnet.processSocketData(read.data(), static_cast<int>(banner.size()), false);
+        QVERIFY(telnet.stopReplayRecording());
+
+        const QList<RecordedChunk> chunks = readRecording(fileName);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, banner);
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
