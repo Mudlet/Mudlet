@@ -367,7 +367,6 @@ void dlgMapper::setupEmptyStateOverlay()
     layout->addWidget(startBlankButton);
 
     connect(mpEmptyStateDownloadButton, &QPushButton::clicked, this, [this]() {
-        mEmptyStateDismissed = true;
         if (mpMap) {
             mpMap->downloadMap();
         }
@@ -541,9 +540,6 @@ void dlgMapper::loadMapFromFile()
             success = pHost->loadMapFile(fileName);
         }
         if (success) {
-            if (!isJson) {
-                pHost->mpMap->audit();
-            }
             mEmptyStateDismissed = true;
             MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
@@ -565,7 +561,9 @@ void dlgMapper::updateEmptyStateOverlay()
     if (!mpMap->mpRoomDB->isEmpty()) {
         mEmptyStateDismissed = false;
     }
-    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed;
+    // isHidden(), not isMapProgressVisible(): a download keeps its overlay while the mapper itself is hidden
+    const bool progressShown = mpProgressOverlay && !mpProgressOverlay->isHidden();
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed && !progressShown;
     const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
     if (mpEmptyStateDownloadButton) {
         mpEmptyStateDownloadButton->setVisible(canDownload);
@@ -581,7 +579,7 @@ void dlgMapper::updateEmptyStateOverlay()
         mpEmptyStateOverlay->hide();
     }
     // Don't clobber the progress overlay's own suppression of the empty-state text.
-    if (mp2dMap && !isMapProgressVisible() && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
+    if (mp2dMap && !progressShown && mp2dMap->mSuppressEmptyStateMessage != shouldShow) {
         mp2dMap->mSuppressEmptyStateMessage = shouldShow;
         mp2dMap->update();
     }
@@ -607,11 +605,6 @@ void dlgMapper::keyPressEvent(QKeyEvent* event)
     if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
         QWidget::keyPressEvent(event);
     }
-}
-
-int dlgMapper::getCurrentShownAreaIndex()
-{
-    return comboBox_showArea->currentIndex();
 }
 
 void dlgMapper::updateAreaComboBox()
@@ -736,6 +729,25 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 #else
     return mp2dMap->setMapZoom(zoom, areaId);
 #endif
+}
+
+std::pair<bool, QString> dlgMapper::centerViewOn(const int roomId)
+{
+    auto centered = mp2dMap->centerview(roomId);
+    if (!centered.first) {
+        return centered;
+    }
+    // The pan is the later request, so a recentre on the player still pending from earlier would undo it at the
+    // next 2D frame. The 3D view is not panned by this, so while it shows, its pending recentre is left to it.
+    if (!showing3DView()) {
+        mpMap->mNewMove = false;
+    }
+    // Set by text, which is not an activation, so the chooser does not switch the area a second time
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mp2dMap->getAreaId());
+    if (!areaName.isEmpty()) {
+        comboBox_showArea->setCurrentText(areaName);
+    }
+    return centered;
 }
 
 int dlgMapper::shownAreaId() const
@@ -1234,6 +1246,7 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
     repaintMaps();
+    mpMap->requestMapRepaint();
 }
 
 void dlgMapper::slot_toggleShowRoomNames(const bool enabled)

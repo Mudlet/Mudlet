@@ -318,8 +318,7 @@ void ActionUnit::unregisterAction(TAction* pT)
     if (!pT) {
         return;
     }
-    // The bars are redrawn from the tree below, and the undo stack clears this
-    // action's host before deleting it, so they must no longer reach it
+    // The bars are redrawn from the tree below, so they must no longer reach it
     if (pT->getParent()) {
         pT->getParent()->popChild(pT);
     }

@@ -29,6 +29,7 @@
  * Run with: ctest -R SettingsSearchTest -V
  */
 
+#include <QAccessible>
 #include <QDir>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -197,6 +198,16 @@ private slots:
     {
         delete mpPreferences;
         mpPreferences = nullptr;
+    }
+
+    // A placeholder is not a name: without one a screen reader reads the field as just "edit"
+    void test_theSearchFieldHasAScreenReaderName()
+    {
+        auto* pField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        QVERIFY(pField);
+        QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pField);
+        QVERIFY(pInterface);
+        QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), "the settings search field has no name for a screen reader to announce");
     }
 
     // The invariant behind lending cards out: after any number of searches,

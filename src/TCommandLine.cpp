@@ -175,8 +175,11 @@ void TCommandLine::slot_contentsChange()
 void TCommandLine::insertFromMimeData(const QMimeData* source)
 {
     // Paste, drop and middle-click all land here
-    const UserEditScope userEdit(*this);
-    QPlainTextEdit::insertFromMimeData(source);
+    {
+        const UserEditScope userEdit(*this);
+        QPlainTextEdit::insertFromMimeData(source);
+    }
+    adjustHeight();
 }
 
 bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
@@ -211,6 +214,8 @@ void TCommandLine::pressClaimedControlTab([[maybe_unused]] QObject* receiver, [[
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
+    const QString textBefore = toPlainText();
+    const QTextCursor cursorBefore = textCursor();
     {
         const UserEditScope userEdit(*this);
         QPlainTextEdit::event(event);
@@ -218,7 +223,11 @@ void TCommandLine::processNormalKey(QEvent* event)
     adjustHeight();
 
     mHistoryBuffer = 0;
-    if (mCompletion.lineEdited(toPlainText())) {
+    // A key that changes neither text nor caret, such as Shift on its way to Shift+End, keeps Up's walk where it is
+    const QString text = toPlainText();
+    const QTextCursor cursor = textCursor();
+    const bool changed = text != textBefore || cursor.position() != cursorBefore.position() || cursor.anchor() != cursorBefore.anchor();
+    if (mCompletion.lineEdited(text) && changed) {
         mCompletion.restartHistoryWalk();
     }
 
@@ -316,20 +325,7 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Copy)) { // Copy is Ctrl+C and possibly Ctrl+Ins, F16
-            // Check for console selections in both upper and lower panes
-            // Prioritize console selection over command line text
-            const bool hasUpperPaneSelection = !mpConsole->mUpperPane->mSelectedRegion.isEmpty();
-            const bool hasLowerPaneSelection = !mpConsole->mLowerPane->mSelectedRegion.isEmpty();
-
-            if (hasUpperPaneSelection) {
-                // Copy from upper pane if it has a selection
-                mpConsole->mUpperPane->slot_copySelectionToClipboard();
-                ke->accept();
-                return true;
-            }
-            if (hasLowerPaneSelection) {
-                // Copy from lower pane if it has a selection
-                mpConsole->mLowerPane->slot_copySelectionToClipboard();
+            if (copyConsoleSelection()) {
                 ke->accept();
                 return true;
             }
@@ -385,7 +381,6 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Process as plain <BACKTAB> - (ignoring implicit <SHIFT>)
                 handleTabCompletion(false);
-                adjustHeight();
                 ke->accept();
                 return true;
             }
@@ -920,9 +915,18 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     auto codecName = mpHost->spellChecker().systemCodecName();
     auto handle_system = mpHost->spellChecker().systemHandle();
+    // Spelling entries only for a word the line underlines, which needs a dictionary that lacks it
+    if (!handle_system || codecName.isEmpty()) {
+        return;
+    }
+    // The dictionary used from "the system" may not be UTF-8 encoded so we
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+    const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
+    if (Hunspell_spell(handle_system, encodedText.constData())) {
+        return;
+    }
+
     auto handle_profile = mpHost->spellChecker().userHandle();
-    bool haveAddOption = false;
-    bool haveRemoveOption = false;
     QAction* action_addWord = nullptr;
     QAction* action_removeWord = nullptr;
     QAction* action_dictionarySeparatorLine = nullptr;
@@ -972,35 +976,17 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     int userSuggestionsCount = 0;
     char** pSystemSuggestionsList = nullptr;
     char** pUserSuggestionsList = nullptr;
-    if (handle_system && !codecName.isEmpty()) {
-        // The dictionary used from "the system" may not be UTF-8 encoded so we
-        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
-        const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
-        if (!Hunspell_spell(handle_system, encodedText.constData())) {
-            // The word is NOT in the main system dictionary:
-            if (handle_profile) {
-                // Have a user dictionary so check it:
-                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
-                    // The word is NOT in the profile one either - so enable add option
-                    haveAddOption = true;
-                } else {
-                    // However the word is in the profile one - so enable remove option
-                    haveRemoveOption = true;
-                }
-
-                if (haveAddOption) {
-                    action_addWord->setEnabled(true);
-                    connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
-                }
-                if (haveRemoveOption) {
-                    action_removeWord->setEnabled(true);
-                    connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
-                }
-            }
+    if (handle_profile) {
+        if (Hunspell_spell(handle_profile, utf8Text.constData())) {
+            action_removeWord->setEnabled(true);
+            connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+        } else {
+            action_addWord->setEnabled(true);
+            connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
         }
-
-        systemSuggestionsCount = Hunspell_suggest(handle_system, &pSystemSuggestionsList, encodedText.constData());
     }
+
+    systemSuggestionsCount = Hunspell_suggest(handle_system, &pSystemSuggestionsList, encodedText.constData());
 
     if (handle_profile) {
         userSuggestionsCount = Hunspell_suggest(handle_profile, &pUserSuggestionsList, utf8Text.constData());
@@ -1165,6 +1151,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     // Emit signal for hyperlink visibility triggers before processing the command
     emit commandSubmitted();
 
+    const int revisionAtSubmit = document()->revision();
+    // Taken before the action runs, as it may reset itself
+    const bool sentToAction = mType != enums::MainCommandLine && mActionFunction;
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
@@ -1193,19 +1182,24 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         TCommandHistory::add(mHistoryList, toPlainText());
     }
 
-    if (mpHost->mAutoClearCommandLineAfterSend) {
+    // A line changed while it was sent, say by an alias's printCmdLine(), is left for the player to finish. Not so
+    // for a setCmdLineAction() field: packages' settings fields write their value back and expect it replaced.
+    const bool lineChangedDuringSend = !sentToAction && document()->revision() != revisionAtSubmit;
+    if (!lineChangedDuringSend) {
+        if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined(Q_OS_MACOS)
-        // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
-        // essentially re-announcing everything we've typed. This workaround fixes this behaviour
-        // and does not seem to negatively affect other platforms
-        hide();
+            // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
+            // essentially re-announcing everything we've typed. This workaround fixes this behaviour
+            // and does not seem to negatively affect other platforms
+            hide();
 #endif
-        clear();
+            clear();
 #if defined(Q_OS_MACOS)
-        show();
+            show();
 #endif
-    } else {
-        selectAll();
+        } else {
+            selectAll();
+        }
     }
     adjustHeight();
 }
@@ -1220,6 +1214,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     mudlet::self()->announce(completion->word);
     moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     mCompletion.setShownLine(toPlainText());
+    adjustHeight();
 }
 
 // Hitting the cursor up key gets you in autocompletion mode.
@@ -1232,8 +1227,7 @@ void TCommandLine::handleAutoCompletion(const bool forward)
 {
     const QString line = toPlainText();
     const QTextCursor playerCursor = textCursor();
-    const bool tailSelected = playerCursor.selectionStart() == mCompletion.shownLine().size() && playerCursor.selectionEnd() == line.size();
-    const auto completion = mCompletion.historyComplete(line, tailSelected, mHistoryList, forward);
+    const auto completion = mCompletion.historyComplete(line, completionTailSelected(), mHistoryList, forward);
     if (completion.tailCut) {
         setPlainText(completion.typed);
     }
@@ -1257,14 +1251,29 @@ void TCommandLine::handleAutoCompletion(const bool forward)
     }
 }
 
+bool TCommandLine::completionTailSelected() const
+{
+    const QTextCursor cursor = textCursor();
+    return cursor.selectionStart() == mCompletion.shownLine().size() && cursor.selectionEnd() == toPlainText().size();
+}
+
+bool TCommandLine::walkingHistoryCompletion() const
+{
+    if (!mpHost->mHighlightHistory || !mCompletion.showingHistoryCompletion(toPlainText(), completionTailSelected())) {
+        return false;
+    }
+    // A completion that is just what was typed has no tail to take back, so it is the player's line unless a newer match is left
+    return textCursor().hasSelection() || mCompletion.newerHistoryMatch(mHistoryList);
+}
+
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
 // In case nothing has been typed it cycles through the command history in
 // reverse order compared to cursor down.
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
-    // DOWN at position 0 with text: save to history and clear input
-    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
+    // DOWN at position 0 with text: save to history and clear input, unless Down can still walk back through Up's completions
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && !walkingHistoryCompletion() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         TCommandHistory::add(mHistoryList, toPlainText());
 
         clear();
@@ -1299,8 +1308,16 @@ void TCommandLine::historyMove(MoveDirection direction)
 
 void TCommandLine::slot_clearSelection(bool yes)
 {
-    if (yes) {
-        mpConsole->clearSelection();
+    if (!yes) {
+        return;
+    }
+    mpConsole->clearSelection();
+    // The line's own text is now the latest selection, wherever the last one was made
+    if (TMainConsole* pMainConsole = mpHost->mainConsoleView(); pMainConsole && pMainConsole->mpLastSelectedPane) {
+        TTextEdit* pPane = pMainConsole->mpLastSelectedPane;
+        pPane->unHighlight();
+        pPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+        pPane->forceUpdate();
     }
 }
 
@@ -1677,4 +1694,21 @@ void TCommandLine::slot_saveHistory()
 TConsole* TCommandLine::console() const
 {
     return mpConsole;
+}
+
+bool TCommandLine::copyConsoleSelection()
+{
+    TMainConsole* pMainConsole = mpHost->mainConsoleView();
+    TTextEdit* pLastSelected = pMainConsole ? pMainConsole->mpLastSelectedPane.data() : nullptr;
+    // A script can hide a window with its selection still in it
+    if (pLastSelected && !pLastSelected->isVisible()) {
+        pLastSelected = nullptr;
+    }
+    for (TTextEdit* pPane : {pLastSelected, mpConsole ? mpConsole->mUpperPane : nullptr, mpConsole ? mpConsole->mLowerPane : nullptr}) {
+        if (pPane && pPane->hasSelectedText()) {
+            pPane->slot_copySelectionToClipboard();
+            return true;
+        }
+    }
+    return false;
 }
