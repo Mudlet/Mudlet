@@ -1562,11 +1562,12 @@ tree in both appearances and holds that red to `scmQuietMinimumRatio` against
 the surface the rows sit on.
 
 The seventh tree reads the same two slots differently, on the same row.
-`VariableTreeDelegate` draws a kept square where the dot stands: filled in the
-blue a running dot is filled in when the variable is saved with the profile,
-hollow when it is not, half when only some of a table is, and absent for a row
-the profile cannot keep - a function, a reference, a table past the size limit -
-which is written in `disabledText` with the reason as its tooltip. Beside it
+`VariableTreeDelegate` draws a kept dot where the switch stands, round like it
+(`treeRowDotGlyph()`): filled in the blue a running dot is filled in when the
+variable is saved with the profile, hollow when it is not, half when only some
+of a table is, and absent for a row the profile cannot keep - a function, a
+reference, a table past the size limit - which is written in `disabledText`
+with the reason as its tooltip. Beside it
 stands a mark for the value's type: `editor-variables.png` for a table (a table
 is braces everywhere, the sidebar included), `editor-type-string.png` (quote),
 `editor-type-number.png` (hash), `editor-type-boolean.png` (toggle),
@@ -1577,7 +1578,7 @@ value as the panel leaves room for, in `chipFont()`: the string in quotes, the
 number, `true` or `false`, `{ n keys }` or `{ n items }`. Everything a row is
 drawn from is written into the row's data roles when it is built or written back
 (`setVariableRowData()`, `refreshVariableRow()`), so painting never reaches into
-Lua or counts a table. A click on the square asks the editor for the toggle
+Lua or counts a table. A click on the dot asks the editor for the toggle
 (`slot_toggleVariableKept()`), which is where the rule about which members of a
 table may be kept lives. The switch under the tree says how many globals it
 holds back (`editorHiddenVariablesCount`).

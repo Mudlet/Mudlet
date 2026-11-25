@@ -1014,7 +1014,7 @@ private slots:
         QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("c"));
         QCOMPARE(rowNames(pHolder), (QStringList{qsl("a0"), qsl("b"), qsl("c")}));
 
-        // The rename moved the rows, so the square is looked for again
+        // The rename moved the rows, so the dot is looked for again
         QSignalSpy clickSpy(mpVariablesTree, &QTreeWidget::itemClicked);
         QTest::qWait(QApplication::doubleClickInterval() + 50);
         const QPoint cornerNow = saveBoxCorner(pC);
@@ -1117,7 +1117,7 @@ private:
         execLua(qsl("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) if k == '%1' then waitForEvent('neverRaised', 300) end end})").arg(name));
     }
 
-    // VariableTreeDelegate answers a press anywhere inside the square it draws the save box as
+    // VariableTreeDelegate answers a press anywhere inside the box around the kept dot it draws
     QPoint saveBoxCorner(QTreeWidgetItem* pItem)
     {
         mpVariablesTree->scrollToItem(pItem);
@@ -1127,19 +1127,19 @@ private:
             qWarning() << "saveBoxCorner(): the Variables tree is not drawn by its delegate";
             return {};
         }
-        const auto keptSquareOf = [this, pDelegate](QTreeWidgetItem* pRow) {
+        const auto keptDotOf = [this, pDelegate](QTreeWidgetItem* pRow) {
             const QModelIndex index = mpVariablesTree->indexFromItem(pRow);
             return pDelegate->dotHitRect(pDelegate->rowOption(index), index);
         };
-        QRect tickArea = keptSquareOf(pItem);
-        // A row the profile cannot keep has no square, so the press goes where
+        QRect tickArea = keptDotOf(pItem);
+        // A row the profile cannot keep has no dot, so the press goes where
         // a sibling's is drawn
         for (int i = 0; tickArea.isNull() && pItem->parent() && i < pItem->parent()->childCount(); ++i) {
             QTreeWidgetItem* pSibling = pItem->parent()->child(i);
-            const QRect square = keptSquareOf(pSibling);
-            if (!square.isNull()) {
+            const QRect dot = keptDotOf(pSibling);
+            if (!dot.isNull()) {
                 const int rowOffset = mpVariablesTree->visualItemRect(pItem).top() - mpVariablesTree->visualItemRect(pSibling).top();
-                tickArea = square.translated(0, rowOffset);
+                tickArea = dot.translated(0, rowOffset);
             }
         }
         const QPoint corner(tickArea.left() + 1, tickArea.top() + 2);

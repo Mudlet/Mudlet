@@ -76,7 +76,7 @@ protected:
     // The derived class's own inks, read before the caches are cleared
     virtual void restyleInks(const ThemeTokens& tokens) = 0;
     virtual void clearGlyphs() const = 0;
-    // Whether the row carries the mark at the dot's place: an item's switch, a variable's kept square
+    // Whether the row carries the mark at the dot's place: an item's switch, a variable's kept dot
     [[nodiscard]] virtual bool carriesDot(const QModelIndex& index) const = 0;
     // A press landed on that mark; the row is the tree's current one by now
     virtual void dotPressed() = 0;

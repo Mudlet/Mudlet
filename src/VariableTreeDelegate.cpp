@@ -39,8 +39,6 @@
 namespace uiDesign {
 
 namespace {
-// A chip's full corner would round a 9px square away altogether
-constexpr qreal scmKeptSquareRadius = scmRadiusChip / 2.0;
 // The drawing elides anyway; this stops a row carrying a megabyte string around
 constexpr int scmPreviewCharacterLimit = 80;
 constexpr int scmPreviewMinimumCharacters = 6;
@@ -298,37 +296,27 @@ QPixmap VariableTreeDelegate::keptGlyph(const KeptState kept, const bool selecte
         return glyph;
     }
 
-    const qreal ratio = mGlyphRatio;
-    glyph = QPixmap(qRound(scmTreeDotDiameter * ratio), qRound(scmTreeDotDiameter * ratio));
-    glyph.setDevicePixelRatio(ratio);
-    glyph.fill(Qt::transparent);
-
-    QPainter painter(&glyph);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    // A stroke is centred on its path; half a pen in keeps hollow and filled the same size
-    const qreal inset = (kept == KeptState::All) ? 0.0 : scmTreeHollowPenWidth / 2.0;
-    const QRectF square(inset, inset, scmTreeDotDiameter - 2.0 * inset, scmTreeDotDiameter - 2.0 * inset);
+    // The same dot as every other view's switch, which it stands in for; what it means is told by its tooltip
     if (kept == KeptState::All) {
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(mKeptFill);
-        painter.drawRoundedRect(square, scmKeptSquareRadius, scmKeptSquareRadius);
-    } else {
-        if (kept == KeptState::Some) {
-            painter.save();
-            painter.setClipRect(QRectF(square.left(), square.top(), square.width() / 2.0, square.height()));
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(mKeptFill);
-            painter.drawRoundedRect(square, scmKeptSquareRadius, scmKeptSquareRadius);
-            painter.restore();
-        }
-        QPen pen(selected ? mSelectedInk : mChromeInk);
-        pen.setWidthF(scmTreeHollowPenWidth);
-        painter.setPen(pen);
-        painter.setBrush(Qt::NoBrush);
-        painter.drawRoundedRect(square, scmKeptSquareRadius, scmKeptSquareRadius);
+        glyph = treeRowDotGlyph(TreeDotForm::Filled, mKeptFill, mGlyphRatio);
+        return glyph;
     }
-    // A copy taken while a painter is still active is a copy of something mid-write
-    painter.end();
+    glyph = treeRowDotGlyph(TreeDotForm::Ring, selected ? mSelectedInk : mChromeInk, mGlyphRatio);
+    if (kept == KeptState::Some) {
+        // The left half filled in, under the ring, as for a table only some of whose members are kept
+        const QPixmap half = treeRowDotGlyph(TreeDotForm::Filled, mKeptFill, mGlyphRatio);
+        QPixmap composed(glyph.size());
+        composed.setDevicePixelRatio(mGlyphRatio);
+        composed.fill(Qt::transparent);
+        QPainter painter(&composed);
+        painter.setClipRect(QRectF(0.0, 0.0, scmTreeDotDiameter / 2.0, scmTreeDotDiameter));
+        painter.drawPixmap(QPointF(0.0, 0.0), half);
+        painter.setClipping(false);
+        painter.drawPixmap(QPointF(0.0, 0.0), glyph);
+        // A copy taken while a painter is still active is a copy of something mid-write
+        painter.end();
+        glyph = composed;
+    }
     return glyph;
 }
 
@@ -363,7 +351,7 @@ VariableTreeDelegate::Decoration VariableTreeDelegate::decorationFor(const RowSt
     if (const auto cached = mDecorations.constFind(key); cached != mDecorations.constEnd()) {
         return cached.value();
     }
-    // The square's room is left even where it is not drawn, so an unkeepable row's
+    // The dot's room is left even where it is not drawn, so an unkeepable row's
     // name lines up with its siblings'
     return composeDecoration(key, level, chevron, state.known, keptGlyph(state.kept, selected), typeGlyph(state.type, inkForSlot(inkSlot), inkSlot));
 }
@@ -372,7 +360,7 @@ void VariableTreeDelegate::initStyleOption(QStyleOptionViewItem* pOption, const 
 {
     QStyledItemDelegate::initStyleOption(pOption, index);
 
-    // The square is drawn in the decoration, so no room is reserved for a check indicator
+    // The dot is drawn in the decoration, so no room is reserved for a check indicator
     pOption->features &= ~QStyleOptionViewItem::HasCheckIndicator;
 
     const RowState state = stateOf(index);
@@ -484,13 +472,13 @@ QString VariableTreeDelegate::keptTooltip(const QModelIndex& index) const
 {
     switch (stateOf(index).kept) {
     case KeptState::All:
-        //: Tooltip on the square at the head of a row in the editor's Variables view, where the profile keeps this variable
+        //: Tooltip on the dot at the head of a row in the editor's Variables view, where the profile keeps this variable
         return tr("Kept with the profile - click to change");
     case KeptState::Some:
-        //: Tooltip on the square at the head of a table's row in the editor's Variables view, where the profile keeps some of the table's members
+        //: Tooltip on the dot at the head of a table's row in the editor's Variables view, where the profile keeps some of the table's members
         return tr("Some of this table is kept with the profile - click to keep all of it");
     case KeptState::Off:
-        //: Tooltip on the square at the head of a row in the editor's Variables view, where the profile does not keep this variable
+        //: Tooltip on the dot at the head of a row in the editor's Variables view, where the profile does not keep this variable
         return tr("Not kept with the profile - click to keep it");
     case KeptState::None:
         break;

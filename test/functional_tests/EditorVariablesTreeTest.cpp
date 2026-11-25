@@ -19,7 +19,7 @@
 
 /*
  * Guards VariableTreeDelegate: the variables tree keeps the six item trees' row
- * grammar, and its kept square, type mark and value preview behave.
+ * grammar, and its kept dot, type mark and value preview behave.
  *
  * Run with: ctest -R EditorVariablesTreeTest -V
  */
@@ -33,6 +33,7 @@
 #include <QScopeGuard>
 #include <QStyleOptionViewItem>
 #include <QTreeWidget>
+#include <QtMath>
 #include <QtTest/QtTest>
 
 #include "EditorTreeRowMetrics.h"
@@ -250,28 +251,28 @@ private slots:
         QVERIFY2(uneven.isEmpty(), qPrintable(qsl("the variables tree is not on the item trees' row grammar: %1").arg(uneven.join(qsl("; ")))));
     }
 
-    void test_clickingTheKeptSquareKeepsTheVariable()
+    void test_clickingTheKeptDotKeepsTheVariable()
     {
         openTheVariablesView();
         QTreeWidgetItem* pString = variableRow(qsl("myString"));
         QVERIFY(pString);
 
-        const QRect square = keptRectOf(pString);
-        QVERIFY2(!square.isEmpty(), "a variable's row reports no square to click");
+        const QRect dot = keptRectOf(pString);
+        QVERIFY2(!dot.isEmpty(), "a variable's row reports no dot to click");
 
-        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, square.center());
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, dot.center());
         QCoreApplication::processEvents();
         QCOMPARE(pString->checkState(0), Qt::Checked);
-        QVERIFY2(varUnit()->savedVars.contains(qsl("myString")), "clicking the square did not put the variable among the ones the profile keeps");
+        QVERIFY2(varUnit()->savedVars.contains(qsl("myString")), "clicking the dot did not put the variable among the ones the profile keeps");
 
         QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pString).center());
         QCoreApplication::processEvents();
         QCOMPARE(pString->checkState(0), Qt::Unchecked);
-        QVERIFY2(!varUnit()->savedVars.contains(qsl("myString")), "clicking the square a second time did not stop the profile keeping the variable");
+        QVERIFY2(!varUnit()->savedVars.contains(qsl("myString")), "clicking the dot a second time did not stop the profile keeping the variable");
 
         const QRect row = mpVariablesTree->visualItemRect(pString);
         const QPoint onTheName(row.right() - 8, row.center().y());
-        QVERIFY2(!keptRectOf(pString).contains(onTheName), "the point this case clicks has to be clear of the square");
+        QVERIFY2(!keptRectOf(pString).contains(onTheName), "the point this case clicks has to be clear of the dot");
         QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, onTheName);
         QCoreApplication::processEvents();
         QCOMPARE(mpVariablesTree->currentItem(), pString);
@@ -279,7 +280,7 @@ private slots:
     }
 
     // Qt's tristate cascade ticks every member, and each tick is what enrols it
-    void test_clickingATablesSquareKeepsItsMembers()
+    void test_clickingATablesDotKeepsItsMembers()
     {
         openTheVariablesView();
         QTreeWidgetItem* pTable = variableRow(qsl("myNested"));
@@ -301,27 +302,79 @@ private slots:
         QCOMPARE(pTable->checkState(0), Qt::Unchecked);
     }
 
+    // The kept dot is round like every other view's switch, kept or not: the corners of the box it is drawn in are left
+    // as the row was, where a square, rounded or not, would cover them at least in part
+    void test_theKeptDotIsRound()
+    {
+        openTheVariablesView();
+        QTreeWidgetItem* pString = variableRow(qsl("myString"));
+        QVERIFY(pString);
+        QCOMPARE(pString->checkState(0), Qt::Unchecked);
+
+        const auto checkRound = [this, pString](const QString& state) {
+            const QRect hit = keptRectOf(pString);
+            const QImage shot = viewport()->grab().toImage().convertToFormat(QImage::Format_ARGB32);
+            // In device pixels, which the grab is in on a scaled screen
+            const qreal ratio = shot.devicePixelRatio();
+            const QRect box(QPoint(qFloor(hit.left() * ratio), qFloor(hit.top() * ratio)), QPoint(qCeil((hit.right() + 1) * ratio) - 1, qCeil((hit.bottom() + 1) * ratio) - 1));
+            const auto failed = [&](const QString& why) {
+                const QString file = qsl("%1/kept-dot-%2.png").arg(QDir::tempPath(), state);
+                shot.copy(box).scaled(box.size() * 8).save(file);
+                return qsl("%1 (%2), see %3").arg(why, state, file);
+            };
+            // The slack beside the mark, left and right of it, is the row's own surface
+            const QRgb surface = shot.pixel(box.left(), box.center().y());
+            QVERIFY2(shot.pixel(box.right(), box.center().y()) == surface, qPrintable(failed(qsl("the slack around the dot is not one plain surface"))));
+            QRect drawn;
+            for (int y = box.top(); y <= box.bottom(); ++y) {
+                for (int x = box.left(); x <= box.right(); ++x) {
+                    if (shot.pixel(x, y) != surface) {
+                        drawn |= QRect(x, y, 1, 1);
+                    }
+                }
+            }
+            const int least = qFloor((uiDesign::scmTreeDotDiameter - 1) * ratio);
+            QVERIFY2(drawn.width() >= least && drawn.height() >= least, qPrintable(failed(qsl("only %1x%2 pixels of the dot were found").arg(drawn.width()).arg(drawn.height()))));
+            for (const QPoint& corner : {drawn.topLeft(), drawn.topRight(), drawn.bottomLeft(), drawn.bottomRight()}) {
+                QVERIFY2(shot.pixel(corner) == surface, qPrintable(failed(qsl("the dot covers its corner at %1,%2, so it is not round").arg(corner.x()).arg(corner.y()))));
+            }
+        };
+
+        checkRound(qsl("not-kept"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pString).center());
+        QCoreApplication::processEvents();
+        QCOMPARE(pString->checkState(0), Qt::Checked);
+        auto restore = qScopeGuard([this, pString]() {
+            QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pString).center());
+            QCoreApplication::processEvents();
+        });
+        checkRound(qsl("kept"));
+    }
+
     // The profile cannot save a Lua function
-    void test_aFunctionsRowHasNoSquareToClick()
+    void test_aFunctionsRowHasNoDotToClick()
     {
         openTheVariablesView();
         QTreeWidgetItem* pFunction = variableRow(qsl("myFunction"));
         QTreeWidgetItem* pString = variableRow(qsl("myString"));
         QVERIFY(pFunction && pString);
 
-        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pFunction)), indexOf(pFunction)).isNull(), "a variable the profile cannot keep still reports a square to click");
+        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pFunction)), indexOf(pFunction)).isNull(), "a variable the profile cannot keep still reports a dot to click");
 
-        const QRect square = keptRectOf(pString);
+        const QRect dot = keptRectOf(pString);
         mpVariablesTree->scrollToItem(pFunction);
         QCoreApplication::processEvents();
         const QRect row = mpVariablesTree->visualItemRect(pFunction);
-        const QPoint whereTheSquareWouldBe(square.center().x(), row.center().y());
+        const QPoint whereTheDotWouldBe(dot.center().x(), row.center().y());
 
-        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, whereTheSquareWouldBe);
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, whereTheDotWouldBe);
         QCoreApplication::processEvents();
 
         QCOMPARE(pFunction->checkState(0), Qt::Unchecked);
-        QVERIFY2(!varUnit()->savedVars.contains(qsl("myFunction")), "a click where the square would be enrolled a variable the profile cannot keep");
+        QVERIFY2(!varUnit()->savedVars.contains(qsl("myFunction")), "a click where the dot would be enrolled a variable the profile cannot keep");
     }
 
     void test_theTrailingEdgeSaysWhatTheValueIs()
@@ -516,7 +569,7 @@ private slots:
     }
 
     // Grayscale icons, as in colour the braces take the old picture's colour rather than the chrome's tone
-    void test_theHeadingRowCarriesTheBracesAndNoSquare()
+    void test_theHeadingRowCarriesTheBracesAndNoDot()
     {
         mudlet::self()->setColouredIcons(false);
         const auto restore = qScopeGuard([]() {
@@ -527,7 +580,7 @@ private slots:
         QVERIFY(pHeading);
         QCOMPARE(pHeading->text(0), qsl("Variables"));
 
-        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pHeading)), indexOf(pHeading)).isNull(), "the tree's own heading row reports a square the profile could keep it by");
+        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pHeading)), indexOf(pHeading)).isNull(), "the tree's own heading row reports a dot the profile could keep it by");
         QVERIFY2(delegate()->typeGlyphFile(indexOf(pHeading)).isEmpty(), "the tree's own heading row is marked as though it held a Lua value");
 
         // Read from initStyleOption() rather than the item: the heading is the
