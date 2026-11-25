@@ -71,6 +71,7 @@ public:
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
+    // 0 when every ID from minimumId upwards is taken
     int lowestFreeRoomId(int minimumId);
     bool hasRoom(int id) const { return rooms.contains(id); }
     QList<int> getAreaIDList();
@@ -112,6 +113,9 @@ public:
     // saved under the old version.
     QMap<QString, int> hashToRoomID;
     QMap<int, QString> roomIDToHash;
+    // Gives the room this hash, taking it from any other room that had it; an empty hash clears the room's. Returns
+    // whether anything changed.
+    bool setRoomHash(const int roomId, const QString& hash);
 
 
 private:
@@ -147,6 +151,8 @@ private:
     int mLowestFreeRoomIdHint = 1;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
+    // While removeArea() deletes the area's rooms, whose exits from other areas then go rather than becoming stubs
+    bool mRemovingArea = false;
     // Flag to prevent expensive individual cleanup during bulk destruction
     bool mBulkDeletionMode = false;
     unsigned int mMapGeneration = 0;

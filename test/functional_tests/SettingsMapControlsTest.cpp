@@ -27,13 +27,21 @@
  * Run with: ctest -R SettingsMapControlsTest -V
  */
 
+#include <algorithm>
+
 #include <QDir>
+#include <QFileDialog>
+#include <QLineEdit>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QApplication>
+#include <QImage>
+#include <QPointer>
 #include <QPushButton>
 #include <QScopeGuard>
 #include <QSpinBox>
+#include <QTimer>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -42,13 +50,19 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
+#include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
+#include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "dlgMapper.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsMapControlsTest : public QObject
 {
@@ -60,6 +74,7 @@ private:
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
+    QPointer<QTimer> mpColorDialogTimer;
     const QString mProfileName = qsl("SettingsMapControls-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
@@ -72,6 +87,55 @@ private:
         mpPreferences->resize(1060, 760);
         mpPreferences->show();
         return QTest::qWaitForWindowExposed(mpPreferences);
+    }
+
+    // An extra map window draws with settings of its own, so the controls must reach it
+    // as well as the main mapper, when there is one
+    void checkTheMapControlsReachAnExtraMapWindow(T2DMap* pMainMap)
+    {
+        TMapViewManager* pManager = mpHost->mpMap->getViewManager();
+        QVERIFY2(pManager, "the profile has no manager for extra map windows");
+        const auto [viewId, message] = pManager->createView(0);
+        const auto closeViews = qScopeGuard([pManager]() {
+            pManager->closeAllViews();
+        });
+        QVERIFY2(viewId, qPrintable(message));
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        QPointer<T2DMap> pViewMap = pView->get2DMap();
+        QVERIFY(pViewMap);
+
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        const int priorRoom = mpPreferences->spinBox_roomSize->value();
+        const int priorExit = mpPreferences->spinBox_exitSize->value();
+        const int priorBorder = mpPreferences->spinBox_borderSize->value();
+        const bool priorAntiAlias = mpPreferences->mMapperUseAntiAlias->isChecked();
+        const bool priorLargeArrows = mpPreferences->checkBox_largeAreaExitArrows->isChecked();
+        const auto restore = qScopeGuard([=, this]() {
+            mpPreferences->spinBox_roomSize->setValue(priorRoom);
+            mpPreferences->spinBox_exitSize->setValue(priorExit);
+            mpPreferences->spinBox_borderSize->setValue(priorBorder);
+            mpPreferences->mMapperUseAntiAlias->setChecked(priorAntiAlias);
+            mpPreferences->checkBox_largeAreaExitArrows->setChecked(priorLargeArrows);
+        });
+
+        const int room = priorRoom == 7 ? 8 : 7;
+        const int exit = priorExit == 3 ? 4 : 3;
+        const int border = priorBorder == 9 ? 10 : 9;
+        // Each is checked on its own: any later change makes the window re-read every size
+        mpPreferences->spinBox_roomSize->setValue(room);
+        QCOMPARE(pViewMap->rSize, room / 10.0);
+        mpPreferences->spinBox_exitSize->setValue(exit);
+        QCOMPARE(pViewMap->eSize, 50.0 / exit);
+        if (pMainMap) {
+            QCOMPARE(pMainMap->eSize, 50.0 / exit);
+        }
+        mpPreferences->spinBox_borderSize->setValue(border);
+        QCOMPARE(pViewMap->mBSize, 50.0 / border);
+        mpPreferences->mMapperUseAntiAlias->setChecked(!priorAntiAlias);
+        QCOMPARE(pViewMap->mMapperUseAntiAlias, !priorAntiAlias);
+        mpPreferences->checkBox_largeAreaExitArrows->setChecked(!priorLargeArrows);
+        QCOMPARE(pViewMap->mLargeAreaExitArrows, !priorLargeArrows);
     }
 
 private slots:
@@ -123,6 +187,7 @@ private slots:
 
     void cleanup()
     {
+        delete mpColorDialogTimer;
         delete mpPreferences;
         mpPreferences = nullptr;
         if (mpHost) {
@@ -187,12 +252,80 @@ private slots:
         QCOMPARE(mpHost->mpMap->mCustomEnvColors.value(257), QColor(QColorConstants::DarkRed));
     }
 
+    // Must run before any case that opens the mapper: the windows must hear of a change with no mapper to pass it on
+    void test_theMapControlsReachAnExtraMapWindowWithNoMapper()
+    {
+        QVERIFY2(!mpHost->mpMap->mapper(), "the profile already has a mapper, so this cannot change the controls without one");
+        checkTheMapControlsReachAnExtraMapWindow(nullptr);
+        QVERIFY2(!mpHost->mpMap->mapper(), "something opened the mapper, so this did not run without one");
+    }
+
+    // Must run before any case that opens the mapper: it needs a profile whose mapper was never created
+    void test_theMapBackgroundCanBePickedBeforeTheMapIsOpened()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY2(!pMap->mapper(), "the profile already has a mapper, so this cannot pick the colour without one");
+
+        const QColor priorBackground = mpHost->mBgColor_2;
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Map background test"));
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this, pMap, areaId, priorBackground]() {
+            mpHost->mBgColor_2 = priorBackground;
+            pMap->mpRoomDB->removeArea(areaId);
+        });
+
+        const QColor picked(12, 34, 56);
+        QVERIFY(mpHost->mBgColor_2 != picked);
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, picked);
+        mpPreferences->pushButton_background_color_2->click();
+        QCOMPARE(mpHost->mBgColor_2, picked);
+
+        // With no room to centre on, the 2D map draws a message rather than its background
+        const int roomId = 1;
+        QVERIFY(pMap->addRoom(roomId) && pMap->setRoomArea(roomId, areaId) && pMap->setRoomCoordinates(roomId, 0, 0, 0));
+        mpHost->showHideOrCreateMapper(true);
+        QVERIFY2(pMap->mapper() && pMap->mapper()->mp2dMap, "opening the map left no 2D map to draw the background");
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
+        p2dMap->resize(200, 200);
+        QImage frame(p2dMap->size(), QImage::Format_ARGB32);
+        frame.fill(Qt::magenta);
+        p2dMap->render(&frame);
+        QCOMPARE(frame.pixelColor(frame.width() - 5, frame.height() - 5), picked);
+    }
+
+    // macOS's native colour panel hands the activation to the main window as
+    // it closes, cancelled or not, so after every colour dialog the settings
+    // take it back and the well that was clicked takes the keyboard. The
+    // dialog itself is modal and native, so it is the step after it that is
+    // tested here, with the main window holding the activation as the panel
+    // leaves it.
+    void test_theSettingsTakeTheActivationBackAfterAColourDialog()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        mpPreferences->setTab(qsl("mapper"));
+        QPushButton* pWell = mpPreferences->pushButton_mapInfoBg;
+        QVERIFY2(pWell->isVisible(), "the map info background well is not on show");
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QTRY_COMPARE(QApplication::activeWindow(), mudlet::self());
+        QVERIFY(QApplication::focusWidget() != pWell);
+
+        mpPreferences->returnFromColourDialog(pWell);
+        QTRY_COMPARE(QApplication::activeWindow(), mpPreferences);
+        QCOMPARE(QApplication::focusWidget(), pWell);
+    }
+
     // The spin box counts in tenths of a room, and the profile and the 2D map
     // have to end up holding the same size - the widget was once handed the
     // spin box's own number, so the map drew rooms ten times too big (#8513).
     void test_theRoomSizeControlGivesTheMapTheSameSizeAsTheProfile()
     {
-        mpHost->showHideOrCreateMapper(true);
+        // Only when there is none: on an existing mapper this toggles it hidden
+        if (!mpHost->mpMap->mapper()) {
+            mpHost->showHideOrCreateMapper(true);
+        }
         QVERIFY2(mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap, "the mapper left no 2D map for the room size to reach");
         T2DMap* p2dMap = mpHost->mpMap->mapper()->mp2dMap;
 
@@ -214,6 +347,84 @@ private slots:
         // each has to be pinned to the size asked for rather than to the other.
         QVERIFY2(qAbs(mpHost->mRoomSize - wanted) < 1.0e-6, qPrintable(qsl("the profile was given a room size of %1 rather than %2").arg(mpHost->mRoomSize).arg(wanted)));
         QVERIFY2(qAbs(p2dMap->rSize - wanted) < 1.0e-6, qPrintable(qsl("the map was given a room size of %1 rather than %2").arg(p2dMap->rSize).arg(wanted)));
+    }
+
+    void test_theMapControlsReachAnExtraMapWindow()
+    {
+        if (!mpHost->mpMap->mapper()) {
+            mpHost->showHideOrCreateMapper(true);
+        }
+        QVERIFY2(mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap, "the mapper could not be opened");
+        checkTheMapControlsReachAnExtraMapWindow(mpHost->mpMap->mapper()->mp2dMap);
+    }
+
+    // saveJsonMap() hands a script the reason, so the dialog's own export should not keep it from the player
+    void test_aJsonExportThatFailsSaysWhy()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString name = qsl("missing&folder/exported.json");
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        auto& console = mpHost->mainConsoleView()->buffer;
+        const int mark = std::max(0, console.getLastLineNumber());
+
+        // A native dialog has no file name field to type into
+        const bool priorNative = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
+        const auto restoreNative = qScopeGuard([priorNative]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, priorNative);
+        });
+        mpPreferences->pushButton_saveMap->click();
+        QFileDialog* pDialog = nullptr;
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    pDialog = mpPreferences->findChild<QFileDialog*>();
+                    return pDialog && pDialog->isVisible();
+                },
+                5s));
+        // Typed, as selectFile() given a path into a missing folder keeps only the name
+        auto* pName = pDialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+        QVERIFY(pName);
+        pDialog->setDirectory(dir.path());
+        pName->setText(name);
+        QVERIFY2(pDialog->selectedFiles().value(0).endsWith(name), qPrintable(pDialog->selectedFiles().value(0)));
+        static_cast<QDialog*>(pDialog)->accept();
+
+        // As one line, since the console wraps long messages
+        const auto shown = [&]() {
+            QStringList lines;
+            for (int line = mark; line <= console.getLastLineNumber(); ++line) {
+                lines << console.line(line);
+            }
+            return lines.join(QChar::Space).simplified();
+        };
+        const auto saysWhy = [&]() {
+            return shown().contains(qsl("could not open save file"));
+        };
+        QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
+        // Spaces dropped, since a wrap can fall inside the path
+        QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
+    }
+
+    // Host::loadMapFile() audits what it loads, so the dialog must not audit it again
+    void test_loadingAMapAuditsItOnce()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("audited.dat"));
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap->mpRoomDB->addRoom(pMap->createNewRoomID()));
+        QVERIFY(mpHost->saveMapFile(path));
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        // Every audit ends by calling the Lua condenseMapLoad(), so counting those calls counts audits
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("specAudits = 0 specCondense = condenseMapLoad "
+                                                  "condenseMapLoad = function() specAudits = specAudits + 1 return specCondense() end")));
+        const auto restoreCondense = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("condenseMapLoad = specCondense specCondense = nil specAudits = nil"));
+        });
+        mpPreferences->loadMap(path);
+        QCOMPARE(pLua->getLuaString(qsl("tostring(specAudits)")), qsl("1"));
     }
 };
 

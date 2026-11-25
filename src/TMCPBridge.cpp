@@ -19,6 +19,7 @@
 
 #include "TMCPBridge.h"
 
+#include "SecureStringUtils.h"
 #include "TMCPServer.h"
 #include "utils.h"
 
@@ -37,6 +38,7 @@
 #include <QStandardPaths>
 #include <QTcpServer>
 
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -46,6 +48,10 @@
 #if defined(Q_OS_WIN32)
 #include <fcntl.h>
 #include <io.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 namespace {
@@ -106,6 +112,22 @@ TMCPBridge::TMCPBridge(const QString& configDir)
 
 int TMCPBridge::exec(const QString& configDir)
 {
+#if defined(Q_OS_WIN32)
+    // A GUI-subsystem exe run from a console without redirection has no stdout or stderr
+    // (fd -2). Reopen only those: attaching succeeds under a client's pipes too.
+    if ((_fileno(stdout) < 0 || _fileno(stderr) < 0) && AttachConsole(ATTACH_PARENT_PROCESS)) {
+        if (_fileno(stdout) < 0) {
+            std::freopen("CONOUT$", "w", stdout);
+        }
+        if (_fileno(stderr) < 0) {
+            std::freopen("CONOUT$", "w", stderr);
+        }
+    }
+    if (_fileno(stdin) < 0 || _fileno(stdout) < 0) {
+        noteOnStderr(qsl("mudlet --mcp-bridge: there is no stdin or stdout to speak JSON-RPC over - this is for an MCP client such as Claude Desktop to start"));
+        return 1;
+    }
+#endif
     TMCPBridge bridge(configDir);
     bridge.startStdinReader();
     return QCoreApplication::exec();
@@ -385,14 +407,28 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     // portable install, say) the restriction cannot be applied; the file is written
     // anyway, since refusing would break the feature there entirely, but it is worth
     // a trace.
-    if (!file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) {
-        qWarning() << "TMCPBridge::writeDiscoveryFile(...) WARNING - could not make" << file.fileName() << "private to this user; other users of this machine may be able to read the MCP access token";
-    }
+    const bool narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
     QJsonObject contents;
     contents[qsl("port")] = static_cast<int>(port);
     contents[qsl("token")] = token;
     file.write(QJsonDocument(contents).toJson(QJsonDocument::Compact));
-    return file.commit();
+    if (!file.commit()) {
+        return false;
+    }
+
+#if defined(Q_OS_UNIX)
+    // Some file systems refuse owner-only on the open file but take it by path; either way, a file
+    // left readable by others is warned about once per path
+    if (narrowAfterCommit) {
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    } else {
+        SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
+    }
+#else
+    // Not confirmFileIsOwnerOnly(): off Unix it only warns, and calls this file a saved password
+    Q_UNUSED(narrowAfterCommit)
+#endif
+    return true;
 }
 
 void TMCPBridge::removeDiscoveryFile(const QString& configDir)
@@ -446,13 +482,28 @@ QString TMCPBridge::claudeDesktopConfigDir()
 #if defined(Q_OS_MACOS)
     return qsl("%1/Library/Application Support/Claude").arg(QDir::homePath());
 #elif defined(Q_OS_WIN32)
-    const QString appData = qEnvironmentVariable("APPDATA");
-    return appData.isEmpty() ? QString() : qsl("%1/Claude").arg(appData);
+    return claudeDesktopConfigDirOnWindows(qEnvironmentVariable("LOCALAPPDATA"), qEnvironmentVariable("APPDATA"));
 #else
     // GenericConfigLocation honours XDG_CONFIG_HOME the way Claude Desktop's Linux
     // builds do. On macOS it would give ~/Library/Preferences - hence the branch above.
     return qsl("%1/Claude").arg(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
 #endif
+}
+
+QString TMCPBridge::claudeDesktopConfigDirOnWindows(const QString& localAppData, const QString& appData)
+{
+    // Packaged (MSIX) Claude Desktop moves its data to Claude-Data\<lowercased package family>
+    // and prefers it over %APPDATA%\Claude. Uninstalling leaves that but removes Packages\<family>.
+    // Of two installed packages, the more recently modified is taken to be the one in use.
+    if (!localAppData.isEmpty()) {
+        const QFileInfoList packaged = QDir(qsl("%1/Claude-Data").arg(localAppData)).entryInfoList({qsl("claude_*"), qsl("anthropicpbc.claude_*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time);
+        for (const QFileInfo& dir : packaged) {
+            if (QFileInfo(qsl("%1/Packages/%2").arg(localAppData, dir.fileName())).isDir()) {
+                return dir.filePath();
+            }
+        }
+    }
+    return appData.isEmpty() ? QString() : qsl("%1/Claude").arg(appData);
 }
 
 QString TMCPBridge::claudeDesktopConfigFilePath()
@@ -881,7 +932,7 @@ QString tomlBasicString(const QString& value)
             escaped += u'\\';
             escaped += c;
         } else if (c.unicode() < 0x20 || c.unicode() == 0x7f) {
-            escaped += qsl("\\u%1").arg(int(c.unicode()), 4, 16, QLatin1Char('0'));
+            escaped += qsl("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QLatin1Char('0'));
         } else {
             escaped += c;
         }
@@ -1061,6 +1112,12 @@ QByteArray TMCPBridge::mergeCodexConfig(const QByteArray& existingConfig, const 
         bool envDottedSeen = false;
         bool envDottedXdgSeen = false;
         bool droppingValue = false;
+        // TOML allows a sub-table before its parent, but the rebuilt block opens with the
+        // parent's header, so the parent's keys must come before any sub-table header or
+        // they would be read as the sub-table's.
+        std::stable_partition(family.begin(), family.end(), [](const TomlLine& line) {
+            return line.section.size() == 2;
+        });
         for (const TomlLine& line : family) {
             if (line.continuation) {
                 if (!droppingValue) {

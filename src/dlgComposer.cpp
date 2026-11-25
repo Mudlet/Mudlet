@@ -35,6 +35,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QSettings>
 #include <QTextCursor>
 
 
@@ -53,6 +54,19 @@ dlgComposer::dlgComposer(Host* pH)
     connect(edit, &QWidget::customContextMenuRequested, this, &dlgComposer::slot_contextMenu);
 
     setAttribute(Qt::WA_DeleteOnClose);
+
+    const QByteArray geometry = MudletApp::getQSettings()->value(qsl("composerGeometry")).toByteArray();
+    if (!geometry.isEmpty()) {
+        restoreGeometry(geometry);
+    }
+}
+
+// In the destructor rather than closeEvent(): a profile closing with the composer up deletes it without a close
+dlgComposer::~dlgComposer()
+{
+    if (QSettings* settings = MudletApp::getQSettings()) {
+        settings->setValue(qsl("composerGeometry"), saveGeometry());
+    }
 }
 
 void dlgComposer::slot_cancel()
@@ -78,6 +92,16 @@ void dlgComposer::init(const QString& newTitle, const QString& newText)
 
 bool dlgComposer::eventFilter(QObject* obj, QEvent* event)
 {
+    if (obj == edit && event->type() == QEvent::KeyPress) {
+        // The Save button's tooltip offers Shift+Tab; left to the editor it would move focus to the read-only title or insert a tab
+        const auto* keyEvent = static_cast<QKeyEvent*>(event);
+        const bool shiftTab = keyEvent->key() == Qt::Key_Backtab || (keyEvent->key() == Qt::Key_Tab && keyEvent->modifiers().testFlag(Qt::ShiftModifier));
+        if (shiftTab && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier))) {
+            slot_save();
+            return true;
+        }
+    }
+
     if (obj == edit && event->type() == QEvent::KeyPress && mpHost && mpHost->getEnableSpellCheck()) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
 

@@ -259,6 +259,10 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
             mpHost->consoleFrontend()->disposeActionBars(static_cast<TAction*>(pPackaged));
         }
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -314,8 +318,7 @@ void ActionUnit::unregisterAction(TAction* pT)
     if (!pT) {
         return;
     }
-    // The bars are redrawn from the tree below, and the undo stack clears this
-    // action's host before deleting it, so they must no longer reach it
+    // The bars are redrawn from the tree below, so they must no longer reach it
     if (pT->getParent()) {
         pT->getParent()->popChild(pT);
     }
@@ -458,4 +461,5 @@ void ActionUnit::updateAllToolbars()
 {
     mpHost->consoleFrontend()->regenerateToolBars(mActionRootNodeList);
     mpHost->consoleFrontend()->regenerateEasyButtonBars(mActionRootNodeList);
+    emit mpHost->signal_buttonsChanged();
 }

@@ -56,15 +56,16 @@ TAction::~TAction()
 {
     // Each child's removal redraws the bars, which draw this action as a menu
     // of its children; ~Tree() would delete them only once this action's own
-    // members and QObject were gone. Done even without a host, as the editor
-    // clears only this action's before deleting it, not its children's.
+    // members and QObject were gone.
     while (!mpMyChildrenList->empty()) {
         delete mpMyChildrenList->front();
     }
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
-        if (isTemporary() && !mScript.isEmpty()) {
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Action0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Action%1").arg(mID)) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
@@ -125,7 +126,7 @@ bool TAction::setScript(const QString& script)
 
 bool TAction::compileScript()
 {
-    mFuncName = qsl("Action%1").arg(QString::number(mID));
+    mFuncName = qsl("Action%1").arg(mID);
     const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     if (QString error; mpHost->mLuaInterpreter.compile(code, error, qsl("Button: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
@@ -156,6 +157,18 @@ void TAction::execute()
     }
 
     runScript();
+}
+
+void TAction::press(const bool checked)
+{
+    const bool state = mIsPushDownButton && checked;
+    if (state != mButtonState) {
+        mButtonState = state;
+        emit mpHost->signal_buttonsChanged();
+    }
+    // Before execute(), as an alias the button's command sets off reads it with getButtonState()
+    mpHost->mainConsoleModel().mButtonState = mButtonState ? 2 : 1;
+    execute();
 }
 
 void TAction::runScript()
@@ -230,4 +243,37 @@ QString TAction::moduleName(TAction* pTAction) const
     }
 
     return QString();
+}
+
+void TAction::updateModuleMembership()
+{
+    if (!mpHost || mModuleMasterFolder) {
+        return;
+    }
+    const TAction* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
+
+void TAction::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TAction*>(pChild)->setModuleMembership(member);
+    }
 }

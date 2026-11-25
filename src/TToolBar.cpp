@@ -233,6 +233,7 @@ void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
     mpHost->mainConsoleView()->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
+    pEAction->setChecked(pAction->isPushDownButton() && pAction->mButtonState);
     pEAction->setStatusTip(pAction->getName());
     mpHost->mainConsoleView()->replaceActionMenuEntry(pAction, pEAction);
     pMenu->addAction(pEAction);
@@ -252,22 +253,18 @@ void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
 
 void TToolBar::finalize()
 {
-    if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
+    if (!mpLayout || mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
         return;
     }
-    auto fillerWidget = new QWidget(this);
-    QPushButton dummy;
-    fillerWidget->setMinimumSize(dummy.minimumSizeHint());
-    fillerWidget->setMaximumSize(dummy.minimumSizeHint());
-    if (mpLayout) {
-        if (mpTAction->mOrientation == 1) {
-            // The toolbar is to be filled with rows of mpTAction->getButtonColumns() wide
-            // The filler widget is to be one or more columns wide
-            mpLayout->addWidget(fillerWidget, 0, 0, mpTAction->getButtonFillerOffset(), 1);
+    const QSize fillerSize = QPushButton().minimumSizeHint();
+    // The offset is kept below the column count, so every empty place is in the first row or column
+    for (int place = 0; place < mpTAction->getButtonFillerOffset(); ++place) {
+        auto fillerWidget = new QWidget(mpWidget);
+        fillerWidget->setFixedSize(fillerSize);
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(fillerWidget, 0, place);
         } else {
-            // The toolbar is to be filled with columns of mpTAction->getButtonColumns() tall
-            // The filler widget is to be one or more rows tall
-            mpLayout->addWidget(fillerWidget, 0, 0, 1, mpTAction->getButtonFillerOffset());
+            mpLayout->addWidget(fillerWidget, place, 0);
         }
     }
 }
@@ -303,16 +300,10 @@ void TToolBar::slot_pressed(const bool isChecked)
     // entries...
     pB->menu();
 
-    if (pA->isPushDownButton()) {
-        pA->mButtonState = isChecked;
-        mpHost->mainConsoleView()->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
-    } else {
-        pA->mButtonState = false;
-        pB->setChecked(false);                       // This does NOT invoke the clicked()!
-        mpHost->mainConsoleView()->mButtonState = 1; // Was effectively 0 but that is wrong
+    if (!pA->isPushDownButton()) {
+        pB->setChecked(false); // This does NOT invoke the clicked()!
     }
-
-    pA->execute();
+    pA->press(isChecked);
 }
 
 void TToolBar::clear()

@@ -121,6 +121,17 @@ local function keepRelativePosition(constraint, value, total, origin)
     return value
 end
 
+-- Internal function: rounded, as the subtraction can land a hair under a whole pixel that "%dpx" would truncate;
+-- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin
+-- @param offset the offset from the parent's origin in pixels
+local function pixelPosition(offset)
+    offset = math.floor(offset + 0.5)
+    if offset < 0 then
+        return "0%" .. offset
+    end
+    return offset
+end
+
 -- Internal function: works out what a constraint measures in a given container,
 -- by letting Geyser compile it against that container rather than by parsing it
 -- @param self the Adjustable.Container itself
@@ -160,7 +171,9 @@ local function adjust_Info(self, label, event)
     if top and bottom then top = false end
 
     if event.button ~= "LeftButton" and not self.minimized then
-        if (top or bottom) and not (left or right) then
+        if self.noResize then
+            label:setCursor("OpenHand")
+        elseif (top or bottom) and not (left or right) then
             label:setCursor("ResizeVertical")
         elseif (left or right) and not (top or bottom) then
             label:setCursor("ResizeHorizontal")
@@ -174,6 +187,15 @@ local function adjust_Info(self, label, event)
     end
 
     adjustInfo = {name = adjustInfo.name, top = top, bottom = bottom, left = left, right = right, x = x, y = y, move = adjustInfo.move, grabX = event.x, grabY = event.y}
+end
+
+-- Internal function: whether a left button drag on the container may do nothing at all.
+-- A container connected to others is only ever resized by one, never moved
+local function dragHeld(self)
+    if self.connectedContainers then
+        return self.noResize
+    end
+    return self.locked
 end
 
 --- function to give your adjustable container a new title
@@ -208,13 +230,14 @@ function Adjustable.Container:onClick(label, event)
     if label.cursorShape == "OpenHand" then
         label:setCursor("ClosedHand")
     end
-    if event.button == "LeftButton" and not(self.locked and not self.connectedContainers) then
+    if event.button == "LeftButton" and not dragHeld(self) then
         if self.raiseOnClick then
             self:raiseAll()
         end
         adjustInfo.name = label.name
         adjustInfo.move = not (adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
-        if self.minimized then adjustInfo.move = true end
+        -- the edges are kept while not resizable, so setResizable(true) applies without a fresh hover
+        if self.minimized or self.noResize then adjustInfo.move = true end
         adjust_Info(self, label, event)
     end
     if event.button == "RightButton" then
@@ -361,7 +384,7 @@ local settlingBorders = 0
 -- @param label the main Adjustable.Container Label
 -- @param event the onMove event and its information
 function Adjustable.Container:onMove (label, event)
-    if self.locked and not self.connectedContainers then
+    if dragHeld(self) then
         if label.cursorShape ~= 0 then
             label:resetCursor()
         end
@@ -406,11 +429,14 @@ function Adjustable.Container:onMove (label, event)
                     return
                 end
             end
-            local tx, ty = max(0,x1-dx), max(0,y1-dy)
+            local tx, ty = x1-dx, y1-dy
             -- get rid of move/size limits when in scrollbox (as it is scrollable)
             if not(hasScrollBox) then
                 tx, ty = min(tx, winw - w), min(ty, winh - h)
             end
+            -- last, as for a container bigger than its parent the bound above is negative,
+            -- and a negative position is read as one measured from the far edge
+            tx, ty = max(0, tx), max(0, ty)
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
@@ -420,30 +446,30 @@ function Adjustable.Container:onMove (label, event)
             if y1-dy <-5 then self:attachToBorder("top") end
             if winw - w < tx+0.1 then self:attachToBorder("right") end
             if winh - h < ty+0.1 then self:attachToBorder("bottom") end--]]
-        elseif adjustInfo.move == false then
-            local w2, h2, x2, y2 = w - dx, h - dy, x1 - dx, y1 - dy
-            local tx, ty, tw, th = x1, y1, w, h
+        elseif adjustInfo.move == false and not self.noResize then
+            local minw, minh = 10, 10
+            if self.container == Geyser and not self.noLimit then minw, minh = 75, 25 end
+            local maxRight, maxBottom = winw, winh
+            if hasScrollBox then maxRight, maxBottom = math.huge, math.huge end
+            -- a negative position is read as one measured from the far edge, so a container partly
+            -- past the parent's top or left edge is shifted back in, or trimmed if that edge is dragged
+            local left, top = max(0, x1), max(0, y1)
+            local right = (adjustInfo.left and x1 or left) + w
+            local bottom = (adjustInfo.top and y1 or top) + h
+            -- a dragged edge stops at the minimum size and at the parent's edge (no right or
+            -- bottom limit in a scroll box) while the opposite edge stays put
             if adjustInfo.top then
-                ty, th = y2, h + dy
+                top = max(0, min(y1 - dy, bottom - minh))
             elseif adjustInfo.bottom then
-                th = h2
+                bottom = min(maxBottom, max(bottom - dy, top + minh))
             end
             if adjustInfo.left then
-                tx, tw = x2, w + dx
+                left = max(0, min(x1 - dx, right - minw))
             elseif adjustInfo.right then
-                tw = w2
+                right = min(maxRight, max(right - dx, left + minw))
             end
-            tx, ty, tw, th = max(0,tx), max(0,ty), max(10,tw), max(10,th)
-            if not(hasScrollBox) then
-                tw, th = min(tw, winw), min(th, winh)
-                tx, ty = min(tx, winw-tw), min(ty, winh-th)
-            end
-            tx = make_percent(tx/winw)
-            ty = make_percent(ty/winh)
-            local minw, minh = 0,0
-            if self.container == Geyser and not self.noLimit then minw, minh = 75,25 end
-            tw,th = max(minw,tw), max(minh,th)
-            tw,th = make_percent(tw/winw), make_percent(th/winh)
+            local tx, ty = make_percent(left/winw), make_percent(top/winh)
+            local tw, th = make_percent(max(minw, right - left)/winw), make_percent(max(minh, bottom - top)/winh)
             -- one pass over the subtree per drag event, where move() then resize()
             -- took two; neither runs here, so an override of either is not invoked
             self.x, self.y, self.width, self.height = tx, ty, tw, th
@@ -573,6 +599,8 @@ function Adjustable.Container:adjustBorder()
         self.attached = false
         return
     end
+    -- recorded before writing: setAxisBorders() re-measures borderSize without reserving it
+    self.reservedBorder = self.borderSize
     setAxisBorders(where)
 end
 
@@ -840,11 +868,13 @@ function Adjustable.Container:detach()
     -- only unregister while it is still ours - the same guard type_delete uses
     local where = self.attached
     self.hiddenAttached = nil
+    self.minimizedAttached = nil
     local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
     end
     self.borderSize = nil
+    self.reservedBorder = nil
     -- unhooked first: handing the border back raises an event we would answer by re-reserving
     self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
@@ -1045,10 +1075,18 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
--- hides everything beside the title; does nothing if it is already minimized
+-- hides everything beside the title; does nothing if it is already minimized.
+-- One attached to a border, or hidden while attached, gives the border back while minimized, and
+-- restore() attaches it again if it still can
 function Adjustable.Container:minimize()
     if self.minimized == true then
         return
+    end
+    local attached = self.attached or self.hiddenAttached or nil
+    -- restore() takes the border back instead: show() cannot attach a minimized container.
+    -- detach() also kills the resize handler hide() kept for show()
+    if self.hiddenAttached then
+        self:detach()
     end
     self.origh = self.height
     self.Inside:hide()
@@ -1058,15 +1096,23 @@ function Adjustable.Container:minimize()
         self:disconnect()
     end
     self:adjustBorder()
+    -- set after adjustBorder(): the detach() it makes for an attached container clears minimizedAttached
+    self.minimizedAttached = attached
 end
 
---- restores the container after it was minimized
+--- restores the container after it was minimized, attaching it again to the border it had,
+-- unless detach() was called meanwhile or it has since been moved too far from that border
 function Adjustable.Container:restore()
     if self.minimized == true then
         self.origh = self.origh or "25%"
         self.Inside:show()
         self:resize(nil,self.origh)
         self.minimized = false
+        local border = self.minimizedAttached
+        self.minimizedAttached = nil
+        if border then
+            self:attachToBorder(border)
+        end
         self:adjustBorder()
     end
 end
@@ -1229,7 +1275,8 @@ end
 -- like position/size and some other variables in your Mudlet Profile Dir/ AdjustableContainer 
 -- to be reliable it is important that the Adjustable.Container has an unique 'name'
 -- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
--- @param dir defines save directory [optional]
+-- @param dir defines save directory [optional]; any missing directories in it are created
+-- @return true, or nil and an error message if the settings could not be written
 -- @see Adjustable.Container:load
 function Adjustable.Container:save(slot, dir)
     assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.save: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
@@ -1260,6 +1307,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.locked = self.locked
     mytable.attached = self.attached
     mytable.hiddenAttached = self.hiddenAttached
+    mytable.minimizedAttached = self.minimizedAttached
     mytable.lockStyle = self.pendingLockStyle or self.lockStyle
     mytable.padding = self.padding
     mytable.attachedMargin = self.attachedMargin
@@ -1269,8 +1317,16 @@ function Adjustable.Container:save(slot, dir)
     mytable.connectedContainers = self.connectedContainers
     mytable.windowname = self.windowname
     mytable.draggedOut = self.draggedOut
+    -- every missing directory on the way, as lfs.mkdir() only makes the last one
+    for separator in dir:gmatch("()[/\\]") do
+        local parent = dir:sub(1, separator - 1)
+        if parent ~= "" and not io.exists(parent) then lfs.mkdir(parent) end
+    end
     if not(io.exists(dir)) then lfs.mkdir(dir) end
-    table.save(saveDir, mainTable)
+    local saved, err = table.save(saveDir, mainTable)
+    if not saved then
+        return nil, string.format("Adjustable.Container.save: couldn't save settings to %s: %s", saveDir, tostring(err))
+    end
     return true
 end
 
@@ -1291,7 +1347,7 @@ function Adjustable.Container:load(slot, dir)
 
     local ok = pcall(table.load, loadDir, mytable)
     if not ok then
-        self:deleteSaveFile()
+        self:deleteSaveFile(dir)
         debugc(string.format("Adjustable.Container.load: Save file %s got corrupted. It was deleted so everything else can load properly.", loadDir))
         return false
     end
@@ -1367,6 +1423,9 @@ function Adjustable.Container:load(slot, dir)
     if mytable.attached or mytable.hiddenAttached then
         self:attachToBorder(mytable.attached or mytable.hiddenAttached)
     end
+    if self.minimized then
+        self.minimizedAttached = mytable.minimizedAttached
+    end
 
     self:adjustBorder()
 
@@ -1393,9 +1452,13 @@ end
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
-    -- set_constraints() places the container through here, so a script laying it out again moves its border too
+    -- set_constraints() places the container through here, so a script laying it out again moves its border too;
+    -- this runs on every resize event, so re-reserving an unchanged request would fight a script's own border forever
     if self.attached and settlingBorders == 0 then
-        self:adjustBorder()
+        if not self:measureBorder() or self.borderSize ~= self.reservedBorder or self.minimized or self.hidden
+            or not table.contains(self:validAttachPositions(), self.attached:lower()) then
+            self:adjustBorder()
+        end
     end
     local x, y, width, height = self:pixel_geometry()
     raiseEvent(
@@ -1539,12 +1602,29 @@ end
 -- @param position_as_absolute bool true to have the position as absolute values
 function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute)
     if position_as_absolute then
-        self.x, self.y = self.get_x(), self.get_y()
+        -- get_x/get_y are on screen, while x and y are taken from the parent's origin
+        local originX, originY = parentFrame(self)
+        self.x, self.y = pixelPosition(self.get_x() - originX), pixelPosition(self.get_y() - originY)
     end
     if size_as_absolute then
         self.width, self.height = self.get_width(), self.get_height()
     end
     self:set_constraints(self)
+end
+
+--- lets the container be resized with the mouse or not; one that is not can still be moved by any part of it,
+-- unless it is connected to other containers, which are never moved by the mouse, as then dragging it does nothing.
+-- It still follows a connected container that is resized, as they share the border.
+-- This is not part of the saved layout, so save() and load() leave it as it is
+-- @param resizable bool false to stop the container being resized by dragging its edges, true to allow it again
+-- @return true, or nil and an error message if resizable is not a boolean
+-- @see Adjustable.Container:new for the noResize option, which sets this at creation
+function Adjustable.Container:setResizable(resizable)
+    if type(resizable) ~= "boolean" then
+        return nil, "setResizable: bad argument #1 type (resizable as boolean expected, got "..type(resizable)..")"
+    end
+    self.noResize = not resizable
+    return true
 end
 
 --- changes the values of your container to be percentage values
@@ -1663,6 +1743,9 @@ function Adjustable.Container:disableAutoSave()
     end
 end
 
+-- stands in for translations that cannot be found, showing each text's key, so they are looked for once rather than on every new()
+local untranslated = setmetatable({}, {__index = function(_, key) return {message = key} end})
+
 --- constructor for the Adjustable Container
 ---@param cons besides standard Geyser.Container parameters there are also:
 ---@param container
@@ -1693,13 +1776,14 @@ end
 --@param cons.titleFormat  a format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.
 --@param[opt="standard"] cons.lockStyle  choose lockstyle at creation. possible integrated lockstyle are: "standard", "border", "light" and "full"
 --@param[opt=false] cons.noLimit  there is a minimum size limit if this constraint is set to false.
+--@param[opt=false] cons.noResize  stops the container being resized by dragging its edges, so a drag anywhere on it moves it; see setResizable
 --@param[opt=true] cons.raiseOnClick  raise your container if you click on it with your left mouse button
 --@param[opt=true] cons.autoSave  saves your container settings on exit (sysExitEvent). If set to false it won't autoSave
 --@param[opt=true] cons.autoLoad  loads the container settings (if there are some to load) at creation of the container. If set to false it won't load the settings at creation
 --@param[opt=false] cons.dragOut  lets a container nested in another container be dragged out of it, into the window it is in. A nested container is otherwise held inside its parent. There is no dragging back in, use changeContainer for that
 
 function Adjustable.Container:new(cons,container)
-    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
+    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer") or untranslated
     cons = cons or {}
     cons.type = cons.type or "adjustablecontainer"
     -- its labels are made only once it is in its container, too late to stop there
@@ -1777,6 +1861,7 @@ function Adjustable.Container:new(cons,container)
     me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
     me.noLimit = me.noLimit or false
+    me.noResize = me.noResize or false
     me.dragOut = me.dragOut or false
     if not(me.raiseOnClick == false) then
         me.raiseOnClick = true

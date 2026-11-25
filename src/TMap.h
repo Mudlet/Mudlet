@@ -80,8 +80,8 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
+    // Host settings the 2D map keeps a copy of to draw with, and those a 3D view sets itself up from
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style, BackgroundColor };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
@@ -91,9 +91,8 @@ signals:
     // Reaches every 2D map showing this map, the mapper's and each secondary view's
     void signal_roomDeleted(int roomId);
 
-    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
-    // cache ones also reach every secondary map view, and with the 3D mapper
-    // built in so do the repaint and mapper-setting ones.
+    // Cues for the mapper drawing this map (mpMapper); the colour, symbol
+    // cache, repaint and mapper-setting ones also reach every secondary map view.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();
@@ -121,6 +120,9 @@ signals:
     void signal_mapProgressSetValue(int value);
     void signal_mapProgressDisableCancel();
     void signal_mapProgressClose();
+    // A long operation has a moment for a window showing its progress to repaint, and to take an Abort. Only a view
+    // that has one connects it; nothing else should run the event loop here, as the operation is still on the stack.
+    void signal_mapProgressRepaintWanted();
 
 private:
     QString mDefaultAreaName;
@@ -238,8 +240,8 @@ public:
     void disableTransferProgressCancel();
     void clearTransferProgress();
 
-    // True while a map import, export or download is on the stack. Those pump
-    // QCoreApplication::processEvents() to keep their progress display alive, so anything
+    // True while a map import, export or download is on the stack. The desktop GUI pumps
+    // the event loop from signal_mapProgressRepaintWanted() to keep its progress dialog alive, so anything
     // delivered from an event loop can find itself running nested inside one -
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.
@@ -303,6 +305,11 @@ public:
     static constexpr qreal scmMinXYZoom = 3.0;
     // Why a script's 2D zoom can't be used, or empty when it can
     static QString zoomError(qreal zoom);
+    // What an image export to the file is written as, from its suffix
+    static QString exportImageFormat(const QString& filePath);
+    // Why an image export of the area would be refused before it is drawn, or empty when it would not;
+    // for every z level, levelExports takes each level and the file it is written to
+    QString areaExportProblem(int areaId, const QString& filePath, qreal zoom, bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const;
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
@@ -423,6 +430,8 @@ public:
     QSet<QString> mHiddenMenuItems;
     static const QStringList& builtInMenuItemNames();
     bool menuItemShown(const QString& itemName) const;
+    // The area of the player's room, which a map view opened on no area shows
+    std::optional<int> playerAreaId() const;
 
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
@@ -551,10 +560,10 @@ private:
     std::vector<quint8> mSearchState;
     std::vector<vertex> mSearchTouched;
 
-    // Held for the whole of a map operation that pumps the event loop, so that
-    // mapOperationInProgress() can tell anything re-entered from that pump that
-    // this map is on the stack. Nested operations are counted, not flagged: an
-    // XML import can start from inside a download's pump.
+    // Held for the whole of a map operation, under which the GUI pumps the event
+    // loop, so that mapOperationInProgress() can tell anything re-entered from
+    // that pump that this map is on the stack. Nested operations are counted, not
+    // flagged: restore() reads a JSON map from within its own operation.
     class MapOperationScope
     {
     public:
@@ -592,14 +601,14 @@ private:
     std::optional<int> mPendingAreaId;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
 
-    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
+                             bool recheckTargetLocks,
                              unsigned int source,
                              TRoom* pSourceR,
                              int target,
                              quint8 direction,
-                             const QString& exitKey,
-                             const QSet<unsigned int>& unUsableRoomSet);
+                             const QString& exitKey);
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;

@@ -19,12 +19,16 @@
 
 // The Mudlet.ini values the main window reads through HostManager::readSettings() as it starts - the
 // pool's mutes and two process-wide statics - and writes back as it closes. HeadlessHostSmokeTest covers
-// the same values for a pool with no main window.
+// the same values for a pool with no main window. Also whether the toolbar's icons are grey, which the
+// main window reads itself.
 
 #include <QtTest/QtTest>
 
+#include <QAction>
 #include <QDir>
 #include <QFile>
+#include <QImage>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QTemporaryDir>
 
@@ -48,6 +52,24 @@ private:
 
     QString iniPath() const { return qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()); }
 
+    // The most saturated solid pixel of Map's glyph on the main toolbar, or -1 with no glyph to read
+    static qreal mapSaturation()
+    {
+        const QAction* pMap = mudlet::self()->findChild<QAction*>(qsl("map_action"));
+        const QImage image = pMap ? pMap->icon().pixmap(QSize(64, 64)).toImage().convertToFormat(QImage::Format_ARGB32) : QImage();
+        if (image.isNull()) {
+            return -1.0;
+        }
+        qreal most = 0.0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const QColor pixel = image.pixelColor(x, y);
+                most = pixel.alphaF() > 0.95 ? std::max(most, static_cast<qreal>(pixel.hslSaturationF())) : most;
+            }
+        }
+        return most;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -58,14 +80,16 @@ private slots:
 
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
-        // Each unlike its default, and in place before the main window reads anything
+        // Each unlike its default, and in place before the main window reads anything. The last is what every
+        // build with the colored icons experiment wrote for a player who never ticked it.
         QFile ini(iniPath());
         QVERIFY(ini.open(QIODevice::WriteOnly | QIODevice::Text));
         ini.write("[General]\n"
                   "enableMuteAPI=true\n"
                   "enableMuteGame=true\n"
                   "reportMapIssuesToConsole=true\n"
-                  "storePasswordsSecurely=false\n");
+                  "storePasswordsSecurely=false\n"
+                  "colouredIcons=false\n");
         ini.close();
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
@@ -92,6 +116,39 @@ private slots:
         QCOMPARE(TMap::smShowMapAuditErrors, true);
     }
 
+    // Grey only for a key of its own, as the experiment's old "colouredIcons=false" above was nobody's choice
+    void test_theIconsAreInColourUnlessMudletIniAsksForGrey()
+    {
+        mudlet* pMudlet = mudlet::self();
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings);
+        const auto restore = qScopeGuard([pMudlet, settings]() {
+            pMudlet->setColouredIcons(true);
+            settings->remove(qsl("greyscaleIcons"));
+        });
+        QVERIFY2(pMudlet->colouredIcons(), "a Mudlet.ini with colouredIcons=false and no greyscaleIcons started the icons grey");
+        QVERIFY2(mapSaturation() > 0.3, qPrintable(qsl("Map on the toolbar started grey (saturation %1)").arg(QString::number(mapSaturation()))));
+
+        // The toolbar is inked before Mudlet.ini is read, so reading grey has to ink it again
+        settings->setValue(qsl("greyscaleIcons"), true);
+        pMudlet->readLateSettings(*settings);
+        QVERIFY2(!pMudlet->colouredIcons(), "greyscaleIcons=true in Mudlet.ini left the icons in colour");
+        QVERIFY2(mapSaturation() >= 0.0 && mapSaturation() < 0.1, qPrintable(qsl("greyscaleIcons=true left Map on the toolbar in colour (saturation %1)").arg(QString::number(mapSaturation()))));
+
+        settings->setValue(qsl("greyscaleIcons"), false);
+        pMudlet->readLateSettings(*settings);
+        QVERIFY2(pMudlet->colouredIcons(), "greyscaleIcons=false in Mudlet.ini left the icons grey");
+        QVERIFY2(mapSaturation() > 0.3, qPrintable(qsl("greyscaleIcons=false left Map on the toolbar grey (saturation %1)").arg(QString::number(mapSaturation()))));
+
+        // Gone first, so what is read back below can only be what writeSettings() put there
+        settings->remove(qsl("greyscaleIcons"));
+        pMudlet->setColouredIcons(false);
+        pMudlet->writeSettings();
+        QCOMPARE(settings->status(), QSettings::NoError);
+        const QSettings written(iniPath(), QSettings::IniFormat);
+        QVERIFY2(written.value(qsl("greyscaleIcons"), false).toBool(), "grey icons were not written to Mudlet.ini as greyscaleIcons=true");
+    }
+
     // What writeSettings() saves as Mudlet closes is what was read, so a value the main window failed
     // to read would overwrite the player's choice with the default
     void test_writingSettingsKeepsThePlayersChoices()
@@ -111,6 +168,50 @@ private slots:
             QVERIFY2(written.contains(key), qPrintable(key));
             QCOMPARE(written.value(key).toBool(), value);
         }
+    }
+
+    // Closed while maximized, Mudlet has to come back un-maximizable to the size it had before
+    void test_aMaximizedWindowKeepsItsNormalSizeAcrossARestart()
+    {
+        mudlet* pMudlet = mudlet::self();
+        pMudlet->show();
+        pMudlet->setWindowState(Qt::WindowNoState);
+        const QSize normalSize(640, 480);
+        pMudlet->resize(normalSize);
+        QTRY_COMPARE(pMudlet->size(), normalSize);
+        pMudlet->setWindowState(Qt::WindowMaximized);
+        QTRY_VERIFY(pMudlet->size() != normalSize);
+
+        pMudlet->writeSettings();
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings->value(qsl("maximized")).toBool());
+
+        pMudlet->setWindowState(Qt::WindowNoState);
+        pMudlet->resize(normalSize / 2);
+        QTRY_COMPARE(pMudlet->size(), normalSize / 2);
+        pMudlet->readLateSettings(*settings);
+        QTRY_VERIFY(pMudlet->windowState() & Qt::WindowMaximized);
+
+        pMudlet->setWindowState(Qt::WindowNoState);
+        QTRY_COMPARE(pMudlet->size(), normalSize);
+    }
+
+    // An older Mudlet sharing this Mudlet.ini writes pos and size but leaves the newer geometry behind
+    void test_aWindowLastPlacedByAnOlderMudletComesBackWhereThatPutIt()
+    {
+        mudlet* pMudlet = mudlet::self();
+        pMudlet->setWindowState(Qt::WindowNoState);
+        pMudlet->resize(640, 480);
+        QTRY_COMPARE(pMudlet->size(), QSize(640, 480));
+        pMudlet->writeSettings();
+
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings->contains(qsl("mainWindowGeometry")));
+        const QSize olderSize(500, 400);
+        settings->setValue(qsl("size"), olderSize);
+        settings->setValue(qsl("maximized"), false);
+        pMudlet->readLateSettings(*settings);
+        QTRY_COMPARE(pMudlet->size(), olderSize);
     }
 };
 

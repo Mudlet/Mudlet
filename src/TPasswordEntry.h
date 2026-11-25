@@ -62,6 +62,7 @@ private slots:
 
 private:
     bool event(QEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
     void focusInEvent(QFocusEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -70,7 +71,7 @@ private:
     void submit();
     void setRevealed(const bool revealed);
     void scrollConsole(const bool up);
-    bool copyConsoleSelection();
+    void followRow();
 
     QPointer<Host> mpHost;
     QPointer<TCommandLine> mpCommandLine;

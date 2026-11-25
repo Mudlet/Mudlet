@@ -840,10 +840,15 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             local seen = {}
             regexTrigger("^[\\Qa]\\E]bc$", function() table.insert(seen, "quoted") end)
             regexTrigger("^xyz\\E?$", function() table.insert(seen, "stray end") end)
+            -- pcre2 skips an \E first in a class, so the ] after it is a member
+            regexTrigger("^[\\E]ab]$", function() table.insert(seen, "first member") end)
+            regexTrigger("^(?:ab|[\\E])(]cd)$", function() table.insert(seen, "first member in a branch") end)
+            -- and \c takes the character after it, even a ]
+            regexTrigger("^(?:xa|[\\c])(]cd)$", function() table.insert(seen, "control character") end)
 
-            feedTriggers("\nabc\nxy\n")
+            feedTriggers("\nabc\nxy\na\nab\nxa\n")
 
-            assert.are.same({"quoted", "stray end"}, seen)
+            assert.are.same({"quoted", "stray end", "first member", "first member in a branch", "control character"}, seen)
         end)
 
         -- pcre2 reads UTF-8 that leaves an unpaired surrogate out, which puts
@@ -868,6 +873,17 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             feedTriggers("\nAnn tells you\nBen asks you\nCal shouts\n")
 
             assert.are.same({"Ann", "Ben", "Cal"}, seen)
+        end)
+
+        -- a (?<* read as a name running to the > would swallow the | or [ before it
+        it("does not take a non-atomic lookbehind for a named group", function()
+            local seen = {}
+            regexTrigger("(?<*ab)(?:cd|ef>ghij)", function() table.insert(seen, matches[1]) end)
+            regexTrigger("(?<*[>]xy)z", function() table.insert(seen, matches[1]) end)
+
+            feedTriggers("\nabcd\n>xyz\n")
+
+            assert.are.same({"cd", "z"}, seen)
         end)
 
         -- The named groups come out of pcre2 in alphabetical order, so their

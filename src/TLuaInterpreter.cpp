@@ -37,6 +37,7 @@
 #include "MudletReplay.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TBackgroundTask.h"
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -58,22 +59,25 @@
 #include "utils.h"
 
 #include <hunspell/hunspell.h>
+#include <yajl/yajl_parse.h>
 
 #include <math.h>
 
-#include <QtConcurrentRun>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QLockFile>
 #include <QCryptographicHash>
 #include <QDataStream>
+#include <QDateTime>
+#include <QDirIterator>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QStringConverter>
 #include <QTemporaryDir>
@@ -82,12 +86,26 @@
 #include <QFileInfo>
 #include <QVector>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
+
+#if defined(Q_OS_WASM)
+#include <emscripten/emscripten.h>
+#endif
 
 using namespace std::chrono_literals;
 
 extern "C" {
 int luaopen_yajl(lua_State*);
+#if defined(INCLUDE_BUNDLED_LUA_MODULES)
+int luaopen_brimworks_zip(lua_State*);
+int luaopen_lfs(lua_State*);
+int luaopen_lpeg(lua_State*);
+int luaopen_luasql_sqlite3(lua_State*);
+int luaopen_rex_pcre2(lua_State*);
+int luaopen_utf8(lua_State*);
+#endif
 }
 
 namespace {
@@ -262,7 +280,8 @@ enum class LuaGlobalFileLoad { Loaded, Failed, LeftToDofile };
 // Kept apart from lua_call() and lua_error(), which longjmp past C++ destructors.
 LuaGlobalFileLoad loadLuaGlobalFile(lua_State* L, LuaBytecodeCache* cache, const char* path, const char* cacheKey)
 {
-    QFile file(QString::fromUtf8(path));
+    // LuaGlobal.lua gives the path with native separators, which Qt does not know a resource by
+    QFile file(QDir::fromNativeSeparators(QString::fromUtf8(path)));
     if (!cache || !file.open(QIODevice::ReadOnly)) {
         return LuaGlobalFileLoad::LeftToDofile;
     }
@@ -298,6 +317,367 @@ int dofileThroughBytecodeCache(lua_State* L)
     lua_call(L, argumentCount, LUA_MULTRET);
     return lua_gettop(L) - base;
 }
+
+// Where USE_BUILTIN_MUDLET_LUA puts a copy of mudlet-lua and its translations
+const QString csmBuiltinLuaPath = qsl(":/builtin/mudlet-lua/lua");
+
+QString builtinLuaFile(const QString& name)
+{
+    return qsl("%1/%2").arg(csmBuiltinLuaPath, name);
+}
+
+QStringList builtinLuaFiles()
+{
+    QStringList files;
+    QDirIterator it(csmBuiltinLuaPath, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        files << it.next().mid(csmBuiltinLuaPath.size() + 1);
+    }
+    files.sort();
+    return files;
+}
+
+// Of every file's name and content, so that another version's copy is never taken for this one
+QByteArray builtinLuaHash(const QStringList& files)
+{
+    QCryptographicHash hash(QCryptographicHash::Sha1);
+    for (const QString& name : files) {
+        QFile file(builtinLuaFile(name));
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning().noquote() << qsl("TLuaInterpreter: could not unpack the built-in Lua files, as %1 cannot be read: %2").arg(file.fileName(), file.errorString());
+            return {};
+        }
+        const QByteArray content = file.readAll();
+        hash.addData(name.toUtf8() + '\0' + QByteArray::number(content.size()) + '\0');
+        hash.addData(content);
+    }
+    return hash.result().toHex();
+}
+
+// By size as well as by name, as a copy cut short by a power loss still has every file
+bool holdsBuiltinLuaFiles(const QString& folder, const QStringList& files)
+{
+    for (const QString& name : files) {
+        const QFileInfo copy(qsl("%1/%2").arg(folder, name));
+        if (!copy.isFile() || copy.size() != QFileInfo(builtinLuaFile(name)).size()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool unpackBuiltinLuaFiles(const QString& folder, const QStringList& files)
+{
+    for (const QString& name : files) {
+        const QString pathFileName = qsl("%1/%2").arg(folder, name);
+        QDir().mkpath(QFileInfo(pathFileName).absolutePath());
+        QFile source(builtinLuaFile(name));
+        if (!source.open(QIODevice::ReadOnly)) {
+            qWarning().noquote() << qsl("TLuaInterpreter: could not unpack the built-in Lua files, as %1 cannot be read: %2").arg(source.fileName(), source.errorString());
+            return false;
+        }
+        const QByteArray content = source.readAll();
+        // Not QFile: commit() has the file on the disk before the folder is renamed, or a power cut soon
+        // after could leave a file of the right size and none of its content, which is never unpacked again
+        QSaveFile copy(pathFileName);
+        // A disk that fills up part way through a write gives no error, only a count that falls short
+        if (!copy.open(QIODevice::WriteOnly) || copy.write(content) != content.size()) {
+            copy.cancelWriting();
+        }
+        if (!copy.commit()) {
+            qWarning().noquote() << qsl("TLuaInterpreter: could not unpack the built-in Lua files, as %1 cannot be written in full: %2").arg(pathFileName, copy.errorString());
+            return false;
+        }
+    }
+    return true;
+}
+
+// In a copy's folder, with the time a Mudlet last marked the copy as in use
+const QString csmBuiltinLuaLastUse = qsl("last-use");
+// Longer than a copy takes to unpack, as the Mudlet waited for may be unpacking this one
+constexpr std::chrono::seconds csmBuiltinLuaLockWait{5};
+
+void markBuiltinLuaCopyUsed(const QString& folder)
+{
+    QFile lastUse(qsl("%1/%2").arg(folder, csmBuiltinLuaLastUse));
+    if (lastUse.open(QIODevice::WriteOnly)) {
+        lastUse.setFileTime(QDateTime::currentDateTime(), QFileDevice::FileModificationTime);
+    }
+}
+
+// Well within the hour after which another version's Mudlet may remove a copy
+constexpr std::chrono::minutes csmBuiltinLuaInUseRefresh{20};
+
+// Marked again while this Mudlet runs, as loadTranslations() and scripts that use luaGlobalPath read the copy
+// long after the profile that unpacked it has loaded
+void markBuiltinLuaCopyInUse(const QString& folder)
+{
+    static QString copyInUse;
+    static QPointer<QTimer> refresh;
+    copyInUse = folder;
+    markBuiltinLuaCopyUsed(copyInUse);
+    if (refresh || !QCoreApplication::instance()) {
+        return;
+    }
+    refresh = new QTimer(QCoreApplication::instance());
+    refresh->setObjectName(qsl("builtinLuaInUseRefresh"));
+    QObject::connect(refresh, &QTimer::timeout, refresh, [] {
+        markBuiltinLuaCopyUsed(copyInUse);
+    });
+    refresh->start(csmBuiltinLuaInUseRefresh);
+}
+
+// Other versions' copies, and what a Mudlet that was stopped while unpacking left, which nothing else removes.
+// Only those an hour out of use, as another Mudlet may be loading one or still unpacking it.
+void removeOtherBuiltinLuaCopies(const QString& cacheLocation, const QString& folderName)
+{
+    static const QRegularExpression otherCopy(qsl("^(mudlet-lua-[0-9a-f]{40}|(unpacking|damaged)-mudlet-lua-.{6})$"));
+    const QDateTime anHourAgo = QDateTime::currentDateTime().addSecs(-3600);
+    const QFileInfoList entries = QDir(cacheLocation).entryInfoList({qsl("*mudlet-lua-*")}, QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo& entry : entries) {
+        if (entry.fileName() == folderName || !otherCopy.match(entry.fileName()).hasMatch()) {
+            continue;
+        }
+        const QFileInfo lastUse(qsl("%1/%2").arg(entry.absoluteFilePath(), csmBuiltinLuaLastUse));
+        if ((lastUse.exists() ? lastUse : entry).lastModified() < anHourAgo) {
+            QDir(entry.absoluteFilePath()).removeRecursively();
+        }
+    }
+}
+
+// Lua's io and dofile() cannot read a Qt resource, and loadTranslations() and scripts that use luaGlobalPath
+// read with those, so the built-in copy is loaded from a folder it is unpacked to. Returns that folder's
+// LuaGlobal.lua, or an empty string where it could not be made.
+QString unpackedBuiltinLuaGlobal()
+{
+    const QString cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    const QStringList files = builtinLuaFiles();
+    const QByteArray hash = builtinLuaHash(files);
+    if (files.isEmpty() || hash.isEmpty()) {
+        return {};
+    }
+    if (cacheLocation.isEmpty()) {
+        qWarning() << "TLuaInterpreter: could not unpack the built-in Lua files, as there is no cache folder";
+        return {};
+    }
+    const QString folderName = qsl("mudlet-lua-%1").arg(QLatin1String(hash));
+    const QString folder = qsl("%1/%2").arg(cacheLocation, folderName);
+    const QString luaGlobal = qsl("%1/LuaGlobal.lua").arg(folder);
+    // One Mudlet at a time from here to the return, or another version's, started at the same moment, could
+    // remove this copy between its being found whole and being marked as in use. Without the lock, as when
+    // a Mudlet that holds it has hung, this one carries on all the same.
+    QDir().mkpath(cacheLocation);
+    QLockFile lock(qsl("%1/mudlet-lua.lock").arg(cacheLocation));
+    if (!lock.tryLock(csmBuiltinLuaLockWait) && lock.error() == QLockFile::LockFailedError) {
+        qWarning().noquote() << qsl("TLuaInterpreter: another Mudlet still holds %1, so the built-in Lua files are unpacked without it").arg(lock.fileName());
+    }
+    if (holdsBuiltinLuaFiles(folder, files)) {
+        markBuiltinLuaCopyInUse(folder);
+        removeOtherBuiltinLuaCopies(cacheLocation, folderName);
+        return luaGlobal;
+    }
+
+    // Unpacked beside the folder and then renamed to it, so that a copy another Mudlet is loading, or one cut
+    // short, is never taken for a whole one
+    QTemporaryDir unpacking(qsl("%1/unpacking-mudlet-lua-XXXXXX").arg(cacheLocation));
+    if (!unpacking.isValid()) {
+        qWarning().noquote() << qsl("TLuaInterpreter: could not unpack the built-in Lua files to %1: %2").arg(cacheLocation, unpacking.errorString());
+        return {};
+    }
+    if (!unpackBuiltinLuaFiles(unpacking.path(), files)) {
+        return {};
+    }
+    // By this Mudlet, or by another that got there first
+    const auto copyInPlace = [&] {
+        return QDir().rename(unpacking.path(), folder) || holdsBuiltinLuaFiles(folder, files);
+    };
+    if (!copyInPlace()) {
+        // A damaged copy is in the way. Moved aside, not removed where it is, as another Mudlet may put a
+        // whole copy there meanwhile and be loading it.
+        QTemporaryDir damaged(qsl("%1/damaged-mudlet-lua-XXXXXX").arg(cacheLocation));
+        const bool movedAside = damaged.isValid() && QDir().rename(folder, qsl("%1/copy").arg(damaged.path()));
+        if (!movedAside || !copyInPlace()) {
+            qWarning().noquote() << qsl("TLuaInterpreter: could not unpack the built-in Lua files, as %1 cannot be renamed to %2").arg(unpacking.path(), folder);
+            return {};
+        }
+    }
+    markBuiltinLuaCopyInUse(folder);
+    removeOtherBuiltinLuaCopies(cacheLocation, folderName);
+    return luaGlobal;
+}
+
+using PreloadedModules = QList<std::pair<QByteArray, lua_CFunction>>;
+
+PreloadedModules& preloadedModules()
+{
+    static PreloadedModules modules{
+#if defined(INCLUDE_BUNDLED_LUA_MODULES)
+            // Under the names initLuaGlobals() requires first
+            {"lfs", luaopen_lfs},
+            {"brimworks.zip", luaopen_brimworks_zip},
+            {"rex_pcre2", luaopen_rex_pcre2},
+            {"luasql.sqlite3", luaopen_luasql_sqlite3},
+            {"lua-utf8", luaopen_utf8},
+            {"yajl", luaopen_yajl},
+            {"lpeg", luaopen_lpeg},
+#endif
+    };
+    return modules;
+}
+
+constexpr int scmJsonMaxDepth = 64;
+
+// Repeats yajl.to_value's table operations in its order, unpresized, or pairs() would walk the result
+// differently. What yajl rejects or this gives up on, nesting past scmJsonMaxDepth included, is left to it.
+struct JsonToLua
+{
+    lua_State* L = nullptr;
+    const QByteArray* json = nullptr;
+    yajl_handle handle = nullptr;
+    bool decoded = false;
+    int depth = 0;
+    // 0 for an object, otherwise the index the array's next element takes
+    int nextIndex[scmJsonMaxDepth] = {};
+};
+
+// Lua errors longjmp out of these callbacks, through yajl, so nothing alive
+// across a Lua API call may have a destructor
+int jsonStoreValue(JsonToLua* state)
+{
+    if (state->depth) {
+        int& next = state->nextIndex[state->depth - 1];
+        if (next) {
+            lua_rawseti(state->L, -2, next++);
+        } else {
+            lua_rawset(state->L, -3);
+        }
+    }
+    return 1;
+}
+
+// strtod as yajl.to_value uses, so the values match
+double jsonNumberValue(lua_State* L, const char* text, const size_t length)
+{
+    char buffer[64];
+    char* copy = length < sizeof(buffer) ? buffer : static_cast<char*>(lua_newuserdata(L, length + 1));
+    memcpy(copy, text, length);
+    copy[length] = '\0';
+    const double value = strtod(copy, nullptr);
+    if (copy != buffer) {
+        lua_pop(L, 1);
+    }
+    return value;
+}
+
+int jsonNull(void* ctx)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_getfield(state->L, LUA_REGISTRYINDEX, "yajl.null");
+    return jsonStoreValue(state);
+}
+
+int jsonBoolean(void* ctx, int value)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushboolean(state->L, value);
+    return jsonStoreValue(state);
+}
+
+int jsonNumber(void* ctx, const char* text, size_t length)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushnumber(state->L, jsonNumberValue(state->L, text, length));
+    return jsonStoreValue(state);
+}
+
+int jsonString(void* ctx, const unsigned char* text, size_t length)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushlstring(state->L, reinterpret_cast<const char*>(text), length);
+    return jsonStoreValue(state);
+}
+
+int jsonMapKey(void* ctx, const unsigned char* text, size_t length)
+{
+    lua_pushlstring(static_cast<JsonToLua*>(ctx)->L, reinterpret_cast<const char*>(text), length);
+    return 1;
+}
+
+int jsonStartContainer(JsonToLua* state, const int firstIndex)
+{
+    // a value, its key and the table to put them in
+    if (state->depth == scmJsonMaxDepth || !lua_checkstack(state->L, 3)) {
+        return 0;
+    }
+    lua_newtable(state->L);
+    state->nextIndex[state->depth++] = firstIndex;
+    return 1;
+}
+
+int jsonStartMap(void* ctx)
+{
+    return jsonStartContainer(static_cast<JsonToLua*>(ctx), 0);
+}
+
+int jsonStartArray(void* ctx)
+{
+    return jsonStartContainer(static_cast<JsonToLua*>(ctx), 1);
+}
+
+int jsonEndContainer(void* ctx)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    --state->depth;
+    return jsonStoreValue(state);
+}
+
+const yajl_callbacks scmJsonToLuaCallbacks = {jsonNull, jsonBoolean, nullptr, nullptr, jsonNumber, jsonString, jsonStartMap, jsonMapKey, jsonEndContainer, jsonStartArray, jsonEndContainer};
+
+int decodeJson(lua_State* L)
+{
+    auto* state = static_cast<JsonToLua*>(lua_touserdata(L, 1));
+    lua_pop(L, 1);
+    state->L = L;
+    yajl_status status = yajl_parse(state->handle, reinterpret_cast<const unsigned char*>(state->json->constData()), static_cast<size_t>(state->json->size()));
+    if (status == yajl_status_ok) {
+        status = yajl_complete_parse(state->handle);
+    }
+    state->decoded = (status == yajl_status_ok);
+    return state->decoded ? 1 : 0;
+}
+
+// Pushes what yajl.to_value would return for json, or the message of a Lua error raised meanwhile
+// with error set; returns false with nothing pushed when yajl rejected or this gave up on the parse
+bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
+{
+    JsonToLua state;
+    state.json = &json;
+    // pushed first, as an error raised there (out of memory, or a finaliser's) would leak the handle
+    lua_pushcfunction(L, decodeJson);
+    lua_pushlightuserdata(L, &state);
+    state.handle = yajl_alloc(&scmJsonToLuaCallbacks, nullptr, &state);
+    if (!state.handle) {
+        lua_pop(L, 2);
+        return false;
+    }
+    error = lua_pcall(L, 1, 1, 0);
+    yajl_free(state.handle);
+    if (!error && !state.decoded) {
+        lua_pop(L, 1);
+        return false;
+    }
+    return true;
+}
+
+#if defined(Q_OS_WASM)
+// Emscripten's clock() is wall time in a 32-bit clock_t, which wraps 2147 seconds after its first call; a browser has
+// no CPU time either, so this is the seconds since the page loaded
+int browserClock(lua_State* L)
+{
+    lua_pushnumber(L, emscripten_get_now() / 1000.0);
+    return 1;
+}
+#endif
 
 } // namespace
 
@@ -446,14 +826,10 @@ bool TLuaInterpreter::checkIntArg(lua_State* L, const char* functionName, const 
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         return false;
     }
-    // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
-    // signed 64 bit value, which is usually larger than an "int" a.k.a. an
-    // int32_t:
-    // We have to error out here otherwise we have to restructure every usage
-    // to handle such an over/under-flow - at least with a change to a
-    // std::optional<int>...
-    auto const result = lua_tointeger(L, pos);
-    if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
+    // Not lua_tointeger(): lua_Integer is ptrdiff_t, which on 32-bit targets such as wasm32 has
+    // already mangled an out-of-range value; the negated test also refuses NaN
+    const lua_Number number = lua_tonumber(L, pos);
+    if (!(number > std::numeric_limits<int>::min() - 1.0 && number < std::numeric_limits<int>::max() + 1.0)) {
         lua_pushfstring(L,
                         "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
                         functionName,
@@ -476,6 +852,23 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
         Q_UNREACHABLE();
     }
     return static_cast<int>(lua_tointeger(L, pos));
+}
+
+// A widget keeps its geometry as a QRect, which overflows int on reading back the size of a widget
+// placed or sized near INT_MAX or INT_MIN. Bounding every x, y, width and height to 2^29 keeps
+// QRect's sums, and a few parents' offsets on top, in range while leaving any size a script could
+// mean, including ones past QWIDGETSIZE_MAX, as given
+int TLuaInterpreter::boundedGeometry(const double value)
+{
+    constexpr double maximumGeometry = 1 << 29;
+    return static_cast<int>(qBound(-maximumGeometry, value, maximumGeometry));
+}
+
+// No documentation available in wiki - internal function
+// getVerifiedInt() for a widget's x, y, width or height, bounded as boundedGeometry() explains
+int TLuaInterpreter::getVerifiedGeometry(lua_State* L, const char* functionName, const int pos, const char* publicName)
+{
+    return boundedGeometry(getVerifiedInt(L, functionName, pos, publicName));
 }
 
 // No documentation available in wiki - internal function
@@ -662,6 +1055,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         // earlier argument positions keep working
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendHttpRequestId(event, reply);
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -670,6 +1064,24 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
     }
 
     handleHttpOK(reply);
+}
+
+int TLuaInterpreter::pushHttpRequestResult(lua_State* L, QNetworkReply* reply)
+{
+    // On the reply itself: it is the one object that survives a redirect, which can also change the operation
+    const qint64 id = ++mLastHttpRequestId;
+    reply->setProperty(csmHttpRequestIdProperty, id);
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    lua_pushnumber(L, static_cast<lua_Number>(id));
+    return 3;
+}
+
+void TLuaInterpreter::appendHttpRequestId(TEvent& event, const QNetworkReply* reply)
+{
+    event.mArgumentList << QString::number(reply->property(csmHttpRequestIdProperty).toLongLong());
+    event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
 }
 
 // No documentation available in wiki - internal function
@@ -756,8 +1168,10 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             break;
         }
 
-        qint64 const bytesWritten = localFile.write(reply->readAll());
-        if (bytesWritten == -1) {
+        const QByteArray downloaded = reply->readAll();
+        qint64 const bytesWritten = localFile.write(downloaded);
+        // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+        if (bytesWritten != downloaded.size()) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't save to the destination file");
@@ -795,7 +1209,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
     event.mArgumentList << QString::number(createHttpResponseTable(reply));
     event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
-
+    appendHttpRequestId(event, reply);
 
     reply->deleteLater();
     pHost->raiseEvent(event);
@@ -1110,9 +1524,10 @@ int TLuaInterpreter::loadReplayFile(lua_State* L, const char* functionName)
 QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
 {
     // Increment the version - and document below - any changes to the table:
-    const int tableVersion = 1;
+    const int tableVersion = 2;
     // Changes:
     // 1 - Initial version.
+    // 2 - <DC2> corrected to 0x12.
 
     /*
      * Entry grouping
@@ -1172,7 +1587,7 @@ QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
                                                           {QByteArray("<DC1>"), '\x11'},
 
                                                           {QByteArray("<12>"), '\x12'}, // Logout
-                                                          {QByteArray("<DC2"), '\x12'},
+                                                          {QByteArray("<DC2>"), '\x12'},
 
                                                           {QByteArray("<13>"), '\x13'}, // Byte Macro
                                                           {QByteArray("<DC3>"), '\x13'},
@@ -1739,10 +2154,10 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 3, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 4, "label y-coordinate");
-    const int width = getVerifiedInt(L, "createLabel", 5, "label width");
-    const int height = getVerifiedInt(L, "createLabel", 6, "label height");
+    const int x = getVerifiedGeometry(L, "createLabel", 3, "label x-coordinate");
+    const int y = getVerifiedGeometry(L, "createLabel", 4, "label y-coordinate");
+    const int width = getVerifiedGeometry(L, "createLabel", 5, "label width");
+    const int height = getVerifiedGeometry(L, "createLabel", 6, "label height");
 
     bool fillBackground = false;
     if ((!lua_isnumber(L, 7)) && (!lua_isboolean(L, 7))) {
@@ -1784,10 +2199,10 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName,
 int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 2, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 3, "label y-coordinate");
-    const int width = getVerifiedInt(L, "createLabel", 4, "label width");
-    const int height = getVerifiedInt(L, "createLabel", 5, "label height");
+    const int x = getVerifiedGeometry(L, "createLabel", 2, "label x-coordinate");
+    const int y = getVerifiedGeometry(L, "createLabel", 3, "label y-coordinate");
+    const int width = getVerifiedGeometry(L, "createLabel", 4, "label width");
+    const int height = getVerifiedGeometry(L, "createLabel", 5, "label height");
 
     bool fillBackground = false;
     if ((!lua_isnumber(L, 6)) && (!lua_isboolean(L, 6))) {
@@ -2047,7 +2462,13 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
     auto argType = lua_type(L, index);
     TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
-        const int id = qRound(lua_tonumber(L, index));
+        const lua_Number number = lua_tonumber(L, index);
+        const double rounded = std::round(number);
+        // Converting NaN or a value outside int's range is undefined, and no button has such an ID
+        if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+            return {warnArgumentValue(L, func, qsl("no button item with ID %1 found").arg(number, 0, 'g', QLocale::FloatingPointShortest).toUtf8().constData()), pItem};
+        }
+        const int id = static_cast<int>(rounded);
         if (id < 0) {
             return {warnArgumentValue(L, func, qsl("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData()), pItem};
         }
@@ -3090,7 +3511,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
     if (!host.mInstalledPackages.contains(packageName)) {
         return warnArgumentValue(L, __func__, qsl("package '%1' is not installed").arg(packageName));
     }
-    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package, true)) {
         // An installed package is only refused while a profile save is running
         return warnArgumentValue(L, __func__, qsl("a profile save is in progress, try again once it has finished"));
     }
@@ -3121,7 +3542,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript)) {
+    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript, true)) {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -3318,7 +3739,9 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     if (info == qsl("mpackage") && value != packageName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
     }
-    host.mPackageInfo[packageName][info] = value;
+    if (const QString error = host.setPackageInfo(packageName, info, value); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3412,7 +3835,8 @@ int TLuaInterpreter::sendRaw(lua_State* L)
         return lua_error(L);
     }
     bool wantPrint = true;
-    if (lua_gettop(L) > 1) {
+    // send("command", nil) must behave like send("command"), so a wrapper can pass its own optional argument on
+    if (!lua_isnoneornil(L, 2)) {
         wantPrint = getVerifiedBool(L, "send", 2, "showOnScreen", true);
     }
     const QString text{lua_tostring(L, 1)};
@@ -3431,7 +3855,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
         return lua_error(L);
     }
     bool parseCodes = false;
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
     size_t length = 0;
@@ -3538,6 +3962,10 @@ int TLuaInterpreter::getOS(lua_State* L)
 #elif defined(Q_PROCESSOR_POWER_32)
         lua_pushstring(L, "ppc (32-bit)");
         return 1;
+#elif defined(Q_PROCESSOR_ARM_64)
+        // Before the _V7 case: Qt also defines Q_PROCESSOR_ARM_V7, _V6 and _V5 for 64-bit ARM
+        lua_pushstring(L, "arm (64-bit)");
+        return 1;
 #elif defined(Q_PROCESSOR_ARM_V7)
         lua_pushstring(L, "arm7");
         return 1;
@@ -3546,6 +3974,9 @@ int TLuaInterpreter::getOS(lua_State* L)
         return 1;
 #elif defined(Q_PROCESSOR_ARM_V5)
         lua_pushstring(L, "arm5");
+        return 1;
+#elif defined(Q_PROCESSOR_WASM)
+        lua_pushstring(L, QT_POINTER_SIZE == 8 ? "wasm (64-bit)" : "wasm (32-bit)");
         return 1;
 #else
         return 0;
@@ -3565,6 +3996,11 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 2 + pushProcessor();
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2 + pushProcessor();
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines
+    lua_pushstring(L, "android");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     return 2 + pushProcessor();
 #elif defined(Q_OS_LINUX)
@@ -4219,11 +4655,22 @@ void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, c
     }
 }
 
+static void pushGlobalTable(lua_State* L, const char* name)
+{
+    lua_getglobal(L, name);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, name);
+    }
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "atcp");
     lua_pushstring(L, var.toUtf8().constData());
     lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);
@@ -4458,8 +4905,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
-    const int error = lua_pcall(L, 1, 1, 0);
+    int error = 0;
+    // a script that put its own decoder in json_to_value has that called
+    if (mStockJsonToValue && lua_tocfunction(L, -1) == mStockJsonToValue && pushJsonValue(L, utf8Data, error)) {
+        lua_remove(L, -2);
+    } else {
+        lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
+        error = lua_pcall(L, 1, 1, 0);
+    }
     if (!error) {
         // Top of stack should now contain the lua representation of json.
         lua_rawset(L, -3);
@@ -4599,12 +5052,21 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
             QStringList payloadList = packageList[i].split(MSSP_VAL);
 
-            if (payloadList.size() != 2) {
+            if (payloadList.size() < 2) {
                 continue;
             }
 
-            const QString msspVAR = payloadList[0];
-            const QString msspVAL = payloadList[1];
+            const QString msspVAR = payloadList.first();
+            // A variable can carry several values, with the default one last
+            QString msspVAL = payloadList.last();
+            // setMSSPVariables() has already removed every CR. A line break at either end is
+            // not part of the value, and would spoil the HOSTNAME match and the TLS flags below
+            while (msspVAL.startsWith(QChar::LineFeed)) {
+                msspVAL.remove(0, 1);
+            }
+            while (msspVAL.endsWith(QChar::LineFeed)) {
+                msspVAL.chop(1);
+            }
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
@@ -4881,7 +5343,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "channel102"); //defined in LuaGlobal.lua
+    pushGlobalTable(L, "channel102");
     lua_pushnumber(L, var);
     lua_pushnumber(L, arg);
     lua_rawset(L, -3);
@@ -6685,9 +7147,12 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         return lua_error(L);
     }
 
-    QString dataToPost;
+    // Sent byte for byte: the data may hold NULs, or bytes that are not UTF-8
+    QByteArray dataToPost;
     if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
+        size_t dataLength = 0;
+        const char* data = lua_tolstring(L, pos + 1, &dataLength);
+        dataToPost = QByteArray(data, static_cast<qsizetype>(dataLength));
     }
     const QString urlString{lua_tostring(L, pos + 2)};
     QString fileLocation;
@@ -6720,25 +7185,24 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
 
+    const QByteArray& payload = fileToUpload.isEmpty() ? dataToPost : fileToUpload;
     QNetworkReply* reply;
     switch (operation) {
     case QNetworkAccessManager::PostOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, payload);
         break;
     case QNetworkAccessManager::PutOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, payload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
-    };
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, payload);
+    }
 
     if (TDebug::wants(TDebug::Category::Network)) {
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;
     }
 
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return host.mLuaInterpreter.pushHttpRequestResult(L, reply);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Networking_Functions#unzipAsync
@@ -6768,12 +7232,13 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
     // Extraction can outlast the profile, or this lua_State across a resetProfile(), so the
     // watcher goes with the Host and reaches it directly rather than through L
     Host* pHost = &getHostFromLua(L);
-    auto future = QtConcurrent::run(utils::unzip, zipLocation, extractLocation, temporaryDir.path());
-    auto watcher = new QFutureWatcher<bool>(pHost);
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [pHost, watcher, future, zipLocation, extractLocation]() {
+    const TBackgroundResult result = TBackgroundTask::run([zipLocation, extractLocation, temporaryPath = temporaryDir.path()]() {
+        return utils::unzip(zipLocation, extractLocation, temporaryPath);
+    });
+    result.whenFinished(pHost, QString(), [pHost, result, zipLocation, extractLocation]() {
         TEvent event{};
 
-        if (future.result()) {
+        if (result.succeeded()) {
             event.mArgumentList.append(qsl("sysUnzipDone"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         } else {
@@ -6786,9 +7251,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         pHost->raiseEvent(event);
-        watcher->deleteLater();
     });
-    watcher->setFuture(future);
 
     lua_pushboolean(L, true);
     return 1;
@@ -7030,6 +7493,19 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
     return true;
 }
 
+void TLuaInterpreter::preloadModule(const QByteArray& name, lua_CFunction open)
+{
+    if (name.isEmpty() || !open) {
+        qWarning().noquote() << qsl("TLuaInterpreter::preloadModule() refused the Lua module \"%1\", as it has no name or no function to open it").arg(QString::fromUtf8(name));
+        return;
+    }
+    auto& modules = preloadedModules();
+    modules.removeIf([&name](const auto& module) {
+        return module.first == name;
+    });
+    modules.append({name, open});
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::insertNativeSeparatorsFunction(lua_State* L)
 {
@@ -7086,6 +7562,20 @@ void TLuaInterpreter::initLuaGlobals()
     storeHostInLua(pGlobalLua, mpHost);
 
     luaL_openlibs(pGlobalLua);
+#if defined(Q_OS_WASM)
+    lua_getglobal(pGlobalLua, "os");
+    lua_pushcfunction(pGlobalLua, browserClock);
+    lua_setfield(pGlobalLua, -2, "clock");
+    lua_pop(pGlobalLua, 1);
+#endif
+
+    lua_getglobal(pGlobalLua, "package");
+    lua_getfield(pGlobalLua, -1, "preload");
+    for (const auto& [name, open] : std::as_const(preloadedModules())) {
+        lua_pushcfunction(pGlobalLua, open);
+        lua_setfield(pGlobalLua, -2, name.constData());
+    }
+    lua_pop(pGlobalLua, 2);
 
     lua_pushstring(pGlobalLua, "SESSION");
     lua_pushnumber(pGlobalLua, mHostID);
@@ -7299,6 +7789,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "updateSounds", TLuaInterpreter::updateSounds);
+    lua_register(pGlobalLua, "updateMusic", TLuaInterpreter::updateMusic);
     lua_register(pGlobalLua, "setMediaListener", TLuaInterpreter::setMediaListener);
     lua_register(pGlobalLua, "getMediaListener", TLuaInterpreter::getMediaListener);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
@@ -7418,11 +7909,15 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetRoomArea", TLuaInterpreter::resetRoomArea);
     lua_register(pGlobalLua, "setAreaName", TLuaInterpreter::setAreaName);
     lua_register(pGlobalLua, "getAreaGraph", TLuaInterpreter::getAreaGraph);
+    lua_register(pGlobalLua, "getAreaExploration", TLuaInterpreter::getAreaExploration);
+    lua_register(pGlobalLua, "getAreaConnections", TLuaInterpreter::getAreaConnections);
     lua_register(pGlobalLua, "setAreaGraphPosition", TLuaInterpreter::setAreaGraphPosition);
     lua_register(pGlobalLua, "resetAreaGraphLayout", TLuaInterpreter::resetAreaGraphLayout);
     lua_register(pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked);
     lua_register(pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor);
+    lua_register(pGlobalLua, "unsetCustomEnvColor", TLuaInterpreter::unsetCustomEnvColor);
     lua_register(pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable);
+    lua_register(pGlobalLua, "getMapEnvColor", TLuaInterpreter::getMapEnvColor);
     lua_register(pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv);
     lua_register(pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName);
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
@@ -7452,6 +7947,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "removeCmdLineBlacklist", TLuaInterpreter::removeCmdLineBlacklist);
     lua_register(pGlobalLua, "clearCmdLineBlacklist", TLuaInterpreter::clearCmdLineBlacklist);
     lua_register(pGlobalLua, "openUrl", TLuaInterpreter::openUrl);
+    lua_register(pGlobalLua, "connectFromGameLink", TLuaInterpreter::connectFromGameLink);
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
     lua_register(pGlobalLua, "getRoomIDbyHash", TLuaInterpreter::getRoomIDbyHash);
@@ -7845,7 +8341,17 @@ void TLuaInterpreter::initLuaGlobals()
     additionalCPaths << qsl("%1/?.so").arg(profilePath);
 #endif
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_ANDROID)
+    // appPath holds only the APK's lib*.so files, flat. Unless they are extracted it is <apk>!/lib/<abi>,
+    // where Lua's fopen() check of each candidate can never find a module.
+    if (appPath.contains(QLatin1String("!/"))) {
+        qInfo().noquote().nospace()
+                << "TLuaInterpreter::initLuaGlobals() INFO - package.cpath has no entry for " << appPath
+                << ", as require() cannot load a module from inside the APK: extract the app's libraries (QT_ANDROID_LEGACY_PACKAGING) or give Lua C modules to THeadlessSession::preloadLuaModule()";
+    } else {
+        additionalCPaths << qsl("%1/lib?.so").arg(appPath);
+    }
+#elif defined(Q_OS_LINUX)
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
@@ -7935,7 +8441,16 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    mStockJsonToValue = nullptr;
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"))) {
+        lua_getglobal(pGlobalLua, "yajl");
+        if (lua_istable(pGlobalLua, -1)) {
+            lua_getfield(pGlobalLua, -1, "to_value");
+            mStockJsonToValue = lua_tocfunction(pGlobalLua, -1);
+            lua_pop(pGlobalLua, 1);
+        }
+        lua_pop(pGlobalLua, 1);
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -8206,6 +8721,21 @@ void TLuaInterpreter::loadGlobal()
             mPossiblePaths << sourcePath;
         }
     }
+
+#if defined(INCLUDE_BUILTIN_MUDLET_LUA)
+    // A Qt resource in a static library only reaches the program if something in it names the resource
+    Q_INIT_RESOURCE(mudlet_lua);
+#endif
+    // This library's own copy first where it has one, as a copy on disk may be another version's
+    const QString builtinLuaGlobal = builtinLuaFile(qsl("LuaGlobal.lua"));
+    if (QFileInfo::exists(builtinLuaGlobal)) {
+        mPossiblePaths.prepend(builtinLuaGlobal);
+        const QString unpackedLuaGlobal = unpackedBuiltinLuaGlobal();
+        if (!unpackedLuaGlobal.isEmpty()) {
+            mPossiblePaths.prepend(unpackedLuaGlobal);
+        }
+    }
+
     QStringList failedMessages{};
     const QString cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     const QString bytecodeCachePathFileName = cacheLocation.isEmpty() ? QString() : qsl("%1/lua-bytecode.dat").arg(cacheLocation);
@@ -8544,23 +9074,24 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
 {
-    TKey* pT;
-    pT = new TKey("a", mpHost);
+    auto* pT = new TKey("a", mpHost);
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerKey();
-    if (!function.isEmpty()) {
-        pT->setScript(function);
-    }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    emit mpHost->signal_keyBoundByScript(pT->getID());
-    return id;
+    if (!function.isEmpty() && !pT->setScript(function)) {
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
+        delete pT;
+        return {-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
+    }
+    emit mpHost->signal_keyBoundByScript(id);
+    return {id, QString()};
 }
 
 // No documentation available in wiki - internal function
@@ -8879,6 +9410,18 @@ int TLuaInterpreter::duplicateLuaRegistryIndex(int index)
 {
     lua_rawgeti(pGlobalLua, LUA_REGISTRYINDEX, index);
     return luaL_ref(pGlobalLua, LUA_REGISTRYINDEX);
+}
+
+// No documentation available in wiki - internal function
+// The action of a game's link to a telnet:// or telnets:// address
+int TLuaInterpreter::connectFromGameLink(lua_State* L)
+{
+    const QString uri = getVerifiedString(L, __func__, 1, "address");
+    // Deferred: the question's nested event loop must not spin inside this Lua call
+    QTimer::singleShot(0, qApp, [uri] {
+        TAppFrontend::instance()->connectFromGameLink(uri);
+    });
+    return 0;
 }
 
 // No documentation available in wiki - internal function
@@ -9430,15 +9973,26 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     }
 }
 
-// Internal function - Creates a table for useful information from the http
-// response. It creates an empty table, calls upon other functions to
-// add things to it, and then returns a key to where it is in the lua registry.
+// Internal function - Creates a table of useful information from the http
+// response and returns a key to where it is in the lua registry.
 int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;
 
     // Push empty table onto stack
     lua_newtable(L);
+    // Absent, not 0, when no HTTP response arrived (e.g. the connection was refused)
+    const QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+    if (status.isValid()) {
+        lua_pushinteger(L, status.toInt());
+        lua_setfield(L, -2, "status");
+    }
+    // HTTP/2 has no reason phrase, yet Qt still reports an empty one
+    const QByteArray reason = reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString().toUtf8();
+    if (!reason.isEmpty()) {
+        lua_pushlstring(L, reason.constData(), reason.size());
+        lua_setfield(L, -2, "reason");
+    }
     // Add "headers" table to table
     createHttpHeadersTable(L, reply);
     // Add "cookies" table to table
@@ -9493,8 +10047,8 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     lua_newtable(L);
 
     // Parse cookies, add them as key-value pairs to the empty table
-    const Host& host = getHostFromLua(L);
-    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    // The reply's own manager: media downloads keep their cookies apart from the scripts' ones
+    QNetworkCookieJar* cookieJar = reply->manager()->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
     for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack
@@ -9549,6 +10103,9 @@ int TLuaInterpreter::setMapBackgroundColor(lua_State* L)
 
     auto& host = getHostFromLua(L);
     host.mBgColor_2 = QColor(r, g, b, a);
+    if (host.mpMap) {
+        host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
+    }
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -9604,7 +10161,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime)) {
+    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime) && !getHostFromLua(L).requestNotification(title, text, notificationExpirationTime)) {
         return warnArgumentValue(L, __func__, "the profile has no main window");
     }
     lua_pushboolean(L, true);
@@ -9752,6 +10309,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         if (key == qsl("mapStitchAreas")) {
             host.mMapperStitchAreas = getVerifiedBool(L, __func__, 2, "value");
             host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (key == qsl("mapDeletedRoomExitsAsStubs")) {
+            host.mMapperDeletedRoomExitsAsStubs = getVerifiedBool(L, __func__, 2, "value");
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
@@ -10279,7 +10840,10 @@ int TLuaInterpreter::announce(lua_State* L)
         return lua_error(L);
     }
 
-    TAppFrontend::instance()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
+    const QString text{lua_tostring(L, 1)};
+    const QString processing = (n > 1) ? QString{lua_tostring(L, 2)} : QString();
+    TAppFrontend::instance()->announce(text, processing, true);
+    emit getHostFromLua(L).signal_announcementRequested(text, processing);
     return 0;
 }
 
@@ -10390,6 +10954,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapStitchAreas"),
              [&]() {
                  lua_pushboolean(L, host.mMapperStitchAreas);
+             }},
+            {qsl("mapDeletedRoomExitsAsStubs"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapperDeletedRoomExitsAsStubs);
              }},
             {qsl("editorAutoComplete"),
              [&]() {

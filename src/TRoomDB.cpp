@@ -30,7 +30,10 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QVarLengthArray>
+
+#include <limits>
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
@@ -239,59 +242,69 @@ bool TRoomDB::__removeRoom(int id)
         // in "Container Class | Qt 5.x Core" for why an iterator into entranceMap
         // itself could not have tolerated that.
         const QList<int> enteringRoomIds = entranceMap.values(id);
+        // mapDeletedRoomExitsAsStubs: an exit that led here still leads somewhere, just not to this room
+        // Not for a whole area going, often to be built again or imported anew: stubs would only clutter the areas around
+        const bool exitsBecomeStubs = mpMap->mpHost && mpMap->mpHost->mMapperDeletedRoomExitsAsStubs && !mRemovingArea;
         for (const int enteringRoomId : enteringRoomIds) {
             if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
                 continue; // Bypass rooms we know are also to be deleted
             }
             TRoom* r = getRoom(enteringRoomId);
             if (r) {
+                // Made a stub before its extras go: removeExitExtras() keeps a door and a lock only on a stub
+                const auto dropExitExtras = [r, exitsBecomeStubs](const int direction) {
+                    if (exitsBecomeStubs) {
+                        r->setExitStub(direction, true);
+                    }
+                    r->removeExitExtras(direction);
+                };
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
-                    r->removeExitExtras(DIR_NORTH);
+                    dropExitExtras(DIR_NORTH);
                 }
                 if (r->getNortheast() == id) {
                     r->setNortheast(-1);
-                    r->removeExitExtras(DIR_NORTHEAST);
+                    dropExitExtras(DIR_NORTHEAST);
                 }
                 if (r->getNorthwest() == id) {
                     r->setNorthwest(-1);
-                    r->removeExitExtras(DIR_NORTHWEST);
+                    dropExitExtras(DIR_NORTHWEST);
                 }
                 if (r->getEast() == id) {
                     r->setEast(-1);
-                    r->removeExitExtras(DIR_EAST);
+                    dropExitExtras(DIR_EAST);
                 }
                 if (r->getWest() == id) {
                     r->setWest(-1);
-                    r->removeExitExtras(DIR_WEST);
+                    dropExitExtras(DIR_WEST);
                 }
                 if (r->getSouth() == id) {
                     r->setSouth(-1);
-                    r->removeExitExtras(DIR_SOUTH);
+                    dropExitExtras(DIR_SOUTH);
                 }
                 if (r->getSoutheast() == id) {
                     r->setSoutheast(-1);
-                    r->removeExitExtras(DIR_SOUTHEAST);
+                    dropExitExtras(DIR_SOUTHEAST);
                 }
                 if (r->getSouthwest() == id) {
                     r->setSouthwest(-1);
-                    r->removeExitExtras(DIR_SOUTHWEST);
+                    dropExitExtras(DIR_SOUTHWEST);
                 }
                 if (r->getUp() == id) {
                     r->setUp(-1);
-                    r->removeExitExtras(DIR_UP);
+                    dropExitExtras(DIR_UP);
                 }
                 if (r->getDown() == id) {
                     r->setDown(-1);
-                    r->removeExitExtras(DIR_DOWN);
+                    dropExitExtras(DIR_DOWN);
                 }
                 if (r->getIn() == id) {
                     r->setIn(-1);
-                    r->removeExitExtras(DIR_IN);
+                    dropExitExtras(DIR_IN);
                 }
                 if (r->getOut() == id) {
                     r->setOut(-1);
-                    r->removeExitExtras(DIR_OUT);
+                    dropExitExtras(DIR_OUT);
                 }
                 r->removeAllSpecialExitsToRoom(id);
                 // The plain setters above do not touch the area exit records,
@@ -410,6 +423,7 @@ bool TRoomDB::removeArea(int id)
             // During map deletion rooms will already
             // have been cleared so this would not
             // be wanted to be done in that case.
+            const QScopedValueRollback removingArea(mRemovingArea, true);
             removeRoom(pA->rooms);
         }
         // During map deletion areaNamesMap will
@@ -595,6 +609,9 @@ int TRoomDB::lowestFreeRoomId(int minimumId)
     const bool searchFromHint = minimumId <= mLowestFreeRoomIdHint;
     int id = searchFromHint ? mLowestFreeRoomIdHint : minimumId;
     while (rooms.contains(id)) {
+        if (id == std::numeric_limits<int>::max()) {
+            return 0;
+        }
         ++id;
     }
     if (searchFromHint) {
@@ -881,9 +898,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRemappedArea.next();
             const int faultyAreaId = itRemappedArea.key();
             int replacementAreaId = 0;
-            do {
-                ; // No-op, increment done in test
-            } while (areas.contains(++replacementAreaId));
+            while (areas.contains(++replacementAreaId)) {
+                // No-op, increment done in test
+            }
             // Insert replacement value into hash
             itRemappedArea.setValue(replacementAreaId);
             if (TMap::smShowMapAuditErrors) {
@@ -967,9 +984,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         while (itRenumberedRoomId.hasNext()) {
             itRenumberedRoomId.next();
             int newRoomId = 0;
-            do {
-                ; // No-op - needed increment is done in test condition!
-            } while (rooms.contains(++newRoomId) || newRoomIds.contains(newRoomId));
+            while (rooms.contains(++newRoomId) || newRoomIds.contains(newRoomId)) {
+                // No-op - needed increment is done in test condition!
+            }
 
             itRenumberedRoomId.setValue(newRoomId); // Update the QHash
             newRoomIds.insert(newRoomId);
@@ -1152,18 +1169,22 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 rooms missing from those it\n"
-                                               "should be recording as possessing, they were:\n%3\nthey have been added.")
+                    //: %1 is the area id, %n how many rooms were missing and %2 the list of their ids
+                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n room(s) missing from those it\n"
+                                               "should be recording as possessing, they were:\n%2\nthey have been added.",
+                                               nullptr,
+                                               missingRooms.count())
                                                     .arg(itArea.key())
-                                                    .arg(missingRooms.count())
                                                     .arg(roomList.join(qsl(", ")));
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing."
-                                             "  They are: %2."
-                                             "  They have been added.")
-                                                  .arg(missingRooms.count())
+                                          //: %n is how many rooms were missing and %1 the list of their ids
+                                          tr("[ INFO ]  - In this area there were %n room(s) missing from those it should be recorded as possessing."
+                                             "  They are: %1."
+                                             "  They have been added.",
+                                             nullptr,
+                                             missingRooms.count())
                                                   .arg(roomList.join(qsl(", "))),
                                           true);
 
@@ -1187,18 +1208,22 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %2 extra rooms compared to those it\n"
-                                               "should be recording as possessing, they were:\n%3\nthey have been removed.")
+                    //: %1 is the area id, %n how many extra rooms there were and %2 the list of their ids
+                    const QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n extra room(s) compared to those it\n"
+                                               "should be recording as possessing, they were:\n%2\nthey have been removed.",
+                                               nullptr,
+                                               extraRooms.count())
                                                     .arg(itArea.key())
-                                                    .arg(extraRooms.count())
                                                     .arg(roomList.join(qsl(", ")));
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing."
-                                             "  They were: %2."
-                                             "  They have been removed.")
-                                                  .arg(extraRooms.count())
+                                          //: %n is how many extra rooms there were and %1 the list of their ids
+                                          tr("[ INFO ]  - In this area there were %n extra room(s) that it should not be recorded as possessing."
+                                             "  They were: %1."
+                                             "  They have been removed.",
+                                             nullptr,
+                                             extraRooms.count())
                                                   .arg(roomList.join(qsl(", "))),
                                           true);
                 pA->mIsDirty = true;
@@ -1363,7 +1388,6 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                 mpMap->appendAreaErrorMsg(areaNamesMap.key(itRemappedNames.value()),
                                           tr(R"([ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: "%1", new name: "%2".)").arg(oldName, itRemappedNames.value()),
                                           true);
-                ;
             }
             detailText.chop(1); // Trim last "\n" off
         }
@@ -1531,6 +1555,24 @@ bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
         return false;
     }
     pA->set2DMapZoom(zoom);
+    return true;
+}
+
+bool TRoomDB::setRoomHash(const int roomId, const QString& hash)
+{
+    if (roomIDToHash.value(roomId) == hash && (hash.isEmpty() || hashToRoomID.value(hash, -1) == roomId)) {
+        return false;
+    }
+    if (roomIDToHash.contains(roomId)) {
+        hashToRoomID.remove(roomIDToHash.take(roomId));
+    }
+    if (!hash.isEmpty()) {
+        if (hashToRoomID.contains(hash)) {
+            roomIDToHash.remove(hashToRoomID[hash]);
+        }
+        hashToRoomID[hash] = roomId;
+        roomIDToHash[roomId] = hash;
+    }
     return true;
 }
 

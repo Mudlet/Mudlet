@@ -603,17 +603,21 @@ describe("stt bridge", function()
     -- none, and the platform running the spec is known.
     it("names this platform with the key an installer would download by", function()
       local key = stt.getPlatformKey()
+      local osName = getOS()
       -- The architecture is not visible from Lua, so each platform's keys are
-      -- named rather than one of them: Windows on ARM64 has no build and
-      -- correctly answers nil, which is the only nil this may be.
+      -- named rather than one of them. A nil is accepted only on Windows on
+      -- ARM64, which has no engine build, or from a build that cannot load engines.
       local allowed = {
         mac = {["macos"] = true},
         linux = {["linux-x86_64"] = true, ["linux-aarch64"] = true},
         windows = {["windows-x64"] = true, ["windows-x86"] = true},
       }
-      local keys = allowed[getOS()]
-      assert.is_table(keys, "this spec does not know the keys for " .. tostring(getOS()))
-      if getOS() == "windows" and key == nil then
+      local keys = allowed[osName]
+      if not keys then
+        assert.is_nil(key, "only macOS, Linux and Windows have an engine build, so " .. tostring(osName) .. " should name no key")
+        return
+      end
+      if osName == "windows" and key == nil then
         return -- ARM64 Windows, which ships no engine build
       end
       if key == nil then

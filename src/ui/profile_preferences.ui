@@ -917,7 +917,20 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="5">
+          <item row="1" column="1" colspan="4">
+           <widget class="QCheckBox" name="checkBox_monospacedFontsOnly">
+            <property name="toolTip">
+             <string>&lt;p&gt;List only fonts whose characters all have the same width, which keeps columns of text from games lined up. While the font in use is not one of them, every font is listed.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>List only fonts whose characters all have the same width, which keeps columns of text from games lined up. While the font in use is not one of them, every font is listed.</string>
+            </property>
+            <property name="text">
+             <string>Show only monospaced fonts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="5">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -929,7 +942,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="5">
+          <item row="3" column="0" colspan="5">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
              <font>
@@ -1648,6 +1661,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_showTimeStamps">
+            <property name="toolTip">
+             <string extracomment="Tooltip of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Accessibility-friendly description of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.</string>
+            </property>
+            <property name="text">
+             <string extracomment="Label of the profile preference that shows the time each line arrived at the start of every line in the main window">Show timestamps</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1719,6 +1745,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="0">
            <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the editor color theme picker on the Editor page of the settings, which has no visible label of its own">Editor theme</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the editor color theme picker on the Editor page of the settings">Color theme the script editor is drawn in</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -1726,11 +1758,20 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="script_preview_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the picker for the script shown as the theme preview on the Editor page of the settings, which has no visible label of its own">Script to preview</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the picker for the script shown as the theme preview on the Editor page of the settings">One of your scripts to show in the editor theme preview</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <property name="minimumContentsLength">
+             <number>24</number>
             </property>
            </widget>
           </item>
@@ -1939,10 +1980,10 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_folderView">
             <property name="toolTip">
-             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; entry to the editor's sidebar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>Adds a Folders button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
+             <string>Adds a Folders entry to the editor's sidebar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
             </property>
             <property name="text">
              <string>Show a Folders view of all item types</string>
@@ -3336,14 +3377,40 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="4">
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_defaultRoomColor">
+            <property name="toolTip">
+             <string>&lt;p&gt;The color of rooms whose environment has no color of its own. Until it is set, it is the map&apos;s red.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Default room color:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_defaultRoomColor</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QPushButton" name="pushButton_defaultRoomColor">
+            <property name="toolTip">
+             <string>&lt;p&gt;The color of rooms whose environment has no color of its own. Until it is set, it is the map&apos;s red.&lt;/p&gt;</string>
+            </property>
+            <property name="autoFillBackground">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="4">
            <widget class="Line" name="line_mapperColorsSeparator">
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_17">
             <property name="text">
              <string>Black:</string>
@@ -3353,7 +3420,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
+          <item row="6" column="1">
            <widget class="QPushButton" name="pushButton_black_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3363,7 +3430,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="2">
+          <item row="6" column="2">
            <widget class="QLabel" name="label_49">
             <property name="text">
              <string>Light black:</string>
@@ -3373,7 +3440,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="3">
+          <item row="6" column="3">
            <widget class="QPushButton" name="pushButton_Lblack_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3383,7 +3450,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="0">
+          <item row="7" column="0">
            <widget class="QLabel" name="label_42">
             <property name="text">
              <string>Red:</string>
@@ -3393,7 +3460,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
+          <item row="7" column="1">
            <widget class="QPushButton" name="pushButton_red_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3403,7 +3470,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="2">
+          <item row="7" column="2">
            <widget class="QLabel" name="label_50">
             <property name="text">
              <string>Light red:</string>
@@ -3413,7 +3480,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="3">
+          <item row="7" column="3">
            <widget class="QPushButton" name="pushButton_Lred_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3423,7 +3490,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
+          <item row="8" column="0">
            <widget class="QLabel" name="label_43">
             <property name="text">
              <string>Green:</string>
@@ -3433,7 +3500,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="1">
+          <item row="8" column="1">
            <widget class="QPushButton" name="pushButton_green_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3443,7 +3510,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="2">
+          <item row="8" column="2">
            <widget class="QLabel" name="label_51">
             <property name="text">
              <string>Light green:</string>
@@ -3453,7 +3520,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="3">
+          <item row="8" column="3">
            <widget class="QPushButton" name="pushButton_Lgreen_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3463,7 +3530,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="0">
+          <item row="9" column="0">
            <widget class="QLabel" name="label_48">
             <property name="text">
              <string>Yellow:</string>
@@ -3473,7 +3540,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="1">
+          <item row="9" column="1">
            <widget class="QPushButton" name="pushButton_yellow_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3483,7 +3550,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="2">
+          <item row="9" column="2">
            <widget class="QLabel" name="label_52">
             <property name="text">
              <string>Light yellow:</string>
@@ -3493,7 +3560,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="3">
+          <item row="9" column="3">
            <widget class="QPushButton" name="pushButton_Lyellow_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3503,7 +3570,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="0">
+          <item row="10" column="0">
            <widget class="QLabel" name="label_44">
             <property name="text">
              <string>Blue:</string>
@@ -3513,7 +3580,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="1">
+          <item row="10" column="1">
            <widget class="QPushButton" name="pushButton_blue_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3523,7 +3590,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="2">
+          <item row="10" column="2">
            <widget class="QLabel" name="label_53">
             <property name="text">
              <string>Light blue:</string>
@@ -3533,7 +3600,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="9" column="3">
+          <item row="10" column="3">
            <widget class="QPushButton" name="pushButton_Lblue_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3543,7 +3610,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="0">
+          <item row="11" column="0">
            <widget class="QLabel" name="label_45">
             <property name="text">
              <string>Magenta:</string>
@@ -3553,7 +3620,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="1">
+          <item row="11" column="1">
            <widget class="QPushButton" name="pushButton_magenta_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3563,7 +3630,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="2">
+          <item row="11" column="2">
            <widget class="QLabel" name="label_54">
             <property name="text">
              <string>Light magenta:</string>
@@ -3573,7 +3640,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="10" column="3">
+          <item row="11" column="3">
            <widget class="QPushButton" name="pushButton_Lmagenta_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3583,7 +3650,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="11" column="0">
+          <item row="12" column="0">
            <widget class="QLabel" name="label_46">
             <property name="text">
              <string>Cyan:</string>
@@ -3593,7 +3660,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="11" column="1">
+          <item row="12" column="1">
            <widget class="QPushButton" name="pushButton_cyan_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3603,7 +3670,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="11" column="2">
+          <item row="12" column="2">
            <widget class="QLabel" name="label_55">
             <property name="text">
              <string>Light cyan:</string>
@@ -3613,7 +3680,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="11" column="3">
+          <item row="12" column="3">
            <widget class="QPushButton" name="pushButton_Lcyan_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3623,7 +3690,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="12" column="0">
+          <item row="13" column="0">
            <widget class="QLabel" name="label_47">
             <property name="text">
              <string>White:</string>
@@ -3633,7 +3700,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="12" column="1">
+          <item row="13" column="1">
            <widget class="QPushButton" name="pushButton_white_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3643,7 +3710,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="12" column="2">
+          <item row="13" column="2">
            <widget class="QLabel" name="label_56">
             <property name="text">
              <string>Light white:</string>
@@ -3653,7 +3720,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="12" column="3">
+          <item row="13" column="3">
            <widget class="QPushButton" name="pushButton_Lwhite_2">
             <property name="autoFillBackground">
              <bool>true</bool>
@@ -3663,7 +3730,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="13" column="3">
+          <item row="14" column="3">
            <widget class="QPushButton" name="reset_colors_button_2">
             <property name="text">
              <string>Reset all colors to default</string>
@@ -5736,6 +5803,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>fontComboBox_displayFont</tabstop>
   <tabstop>spinBox_displayFontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
+  <tabstop>checkBox_monospacedFontsOnly</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -5750,6 +5818,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_showTabConnectionIndicators</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
+  <tabstop>checkBox_showTimeStamps</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
@@ -5818,6 +5887,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_mapInfoBg</tabstop>
   <tabstop>pushButton_upperLevelColor</tabstop>
   <tabstop>pushButton_mapGridColor</tabstop>
+  <tabstop>pushButton_defaultRoomColor</tabstop>
   <tabstop>pushButton_black_2</tabstop>
   <tabstop>pushButton_red_2</tabstop>
   <tabstop>pushButton_green_2</tabstop>

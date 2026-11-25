@@ -280,6 +280,92 @@ describe("Tests the MXP line modes a game switches between", function()
     feed("<T_IAC><T_DONT><O_MXP>")
   end)
 
+  it("joins the line a NOBR tag ends to the next one", function()
+    assert.equals("MXPNOBRFIRSTMXPNOBRSECOND", displayed("MXPNOBRFIRST<NOBR>\r\nMXPNOBRSECOND\r\n"))
+  end)
+
+  it("ignores only the one newline after a NOBR tag", function()
+    assert.equals("MXPNOBRONCE MXPNOBRJOINED|MXPNOBROWNLINE",
+      displayed("MXPNOBRONCE<NOBR>\r\n MXPNOBRJOINED\r\nMXPNOBROWNLINE\r\n"))
+  end)
+
+  it("ignores the newline of a NOBR tag that comes in the next packet", function()
+    local mark = getLastLineNumber("main")
+    feed("MXPNOBRSPLITFIRST<NOBR>")
+    feed("\r\nMXPNOBRSPLITSECOND\r\n")
+    assert.equals("MXPNOBRSPLITFIRSTMXPNOBRSPLITSECOND", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
+  end)
+
+  -- a BR is not a newline from the game, so the NOBR still waits for one
+  it("keeps the line a BR tag breaks after a NOBR tag", function()
+    assert.equals("MXPNOBRBEFORE|MXPNOBRAFTERBREAKMXPNOBRJOINEDTOO",
+      displayed("MXPNOBRBEFORE<NOBR><BR>MXPNOBRAFTERBREAK\r\nMXPNOBRJOINEDTOO\r\n"))
+  end)
+
+  it("lets a prompt the game ends with GA use up a NOBR tag", function()
+    feed("MXPNOBRPROMPT<NOBR><T_IAC><T_GA>")
+    assert.equals("MXPNOBRREPLY|MXPNOBRREPLYNEXT", displayed("MXPNOBRREPLY\r\nMXPNOBRREPLYNEXT\r\n"))
+  end)
+
+  it("does not let a NOBR tag carry a secure line on into the next one", function()
+    finally(function() feed("</B>\r\n") end)
+    assert.equals([[MXPNOBRSECURE<SEND href="x">MXPNOBROPEN</SEND>]],
+      displayed("\27[1z<B>MXPNOBRSECURE</B><NOBR>\r\n<SEND href=\"x\">MXPNOBROPEN</SEND>\r\n"))
+  end)
+
+  it("does not let locally fed text use up the game's NOBR tag", function()
+    local mark = getLastLineNumber("main")
+    feed("MXPNOBRGAME<NOBR>")
+    feedTriggers("MXPNOBRLOCAL<NOBR>\n")
+    feed("\r\nMXPNOBRGAMENEXT\r\n")
+    -- the local text ends the game's unfinished line, as it does without a NOBR, and the game's
+    -- newline is still ignored rather than left to commit an empty line
+    assert.equals("MXPNOBRGAMEMXPNOBRLOCAL|MXPNOBRGAMENEXT", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
+  end)
+
+  it("keeps the tags of an open line open across the newline a NOBR tag ignores", function()
+    finally(function() feed("</B>\r\n") end)
+    feed("<B>MXPNOBRBOLD<NOBR>\r\nMXPNOBRSTILLBOLD</B>\r\n")
+    assert.is_true(boldAt("MXPNOBRSTILLBOLD"))
+  end)
+
+  it("leaves the newline a NOBR tag ignores out of the text a SEND wraps", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("\27[6z\r\n")
+    if type(mxp) == "table" then
+      mxp.send = nil
+    end
+    feed("<SEND>MXPNOBRNORTH<NOBR>\r\nWEST</SEND>\r\n")
+    assert.is_table(mxp.send)
+    assert.are.equal("MXPNOBRNORTHWEST", mxp.send.text)
+    assert.are.same({"send([[\nMXPNOBRNORTHWEST]])"}, mxp.send.actions)
+  end)
+
+  it("ignores the newline after a NOBR tag that follows an unfinished entity", function()
+    assert.equals("MXPNOBRAT&TMXPNOBRNEXT|MXPNOBRTHIRD", displayed("MXPNOBRAT&T<NOBR>\r\nMXPNOBRNEXT\r\nMXPNOBRTHIRD\r\n"))
+  end)
+
+  it("ignores the newline after a NOBR tag that an unfinished entity runs up to", function()
+    assert.equals("MXPNOBRENT&unfinishedMXPNOBRENTNEXT|MXPNOBRENTTHIRD",
+      displayed("MXPNOBRENT<NOBR>&unfinished\r\nMXPNOBRENTNEXT\r\nMXPNOBRENTTHIRD\r\n"))
+  end)
+
+  it("leaves the newline a NOBR tag ignores out of a SEND on a line the game locks", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("\27[6z\r\n")
+    if type(mxp) == "table" then
+      mxp.send = nil
+    end
+    feed("<SEND>MXPNOBRLOCKNORTH<NOBR>\27[2z\r\nWEST</SEND>\r\n")
+    assert.is_table(mxp.send)
+    assert.are.equal("MXPNOBRLOCKNORTHWEST", mxp.send.text)
+    assert.are.same({"send([[\nMXPNOBRLOCKNORTHWEST]])"}, mxp.send.actions)
+  end)
+
+  it("drops a NOBR tag when the game resets", function()
+    assert.equals("MXPNOBRRESET|MXPNOBRAFTERRESET", displayed("MXPNOBRRESET<NOBR>\27[3z\r\nMXPNOBRAFTERRESET\r\n"))
+  end)
+
   it("shows every tag as text on a locked line and parses the next one", function()
     assert.equals("<B>MXPPARSELOCKED</B>", displayed("\27[2z<B>MXPPARSELOCKED</B>\r\n"))
     assert.equals("MXPPARSEAFTERLOCKED", displayed("<B>MXPPARSEAFTERLOCKED</B>\r\n"))
@@ -446,5 +532,59 @@ describe("Tests the MXP line modes a game switches between", function()
     -- secure nor a locked reading of the switch would do
     assert.equals("MXPPARSENONUMBER<SEND href=\"x\">N</SEND>", displayed("\27[z<B>MXPPARSENONUMBER</B><SEND href=\"x\">N</SEND>\r\n"))
     assert.equals("MXPPARSESTILLOPEN<SEND href=\"x\">N</SEND>", displayed("\27[1;2z<B>MXPPARSESTILLOPEN</B><SEND href=\"x\">N</SEND>\r\n"))
+  end)
+end)
+
+-- A forced processor is switched off and on again with the connection, which
+-- must drop a NOBR the last game left
+describe("Tests a NOBR the game left when the connection ends", function()
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  it("does not join the next connection's first line to it", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the connection to come and go needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    local port = handle and tonumber((handle:read("*a") or ""):match("%d+") or "")
+    if handle then
+      handle:close()
+    end
+    if not port then
+      local reason = "needs the telnet fixture (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+      assert.is_nil(os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE"), "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but this " .. reason)
+      pending(reason)
+      return
+    end
+    local function connected()
+      local _, _, isConnected = getConnectionInfo()
+      return isConnected
+    end
+    local function waitFor(predicate)
+      for _ = 1, 100 do
+        if predicate() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return predicate()
+    end
+
+    setConfig("specialForceMXPProcessorOn", true)
+    finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+    feed("MXPNOBRLASTGAME<NOBR>")
+    connectToServer("127.0.0.1", port)
+    assert.is_true(waitFor(connected), "never connected to the telnet fixture on port " .. port)
+    disconnect()
+    assert.is_true(waitFor(function() return not connected() end), "the telnet fixture connection outlived the disconnect")
+
+    local mark = getLastLineNumber("main")
+    feed("MXPNOBRNEXTGAME\r\nMXPNOBRNEXTGAMETOO\r\n")
+    local shown = table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+    assert.is_true(shown:find("MXPNOBRNEXTGAME|MXPNOBRNEXTGAMETOO", 1, true) ~= nil, shown)
   end)
 end)

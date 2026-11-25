@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "uiDesign.h"
+
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QPointer>
@@ -102,6 +104,7 @@ public:
     void updateAllTabIndicators(); // Update all tab indicators in this window
 
     void saveWindowGeometry();
+    void closeProfileByName(const QString& profileName);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -172,15 +175,12 @@ private slots:
     void slot_toggleEmergencyStop();
     void slot_toggleTimeStamp();
     void slot_toggleMultiView();
-    void slot_toggleFullScreen();
 
     // Discord and IRC slots for detached window context
     void slot_profileDiscord();
     void slot_mudletDiscord();
 
     // Window menu activation slots
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
 
@@ -189,8 +189,9 @@ private:
     void createMenus();
     void showMuteState();
     void createToolBar();
+    void restyleToolBarIcons();
     void connectToolBarActions();
-    void closeProfileByName(const QString& profileName);
+    bool closeProfileHere(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();
@@ -214,6 +215,7 @@ private:
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
     QMenu* mpOptionsMenu{nullptr};
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
 
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};
@@ -239,6 +241,7 @@ private:
     QAction* mpActionMuteAPI{nullptr};
     QAction* mpActionMuteGame{nullptr};
     QAction* mpActionFullScreenView{nullptr};
+    QAction* mpMenuFullScreenAction{nullptr};
     QAction* mpActionToggleToolBar{nullptr};
     QAction* mpActionAbout{nullptr};
     QAction* mpActionReconnectStandalone{nullptr};
@@ -247,6 +250,7 @@ private:
     // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
+    QAction* mpHelpMenuDiscordAction{nullptr};
 
     // Menu actions with shortcuts
     QAction* mpMenuConnectAction{nullptr};
@@ -287,9 +291,6 @@ private:
 
     // Flag to track if window is being minimized (to allow hiding during minimize)
     bool mIsBeingMinimized{false};
-
-    // Flag to allow hiding during window flag changes (always on top, etc.)
-    bool mIsChangingWindowFlags{false};
 
     // Flag to prevent duplicate reattach operations on this window
     bool mReattachInProgress{false};

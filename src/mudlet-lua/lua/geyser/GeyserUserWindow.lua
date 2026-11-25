@@ -141,8 +141,8 @@ Geyser.UserWindow.Parent = Geyser.Window
 -- @param cons.titleText choose your UserWindows title (set to default title if not set)
 function Geyser.UserWindow:new(cons)
   cons = cons or {}
-  cons.name = cons.name or Geyser.nameGen()
   cons.type = cons.type or "userwindow"
+  cons.name = cons.name or Geyser.anonymousName(cons.type)
   cons.windowname = cons.name
   cons.width = cons.width or 435
   cons.height = cons.height or 375
@@ -194,7 +194,19 @@ function Geyser.UserWindow:new(cons)
   elseif cons.wrapAt then
     me:setWrap(cons.wrapAt)
   end
-  
+  if cons.horizontalScrollBar then
+    me:enableHorizontalScrollBar()
+  end
+  if me.commandLine then
+    me:enableCommandLine()
+    if me.cmdLineStylesheet then
+      me:setCmdLineStyleSheet()
+    end
+  end
+  if me.scrolling == false then
+    me:disableScrolling()
+  end
+
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
   if me.docked == false and me.restoreLayout == false then

@@ -238,6 +238,43 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
 }
 
+CommandLineEditDelegate::CommandLineEditDelegate(const QString& placeholder, QObject* parent)
+: QStyledItemDelegate(parent)
+, mPlaceholder(placeholder)
+{
+}
+
+QWidget* CommandLineEditDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    auto* pEditor = QStyledItemDelegate::createEditor(parent, option, index);
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor)) {
+        pLineEdit->setPlaceholderText(mPlaceholder);
+    }
+    // The cell underneath still holds the hint as text, which would show through
+    pEditor->setAutoFillBackground(true);
+    return pEditor;
+}
+
+void CommandLineEditDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    QStyledItemDelegate::setEditorData(pEditor, index);
+    auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor);
+    if (pLineEdit && pLineEdit->text() == mPlaceholder) {
+        pLineEdit->clear();
+    }
+}
+
+void CommandLineEditDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor);
+    if (pLineEdit && pLineEdit->text().trimmed().isEmpty()) {
+        // save() and slot_checkModified() recognise a row with no command by the placeholder
+        model->setData(index, mPlaceholder, Qt::EditRole);
+        return;
+    }
+    QStyledItemDelegate::setModelData(pEditor, model, index);
+}
+
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 : QDialog(pW)
 , mpHost(pH)
@@ -281,6 +318,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_command, new CommandLineEditDelegate(mSpecialExitCommandPlaceholder, specialExits));
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
@@ -448,7 +486,8 @@ void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
         pI->setCheckState(ExitsTreeWidget::colIndex_doorLocked, Qt::Checked);
         break;
 
-    default:; //noop for other columns?
+    default: //noop for other columns?
+        break;
     }
 }
 
@@ -541,12 +580,6 @@ void dlgRoomExits::save()
 
     // Clean up after any deleted specialExits originally present but not now so
     for (const auto& value : originalExitCmds) {
-        pR->customLinesArrow.remove(value);
-        pR->customLinesColor.remove(value);
-        pR->customLinesStyle.remove(value);
-        pR->customLines.remove(value);
-        pR->setDoor(value, 0);
-        pR->setExitWeight(value, 0);
         pR->setSpecialExit(-1, value);
     }
 
@@ -951,57 +984,28 @@ void dlgRoomExits::save()
     saveExitLock(DIR_IN, noroute_in);
     saveExitLock(DIR_OUT, noroute_out);
 
-    // return value from checkedId() is -1 for no radio button in group checked,
-    //   and then more negative values starting from -2 for each button that was
-    //   created without an explicit Id, any attempt to set a different Id using
-    //   setId() seems to fail for me :(
-    if (doortype_nw->checkedId() < -1) {
-        pR->setDoor(qsl("nw"), -2 - doortype_nw->checkedId());
-    }
-
-    if (doortype_n->checkedId() < -1) {
-        pR->setDoor(qsl("n"), -2 - doortype_n->checkedId());
-    }
-
-    if (doortype_ne->checkedId() < -1) {
-        pR->setDoor(qsl("ne"), -2 - doortype_ne->checkedId());
-    }
-
-    if (doortype_up->checkedId() < -1) {
-        pR->setDoor(qsl("up"), -2 - doortype_up->checkedId());
-    }
-
-    if (doortype_w->checkedId() < -1) {
-        pR->setDoor(qsl("w"), -2 - doortype_w->checkedId());
-    }
-
-    if (doortype_e->checkedId() < -1) {
-        pR->setDoor(qsl("e"), -2 - doortype_e->checkedId());
-    }
-
-    if (doortype_down->checkedId() < -1) {
-        pR->setDoor(qsl("down"), -2 - doortype_down->checkedId());
-    }
-
-    if (doortype_sw->checkedId() < -1) {
-        pR->setDoor(qsl("sw"), -2 - doortype_sw->checkedId());
-    }
-
-    if (doortype_s->checkedId() < -1) {
-        pR->setDoor(qsl("s"), -2 - doortype_s->checkedId());
-    }
-
-    if (doortype_se->checkedId() < -1) {
-        pR->setDoor(qsl("se"), -2 - doortype_se->checkedId());
-    }
-
-    if (doortype_in->checkedId() < -1) {
-        pR->setDoor(qsl("in"), -2 - doortype_in->checkedId());
-    }
-
-    if (doortype_out->checkedId() < -1) {
-        pR->setDoor(qsl("out"), -2 - doortype_out->checkedId());
-    }
+    // checkedId() is -1 for no button checked, then -2, -3... in creation order (none, open, closed, locked).
+    // The buttons grey out, still checked, when the roomID is cleared, so a door only counts where an exit or stub was saved
+    const auto saveDoor = [this](const int dirCode, const QButtonGroup* pDoorType) {
+        const int checkedId = pDoorType->checkedId();
+        if (checkedId >= -1) {
+            return;
+        }
+        const bool exitOrStubSaved = pR->getExit(dirCode) > 0 || pR->hasExitStub(dirCode);
+        pR->setDoor(TRoom::dirCodeToShortString(dirCode), exitOrStubSaved ? -2 - checkedId : 0);
+    };
+    saveDoor(DIR_NORTHWEST, doortype_nw);
+    saveDoor(DIR_NORTH, doortype_n);
+    saveDoor(DIR_NORTHEAST, doortype_ne);
+    saveDoor(DIR_UP, doortype_up);
+    saveDoor(DIR_WEST, doortype_w);
+    saveDoor(DIR_EAST, doortype_e);
+    saveDoor(DIR_DOWN, doortype_down);
+    saveDoor(DIR_SOUTHWEST, doortype_sw);
+    saveDoor(DIR_SOUTH, doortype_s);
+    saveDoor(DIR_SOUTHEAST, doortype_se);
+    saveDoor(DIR_IN, doortype_in);
+    saveDoor(DIR_OUT, doortype_out);
 
     TArea* pA = mpHost->mpMap->mpRoomDB->getArea(pR->getArea());
     if (pA) {

@@ -30,7 +30,9 @@
 #include "HostManager.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
+#include "uiDesign.h"
 #include "utils.h"
+#include <functional>
 #include <memory>
 
 #if defined(INCLUDE_UPDATER)
@@ -63,6 +65,7 @@ class QDockWidget;
 class QKeyEvent;
 class QMediaPlayer;
 class QMenu;
+class QMessageBox;
 class QLabel;
 class QListWidget;
 class QPushButton;
@@ -92,6 +95,7 @@ class TMCPServer;
 #endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
+struct TelnetUriData;
 class TConsole;
 class TDebugFilterBar;
 class TDetachedWindow;
@@ -116,6 +120,7 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    static bool ensureEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
@@ -129,6 +134,8 @@ public:
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // Set when a style was given with -style or QT_STYLE_OVERRIDE; the light appearance keeps it on macOS and Windows
+    inline static bool smStyleChosenByPlayer = false;
 
 
     void showEvent(QShowEvent*) override;
@@ -141,6 +148,9 @@ public:
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
+    static QString keySequenceForProse(const QKeySequence&);
+    // What the balloon says when a second game opens: the keys that switch games for this profile
+    QString profileSwitchingTip(const Host*) const;
     bool profileSwitchShortcutMatches(const Qt::Key, const Qt::KeyboardModifiers) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
@@ -158,7 +168,7 @@ public:
     void growDockToSizeHintWhenShown(QDockWidget*);
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
-    void doAutoLogin(const QString&, bool offline);
+    void doAutoLogin(const QString&, bool offline, bool useTlsThisSession = false);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
     void updateMapActionAvailability() override;
@@ -182,9 +192,16 @@ public:
     // The marker the main window carries, for any profile it holds
     QString mainWindowMicrophoneMarker() const;
     const QMap<QString, QPointer<TDetachedWindow>>& getDetachedWindows() const { return mDetachedWindows; }
+    bool multiView() const { return mMultiView; }
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
+    // The profile container's size once profileName is in front, from its size now
+    QSize profileContainerSizeFor(const QString& profileName, QSize containerSize) const;
+    // Profiles hidden by a tab switch get no resize events of their own
+    void syncHiddenProfilesSoon();
+    // After a resizeDocks() on the main window, from which Qt keeps each dock side's depth
+    void noteDockSidesKeepTheirDepth() { mDockSidesKeepTheirDepth = true; }
     std::optional<QSize> getImageSize(const QString&) override;
     const QLocale& getUserLocale() const { return mUserLocale; }
     // Used to enable "emergency" control recovery action - if Mudlet is
@@ -215,14 +232,16 @@ public:
     void closeComposer(QObject* composer) override;
     QString getOpenFileName(const QString& title, const QString& location) override;
     QString getExistingDirectory(const QString& title, const QString& location) override;
+    void getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void setClipboardText(const QString& text) override;
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
-    // Used by a profile to tell the mudlet class
-    // to tell other profiles to reload the updated
-    // maps (via signal_profileMapReloadRequested(...))
-    void requestProfilesToReloadMaps(QList<QString>);
+    // mapFileName is a bare file name; each listed profile loads it from its own map folder
+    void requestProfilesToReloadMaps(QList<QString>, const QString& mapFileName);
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
@@ -241,22 +260,28 @@ public:
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
+    void setColouredIcons(const bool);
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
-    void setActiveProfileTab(const QString& profileName) override;
-    bool resizeMainWindow(int width, int height) override
+    bool setActiveProfileTab(const QString& profileName) override;
+    std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) override
     {
         resize(width, height);
-        return true;
+        return {true, QString()};
     }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
+    void restyleToolBarIcons();
+    void restyleMainToolBar();
+    static QString toolBarShellStyleSheet(const QString& barSelector);
+    static bool sheetStylesToolBars(const QString& sheet);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     void showConnectionDialog() override { slot_showConnectionDialog(); }
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
+    bool colouredIcons() const { return mColouredIcons; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
@@ -300,6 +325,10 @@ public:
     void setStorePasswordsSecurely(bool storeSecurely);
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
+    // Shared with TDetachedWindow so both windows' Discord buttons read, and are translated, the same
+    static QString gameDiscordLabel(const QString& gameName);
+    // Plain text, for a status tip as it is; escape it before putting it in a rich text tooltip
+    static QString gameDiscordToolTip(const QString& gameName);
     void updateMultiViewControls();
     void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER
@@ -334,11 +363,13 @@ public:
 
     // Telnet URI handling
     void handleTelnetUri(const QString& uri) override;
+    void connectFromGameLink(const QString& uri) override;
+    // Answers the question connectFromGameLink() asks, in place of the dialog; set by tests
+    std::function<bool(const QString& question)> mConfirmGameLink;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
-    // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
-    // issue:
-    QString mBG_ONLY_STYLESHEET;
+    QString backgroundOnlyStyleSheet(const QColor& fill) const;
+    bool mStyleDropsButtonFrame = false;
     // approximate max duration that 'Copy as image' is allowed to take
     // (seconds):
     int mCopyAsImageTimeout = 3;
@@ -370,7 +401,11 @@ public:
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     // Flag to prevent connection dialog from opening during telnet:// URI processing
     bool mProcessingTelnetUri = false;
+    bool mGameLinkQuestionOpen = false;
     QToolBar* mpMainToolBar = nullptr;
+    // Never set on the bar directly: restyleMainToolBar() appends it to the design's rules on the same widget
+    QString mMainToolBarProfileStyleSheet;
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     // More modern Desktop styles no longer include icons on the buttons in
@@ -394,8 +429,7 @@ public:
     // sysApplicationFocusChangeEvent is raised on a change of that and not on
     // every transition Qt reports between its inactive states
     bool mApplicationActive = true;
-    // 2 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
-    // issue:
+    // The caller's arg() fills in the ink, the fill and the hairline, in that order
     QString mTEXT_ON_BG_STYLESHEET;
     int mToolbarIconSize = 0;
     QMap<QString, translation> mTranslationsMap;
@@ -450,8 +484,6 @@ public slots:
     void slot_minimize();
     void slot_newMapWindow();
     void updateWindowMenu();
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
     void slot_replay();
@@ -492,6 +524,8 @@ public slots:
     void slot_showUiTour();
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
+    static void bringWindowToFront(QWidget* window);
+    static void setWindowStaysOnTop(QWidget* window, const bool onTop);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
@@ -505,6 +539,8 @@ public slots:
     void slot_showVariableDialog();
 
 protected:
+    void childEvent(QChildEvent*) override;
+    bool eventFilter(QObject*, QEvent*) override;
     void closeEvent(QCloseEvent*) override;
     void changeEvent(QEvent*) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -526,12 +562,13 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
     void signal_profileActivated(Host*, quint8);
-    void signal_profileMapReloadRequested(QList<QString>);
+    void signal_profileMapReloadRequested(QList<QString>, const QString& mapFileName);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
     void signal_shortcutsChanged();
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
+    void signal_colouredIconsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
@@ -566,6 +603,7 @@ private slots:
 
 private:
     void assignKeySequences();
+    void noticeDockSidesKeepingTheirDepth();
     void keepFloatingDocksOnScreen();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
@@ -658,6 +696,7 @@ private:
     QPointer<QAction> mpActionAboutWithUpdates;
 #if defined(INCLUDE_UPDATER)
     bool mUpdateInstalled = false;
+    QPointer<QMessageBox> mpUpdateFailedBox;
 #endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
@@ -745,6 +784,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
+    bool mColouredIcons = true;
     QSplitter* mpSplitter_profileContainer = nullptr;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
@@ -871,16 +911,7 @@ private:
     static constexpr int mCharacterModeWarningsMax = 3;     // Character mode
     static constexpr int mCompactInputLineTutorialsMax = 3; // Compact input line
 
-    // Telnet URI handling structures and methods
-    struct TelnetUriData
-    {
-        QString host;
-        int port = 23;
-        QString username;
-        bool useTls = false;
-    };
-
-    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
+    // Telnet URI handling methods
     QString findMatchingProfile(const QString& host, int port);
     QString createProfileForUri(const TelnetUriData& uriData);
 
@@ -889,6 +920,7 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    QPointer<Host> mpProfileBeingActivated;
     // Every profile in main tab bar order, with each detached one kept behind
     // the tab it followed, so that a reattach can put it back there
     QStringList mMainTabOrder;
@@ -901,6 +933,9 @@ private:
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
     QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets
+    // Whether Qt has stopped sizing dock sides from their hints, as it does for good once a side's edge or a dock is
+    // dragged, or resizeDocks() or restoreState() runs
+    bool mDockSidesKeepTheirDepth = false;
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows

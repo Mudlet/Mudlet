@@ -34,12 +34,14 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QSettings>
 #include <QThread>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
 
+#include "RefusedPort.h"
 #include "TelnetServerStub.h"
 
 #if defined(Q_OS_WINDOWS)
@@ -294,6 +296,11 @@ private slots:
                                       << qsl("--host was given more than once");
         QTest::newRow("--port twice") << QStringList{qsl("-p"), qsl("a"), qsl("--port"), qsl("23"), qsl("--port"), qsl("4000")} << 2 << QString() << qsl("--port was given more than once");
         QTest::newRow("--login twice") << QStringList{qsl("-p"), qsl("a"), qsl("--login"), qsl("one"), qsl("--login"), qsl("two")} << 2 << QString() << qsl("--login was given more than once");
+        QTest::newRow("an empty config dir") << QStringList{qsl("-p"), qsl("a"), qsl("--config-dir"), QString()} << 2 << QString() << qsl("--config-dir was given nothing");
+        QTest::newRow("--config-dir twice") << QStringList{qsl("-p"), qsl("a"), qsl("--config-dir"), qsl("/one"), qsl("--config-dir"), qsl("/two")} << 2 << QString()
+                                            << qsl("--config-dir was given more than once");
+        QTest::newRow("an unknown --color") << QStringList{qsl("-p"), qsl("a"), qsl("--color"), qsl("sometimes")} << 2 << QString() << qsl("--color takes auto, always or never, not 'sometimes'");
+        QTest::newRow("--color twice") << QStringList{qsl("-p"), qsl("a"), qsl("--color"), qsl("always"), qsl("--color"), qsl("never")} << 2 << QString() << qsl("--color was given more than once");
         QTest::newRow("--password-env twice") << QStringList{qsl("-p"), qsl("a"), qsl("--password-env"), qsl("ONE"), qsl("--password-env"), qsl("TWO")} << 2 << QString()
                                               << qsl("--password-env was given more than once");
     }
@@ -314,6 +321,47 @@ private slots:
         QVERIFY2(child.exitCode() == exitCode, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QVERIFY2(standardOutput.contains(standardOutputHas), qPrintable(standardOutput));
         QVERIFY2(standardError.contains(standardErrorHas), qPrintable(standardError));
+    }
+
+    // Relative to where it is run from, as a path on a command line is
+    void test_configDirKeepsTheProfiles()
+    {
+        const QString name = qsl("Headless Runner Own Folder");
+        const QString chosen = qsl("%1/chosen config").arg(mSandbox.path());
+        QProcess child;
+        child.setWorkingDirectory(mSandbox.path());
+        startChild(child, {qsl("--config-dir"), qsl("chosen config"), qsl("-p"), name, qsl("--host"), qsl("game.example"), qsl("--offline"), qsl("--no-stdin"), qsl("-e"), qsl("closeMudlet()")});
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
+        QVERIFY(QDir(qsl("%1/profiles/%2").arg(chosen, name)).exists());
+        QVERIFY(QFileInfo::exists(qsl("%1/Mudlet.ini").arg(chosen)));
+        QVERIFY(!QDir(profileFolder(name)).exists());
+        QVERIFY2(standardError.contains(qsl("loaded in offline mode")), qPrintable(standardError));
+
+        // Its language is the one its Mudlet.ini names, not the GUI's
+        {
+            QSettings ini(qsl("%1/Mudlet.ini").arg(chosen), QSettings::IniFormat);
+            ini.setValue(qsl("interfaceLanguage"), qsl("de_DE"));
+            ini.sync();
+            QCOMPARE(ini.status(), QSettings::NoError);
+        }
+        QProcess translated;
+        translated.setWorkingDirectory(mSandbox.path());
+        startChild(translated, {qsl("--config-dir"), qsl("chosen config"), qsl("-p"), name, qsl("--offline"), qsl("--no-stdin"), qsl("-e"), qsl("closeMudlet()")});
+        QTRY_COMPARE_WITH_TIMEOUT(translated.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString translatedError = textOf(translated.readAllStandardError());
+        QVERIFY2(translated.exitCode() == 0, qPrintable(translatedError));
+        QVERIFY2(translatedError.contains(qsl("im Offline-Modus geladen")), qPrintable(translatedError));
+
+        const QString file = qsl("%1/Mudlet.ini").arg(chosen);
+        QProcess refused;
+        startChild(refused, {qsl("--config-dir"), file, qsl("-p"), name, qsl("--offline"), qsl("--no-stdin")});
+        QTRY_COMPARE_WITH_TIMEOUT(refused.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString refusal = textOf(refused.readAllStandardError());
+        QVERIFY2(refused.exitCode() == 2, qPrintable(refusal));
+        QVERIFY2(refusal.contains(qsl("is not a folder")), qPrintable(refusal));
     }
 
 #if defined(Q_OS_UNIX)
@@ -358,6 +406,45 @@ private slots:
         QCOMPARE(child.exitStatus(), QProcess::NormalExit);
         QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
         QVERIFY2(lines.contains(qsl("Welcome to the headless runner test.")), qPrintable(lines.join(QLatin1Char('\n'))));
+    }
+
+    void test_colorShowsTheGamesColours_data()
+    {
+        QTest::addColumn<QStringList>("options");
+        QTest::addColumn<QStringList>("variables");
+        QTest::addColumn<QByteArray>("firstLine");
+
+        const QByteArray plain = QByteArrayLiteral("red plain bold");
+        // The profile's dark red, as 24-bit colour or the nearest of 256; the profile's own colours are left out
+        QTest::newRow("always, 256 colours") << QStringList{qsl("--color"), qsl("always")} << QStringList{qsl("COLORTERM=")}
+                                             << QByteArrayLiteral("\x1b[0;38;5;88mred\x1b[0m plain\x1b[0;1;4m bold\x1b[0m");
+        QTest::newRow("always, 24-bit colour") << QStringList{qsl("--color"), qsl("always")} << QStringList{qsl("COLORTERM=truecolor")}
+                                               << QByteArrayLiteral("\x1b[0;38;2;128;0;0mred\x1b[0m plain\x1b[0;1;4m bold\x1b[0m");
+        QTest::newRow("never") << QStringList{qsl("--color"), qsl("never")} << QStringList{qsl("COLORTERM=truecolor")} << plain;
+        QTest::newRow("auto, to a pipe") << QStringList() << QStringList{qsl("COLORTERM=truecolor")} << plain;
+    }
+
+    void test_colorShowsTheGamesColours()
+    {
+        QFETCH(QStringList, options);
+        QFETCH(QStringList, variables);
+        QFETCH(QByteArray, firstLine);
+
+        const QString name = qsl("Headless Runner Colours");
+        QVERIFY(writeProfile(name, QString()));
+        QProcess child;
+        startChild(child,
+                   QStringList{qsl("-p"), name, qsl("--offline"), qsl("--no-stdin"), qsl("-e"), qsl("feedTriggers('\\27[31mred\\27[0m plain\\27[1;4m bold\\27[0m\\nplain\\n') closeMudlet()")}
+                           + options,
+                   QString(),
+                   QString(),
+                   variables);
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
+        const QList<QByteArray> lines = child.readAllStandardOutput().replace('\r', QByteArray()).split('\n');
+        QCOMPARE(lines.mid(0, 2), (QList<QByteArray>{firstLine, QByteArrayLiteral("plain")}));
     }
 
     void test_closeMudletSavesAndExits_data()
@@ -460,9 +547,8 @@ tempTimer(0.1, function() feedTriggers("headless tick\n") end, true))lua")
         QCOMPARE(saveCount(name), 2);
     }
 
-    // As above, with the reader gone before the load is over, and a load that runs the event loop (as one
-    // trying a map file that will not read does) before the runner's own loop starts: the timer's line
-    // comes before sysLoadEvent's
+    // As above, with the reader gone before the load is over, and a load that runs the event loop before the
+    // runner's own loop starts: the timer's line comes before sysLoadEvent's
     void test_outputClosedDuringTheLoadSavesAndExits()
     {
         const QString name = qsl("Headless Runner Early Reader");
@@ -476,14 +562,9 @@ end
 registerAnonymousEventHandler("sysExitEvent", function() record("sysExitEvent") end)
 registerAnonymousEventHandler("sysLoadEvent", function() record("sysLoadEvent") end)
 tempTimer(0, function() record("timer") end)
-feedTriggers("headless during the load\n"))lua")
+feedTriggers("headless during the load\n")
+pumpEvents(100))lua")
                                      .arg(recordPath)));
-        const QString mapFolder = qsl("%1/map").arg(profileFolder(name));
-        QVERIFY(QDir().mkpath(mapFolder));
-        QFile mapFile(qsl("%1/2020-01-01#00-00-00map.dat").arg(mapFolder));
-        QVERIFY(mapFile.open(QIODevice::WriteOnly));
-        mapFile.write(QByteArray(64, 'x'));
-        mapFile.close();
 
         int output[2];
         QVERIFY(::pipe(output) == 0);
@@ -953,12 +1034,7 @@ registerAnonymousEventHandler("sysExitEvent", function() send("exit event", fals
 tempAlias("^bye$", [[closeProfile()]]))lua")
                                               .arg(other),
                                       recordPath));
-        QVERIFY(writeProfile(other, QString()));
-        // TMap::restore() pumps the event loop as it reports a map file it cannot read
-        QVERIFY(QDir().mkpath(qsl("%1/map").arg(profileFolder(other))));
-        QFile map(qsl("%1/map/map.json").arg(profileFolder(other)));
-        QVERIFY(map.open(QIODevice::WriteOnly) && map.write("not a map") > 0);
-        map.close();
+        QVERIFY(writeProfile(other, qsl("pumpEvents(100)")));
 
         RecordingGame game;
         QVERIFY(game.start());
@@ -1305,12 +1381,9 @@ tempAlias("^bye$", [[closeProfile()]]))lua")
         const QString name = qsl("Headless Runner Typed To Nobody");
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, qsl(R"lua(tempAlias("^note$", [[record("noted")]]))lua"), recordPath));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(port)));
 
         QProcess child;
@@ -1332,12 +1405,9 @@ tempAlias("^bye$", [[closeProfile()]]))lua")
         const QString name = qsl("Headless Runner Noted To Nobody");
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, qsl(R"lua(tempAlias("^note$", [[record("noted")]]))lua"), recordPath));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(port)));
 
         QProcess child;
@@ -1356,12 +1426,9 @@ tempAlias("^bye$", [[closeProfile()]]))lua")
     void test_inputTakenDuringAnAliasEventLoopIsCountedOnce()
     {
         const QString name = qsl("Headless Runner Hop");
-        quint16 closedPort = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            closedPort = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 closedPort = refused.port();
         QString recordPath;
         // Long enough for the next line to be waiting when connectToServer() runs its event loop
         QVERIFY(writeRecordingProfile(name,
@@ -1432,12 +1499,9 @@ record("hopped")
     void test_aPackageThatSendsBeforeTheConnectionFailsTheRun()
     {
         const QString name = qsl("Headless Runner Package Sent Too Soon");
-        quint16 closedPort = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            closedPort = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 closedPort = refused.port();
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, QString(), recordPath));
         const QString packagePath = writePackage(qsl("runnerSendsEarly"), qsl(R"lua(send("frompackage"))lua"));
@@ -1547,12 +1611,9 @@ registerAnonymousEventHandler("sysDisconnectionEvent", function() record("discon
         const QString name = qsl("Headless Runner Refused %1").arg(arguments.size());
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, QString(), recordPath));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(port)));
 
         QProcess child;
@@ -1588,6 +1649,8 @@ closeMudlet())lua"),
         QCOMPARE(child.exitStatus(), QProcess::NormalExit);
         QVERIFY2(child.exitCode() == 1, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QVERIFY2(standardError.contains(qsl("The profile \"%1\" could not be saved.").arg(name)), qPrintable(standardError));
+        // Which part of the save failed
+        QVERIFY2(standardError.contains(qsl("the profile \"%1\" or its modules could not be written").arg(name)), qPrintable(standardError));
         // What Qt logs, and the runner's own messages, start a line of their own
         QVERIFY2(standardError.contains(qsl("half a line\n")), qPrintable(standardError));
         QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
@@ -1616,6 +1679,7 @@ closeMudlet())lua"),
         QCOMPARE(child.exitStatus(), QProcess::NormalExit);
         QVERIFY2(child.exitCode() == 1, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QVERIFY2(standardError.contains(qsl("The profile \"%1\" could not be saved.").arg(name)), qPrintable(standardError));
+        QVERIFY2(standardError.contains(qsl("the map of \"%1\" could not be written").arg(name)), qPrintable(standardError));
         QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
         QCOMPARE(saveCount(name), 2);
     }
@@ -2202,6 +2266,145 @@ tempTimer(0, function() feedTriggers("headless ready\n") end))lua"),
         const QString standardError = textOf(child.readAllStandardError());
         QVERIFY2(child.exitCode() == 128 + SIGTERM, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QCOMPARE(readFile(recordPath), qsl("resized\nresized\nsysExitEvent\n"));
+    }
+
+    // A script cannot resize the terminal, so the runner gives the terminal's size again and the game is told no other
+    void test_aScriptLeavesTheTerminalItsSize()
+    {
+        const QString name = qsl("Headless Runner Terminal Kept");
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name,
+                                      qsl(R"lua(tempTrigger("headless resize", function()
+  record(tostring(setMainWindowSize(1280, 800)))
+  tempTimer(1, function() record(getColumnCount() .. "x" .. getRowCount()) end)
+end))lua"),
+                                      recordPath));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")));
+        QVERIFY(writeProfileData(name, qsl("port"), QString::number(server.serverPort())));
+        const int terminal = ::posix_openpt(O_RDWR | O_NOCTTY);
+        QVERIFY(terminal >= 0);
+        QVERIFY(::grantpt(terminal) == 0 && ::unlockpt(terminal) == 0);
+        const int output = ::open(::ptsname(terminal), O_RDWR | O_NOCTTY);
+        QVERIFY(output >= 0);
+        winsize size{};
+        size.ws_col = 80;
+        size.ws_row = 30;
+        QVERIFY(::ioctl(output, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFD, FD_CLOEXEC) == 0 && ::fcntl(output, F_SETFD, FD_CLOEXEC) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFL, O_NONBLOCK) == 0);
+        const auto closeTerminal = qScopeGuard([terminal]() {
+            ::close(terminal);
+        });
+        const auto drain = [terminal]() {
+            char buffer[4096];
+            while (::read(terminal, buffer, sizeof(buffer)) > 0) {
+            }
+        };
+
+        QProcess child;
+        child.setChildProcessModifier([output]() {
+            ::dup2(output, STDOUT_FILENO);
+        });
+        startChild(child, {qsl("-p"), name, qsl("--no-stdin")});
+        ::close(output);
+        QVERIFY(child.waitForStarted(scmFinishTimeoutMs));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.clientConnected()), scmFinishTimeoutMs);
+        // IAC DO NAWS
+        server.sendRaw(QByteArray("\xff\xfd\x1f", 3));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(80, 30))), scmFinishTimeoutMs);
+        server.clearNawsUpdates();
+
+        server.sendRaw(QByteArray("headless resize\r\n"));
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), readFile(recordPath)), qsl("true\n80x30\n"), scmFinishTimeoutMs);
+        // Past the 0.3s NAWS waits for the size to settle
+        QTest::qWait(500);
+        drain();
+        QCOMPARE(server.nawsUpdates(), QVector<QSize>());
+
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGTERM) == 0);
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), child.state()), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QVERIFY2(child.exitCode() == 128 + SIGTERM, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
+    }
+
+    // A resize handler that asks again for a size the terminal cannot take is answered with the terminal's, so the
+    // sizes settle and the game is told them
+    void test_aScriptAskingAgainForItsSizeLetsTheTerminalSettle()
+    {
+        const QString name = qsl("Headless Runner Terminal Settles");
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name,
+                                      qsl(R"lua(local resizes = 0
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width)
+  resizes = resizes + 1
+  if width < 1600 then
+    setMainWindowSize(1600, 900)
+  end
+end)
+tempTrigger("headless count", function()
+  record(resizes .. " " .. getColumnCount() .. "x" .. getRowCount())
+end))lua"),
+                                      recordPath));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")));
+        QVERIFY(writeProfileData(name, qsl("port"), QString::number(server.serverPort())));
+        const int terminal = ::posix_openpt(O_RDWR | O_NOCTTY);
+        QVERIFY(terminal >= 0);
+        QVERIFY(::grantpt(terminal) == 0 && ::unlockpt(terminal) == 0);
+        const int output = ::open(::ptsname(terminal), O_RDWR | O_NOCTTY);
+        QVERIFY(output >= 0);
+        winsize size{};
+        size.ws_col = 80;
+        size.ws_row = 30;
+        QVERIFY(::ioctl(output, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFD, FD_CLOEXEC) == 0 && ::fcntl(output, F_SETFD, FD_CLOEXEC) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFL, O_NONBLOCK) == 0);
+        const auto closeTerminal = qScopeGuard([terminal]() {
+            ::close(terminal);
+        });
+        const auto drain = [terminal]() {
+            char buffer[4096];
+            while (::read(terminal, buffer, sizeof(buffer)) > 0) {
+            }
+        };
+
+        QProcess child;
+        child.setChildProcessModifier([output]() {
+            ::dup2(output, STDOUT_FILENO);
+        });
+        startChild(child, {qsl("-p"), name, qsl("--no-stdin")});
+        ::close(output);
+        const auto stopChild = qScopeGuard([&child]() {
+            if (child.state() != QProcess::NotRunning) {
+                child.kill();
+                child.waitForFinished(scmFinishTimeoutMs);
+            }
+        });
+        QVERIFY(child.waitForStarted(scmFinishTimeoutMs));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.clientConnected()), scmFinishTimeoutMs);
+        // IAC DO NAWS; a loop would regrid the main console each turn, and NAWS waits 0.3s for it to settle
+        server.sendRaw(QByteArray("\xff\xfd\x1f", 3));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(80, 30))), 5000);
+        // The terminal's size, the script's and the terminal's again
+        server.sendRaw(QByteArray("headless count\r\n"));
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), readFile(recordPath)), qsl("3 80x30\n"), scmFinishTimeoutMs);
+
+        size.ws_col = 100;
+        QVERIFY(::ioctl(terminal, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGWINCH) == 0);
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(100, 30))), 5000);
+        server.sendRaw(QByteArray("headless count\r\n"));
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), readFile(recordPath)), qsl("3 80x30\n6 100x30\n"), scmFinishTimeoutMs);
+
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGTERM) == 0);
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), child.state()), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QVERIFY2(child.exitCode() == 128 + SIGTERM, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
     }
 
     // What a phone app built on mudlet_core can count on: nothing the core runs needs Qt Widgets

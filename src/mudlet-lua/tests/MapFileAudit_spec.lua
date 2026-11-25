@@ -104,6 +104,29 @@ describe("Tests the audit of a damaged binary map file", function()
     return id
   end
 
+  local mapErrorLogPath = getMudletHomeDir() .. "/log/errors.txt"
+
+  local function mapErrorLogSize()
+    local file = io.open(mapErrorLogPath, "rb")
+    if not file then
+      return 0
+    end
+    local size = file:seek("end")
+    file:close()
+    return size
+  end
+
+  local function readMapErrorLogFrom(offset)
+    local file = io.open(mapErrorLogPath, "rb")
+    if not file then
+      return ""
+    end
+    file:seek("set", offset)
+    local text = file:read("*a")
+    file:close()
+    return text
+  end
+
   local function listHas(list, wanted)
     for _, value in pairs(list or {}) do
       if value == wanted then
@@ -332,6 +355,34 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.is_table(lines["w"])
       assert.are.equal("dot line", lines["w"].attributes.style)
       assert.are.equal(-2147483648, lines["w"].points[2][1])
+    end)
+  end)
+
+  describe("Tests map labels", function()
+    -- the 2D map rounds a label's size to pixels, which a NaN or infinity cannot be
+    it("gives a label whose size is not a finite number the size of its image", function()
+      local area = newArea("MapFileAuditSpecUnpaintableLabel")
+      newRoom(area, 0)
+      local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+      local image = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+      -- at this zoom the label's image is 43 by 12 pixels
+      local label = assert(createMapImageLabel(area, image, 0, 0, 0, 4321.25, 1234.5, 0.01, false))
+      -- the control, whose 4 by 3 pixel image is not its size either
+      local soundLabel = assert(createMapImageLabel(area, image, 5, 5, 0, 3.5, 2.75, 1, false))
+
+      reloadWith(function(data)
+        -- the size is two doubles, most significant byte first: the width
+        -- becomes NaN and the height infinity
+        data = planted(data, "\64\176\225\64\0\0\0\0", "\127\248\0\0\0\0\0\0", 1)
+        return planted(data, "\64\147\74\0\0\0\0\0", "\127\240\0\0\0\0\0\0", 1)
+      end)
+
+      local loaded = getMapLabel(area, label)
+      assert.are.equal(43, loaded.Width)
+      assert.are.equal(12, loaded.Height)
+      local sound = getMapLabel(area, soundLabel)
+      assert.are.equal(3.5, sound.Width)
+      assert.are.equal(2.75, sound.Height)
     end)
   end)
 
@@ -593,6 +644,61 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests the numbers in a JSON map's header", function()
+    local jsonPath
+
+    -- the player marker settings are not in a binary map, so only reloading
+    -- the JSON map puts them back for the tests after these ones
+    local function loadWithHeader(plant)
+      jsonPath = mapDirectory .. "/mapfileaudit_spec_header.json"
+      assert.is_true(saveJsonMap(jsonPath))
+      local original = readFile(jsonPath)
+      finally(function()
+        writeFile(jsonPath, original)
+        loadJsonMap(jsonPath)
+        os.remove(jsonPath)
+      end)
+      writeFile(jsonPath, plant(original))
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    local function savedHeaderValue(key)
+      assert.is_true(saveJsonMap(jsonPath))
+      return readFile(jsonPath):match(('\n    "%s": ([^,\n]+)'):format(key))
+    end
+
+    it("loads a JSON map whose counts and settings are far beyond the range of an int", function()
+      openMapWidget()
+      local area = newArea("MapFileAuditSpecJsonHugeHeader")
+      local room = newRoom(area, 0)
+      loadWithHeader(function(text)
+        -- each top-level key keeps its original value under a name the reader ignores
+        for _, key in ipairs({"areaCount", "roomCount", "labelCount", "playerRoomStyle",
+                              "playerRoomOuterDiameterPercentage", "playerRoomInnerDiameterPercentage"}) do
+          text = planted(text, ('\n    "%s": '):format(key), ('\n    "%s": -2147483649, "%sWas": '):format(key, key), 1)
+        end
+        return planted(text, '\n    "mapSymbolFontFudgeFactor": ',
+                       '\n    "mapSymbolFontFudgeFactor": 1e300, "fudgeWas": ', 1)
+      end)
+
+      assert.are.equal(area, getRoomArea(room))
+      assert.are.equal(2, getConfig("mapSymbolFontScaling"))
+      assert.are.equal("0", savedHeaderValue("playerRoomStyle"))
+      assert.are.equal("0", savedHeaderValue("playerRoomOuterDiameterPercentage"))
+    end)
+
+    it("rounds a hand-edited fraction in the player marker settings", function()
+      newRoom(newArea("MapFileAuditSpecJsonFractionHeader"), 0)
+      loadWithHeader(function(text)
+        return planted(text, '\n    "playerRoomOuterDiameterPercentage": ',
+                       '\n    "playerRoomOuterDiameterPercentage": 120.5, "outerWas": ', 1)
+      end)
+
+      assert.are.equal("121", savedHeaderValue("playerRoomOuterDiameterPercentage"))
+    end)
+  end)
+
   describe("Tests area IDs and area membership", function()
     it("renumbers an area whose ID is below one and moves its rooms with it", function()
       assert.is_true(setAreaName(distantAreaId, "MapFileAuditSpecBadId"))
@@ -635,6 +741,32 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same({awayRoom}, getAreaRooms1(away))
       assert.are.equal(home, getRoomArea(homeRoom))
       assert.are.equal(away, getRoomArea(awayRoom))
+    end)
+
+    it("reports one room missing from and one extra in an area in the singular", function()
+      if mudlet.translations.interfacelanguage ~= "en_US" then
+        pending("the singular forms come from the en_US translation")
+        return
+      end
+      local home = newArea("MapFileAuditSpecHome")
+      local away = newArea("MapFileAuditSpecAway")
+      local homeRoom = newRoom(home, 0, distantRoomId)
+      local awayRoom = newRoom(away, 1, otherDistantRoomId)
+      local logSize = mapErrorLogSize()
+
+      reloadWith(function(data)
+        assert.are.equal(2, countBytes(data, int32(homeRoom)))
+        return planted(data, int32(homeRoom), int32(awayRoom), 1, 1)
+      end)
+
+      local log = readMapErrorLogFrom(logSize)
+      -- loading first writes out any messages still queued under a report of its own
+      local reportStart = log:find(('Loading map(1) "%s" at'):format(damagedPath), 1, true)
+      assert.is_truthy(reportStart, log)
+      local areaIssues = log:sub(reportStart):match("= Area issues =(.-)= Room issues =")
+      assert.is_truthy(areaIssues, log)
+      assert.is_truthy(areaIssues:find(("there was 1 room missing from those it should be recorded as possessing.  It is: %d."):format(homeRoom), 1, true), areaIssues)
+      assert.is_truthy(areaIssues:find(("there was 1 extra room that it should not be recorded as possessing.  It was: %d."):format(awayRoom), 1, true), areaIssues)
     end)
 
     it("creates an area that has a name but was never instantiated", function()

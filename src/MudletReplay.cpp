@@ -77,11 +77,16 @@ bool MudletReplay::start(Host* pHost)
 
     mRunning = true;
     mpHost = pHost;
-    mSpeed = 1;
-    // A null QTime would stay null through addMSecs(), so start a millisecond in
-    mElapsed.setHMS(0, 0, 0, 1);
-    emit signal_replayStarted();
+    mSpeed = scMinSpeed;
+    mElapsedMSecs = 0;
     return true;
+}
+
+void MudletReplay::announce()
+{
+    if (mRunning) {
+        emit signal_replayStarted();
+    }
 }
 
 void MudletReplay::over()
@@ -96,7 +101,7 @@ void MudletReplay::speedUp()
     if (!mRunning) {
         return;
     }
-    mSpeed = qMin(1024, mSpeed * 2);
+    mSpeed = qMin(scMaxSpeed, mSpeed * 2);
     emit signal_replaySpeedChanged(mSpeed);
 }
 
@@ -105,6 +110,6 @@ void MudletReplay::speedDown()
     if (!mRunning) {
         return;
     }
-    mSpeed = qMax(1, mSpeed / 2);
+    mSpeed = qMax(scMinSpeed, mSpeed / 2);
     emit signal_replaySpeedChanged(mSpeed);
 }

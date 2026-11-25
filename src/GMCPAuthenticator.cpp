@@ -30,7 +30,6 @@
 #include "TAppFrontend.h"
 #include <QCryptographicHash>
 #include <QDebug>
-#include <QDesktopServices>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -180,6 +179,7 @@ QPair<bool, QString> removeMetadataFromProfile(const QString& profileName)
     }
     QFile file(path);
     if (file.remove()) {
+        TAppFrontend::instance()->configWritten();
         return qMakePair(true, QString());
     }
     return qMakePair(false, file.errorString());
@@ -246,9 +246,14 @@ void rememberRejectedToken(const QString& profileName, const QByteArray& hash)
 void forgetRejectedToken(const QString& profileName)
 {
     QFile record(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, rejectedTokenKey()));
-    if (record.exists() && !record.remove()) {
-        qWarning().noquote() << "GMCP Char.Login - could not remove the record of a rejected token for profile" << profileName << ":" << record.errorString();
+    if (!record.exists()) {
+        return;
     }
+    if (!record.remove()) {
+        qWarning().noquote() << "GMCP Char.Login - could not remove the record of a rejected token for profile" << profileName << ":" << record.errorString();
+        return;
+    }
+    TAppFrontend::instance()->configWritten();
 }
 
 } // namespace
@@ -880,7 +885,7 @@ void GMCPAuthenticator::offerOrOpenSignInUrl(const QUrl& url, const QString& pro
 
 bool GMCPAuthenticator::openSignInUrl(const QUrl& url, const QString& provider)
 {
-    if (!QDesktopServices::openUrl(url)) {
+    if (!TAppFrontend::instance()->openWebPage(url.toString(QUrl::FullyEncoded))) {
         //: %1 is the sign-in web address the user should open manually in their browser.
         mpHost->postMessage(tr("[ WARN ]  - Could not open your browser. Open this link manually to sign in: %1").arg(UntrustedText::forTarget(url.toString())));
         return false;
@@ -900,6 +905,7 @@ void GMCPAuthenticator::announceBrowserHandoff(const QString& provider)
     // The browser handoff happens with no focused control to announce it, so push an explicit
     // announcement to assistive technology (VoiceOver/NVDA/Orca) instead of relying on the console.
     TAppFrontend::instance()->announce(message, QString(), true);
+    emit mpHost->signal_announcementRequested(message, QString());
 }
 
 void GMCPAuthenticator::startClientDrivenOAuth()

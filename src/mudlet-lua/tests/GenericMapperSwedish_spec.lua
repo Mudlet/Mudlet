@@ -23,8 +23,9 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   end
 
   local captureMoveCmd = upvalue(map.eventHandler, "capture_move_cmd")
+  local queueMove = upvalue(captureMoveCmd, "queue_move")
   local function moveQueue()
-    return upvalue(captureMoveCmd, "move_queue")
+    return upvalue(queueMove, "move_queue")
   end
 
   local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}

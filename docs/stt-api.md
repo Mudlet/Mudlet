@@ -97,6 +97,14 @@ engine's installed models rather than picking one, since a downloaded model
 should stay visible whether or not its engine happens to be the one loaded
 right now.
 
+**Installing an engine library on macOS.** Signed Mudlet releases and PTBs
+only load engine libraries signed by Mudlet, so the builds the sherpa-onnx and
+Vosk projects publish are refused there and the built-in macOS backend is used
+instead. Install the libraries from `Mudlet-<version>-speech-engines-<arch>.zip`
+on the same GitHub release as your Mudlet, whose README names the folder each
+engine goes into. The upstream builds work only in a self-built or unsigned
+Mudlet.
+
 **Using the built-in macOS backend from a development build.** It asks macOS
 for speech-recognition permission, and macOS attributes that request to the
 *responsible process* - which, for anything started from a shell, is the
@@ -161,10 +169,13 @@ words, sensitivityTuning, onDevice = true}`. `biasing` and `grammar` are always
 `false` there. The other two each follow a symbol resolving in the installed
 libvosk — `words` the word-level one, `sensitivityTuning` the endpointer — so an
 older or partial library reports `false` rather than promising a `sysSTTWords`
-that never arrives, or a sensitivity the engine cannot be told about. Unloading
-or reloading the library changes both answers, announced through
-`sysSTTCapabilitiesChanged`. Its sherpa-onnx backend reports `{biasing,
-grammar = false, words = false, sensitivityTuning = true, onDevice = true}`,
+that never arrives, or a sensitivity the engine cannot be told about. The
+endpointer symbol is newer than libvosk 0.3.45, the last release with prebuilt
+desktop libraries, so those report `sensitivityTuning = false`; later versions
+must be built from source. Unloading or reloading the library changes both
+answers, announced through `sysSTTCapabilitiesChanged`. Its sherpa-onnx
+backend reports `{biasing, grammar = false, words = false, sensitivityTuning =
+true, onDevice = true}`,
 where `sensitivityTuning` is unconditional — the endpoint rules are its own, so a
 `setSensitivity` that answers `false` there means the model rebuild it needs
 failed, not that tuning is beyond it — and `biasing` is `true`

@@ -57,6 +57,13 @@
 
 #include "GroupedTest.h"
 
+#if defined(Q_OS_UNIX)
+#include <algorithm>
+#include <cerrno>
+#include <csignal>
+#include <sys/resource.h>
+#endif
+
 namespace {
 const int scmRoom1 = 101;
 const int scmRoom2 = 102;
@@ -725,6 +732,67 @@ private slots:
         QCOMPARE(oldRoom.getSpecialExits().value(scmUnprefixedSpecialExit, 0), scmRoom2);
         QVERIFY2(oldRoom.getSpecialExitLocks().isEmpty(), "a command with no lock flag came back locked");
     }
+
+#if defined(Q_OS_UNIX)
+    void test_aJsonExportThatCannotBeWrittenIsReported_data()
+    {
+        QTest::addColumn<int>("rooms");
+        QTest::addColumn<qint64>("fileSizeLimit");
+        QTest::addColumn<QString>("reason");
+        // Bigger than the file's write buffer, so the write itself comes up short, with no error on the file
+        QTest::newRow("cut short while writing") << 3000 << qint64(64 * 1024) << qsl("is the disk full?");
+        // Held in the file's write buffer until commit() flushes it, and Qt gives that failure no reason
+        QTest::newRow("cut short while flushing") << 1 << qint64(256) << QString();
+        // The write fails outright, and its reason is gone from the file once commit() returns
+        QTest::newRow("nothing written") << 3000 << qint64(0) << qt_error_string(EFBIG);
+    }
+
+    // A full disk is the usual cause, and the file already there must be left as it was
+    void test_aJsonExportThatCannotBeWrittenIsReported()
+    {
+        QFETCH(int, rooms);
+        QFETCH(qint64, fileSizeLimit);
+        QFETCH(QString, reason);
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        const int areaId = pTargetMap->mpRoomDB->addArea(qsl("Export area"));
+        QVERIFY(areaId > 0);
+        for (int id = 1; id <= rooms; ++id) {
+            QVERIFY(pTargetMap->addRoom(id));
+            QVERIFY(pTargetMap->setRoomArea(id, areaId));
+        }
+        const QString fileName = qsl("%1/cannot_be_written.json").arg(mSaveDir.path());
+        {
+            QFile old(fileName);
+            QVERIFY(old.open(QIODevice::WriteOnly));
+            QCOMPARE(old.write("OLD"), 3);
+        }
+
+        rlimit saved{};
+        QCOMPARE(::getrlimit(RLIMIT_FSIZE, &saved), 0);
+        rlimit limited = saved;
+        limited.rlim_cur = std::min(static_cast<rlim_t>(fileSizeLimit), saved.rlim_max);
+        // Past the limit the kernel also raises SIGXFSZ, whose default action ends the process
+        const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
+        const bool applied = ::setrlimit(RLIMIT_FSIZE, &limited) == 0;
+        std::pair<bool, QString> result{true, QString()};
+        if (applied) {
+            result = pTargetMap->writeJsonMapFile(fileName);
+        }
+        const bool restored = ::setrlimit(RLIMIT_FSIZE, &saved) == 0;
+        std::signal(SIGXFSZ, previousHandler);
+        QVERIFY2(applied, "the file size limit could not be set");
+        QVERIFY2(restored, "the file size limit could not be put back");
+
+        QVERIFY2(!result.first, "an export that could not be written was reported as a success");
+        QVERIFY2(result.second.startsWith(qsl("could not export file")), qPrintable(result.second));
+        QVERIFY2(result.second.endsWith(reason), qPrintable(result.second));
+        QFile file(fileName);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), QByteArray("OLD"));
+        QCOMPARE(QDir(mSaveDir.path()).entryList({qsl("cannot_be_written.json*")}, QDir::Files | QDir::Hidden), QStringList{qsl("cannot_be_written.json")});
+    }
+#endif
 
     // An area id can reach the load as a name in the map's area table with no
     // TArea of its own, and the audit is what makes one for it (#989). This

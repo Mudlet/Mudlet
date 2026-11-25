@@ -68,12 +68,11 @@ TAlias::~TAlias()
     if (mpHost) {
         mpHost->getAliasUnit()->unregisterAlias(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Alias0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Alias%1").arg(mID)) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 
@@ -163,6 +162,8 @@ bool TAlias::match(const QByteArray& haystack)
 
     matchCondition = true; // alias has matched
 
+    // rc stops at the highest set group, so unset trailing groups stay out of matches (nil)
+    // instead of becoming "": scripts test `if matches[N]` on an optional trailing group
     for (i = 0; i < rc; i++) {
         const char* substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
@@ -350,8 +351,7 @@ bool TAlias::setScript(const QString& script)
     // Switching from a registered anonymous Lua function (set up by tempAlias with a
     // function argument) to a script string: release the old function from the Lua
     // registry and leave callback mode. Otherwise execute() keeps calling the stale
-    // function so the new script never runs, and the registry entry leaks - the
-    // destructor would take its mScript-based branch and delete the compiled function.
+    // function so the new script never runs.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
@@ -368,7 +368,7 @@ bool TAlias::compileScript()
 {
     QString code = qsl("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
     QString aliasName = qsl("Alias: %1").arg(getName());
-    mFuncName = qsl("Alias%1").arg(QString::number(mID));
+    mFuncName = qsl("Alias%1").arg(mID);
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
@@ -436,4 +436,37 @@ bool TAlias::checkIfNew()
 void TAlias::unmarkAsNew()
 {
     mIsNew = false;
+}
+
+void TAlias::updateModuleMembership()
+{
+    if (!mpHost || mModuleMasterFolder) {
+        return;
+    }
+    const TAlias* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
+
+void TAlias::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TAlias*>(pChild)->setModuleMembership(member);
+    }
 }

@@ -40,8 +40,9 @@ class dlgComposer : public QMainWindow, public Ui::composer
 public:
     Q_DISABLE_COPY(dlgComposer)
     explicit dlgComposer(Host*);
+    ~dlgComposer() override;
 
-    void init(const QString &title, const QString &newText);
+    void init(const QString& title, const QString& newText);
 
 public slots:
     void slot_save();

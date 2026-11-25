@@ -28,6 +28,7 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -46,7 +47,6 @@
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -92,6 +92,8 @@ int TLuaInterpreter::connectToServer(lua_State* L)
         }
     }
 
+    // A telnets:// link's TLS was for the address the player agreed to, not this one
+    host.mUseTlsThisSession = false;
     host.mTelnet.connectIt(url, port);
 
     lua_pushboolean(L, true);
@@ -153,6 +155,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
             event.mArgumentList << QString();
             event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
         }
+        appendHttpRequestId(event, reply);
         pHost->raiseEvent(event);
         if (TDebug::wants(TDebug::Category::Network)) {
             TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << "downloadFile: " << bytesDownloaded << "/" << totalBytes << " bytes ready for " << reply->url().toString() << "\n" >> pHost;
@@ -163,9 +166,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << "downloadFile: start download from " << reply->url().toString() << "\n" >> &host;
     }
 
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return host.mLuaInterpreter.pushHttpRequestResult(L, reply);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConnectionInfo
@@ -274,8 +275,8 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
 int TLuaInterpreter::openUrl(lua_State* L)
 {
     const QString url = getVerifiedString(L, __func__, 1, "url");
-    QDesktopServices::openUrl(url);
-    return 0;
+    lua_pushboolean(L, TAppFrontend::instance()->openWebPage(url));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#reconnect
@@ -307,7 +308,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
         lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    const bool hasWhat = lua_gettop(L) > 1;
+    const bool hasWhat = !lua_isnoneornil(L, 2);
     if (hasWhat && !lua_isstring(L, 2)) {
         lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
@@ -357,7 +358,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    const bool hasWhat = lua_gettop(L) > 1;
+    const bool hasWhat = !lua_isnoneornil(L, 2);
     if (hasWhat && !lua_isstring(L, 2)) {
         lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
@@ -748,9 +749,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << qsl("getHTTP: script is getting data from %1\n").arg(reply->url().toString()) >> &host;
     }
 
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return host.mLuaInterpreter.pushHttpRequestResult(L, reply);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
@@ -793,9 +792,7 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << qsl("deleteHTTP: script is sending delete request for %1\n").arg(reply->url().toString()) >> &host;
     }
 
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
+    return host.mLuaInterpreter.pushHttpRequestResult(L, reply);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#customHTTP

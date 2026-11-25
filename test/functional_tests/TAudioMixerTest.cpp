@@ -124,7 +124,7 @@ private slots:
     void test_aGameThatSendsMediaHasTheBackendCheckedBeforeItsFirstSound()
     {
         if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+            QSKIP("A backend is named: TMediaPanTest checks what starts the check of FFmpeg named, and this class checks its first sound next.");
         }
         QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the game said anything.");
         QVERIFY2(QTest::qWaitFor(
@@ -158,6 +158,43 @@ private slots:
         TMediaData first = clipData(writeClip(qsl("first.wav"), 3000), TMediaData::MediaTypeSound);
         media()->playMedia(first);
         QCOMPARE(media()->playersMixed(), 1);
+    }
+
+    // Second, so nothing has checked the backend yet. FFmpeg named is trusted while its check runs, so a sound
+    // played before the check answers is mixed from its start.
+    void test_aSoundPlayedWhileFFmpegIsCheckedIsMixed()
+    {
+        if (qEnvironmentVariable("QT_MEDIA_BACKEND") != qsl("ffmpeg")) {
+            QSKIP("Only FFmpeg named is trusted before its check answers.");
+        }
+        QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the first sound.");
+        TMediaData data = clipData(writeClip(qsl("unchecked.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        QVERIFY(TMediaVoice::probeStarted());
+        QCOMPARE(media()->playersMixed(), 1);
+
+        // Stopped before its silence could move it, and played again once the check has answered, the sound reuses
+        // its player: mixed only if the check found audio coming through, as a new player would be
+        media()->stopMedia(data);
+
+        // A main thread held up past the check's limit, as by a slow login, does not count against it
+        QElapsedTimer busy;
+        busy.start();
+        while (busy.elapsed() < 6000) {
+            // Blocking on purpose: no events are processed
+        }
+        QTest::qWait(300ms);
+        QVERIFY2(!TMediaVoice::probeFailed(), "The check failed the backend on time the main thread was held up.");
+
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return TMediaVoice::probePassed() || TMediaVoice::probeFailed();
+                         },
+                         QDeadlineTimer(8s)),
+                 "The check of the backend never answered.");
+        media()->playMedia(data);
+        QCOMPARE(media()->mediaPlayerCount(), 1);
+        QCOMPARE(media()->playersMixed(), TMediaVoice::probePassed() ? 1 : 0);
     }
 
     // Video keeps an output of its own, timed against its picture; the rest are mixed
@@ -341,6 +378,26 @@ private slots:
         }
     }
 
+    // Moved off the mix, a sound leaves its voice to be deleted later. Qt 6.12 leaves a detached QAudioBufferOutput
+    // pointing at its player, so a player evicted before then must take that voice with it (QTBUG-152293).
+    void test_aPlayerEvictedJustAfterLeavingTheMixTakesItsVoice()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendFeedsTheMix() ? QString() : noMixingReason());
+        TMediaData data = clipData(writeClip(qsl("retired.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        const QPointer<const TMediaVoice> retired = mixedVoice();
+        QVERIFY2(retired, "The sound was not played through the shared output.");
+        emit const_cast<TMediaVoice*>(retired.data())->signal_unsupported();
+        QCOMPARE(media()->playersMixed(), 0);
+        QVERIFY2(retired, "The voice was deleted as it was moved off the shared output, from within its own signal.");
+
+        for (int sound = 0; sound <= media()->getMaxUnprunedPlayers(); ++sound) {
+            TMediaData burst = clipData(writeClip(qsl("evicts%1.wav").arg(sound), 3000), TMediaData::MediaTypeSound);
+            media()->playMedia(burst);
+        }
+        QVERIFY2(!retired, "An evicted player left its old voice waiting to be deleted after it.");
+    }
+
     // The mute switch applies to a sound from its start, not only when it is next flipped
     void test_aSoundStartedWhileMutedStartsMuted()
     {
@@ -418,11 +475,11 @@ private slots:
         QCOMPARE(TAudioMixer::self()->timesRanDry(), ranDryBefore);
     }
 
-    // Once the check of a backend nobody named has answered, every sound is mixed
+    // Once the check has answered, every sound is mixed
     void test_aCheckedBackendMixesTheFirstSound()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        if (const QString backend = qEnvironmentVariable("QT_MEDIA_BACKEND"); !backend.isEmpty() && backend != qsl("ffmpeg")) {
+            QSKIP("A backend other than FFmpeg is named, so it is never checked.");
         }
         TMediaVoice::probeBackend();
         QVERIFY(TMediaVoice::probeStarted());
@@ -442,12 +499,39 @@ private slots:
     // A backend that is known not to feed a voice keeps every player on an output of its own
     void test_aBackendThatCannotFeedTheMixKeepsOutputsOfItsOwn()
     {
-        if (backendFeedsTheMix()) {
+        // Skipped on what the check found, not on the decision under test that is made from it
+        if (backendFeedsTheMix() && TMediaVoice::probePassed()) {
             QSKIP("This Qt Multimedia backend feeds the shared output, so there is no fallback to see.");
         }
         TMediaData data = clipData(writeClip(qsl("fallback.wav"), 3000), TMediaData::MediaTypeSound);
         media()->playMedia(data);
         QCOMPARE(media()->playersMixed(), 0);
+    }
+
+    // Last, as it stops the mixer for good. Left to the application's teardown, the output would be closed
+    // from the main thread after its own had finished, and after Qt released the backend it plays through.
+    void test_theOutputIsClosedOnItsOwnThreadAsTheApplicationQuits()
+    {
+        REQUIRE_MIXING();
+        TMediaData data = clipData(writeClip(qsl("quit.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TAudioMixer::self()->outputOpen();
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noAudioReason());
+
+        // What QCoreApplication::exec() emits as its event loop ends
+        QVERIFY(QMetaObject::invokeMethod(qApp, "aboutToQuit", Qt::DirectConnection));
+        const bool closed = !TAudioMixer::self()->outputOpen();
+        media()->playMedia(data);
+        QTest::qWait(500ms);
+        const bool stayedClosed = !TAudioMixer::self()->outputOpen();
+
+        QVERIFY2(closed, "The shared output was still open once the application said it was quitting.");
+        QVERIFY2(stayedClosed, "A sound played after the application said it was quitting opened the shared output again.");
     }
 
 private:
@@ -458,21 +542,22 @@ private:
 
     QString noMixingReason() const
     {
-        return qsl("This Qt Multimedia backend (\"%1\") does not feed the shared output, so every player keeps an output of its own. Needs Qt's FFmpeg backend.")
+        return qsl("The media backend Qt loaded for QT_MEDIA_BACKEND=\"%1\" does not feed the shared output, so every player keeps an output of its own. "
+                   "Needs Qt's FFmpeg backend, which a Qt built without it replaces with another.")
                 .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")));
     }
 
-    // Asking starts the one-time probe of a backend nobody named, which takes a moment to answer
+    // Asking starts the one-time probe, which takes a moment to answer; a backend other than FFmpeg is never
+    // probed. FFmpeg named is not taken on trust here: a Qt without it plays through another backend.
     static bool backendFeedsTheMix()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            return !TMediaVoice::unsupported();
-        }
-        return QTest::qWaitFor(
+        const bool answered = QTest::qWaitFor(
                 []() {
-                    return !TMediaVoice::unsupported();
+                    TMediaVoice::unsupported();
+                    return TMediaVoice::probePassed() || TMediaVoice::probeFailed() || !TMediaVoice::probeStarted();
                 },
                 QDeadlineTimer(6s));
+        return answered && !TMediaVoice::unsupported();
     }
 
     bool waitForQueuedAudio() const

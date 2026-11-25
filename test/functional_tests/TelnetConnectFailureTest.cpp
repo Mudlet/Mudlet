@@ -90,6 +90,15 @@ public:
     // secure handshake outright, rather than leaving it waiting.
     void setGreeting(const QByteArray& greeting) { mGreeting = greeting; }
 
+    // Plain text sent after the client has already started its handshake, so a test can act before it fails.
+    void sendToClient(const QByteArray& bytes)
+    {
+        if (mClient) {
+            mClient->write(bytes);
+            mClient->flush();
+        }
+    }
+
     // The game dropping the player, which is how most disconnections actually happen.
     void dropClient()
     {
@@ -299,6 +308,72 @@ private slots:
         QCOMPARE(mpServer->connectionCount(), connectionsBefore);
     }
 
+    // A script that reconnects from sysDisconnectionEvent starts its attempt before the failure it
+    // was told of decides whether to retry, and that decision is still the player's to make.
+    void test_aCalledOffAttemptIsNotRetriedWhenAScriptReconnectsFromItsEvent()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        host->mTelnet.setAutoReconnect(true);
+        host->mTelnet.mFailedConnectionRetryDelay = 200ms;
+
+        QVERIFY(disconnectAndWait(host));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("local handler\n"
+                                                                       "handler = registerAnonymousEventHandler(\"sysDisconnectionEvent\", function()\n"
+                                                                       "  killAnonymousEventHandler(handler)\n"
+                                                                       "  connectToServer(\"127.0.0.1\", %1)\n"
+                                                                       "end)")
+                                                                           .arg(mpServer->serverPort())));
+        const int connectionsBefore = mpServer->connectionCount();
+        // A refused local dial fails inside connectToHost(), too fast to call off, so this sets up
+        // what a Disconnect during a slower dial leaves behind and then ends that dial
+        host->mTelnet.mDontReconnect = true;
+        host->mTelnet.handleFailedConnection();
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > connectionsBefore;
+                         },
+                         10s),
+                 "the script's own connection never reached the game");
+        QTest::qWait(2s);
+        QVERIFY2(!bufferContains(host, qsl("Trying again")), "the attempt the player called off was scheduled to be tried again");
+        QCOMPARE(mpServer->connectionCount(), connectionsBefore + 1);
+        QCOMPARE(host->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState);
+    }
+
+    // A script that answers a failure by calling disconnect() and then connecting again leaves no
+    // flag for the failure to read, so it has to see the new attempt itself before arming a retry
+    void test_aFailureIsNotRetriedWhenAScriptHasAlreadyDialledAgain()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        host->mTelnet.setAutoReconnect(true);
+        host->mTelnet.mFailedConnectionRetryDelay = 200ms;
+
+        const quint16 deadPort = connectToADeadPort(host);
+        QVERIFY(deadPort);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("local handler\n"
+                                                                       "handler = registerAnonymousEventHandler(\"sysDisconnectionEvent\", function()\n"
+                                                                       "  killAnonymousEventHandler(handler)\n"
+                                                                       "  disconnect()\n"
+                                                                       "  connectToServer(\"127.0.0.1\", %1)\n"
+                                                                       "end)")
+                                                                           .arg(mpServer->serverPort())));
+        const int connectionsBefore = mpServer->connectionCount();
+        QVERIFY2(waitForTextInBuffer(host, qsl("Unable to connect")), "the connection attempt did not fail");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > connectionsBefore;
+                         },
+                         10s),
+                 "the script's own connection never reached the game");
+        QTest::qWait(2s);
+        QVERIFY2(!bufferContains(host, qsl("Trying again")), "a retry was scheduled on top of the script's own attempt");
+        QCOMPARE(mpServer->connectionCount(), connectionsBefore + 1);
+        QCOMPARE(host->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState);
+    }
+
     // Every ordinary disconnection reaches the new error handling as well, because Qt reports the
     // remote host closing as a socket error before it signals the disconnection. Those already
     // have their own message and their own event, and must not collect a second of either.
@@ -393,9 +468,238 @@ private slots:
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a failed handshake was reported as a failure to connect as well");
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
+
+    // A game answering in plain text did not reject the login: the secure option is on for a port
+    // without it. Connected openly first, as a player who has just switched the option on was.
+    void test_aFailedSecureHandshakeSuggestsTurningTheOptionOff()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+        host->mSslTsl = true;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the failed handshake was not reported by the disconnection path");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return bufferContains(host, qsl("Secure handshake failed; this game may not support secure connections on this port"));
+                         },
+                         2s),
+                 "a failed handshake was not explained as the game not offering secure connections on that port");
+        QVERIFY2(!bufferContains(host, qsl("rejected by server")), "a failed handshake was reported as the game rejecting the login");
+        QVERIFY2(!bufferContains(host, qsl("Secure connection made")), "a secure connection was announced before its handshake had succeeded");
+    }
+
+    // A connection that was never made did not last long enough to be worth reconnecting
+    // automatically, however long ago the last one that was made began.
+    void test_aFailedSecureHandshakeIsNotRetriedStraightAway()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        host->mTelnet.setAutoReconnect(true);
+        // Past the 5s a connection has to last before its loss sets off an automatic reconnect
+        QTest::qWait(5500ms);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+        host->mSslTsl = true;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the failed handshake was not reported by the disconnection path");
+        QTest::qWait(3s);
+        QCOMPARE(countLines(host, qsl("Attempting a secure connection")), 1);
+    }
+
+    // A handshake one address family fails, the other, to the same game and certificate, would
+    // fail too, so it is called off and the failure is reported once, straight away
+    void test_aFailedSecureHandshakeCallsOffTheOtherAddressFamily()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QTcpServer otherAddress;
+        int disconnectsBefore = 0;
+        startSecureAttemptBesideTheOtherAddressFamily(host, otherAddress, disconnectsBefore);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        mpServer->sendToClient(QByteArray("Welcome to the game.\r\n"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         8s),
+                 "the failed handshake was not reported while the other address family was still trying");
+        QVERIFY2(bufferContains(host, qsl("Secure handshake failed")), "the failed handshake was not explained");
+        QCOMPARE(host->mTelnet.mSocket_ipV6.state(), QAbstractSocket::UnconnectedState);
+        QTest::qWait(500ms);
+        QCOMPARE(countLines(host, qsl("Socket got disconnected")), disconnectsBefore + 1);
+        QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
+    }
+
+    // A connection dropped mid-handshake can be particular to one network path, so the other
+    // address family's attempt is left to run
+    void test_aSecureAttemptDroppedMidHandshakeLeavesTheOtherAddressFamilyTrying()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QTcpServer otherAddress;
+        int disconnectsBefore = 0;
+        startSecureAttemptBesideTheOtherAddressFamily(host, otherAddress, disconnectsBefore);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        mpServer->dropClient();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         8s),
+                 "the dropped attempt was never reported");
+        QCOMPARE(host->mTelnet.mSocket_ipV6.state(), QAbstractSocket::ConnectedState);
+        host->mTelnet.mSocket_ipV6.abort();
+    }
+#endif
+
+    // connectToServer() can save an address the open profile is not using, which is the one a game's
+    // link is matched to and asked about, so that is the one dialled
+    void test_aGameLinkDialsTheAddressItAskedAbout()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        host->setUrl(qsl("unreachable.invalid"));
+
+        mudlet::self()->mConfirmGameLink = [](const QString&) {
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        mudlet::self()->connectFromGameLink(qsl("telnet://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY2(connected.wait(3s), "the link dialled the open profile's address, not the one it asked about");
+    }
+
+#if !defined(QT_NO_SSL)
+    // A game's telnets:// link to a saved profile connects it with TLS, which this plain game fails,
+    // without saving TLS to the profile; a telnet:// link afterwards connects it without
+    void test_aGameLinkToASavedProfileUsesTlsOnlyWhenItSaysSo()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const QString savedTls = MudletApp::readProfileData(mHostname, qsl("ssl_tsl"));
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+
+        QString asked;
+        mudlet::self()->mConfirmGameLink = [&asked](const QString& question) {
+            asked = question;
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost).arg(mPort));
+        QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost).arg(mPort).arg(mHostname));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the telnets:// link did not connect with TLS");
+        QVERIFY(!host->mSslTsl);
+        QCOMPARE(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")), savedTls);
+
+        const int disconnectsAfterTls = countLines(host, qsl("Socket got disconnected"));
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        mudlet::self()->connectFromGameLink(qsl("telnet://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY2(connected.wait(3s), "the telnet:// link did not connect");
+        QTest::qWait(1s);
+        QCOMPARE(countLines(host, qsl("Socket got disconnected")), disconnectsAfterTls);
+        QVERIFY(!host->mUseTlsThisSession);
+    }
+
+    // A telnets:// link's TLS is for the address the player agreed to, not one a script dials afterwards
+    void test_aScriptsConnectionAfterAGameLinkDoesNotInheritItsTls()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+
+        mudlet::self()->mConfirmGameLink = [](const QString&) {
+            return true;
+        };
+        const auto unhook = qScopeGuard([] {
+            mudlet::self()->mConfirmGameLink = nullptr;
+        });
+        mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost).arg(mPort));
+        QVERIFY(host->mUseTlsThisSession);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the telnets:// link did not connect with TLS");
+
+        QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("connectToServer('%1', %2)").arg(mLocalhost).arg(mPort)));
+        QVERIFY2(connected.wait(3s), "the script's connection did not connect");
+        QVERIFY(!host->mUseTlsThisSession);
+    }
 #endif
 
 private:
+    // Starts a secure attempt on the stub, then has the profile's IPv6 socket wait on a game that
+    // says nothing, standing in for the other address family's attempt as this machine may lack IPv6
+    void startSecureAttemptBesideTheOtherAddressFamily(Host* host, QTcpServer& otherAddress, int& disconnectsBefore)
+    {
+        QVERIFY(recordEvents(host));
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        const int connectionsBefore = mpServer->connectionCount();
+
+        host->mSslTsl = true;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("recordedEvents = {}"));
+        host->mTelnet.connectIt(mLocalhost, mPort);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > connectionsBefore;
+                         },
+                         8s),
+                 "the secure attempt never reached the stub");
+        QCOMPARE(host->mTelnet.mPendingConnectionAttempts, 1);
+
+        QVERIFY(otherAddress.listen(QHostAddress::LocalHost, 0));
+        host->mTelnet.mSocket_ipV6.connectToHost(QHostAddress::LocalHost, otherAddress.serverPort());
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return host->mTelnet.mSocket_ipV6.state() == QAbstractSocket::ConnectedState;
+                         },
+                         8s),
+                 "the stand-in for the other address family's attempt never got under way");
+        // As slot_socketHostFound() would have counted them for a game with both address families
+        host->mTelnet.mPendingConnectionAttempts = 2;
+    }
+
     // Takes a port that nothing is listening on - by binding one and letting it go - and points
     // the profile at it. Answers the port, or 0 if one could not be had.
     quint16 connectToADeadPort(Host* host, const quint16 knownDeadPort = 0)

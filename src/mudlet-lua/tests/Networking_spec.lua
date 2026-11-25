@@ -128,6 +128,12 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "not connected to game server"))
     end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendATCP("Char.Login", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not connected to game server"), tostring(err))
+    end)
   end)
 
   describe("sendTelnetChannel102", function()
@@ -158,6 +164,16 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "unable to send"))
     end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendSocket("noop", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unable to send"), tostring(err))
+    end)
+
+    it("still raises a Lua error when the second argument is not a boolean", function()
+      assertArgError(function() sendSocket("noop", "yes") end, "sendSocket: bad argument #2 type")
+    end)
   end)
 end)
 
@@ -187,6 +203,53 @@ describe("connectToServer validates its arguments without connecting", function(
     local hostAfter, portAfter = storedProfileAddress()
     assert.equals(hostBefore, hostAfter)
     assert.equals(portBefore, portAfter)
+  end)
+end)
+
+describe("a connection attempt after disconnect() found nothing to disconnect", function()
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    for _ = 1, math.ceil(timeoutMs / 20) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(20)
+    end
+    return predicate()
+  end
+
+  local function linesSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  it("still reports the attempt failing", function()
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000))
+    -- Finds no connection to end, so the flags it sets are never cleared by a disconnection
+    disconnect()
+
+    local failed = false
+    local handler = registerAnonymousEventHandler("sysDisconnectionEvent", function() failed = true end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      -- Calls off any automatic retry the failure scheduled
+      disconnect()
+    end)
+
+    local mark = getLastLineNumber("main")
+    -- Nothing listens on port 1, so the connection is refused straight away
+    connectToServer("127.0.0.1", 1)
+    assert.is_true(waitUntil(function() return failed or connected() end, 10000), "the connection attempt never ended")
+    if connected() then
+      pending("something accepted a connection on 127.0.0.1:1, so the refusal could not be tested")
+      return
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(mark), "Unable to connect") end, 2000),
+                   "the refused connection was not reported, saw: " .. linesSince(mark))
   end)
 end)
 
@@ -581,6 +644,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals(#fixtureBody, bytesWritten)
       assert.equals(fixtureBody, readFile(target))
       assertFixtureResponse(response)
+      assert.equals(200, response.status)
     end)
 
     it("reports the download's progress while it runs", function()
@@ -626,6 +690,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals(target, localFile)
       assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.equals(404, response.status)
       assert.is_true(contains(body, "File not found"), body)
       assert.is_nil(readFile(target))
     end)
@@ -661,6 +726,8 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals(fixtureUrl("/fixture.txt"), url)
       assert.equals(fixtureBody, body)
       assertFixtureResponse(response)
+      assert.equals(200, response.status)
+      assert.equals("OK", response.reason)
     end)
 
     it("sends the custom headers it was given", function()
@@ -688,7 +755,25 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.is_string(message)
       assert.equals(fixtureUrl("/no-such-fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.equals(404, response.status)
+      -- Python's file server sends its message as the reason phrase
+      assert.equals("File not found", response.reason)
       assert.is_true(contains(body, "File not found"), body)
+    end)
+
+    it("leaves the status out of sysGetHttpError when no HTTP response arrived", function()
+      if noFixtureServer() then
+        return
+      end
+      -- nothing listens on port 1, so the connection is refused before any reply
+      assert.is_true(getHTTP("http://127.0.0.1:1/"))
+
+      local event, _, url, response = waitForEvent("sysGetHttpError", 5000)
+      assert.equals("sysGetHttpError", event)
+      assert.equals("http://127.0.0.1:1/", url)
+      assert.is_table(response)
+      assert.is_nil(response.status)
+      assert.is_nil(response.reason)
     end)
   end)
 
@@ -740,6 +825,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.is_true(contains(body, "body=file body with no data argument"), body)
     end)
 
+    it("sends data holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      -- a binary part of a multipart form, say
+      assert.is_true(postHTTP("a\0b\255c", fixtureUrl("/echo")))
+
+      local event, _, body = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.is_true(contains(body, "bodyhex=610062ff63\n"), body)
+    end)
+
     it("raises sysPostHttpError when the endpoint refuses the verb", function()
       if noFixtureServer() then
         return
@@ -752,6 +849,8 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.is_string(message)
       assert.equals(fixtureUrl("/fixture.txt"), url)
       assertFixtureResponse(response)
+      assert.equals(404, response.status)
+      assert.equals("Not Found", response.reason)
       assert.is_true(contains(body, "only /echo answers this method"), body)
     end)
   end)
@@ -850,6 +949,290 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals("REPORT", method)
       assertFixtureResponse(response)
       assert.is_true(contains(body, "only /echo answers this method"), body)
+    end)
+  end)
+
+  describe("request ids", function()
+    local downloadTarget = getMudletHomeDir() .. "/busted-http-request-id.txt"
+    local unwritableTarget = getMudletHomeDir() .. "/busted-no-such-directory/request-id.txt"
+
+    local function lastArgument(...)
+      return (select(-1, ...))
+    end
+
+    local cases = {
+      {"sysGetHttpDone", function() return getHTTP(fixtureUrl("/fixture.txt")) end},
+      {"sysGetHttpError", function() return getHTTP(fixtureUrl("/no-such-fixture.txt")) end},
+      {"sysPostHttpDone", function() return postHTTP("payload", fixtureUrl("/echo")) end},
+      {"sysPostHttpError", function() return postHTTP("payload", fixtureUrl("/fixture.txt")) end},
+      {"sysPutHttpDone", function() return putHTTP("payload", fixtureUrl("/echo")) end},
+      {"sysPutHttpError", function() return putHTTP("payload", fixtureUrl("/fixture.txt")) end},
+      {"sysDeleteHttpDone", function() return deleteHTTP(fixtureUrl("/echo")) end},
+      {"sysDeleteHttpError", function() return deleteHTTP(fixtureUrl("/fixture.txt")) end},
+      {"sysCustomHttpDone", function() return customHTTP("REPORT", "payload", fixtureUrl("/echo")) end},
+      {"sysCustomHttpError", function() return customHTTP("REPORT", "payload", fixtureUrl("/fixture.txt")) end},
+      {"sysDownloadDone", function() return downloadFile(downloadTarget, fixtureUrl("/fixture.txt")) end},
+      {"sysDownloadError", function() return downloadFile(downloadTarget, fixtureUrl("/no-such-fixture.txt")) end},
+      {"sysDownloadError", function() return downloadFile(unwritableTarget, fixtureUrl("/fixture.txt")) end, "when the file cannot be written"},
+    }
+
+    for _, case in ipairs(cases) do
+      local eventName, request, detail = case[1], case[2], case[3]
+      it("returns an id that " .. eventName .. " carries as its last argument " .. (detail or ""), function()
+        if noFixtureServer() then
+          return
+        end
+        finally(function() os.remove(downloadTarget) end)
+        local queued, actualUrl, id = request()
+        assert.is_true(queued)
+        assert.is_string(actualUrl)
+        assert.is_number(id)
+
+        local eventArguments = {waitForEvent(eventName, 2000)}
+        assert.equals(eventName, eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+    end
+
+    it("tells apart two requests for the same url", function()
+      if noFixtureServer() then
+        return
+      end
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysGetHttpDone", function(_, _, _, _, id)
+        seen[id] = true
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      local _, _, firstId = getHTTP(fixtureUrl("/fixture.txt"))
+      local _, _, secondId = getHTTP(fixtureUrl("/fixture.txt"))
+      assert.is_number(firstId)
+      assert.is_number(secondId)
+      assert.are_not.equal(firstId, secondId)
+
+      for _ = 1, 2 do
+        if not (seen[firstId] and seen[secondId]) then
+          waitForEvent("sysGetHttpDone", 2000)
+        end
+      end
+      assert.is_true(seen[firstId])
+      assert.is_true(seen[secondId])
+    end)
+
+    it("carries the id through sysDownloadFileProgress as its last argument", function()
+      if noFixtureServer() then
+        return
+      end
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, _, _, _, id)
+        if id then
+          seen[id] = true
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        os.remove(downloadTarget)
+      end)
+
+      local _, _, id = downloadFile(downloadTarget, fixtureUrl("/fixture.txt"))
+      assert.equals("sysDownloadDone", (waitForEvent("sysDownloadDone", 2000)))
+      assert.is_true(seen[id])
+    end)
+
+    it("hands out positive whole numbers that only go up, across every function", function()
+      if noFixtureServer() then
+        return
+      end
+      finally(function() os.remove(downloadTarget) end)
+      local previous = 0
+      for _, case in ipairs(cases) do
+        local _, _, id = case[2]()
+        assert.is_number(id)
+        assert.equals(math.floor(id), id)
+        assert.is_true(id > previous, case[1])
+        previous = id
+        assert.equals(case[1], (waitForEvent(case[1], 2000)))
+      end
+    end)
+
+    it("returns no id from any function when the request is refused", function()
+      local noSuchFile = getMudletHomeDir() .. "/busted-no-such-upload.txt"
+      local refused = {
+        getHTTP = function() return getHTTP("") end,
+        postHTTP = function() return postHTTP("payload", "") end,
+        putHTTP = function() return putHTTP("payload", "") end,
+        deleteHTTP = function() return deleteHTTP("") end,
+        customHTTP = function() return customHTTP("REPORT", "payload", "") end,
+        downloadFile = function() return downloadFile(downloadTarget, "") end,
+        ["getHTTP with a refused scheme"] = function() return getHTTP("ftp://localhost/file.txt") end,
+        ["downloadFile with a refused scheme"] = function() return downloadFile(downloadTarget, "ftp://localhost/file.txt") end,
+        ["postHTTP with a missing upload"] = function() return postHTTP("payload", "http://localhost/", {}, noSuchFile) end,
+      }
+      for name, request in pairs(refused) do
+        local results = {n = 0}
+        local function capture(...)
+          results.n = select("#", ...)
+          results[1], results[2] = ...
+        end
+        capture(request())
+        assert.equals(2, results.n, name)
+        assert.is_nil(results[1], name)
+        assert.is_string(results[2], name)
+      end
+    end)
+
+    describe("when no server answers", function()
+      local unanswered = {
+        {"sysGetHttpError", function(url) return getHTTP(url) end},
+        {"sysPostHttpError", function(url) return postHTTP("payload", url) end},
+        {"sysPutHttpError", function(url) return putHTTP("payload", url) end},
+        {"sysDeleteHttpError", function(url) return deleteHTTP(url) end},
+        {"sysCustomHttpError", function(url) return customHTTP("REPORT", "payload", url) end},
+        {"sysDownloadError", function(url) return downloadFile(downloadTarget, url) end},
+      }
+
+      for _, case in ipairs(unanswered) do
+        local eventName, request = case[1], case[2]
+        it("still reaches " .. eventName, function()
+          if noFixtureServer() then
+            return
+          end
+          finally(function() os.remove(downloadTarget) end)
+          local _, _, id = request(fixtureUrl("/hangup"))
+          local eventArguments = {waitForEvent(eventName, 2000)}
+          assert.equals(eventName, eventArguments[1])
+          assert.equals(id, lastArgument(unpack(eventArguments)))
+        end)
+      end
+    end)
+
+    describe("with a local file url", function()
+      local source = getMudletHomeDir() .. "/busted-http-request-id-source.txt"
+
+      local function asFileUrl(path)
+        return "file://" .. (path:sub(1, 1) == "/" and "" or "/") .. path
+      end
+
+      it("reaches sysDownloadDone", function()
+        writeFile(source, "local contents")
+        finally(function()
+          os.remove(source)
+          os.remove(downloadTarget)
+        end)
+        local _, _, id = downloadFile(downloadTarget, asFileUrl(source))
+        local eventArguments = {waitForEvent("sysDownloadDone", 2000)}
+        assert.equals("sysDownloadDone", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("reaches sysDownloadError when the file is missing", function()
+        local _, _, id = downloadFile(downloadTarget, asFileUrl(source .. "-missing"))
+        local eventArguments = {waitForEvent("sysDownloadError", 2000)}
+        assert.equals("sysDownloadError", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+    end)
+
+    describe("across a redirect", function()
+      it("matches a response whose url no longer matches the one requested", function()
+        if noFixtureServer() then
+          return
+        end
+        local requested = fixtureUrl("/redirect/302/echo")
+        local _, returnedUrl, id = getHTTP(requested)
+        assert.equals(requested, returnedUrl)
+
+        local eventArguments = {waitForEvent("sysGetHttpDone", 2000)}
+        assert.equals("sysGetHttpDone", eventArguments[1])
+        assert.equals(fixtureUrl("/echo"), eventArguments[2])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("survives a chain of redirects", function()
+        if noFixtureServer() then
+          return
+        end
+        local _, _, id = getHTTP(fixtureUrl("/redirect/302/redirect/301/redirect/307/echo"))
+        local eventArguments = {waitForEvent("sysGetHttpDone", 2000)}
+        assert.equals(fixtureUrl("/echo"), eventArguments[2])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("reaches the event of the verb that finished, not the one that was asked for", function()
+        if noFixtureServer() then
+          return
+        end
+        local verbCases = {
+          {"sysGetHttpDone", "GET", function() return postHTTP("payload", fixtureUrl("/redirect/302/echo")) end},
+          {"sysGetHttpDone", "GET", function() return postHTTP("payload", fixtureUrl("/redirect/303/echo")) end},
+          {"sysPostHttpDone", "POST", function() return postHTTP("payload", fixtureUrl("/redirect/307/echo")) end},
+          {"sysPutHttpDone", "PUT", function() return putHTTP("payload", fixtureUrl("/redirect/307/echo")) end},
+          {"sysDeleteHttpDone", "DELETE", function() return deleteHTTP(fixtureUrl("/redirect/307/echo")) end},
+          {"sysCustomHttpDone", "REPORT", function() return customHTTP("REPORT", "payload", fixtureUrl("/redirect/307/echo")) end},
+        }
+        for _, case in ipairs(verbCases) do
+          local eventName, method, request = case[1], case[2], case[3]
+          local _, _, id = request()
+          local eventArguments = {waitForEvent(eventName, 2000)}
+          assert.equals(eventName, eventArguments[1])
+          assert.is_true(contains(eventArguments[3], "method=" .. method), eventArguments[3])
+          assert.equals(id, lastArgument(unpack(eventArguments)))
+        end
+      end)
+
+      it("reaches the error event when the redirect leads nowhere", function()
+        if noFixtureServer() then
+          return
+        end
+        local nowhere = {
+          {"sysGetHttpError", function(url) return getHTTP(url) end},
+          {"sysPostHttpError", function(url) return postHTTP("payload", url) end},
+          {"sysPutHttpError", function(url) return putHTTP("payload", url) end},
+          {"sysDeleteHttpError", function(url) return deleteHTTP(url) end},
+          {"sysCustomHttpError", function(url) return customHTTP("REPORT", "payload", url) end},
+        }
+        for _, case in ipairs(nowhere) do
+          local eventName, request = case[1], case[2]
+          local _, _, id = request(fixtureUrl("/redirect/307/no-such-fixture.txt"))
+          local eventArguments = {waitForEvent(eventName, 2000)}
+          assert.equals(eventName, eventArguments[1])
+          assert.equals(fixtureUrl("/no-such-fixture.txt"), eventArguments[3])
+          assert.equals(id, lastArgument(unpack(eventArguments)))
+        end
+      end)
+
+      it("reaches the error event when the redirects never end", function()
+        if noFixtureServer() then
+          return
+        end
+        local _, _, id = getHTTP(fixtureUrl("/redirect/loop"))
+        local eventArguments = {waitForEvent("sysGetHttpError", 5000)}
+        assert.equals("sysGetHttpError", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+      end)
+
+      it("keeps the id on a download and its progress", function()
+        if noFixtureServer() then
+          return
+        end
+        local seen = {}
+        local handler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, _, _, _, progressId)
+          if progressId then
+            seen[progressId] = true
+          end
+        end)
+        finally(function()
+          killAnonymousEventHandler(handler)
+          os.remove(downloadTarget)
+        end)
+
+        local _, _, id = downloadFile(downloadTarget, fixtureUrl("/redirect/302/fixture.txt"))
+        local eventArguments = {waitForEvent("sysDownloadDone", 2000)}
+        assert.equals("sysDownloadDone", eventArguments[1])
+        assert.equals(id, lastArgument(unpack(eventArguments)))
+        assert.equals(fixtureBody, readFile(downloadTarget))
+        assert.is_true(seen[id])
+      end)
     end)
   end)
 end)
@@ -986,6 +1369,20 @@ describe("MMCP chat commands report the absence of a session", function()
       assert.is_string(mmcp.chatName())
     end)
 
+    it("is never empty, so nothing goes out on the wire unnamed", function()
+      -- A profile that has never had a name typed into its preferences used to
+      -- carry an empty one, and it went out in the handshake and in front of
+      -- every chat message: " chats to everybody, 'hi'".
+      assert.is_true(#mmcp.chatName() > 0, mmcp.chatName())
+    end)
+
+    it("falls back to the default rather than taking an empty name", function()
+      local previous = mmcp.chatName()
+      assert.is_true(mmcp.chatName(""))
+      assert.is_true(#mmcp.chatName() > 0, mmcp.chatName())
+      mmcp.chatName(previous)
+    end)
+
     it("rejects names containing a tilde or comma", function()
       local ok, err = mmcp.chatName("bad~name")
       assert.is_nil(ok)
@@ -1075,6 +1472,10 @@ describe("MMCP effects against a scripted chat peer", function()
   local PEER_NAME = "BustedPeer"
   local PEER_VERSION = "Mudlet 0.0.0-busted-peer"
   local CHAT_NAME = "MudletBustedTester"
+  -- The MMCP port this profile would listen on. There is no Lua getter for it,
+  -- so this tracks csDefaultMMCPHostPort and holds only while the test profile
+  -- leaves the preference alone.
+  local OUR_MMCP_PORT = 4050
   local mmcpDir = os.getenv("MUDLET_TEST_MMCP_DIR")
   local peerRequired = os.getenv("MUDLET_TEST_REQUIRE_MMCP_PEER")
   local commandCounter = 0
@@ -1167,16 +1568,24 @@ describe("MMCP effects against a scripted chat peer", function()
     return predicate()
   end
 
+  -- The peer renames capture.json into place rather than writing over it, so a
+  -- reader gets the whole of one version or the whole of another - except on
+  -- Windows, where the destination briefly cannot be opened at all while the
+  -- rename is in flight. One unreadable attempt is therefore not yet an answer.
   local function capture()
-    local raw = readFile(mmcpDir .. "/capture.json")
-    if not raw or raw == "" then
-      return nil
+    for attempt = 1, 5 do
+      local raw = readFile(mmcpDir .. "/capture.json")
+      if raw and raw ~= "" then
+        local ok, decoded = pcall(yajl.to_value, raw)
+        if ok then
+          return decoded
+        end
+      end
+      if attempt < 5 then
+        pump(20)
+      end
     end
-    local ok, decoded = pcall(yajl.to_value, raw)
-    if not ok then
-      return nil
-    end
-    return decoded
+    return nil
   end
 
   -- How far the peer's history has got, so a spec can disregard what earlier
@@ -1231,10 +1640,20 @@ describe("MMCP effects against a scripted chat peer", function()
 
   -- The command channel is JSON, so bytes that are not valid UTF-8 - the 0xff
   -- terminator above all - have to travel as hex.
-  local function peerSendsRaw(bytes)
-    tellPeer({action = "send_hex", hex = (bytes:gsub(".", function(char)
+  local function toHex(bytes)
+    return (bytes:gsub(".", function(char)
       return string.format("%02x", char:byte())
-    end))})
+    end))
+  end
+
+  local function peerSendsRaw(bytes)
+    tellPeer({action = "send_hex", hex = toHex(bytes)})
+  end
+
+  -- Arms the peer to answer the next call with these bytes in place of a
+  -- handshake reply, and to hold the connection open rather than hanging up.
+  local function peerRepliesWith(bytes)
+    tellPeer({action = "reply", hex = toHex(bytes)})
   end
 
   local function peerClient()
@@ -1340,7 +1759,12 @@ describe("MMCP effects against a scripted chat peer", function()
       -- "CHAT:<name>\n<address><port left aligned in 5 columns>", asserted
       -- whole: the port's padding is part of the format a MudMaster peer reads
       -- back, and only the exact string keeps it honest.
-      local port = tostring(peerPort())
+      --
+      -- The address and port are the caller's own - where the peer would call
+      -- back to - and not the ones just dialled, which the peer knows already.
+      -- So this is the profile's own MMCP port, left at its default here, and
+      -- deliberately not peerPort().
+      local port = tostring(OUR_MMCP_PORT)
       local padded = port .. string.rep(" ", math.max(0, 5 - #port))
       assert.equals("CHAT:" .. CHAT_NAME .. "\n127.0.0.1" .. padded, decoded.caller.raw)
     end)
@@ -1410,20 +1834,76 @@ describe("MMCP effects against a scripted chat peer", function()
       end, 1000)
 
       local mark = captureSeq()
-      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
       -- The peer answers "NO:<name>" and hangs up, so the call never reaches
       -- the connected state and nothing is added to the client list.
-      assert.is_table(waitForPeerEvent(mark, function(event)
-        return event.type == "handshake"
-      end, 2000))
-      pump(300)
+      local updates = collectEvents("sysMMCPPeerUpdateEvent", function()
+        assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+        assert.is_table(waitForPeerEvent(mark, function(event)
+          return event.type == "handshake"
+        end, 2000))
+        pump(300)
+      end)
       assert.is_nil(mmcp.getClientList())
+      -- and a client that never joined the peer list does not change it by
+      -- going away either: the refusal used to raise an update naming nobody,
+      -- which scripts watching the peer list had to filter out themselves.
+      assert.equals(0, #updates)
 
       tellPeer({action = "accept", accept = true})
       waitUntil(function()
         local decoded = capture()
         return decoded ~= nil and decoded.accepting == true
       end, 1000)
+    end)
+
+    it("closes a connection answered with something that is not a handshake reply", function()
+      if peerUnavailable() then return end
+      if peerClient() then
+        mmcp.disconnect(PEER_NAME)
+        waitUntil(function() return peerClient() == nil end, 2000)
+      end
+      -- A greeting instead of "YES:"/"NO:", which is what dialling a plain
+      -- telnet server gets you. Mudlet reports the call refused, and closing
+      -- the socket is part of that: it used to report the refusal and then
+      -- leave the connection, and the client object behind it, alive for the
+      -- rest of the session.
+      peerRepliesWith("Hello, world\r\n")
+      local mark = captureSeq()
+      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "handshake"
+      end, 2000))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect" and event.reason == "closed by Mudlet"
+      end, 2000))
+      assert.is_nil(mmcp.getClientList())
+    end)
+
+    it("waits for a handshake reply that arrives in two pieces", function()
+      if peerUnavailable() then return end
+      if peerClient() then
+        mmcp.disconnect(PEER_NAME)
+        waitUntil(function() return peerClient() == nil end, 2000)
+      end
+      -- TCP may split the reply anywhere, and "YES:" without its newline yet is
+      -- a partial read rather than a malformed one. Treating it as a refusal
+      -- would drop a call the peer had accepted.
+      peerRepliesWith("YES:")
+      local mark = captureSeq()
+      assert.is_true(mmcp.call("127.0.0.1", peerPort()))
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "handshake"
+      end, 2000))
+      pump(300)
+      -- Nothing was concluded from the first piece: the connection is still up.
+      assert.is_true(capture().connected)
+      peerSendsRaw(PEER_NAME .. "\n")
+      assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
+      -- The peer answered by hand rather than going through its own accept
+      -- path, so it is not tracking this connection as a normal one. Drop it
+      -- and let the next spec place a fresh call.
+      mmcp.disconnect(PEER_NAME)
+      waitUntil(function() return peerClient() == nil end, 2000)
     end)
   end)
 
@@ -1526,6 +2006,11 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_table(sent)
       -- MudMaster's group field is a fixed 15 characters wide
       assert.equals("testers        ", sent.text:sub(1, 15))
+      -- and the sender's name follows it immediately. A separator here - Mudlet
+      -- used to write a newline - is not part of the format, so a receiver
+      -- splitting the field off leaves it at the head of the message and
+      -- renders the group tag and the message on separate lines.
+      assert.equals(CHAT_NAME, sent.text:sub(16, 15 + #CHAT_NAME))
       assert.is_true(contains(sent.text, " chats to the group, 'group hello'"), sent.text)
     end)
 
@@ -1559,6 +2044,23 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_nil(ok)
       assert.is_true(contains(err, "nobody in group 'testers' now"))
       assert.is_nil(waitForCommand("TextGroup", mark, 500))
+    end)
+
+    it("cuts a group name too long for the fixed width field", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local longGroup = "a-very-long-group-name"
+      assert.is_true(mmcp.setGroup(PEER_NAME, longGroup))
+      local mark = captureSeq()
+      assert.is_true(mmcp.chatGroup(longGroup, "long group hello"))
+      local sent = waitForCommand("TextGroup", mark)
+      assert.is_table(sent)
+      -- Padding a name to 15 without also cutting it there would push the
+      -- message past the boundary the receiver splits on, so the name is what
+      -- gives way rather than the field.
+      assert.equals(longGroup:sub(1, 15), sent.text:sub(1, 15))
+      assert.equals(CHAT_NAME, sent.text:sub(16, 15 + #CHAT_NAME))
+      assert.is_true(mmcp.setGroup(PEER_NAME, "none"))
     end)
   end)
 
@@ -1651,8 +2153,6 @@ describe("MMCP effects against a scripted chat peer", function()
       if peerUnavailable() then return end
       ensurePeer()
       -- MudMaster's format: a 15 character group field, then the message.
-      -- Mudlet's own sender adds a newline after that field, which the
-      -- round-trip spec above covers.
       peerSends(6, "testers        " .. PEER_NAME .. " chats to the group, 'group inbound'")
       local _, from, message = waitForEvent("sysMMCPChatMessage", 2000)
       assert.equals(PEER_NAME, from)
@@ -1911,7 +2411,7 @@ describe("MMCP effects against a scripted chat peer", function()
   end)
 
   describe("mmcp.snoop", function()
-    it("asks the peer for a snoop feed", function()
+    it("asks the peer for a snoop feed, and asks again to stop", function()
       if peerUnavailable() then return end
       ensurePeer()
       local mark = captureSeq()
@@ -1919,11 +2419,16 @@ describe("MMCP effects against a scripted chat peer", function()
       local sent = waitForCommand("Snoop", mark)
       assert.is_table(sent)
       assert.equals("", sent.text)
-      -- Asking a second time is what stops a snoop, since the command is a
-      -- toggle at the far end. That is not asserted here: the local "am I
-      -- snooping them" flag is never set (nothing calls setSnooped(true)), so
-      -- MMCPServer::snoop's stop branch cannot be reached and asserting either
-      -- way would freeze the defect in place.
+
+      -- Stopping is the same command again, because it is a toggle at the far
+      -- end. Mudlet's own record of whether it is snooping has to flip with
+      -- each one: were it to track the state without sending, the peer would
+      -- carry on feeding a snoop Mudlet believes it has stopped.
+      mark = captureSeq()
+      assert.is_true(mmcp.snoop(PEER_NAME))
+      local stopped = waitForCommand("Snoop", mark)
+      assert.is_table(stopped)
+      assert.equals("", stopped.text)
     end)
 
     it("refuses a snoop from a peer that has not been allowed one", function()
@@ -2728,6 +3233,36 @@ describe("The IRC configuration functions round-trip through the profile", funct
         assert.is_string(channel)
       end
     end)
+
+    it("keep the nick they make up when no nick was ever set", function()
+      -- restartIrc() reads the nick again, so a made-up one must not change between reads
+      local profileNickFile = getMudletHomeDir() .. "/irc_nick"
+      local lastUsedNickFile = getMudletHomeDir() .. "/../../irc_nick"
+      local nick = getIrcNick()
+      local lastUsedNick
+      local file = io.open(lastUsedNickFile, "rb")
+      if file then
+        lastUsedNick = file:read("*a")
+        file:close()
+      end
+      finally(function()
+        setIrcNick(nick)
+        if lastUsedNick then
+          local restored = io.open(lastUsedNickFile, "wb")
+          restored:write(lastUsedNick)
+          restored:close()
+        else
+          os.remove(lastUsedNickFile)
+        end
+      end)
+
+      os.remove(profileNickFile)
+      os.remove(lastUsedNickFile)
+      local madeUp = getIrcNick()
+      assert.is_truthy(madeUp:match("^Mudlet%d+$"), madeUp)
+      assert.equals(madeUp, getIrcNick())
+      assert.equals(madeUp, getConfig("ircNickName"))
+    end)
   end)
 
   describe("setIrcNick", function()
@@ -3266,6 +3801,21 @@ describe("sending protocol data to a game server that has not negotiated", funct
     end, 2000), "the bytes after the NUL never reached the wire, saw: " .. tostring(wireHex()))
   end)
 
+  it("sends telnet code tokens unparsed when sendSocket's second argument is nil", function()
+    if serverUnavailable() then return end
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendSocket("SendSocketNilRaw<SOH>|", nil)
+    assert.is_true(ok, "sendSocket refused a connected socket: " .. tostring(err))
+    local wanted = ("SendSocketNilRaw<SOH>|"):gsub(".", function(c) return string.format("%02x", c:byte()) end)
+    assert.is_true(waitUntil(function()
+      local seen = capture()
+      return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
+    end, 2000), "the <SOH> token did not reach the wire as typed, saw: " .. tostring(wireHex()))
+  end)
+
   local function hex(text)
     return (text:gsub(".", function(c) return string.format("%02x", c:byte()) end))
   end
@@ -3412,6 +3962,30 @@ describe("sending protocol data to a game server that has not negotiated", funct
     local atcp, atcpErr = sendATCP("Core.Hello")
     assert.is_nil(atcp)
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
+  end)
+
+  it("still names a disconnect the user's when a sysDisconnectionEvent handler reconnects", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local reconnected = false
+    local handler
+    handler = registerAnonymousEventHandler("sysDisconnectionEvent", function()
+      killAnonymousEventHandler(handler)
+      reconnected = true
+      reconnect()
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local mark = getLastLineNumber("main")
+    disconnect()
+    assert.is_true(waitUntil(function() return reconnected end, 5000), "sysDisconnectionEvent never fired")
+    local function linesSince()
+      return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(), "User Disconnected") end, 2000),
+                   "the disconnect was not reported as the user's, saw: " .. linesSince())
   end)
 end)
 

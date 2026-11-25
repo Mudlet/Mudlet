@@ -50,25 +50,32 @@ public:
     // Claims the replay for pHost, at normal speed and from the start; false
     // while another replay holds it
     bool start(Host*);
+    // Sends the start of the claimed replay, once its file has been found
+    // playable, so that one whose file is corrupt from the start is never shown
+    void announce();
     // Releases the replay, however it ended
     void over();
     bool running() const { return mRunning; }
     // The profile playing the replay, which need not be the one in front
     Host* host() const { return mpHost; }
 
+    static constexpr int scMinSpeed = 1;
+    static constexpr int scMaxSpeed = 1024;
     int speed() const { return mSpeed; }
-    // Doubles or halves the speed, between 1 and 1024 times; nothing while no
-    // replay runs
+    // Doubles or halves the speed, between scMinSpeed and scMaxSpeed times;
+    // nothing while no replay runs
     void speedUp();
     void speedDown();
 
     // How much of the recording has been played, by its own timestamps
-    const QTime& elapsed() const { return mElapsed; }
+    qint64 elapsedMSecs() const { return mElapsedMSecs; }
+    // The same as a clock face, which goes round each day
+    QTime elapsed() const { return QTime(0, 0).addMSecs(static_cast<int>(mElapsedMSecs % (24 * 60 * 60 * 1000))); }
     // Called per chunk with the gap the recording has before it: counts the
     // gap as played and returns how long to wait at the current speed
     int advance(int gapMsec)
     {
-        mElapsed = mElapsed.addMSecs(gapMsec);
+        mElapsedMSecs += gapMsec;
         return gapMsec / mSpeed;
     }
 
@@ -81,8 +88,8 @@ private:
     inline static MudletReplay* smpSelf = nullptr;
 
     QPointer<Host> mpHost;
-    QTime mElapsed;
-    int mSpeed = 1;
+    qint64 mElapsedMSecs = 0;
+    int mSpeed = scMinSpeed;
     bool mRunning = false;
 };
 

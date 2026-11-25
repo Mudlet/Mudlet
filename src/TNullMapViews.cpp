@@ -23,11 +23,14 @@
 #include "TArea.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TNullMapView.h"
 #include "TRoomDB.h"
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QTimer>
+
+#include <algorithm>
 
 TNullSecondaryMapView::TNullSecondaryMapView(Host* pHost, TMap* pMap, TNullMapViews* pViews)
 : QObject(pViews)
@@ -138,19 +141,22 @@ void TNullSecondaryMapView::switchToAnotherArea()
 {
     const QMap<int, QString>& areaNames = mpMap->mpRoomDB->getAreaNamesMap();
     // TMapView's area list, sorted ignoring case, of which it picks the entry it shows or else the first
-    QMap<QString, QString> listedNames;
+    QStringList listedNames;
     for (const auto& [areaId, areaName] : areaNames.asKeyValueRange()) {
         if (areaId == -1 && !mpMap->getDefaultAreaShown()) {
             continue;
         }
-        listedNames.insert(areaName.toLower(), areaName);
+        listedNames.append(areaName);
     }
     if (listedNames.isEmpty()) {
         switchArea(mpMap->getDefaultAreaName());
         return;
     }
+    std::stable_sort(listedNames.begin(), listedNames.end(), [](const QString& a, const QString& b) {
+        return a.compare(b, Qt::CaseInsensitive) < 0;
+    });
     const QString shownName = areaNames.value(mAreaId);
-    const QString pickedName = !shownName.isEmpty() && listedNames.value(shownName.toLower()) == shownName ? shownName : listedNames.first();
+    const QString pickedName = !shownName.isEmpty() && listedNames.contains(shownName) ? shownName : listedNames.first();
     if (!areaNames.key(pickedName, 0)) {
         qWarning() << "TNullSecondaryMapView::switchToAnotherArea() - area" << pickedName << "not found in area names map";
         return;
@@ -215,11 +221,16 @@ std::pair<int, QString> TNullMapViews::createView(const int initialAreaId)
     const int viewId = mNextViewId++;
     //: Title for a secondary map view window, %1 is the view number, %2 is the profile name
     const QString title = QCoreApplication::translate("TMapViewManager", "Map View %1 - %2").arg(viewId).arg(mpHost->getName());
+    TNullMapView::announceEditing(mpHost);
     auto* pView = new TNullSecondaryMapView(mpHost, mpMap, this);
     pView->mDock = {title, true, QSize(400, 500), true};
     // Before the view is listed, as the sysMapAreaChanged this can raise comes before TMapViewManager lists it
     if (initialAreaId > 0) {
         pView->switchArea(initialAreaId);
+    } else if (initialAreaId == 0) {
+        if (const auto playerAreaId = mpMap->playerAreaId()) {
+            pView->switchArea(*playerAreaId);
+        }
     }
     mViews.insert(viewId, pView);
     // The dock showing paints the view

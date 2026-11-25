@@ -1,0 +1,194 @@
+# Specs that fail in a WebAssembly build of mudlet-headless in headless Chromium and not in a desktop one, read
+# by CI/check-headless-lua-failures.py after CI/headless-lua-known-failures.txt; the checker says what each line
+# means. A line of "Not " and an entry takes that entry off the desktop list.
+
+# Load or close another profile in the same run, which takes a timer (see below); a profile left open by one
+# makes the next ones fail as well
+Error Package_spec.lua: Tests opening a profile whose script fails as it loads names a package's script when a module has the package's name too
+Error Package_spec.lua: Tests opening a profile whose script fails as it loads names the scripts that failed on that profile's console, once
+Error Package_spec.lua: Tests opening a profile whose script fails as it loads names them again after a reset, leaving out those fixed or disabled since
+Error Package_spec.lua: Tests opening a profile whose script fails as it loads runs a failing body of a module loaded before the profile's scripts only once
+Failure Mapper_spec.lua: Tests closing another profile that opened a map widget survives the main window being activated again after the close
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes after resetProfile() then closeProfile()
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes another profile after closeProfile(), then closes
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop does not reuse an http request id after resetProfile()
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop loads another profile after closeProfile(), then closes
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop loads another profile after resetProfile(), then resets
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop never runs another function for a timer made while its state closed
+Failure Networking_spec.lua: MMCP chat with a profile that closes should hang up its calls when the profile running the server closes
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer runs nothing and reports nothing for a timer with no code
+Failure Package_spec.lua: Tests opening a profile whose script fails as it loads names a package's script when a module has the package's name too
+Failure Package_spec.lua: Tests opening a profile whose script fails as it loads names the scripts that failed on that profile's console, once
+Failure Package_spec.lua: Tests opening a profile whose script fails as it loads names them again after a reset, leaving out those fixed or disabled since
+Failure Package_spec.lua: Tests opening a profile whose script fails as it loads runs a failing body of a module loaded before the profile's scripts only once
+Failure ProfileFocus_spec.lua: setActiveProfile keeps the profile in front when the one it was bringing forward closes on the way
+Failure ProfileFocus_spec.lua: setActiveProfile refuses a profile whose close has started and keeps the one in front
+Failure ProfileFocus_spec.lua: setActiveProfile switches once when the profile it leaves asks for the same switch again
+Failure ProfileFocus_spec.lua: setActiveProfile tells the profile it leaves and the one it brings forward, and neither when nothing changes
+
+# Wait for a download, which the browser answers only once the page hands it its thread back
+Failure Telnet_spec.lua: Tests the Client.GUI package offer acts on a Client.GUI offer sent as raw telnet rather than JSON (#7704)
+Failure Telnet_spec.lua: Tests the Client.GUI package offer acts on a JSON Client.GUI offer whose version is a number
+Failure Telnet_spec.lua: Tests the Client.GUI package offer forgets the recorded Client.GUI version once that package is uninstalled
+Failure Telnet_spec.lua: Tests the Client.GUI package offer ignores a Client.GUI offer that is missing its version or its URL
+Failure Telnet_spec.lua: Tests the Client.GUI package offer keeps a raw telnet Client.GUI out of the gmcp table (#7034)
+Failure Telnet_spec.lua: Tests the Client.GUI package offer records the Client.GUI package that installed, not an offer made while it installed
+
+# Wait for a timer. Without asyncify Qt for WebAssembly fires timers only once the page hands the browser its
+# thread back, and busted runs every spec in one call, so pumpEvents() and waitForEvent() never run one. Replays,
+# speedwalks, deferred saves and installs, the text-to-speech mock and the file watcher's polling all run on one.
+Failure Alias_spec.lua: Alias processing state across a nested expandAlias command around expandAlias() leaves command holding what a timer expanded
+Failure IDManager_spec.lua: Tests the functionality of IDMgr Tests the functionality of a private manager from getNewIDManager Tests the functionality of IDMgr:registerTimer Should hand the fourth argument to tempTimer as its repeating flag
+Failure IDManager_spec.lua: Tests the functionality of IDMgr Tests the functionality of a private manager from getNewIDManager Tests the functionality of IDMgr:registerTimer Should run the function it was given exactly once
+Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family a queued line starts speaking when the current one ends
+Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family ttsPause holds the utterance and ttsResume runs it to the end
+Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family ttsSpeak speaks the text and reports it until the engine goes ready again
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the file watching functions Tests watching a file for changes raises sysPathChanged until the watch is removed
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay acts on telnet negotiation that was recorded with the text
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay ends a replay at a chunk that grew too long for the buffer after loading
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay ends a replay at a chunk whose delay turned negative after loading
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay ends a replay at a chunk whose length turned negative after loading
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay loads a replay after refusing a file too short to be one
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay plays back a replay written with the eight byte delay
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay plays back an eight byte delay replay that is too short to read with four byte delays
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay plays back an eight byte delay replay with no first delay and an empty chunk
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay plays on past a chunk with no bytes in it
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay plays the recorded bytes back into the main console
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests the functionality of loadReplay refuses a second replay while one is still running
+Failure MudletBusted_spec.lua: pumpEvents test helper keeps running timers when pumping from inside a timer's callback
+Failure MudletBusted_spec.lua: pumpEvents test helper runs a timer that falls due while it is pumping
+Failure MudletBusted_spec.lua: waitForEvent test helper observes a tempTimer firing through a raised event
+Failure MudletBusted_spec.lua: waitForEvent test helper observes an event raised from inside another timer's callback
+Failure MudletBusted_spec.lua: waitForEvent test helper preserves nil and false arguments in their positions
+Failure MudletBusted_spec.lua: waitForEvent test helper returns just the event name when there is no payload
+Failure MudletBusted_spec.lua: waitForEvent test helper round-trips a table argument that outlives the event
+Failure MudletBusted_spec.lua: waitForEvent test helper round-trips raiseEvent arguments of several types
+Failure MudletBusted_spec.lua: waitForEvent test helper supports a nested waitForEvent while one is already blocked
+Failure MudletBusted_spec.lua: waitForEvent test helper uses a default timeout when none is supplied
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life hands over to a walk a sysDataSendRequest handler starts during the last step
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life hands over to a walk a sysSpeedwalkStarted handler starts
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life keeps one timer chain when a sysDataSendRequest handler pauses and resumes during a step
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life leaves nothing to pause or stop once a delayed walk has finished
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life pauses a delayed walk from a sysDataSendRequest handler during a later step
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life refuses to pause a delayed walk while its last step is being sent
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life starts no walk of its own once a sysSpeedwalkStopped handler has started one
+Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life stops a running delayed walk before starting another
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should call a function with each value in time order
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should clear the variable now, set it at true_time and clear it again at nil_time
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should drop the earlier schedule when called again for the same variable
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should not set the variable once killtimeframe has cancelled it
+Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer kills a repeating timer from inside its own callback
+Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer returns false for a one-shot timer that has already fired
+Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer stops a pending timer from ever firing and deactivates it
+Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer stops a repeating timer
+Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer with temporary timers inside a package leaves them to their package, under their name or the id they were made with
+Failure Other_spec.lua: Tests the timer API Tests the functionality of permTimer with enableTimer and disableTimer does not fire while it is disabled
+Failure Other_spec.lua: Tests the timer API Tests the functionality of permTimer with enableTimer and disableTimer does not run with a time of zero
+Failure Other_spec.lua: Tests the timer API Tests the functionality of permTimer with enableTimer and disableTimer does not run with a time of zero when a package brings it in switched on
+Failure Other_spec.lua: Tests the timer API Tests the functionality of permTimer with enableTimer and disableTimer fires once enabled
+Failure Other_spec.lua: Tests the timer API Tests the functionality of permTimer with enableTimer and disableTimer still fires an offset timer with a time of zero, once per firing of its parent
+Failure Other_spec.lua: Tests the timer API Tests the functionality of permTimer with enableTimer and disableTimer stops firing again once disabled
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer does not repeat by default
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer fires a code-string body in the global environment
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer fires a function body
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer fires a zero delay timer
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer repeats until killed when the repeating argument is true
+Failure Other_spec.lua: Tests the timer API Tests the functionality of tempTimer runs a timer scheduled from inside another timer
+Failure Package_spec.lua: Tests exporting the profile to a file with saveProfile says so on the console when the save after a package install cannot be written
+Failure Package_spec.lua: Tests the functionality of installPackage runs nothing else in the middle of the script that is waiting out a profile save
+Failure Package_spec.lua: Tests the game loader packages CF_Loader does not download again on a reconnect once its package is installed
+Failure Package_spec.lua: Tests the game loader packages CF_Loader does not download again once installed a package that removes another
+Failure Package_spec.lua: Tests the game loader packages CF_Loader installs once when more connections come before the download finishes
+Failure Package_spec.lua: Tests the game loader packages CF_Loader installs once when the command it gave sees the download before the loader does
+Failure Package_spec.lua: Tests the game loader packages CF_Loader installs once when the player runs the command it gave after a failed download
+Failure Package_spec.lua: Tests the game loader packages CF_Loader reports a download a module's name blocks, and tries again on the next connection
+Failure Package_spec.lua: Tests the game loader packages CF_Loader reports a download that will not install, and tries again on the next connection
+Failure Package_spec.lua: Tests the game loader packages CF_Loader stays quiet about a download that is already installed
+Failure Package_spec.lua: Tests the game loader packages CF_Loader tries again on the next connection when the command it gave fails to install
+Failure Package_spec.lua: Tests the game loader packages icesus-loader does not download again on a reconnect once its package is installed
+Failure Package_spec.lua: Tests the game loader packages icesus-loader does not download again once installed a package that removes another
+Failure Package_spec.lua: Tests the game loader packages icesus-loader installs once when more connections come before the download finishes
+Failure Package_spec.lua: Tests the game loader packages icesus-loader installs once when the command it gave sees the download before the loader does
+Failure Package_spec.lua: Tests the game loader packages icesus-loader installs once when the player runs the command it gave after a failed download
+Failure Package_spec.lua: Tests the game loader packages icesus-loader reports a download a module's name blocks, and tries again on the next connection
+Failure Package_spec.lua: Tests the game loader packages icesus-loader reports a download that will not install, and tries again on the next connection
+Failure Package_spec.lua: Tests the game loader packages icesus-loader stays quiet about a download that is already installed
+Failure Package_spec.lua: Tests the game loader packages icesus-loader tries again on the next connection when the command it gave fails to install
+Failure Package_spec.lua: Tests the game loader packages mg-loader does not download again on a reconnect once its package is installed
+Failure Package_spec.lua: Tests the game loader packages mg-loader does not download again once installed a package that removes another
+Failure Package_spec.lua: Tests the game loader packages mg-loader installs once when more connections come before the download finishes
+Failure Package_spec.lua: Tests the game loader packages mg-loader installs once when the command it gave sees the download before the loader does
+Failure Package_spec.lua: Tests the game loader packages mg-loader installs once when the player runs the command it gave after a failed download
+Failure Package_spec.lua: Tests the game loader packages mg-loader reports a download a module's name blocks, and tries again on the next connection
+Failure Package_spec.lua: Tests the game loader packages mg-loader reports a download that will not install, and tries again on the next connection
+Failure Package_spec.lua: Tests the game loader packages mg-loader stays quiet about a download that is already installed
+Failure Package_spec.lua: Tests the game loader packages mg-loader tries again on the next connection when the command it gave fails to install
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial cleans up as well when it was installed as a module
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial does not install a generic mapper the profile did not have
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial gives back a global hq that a player's script had
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial gives back a mapping script's doSpeedWalk even after its map script was run again
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial gives back the input, doSpeedWalk and windows it took
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial gives back the player's map, map info and command line style
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial gives back the player's windows even after its Init script was run again
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial keeps the lesson going when another package is uninstalled
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial leaves alone a doSpeedWalk that a mapping script installed after it set
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial leaves no doSpeedWalk behind in a profile that had none, even after its map script was run again
+Failure Package_spec.lua: Tests uninstalling the Mudlet Tutorial shows the player's windows again when the lesson ends
+Failure ServerWrap_spec.lua: Tests undoing the game's own line wrapping flushes a lone full-width line once the game goes quiet
+Failure ServerWrap_spec.lua: Tests undoing the game's own line wrapping runs the flushed line's triggers in trigger context, and only them
+Failure TBufferEncoding_spec.lua: Tests changing from one double byte encoding to another does not pair a byte from the old encoding with one in the new when a replay changes it
+Failure TBufferOSC_spec.lua: Tests TBuffer OSC sequence handling Tests OSC 8 hyperlink visibility expiry does not rewrite an unrelated line after deleteLine() moved the link's line
+Failure TBufferOSC_spec.lua: Tests TBuffer OSC sequence handling Tests OSC 8 hyperlink visibility expiry reveals a link on its own line after the buffer has trimmed
+Failure TBufferOSC_spec.lua: Tests TBuffer OSC sequence handling Tests OSC 8 hyperlink visibility expiry reveals a link that was written concealed once its delay is up
+Failure Telnet_spec.lua: Tests the payload sysTelnetEvent hands over hands a replayed subnegotiation over as the live one was
+Failure Telnet_spec.lua: Tests the payload sysTelnetEvent hands over hands the payload over byte for byte to waitForEvent
+Failure Trigger_spec.lua: Trigger processing deferred deletion agrees with isActive() about a one-shot timer that has fired
+Failure UI_spec.lua: Tests UI functions Test the starter UI standing aside for a game's own interface when the map opens with map data in the profile should still take the map on gmcp.Room.Info when no game interface claims it
+Failure UI_spec.lua: Tests UI functions Test the starter UI standing aside for a game's own interface when the map opens with map data in the profile should still take the map on gmcp.room.info when no game interface claims it
+Failure UI_spec.lua: Tests UI functions Test the starter UI standing aside for a game's own interface when the map opens with map data in the profile should still take the map on mapOpenEvent when no game interface claims it
+Failure UI_spec.lua: Tests UI functions Test the starter UI standing aside for a game's own interface when the map opens with map data in the profile should still take the map on sysMapAreaChanged when no game interface claims it
+Failure UI_spec.lua: Tests UI functions Test the starter UI standing aside for a game's own interface when the map opens with map data in the profile should still take the map on sysMapDownloadEvent when no game interface claims it
+Failure UI_spec.lua: Tests the gui-drop package's image drops brings back an image once a sysLoadEvent handler has opened its user window
+Failure UI_spec.lua: Tests the gui-drop package's image drops says which image it could not bring back, and forgets it when asked
+
+# Fails only once an earlier spec has left another profile open (see above): with nobody listening, the refusal is
+# announced to the profile in front. It passes on its own.
+Failure STT_spec.lua: stt bridge refusals refuses to toggle before a model is loaded, and announces why
+
+# No threads: a profile save is written before saveProfile() returns, so nothing can move its folder away first
+Failure Package_spec.lua: Tests exporting the profile to a file with saveProfile says so on the console when the write fails after the call has answered
+
+# The browser's file system applies no umask, so a folder Qt makes (0777) and one lfs.mkdir() makes (0775) differ
+Failure Package_spec.lua: Tests installing an archive named after one of the profile's own folders unpacks an archive whose file is called media beside the profile's media folder
+Failure Package_spec.lua: Tests the functionality of installPackage leaves a folder named after the archive alone when config.lua installs it under another name
+
+# The browser's file system takes a 300-character file name, so the export it should refuse succeeds
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests area image export exportAreaImage reports a save that failed against that export alone
+
+# PCRE2 has no JIT in WebAssembly, and its interpreter checks the rest of the line for valid UTF-8 at each match
+# of a match-all trigger, so a 32 times longer line costs far more than 128 times as much
+Failure Trigger_spec.lua: Trigger processing tempComplexRegexTrigger costs under 128 times as much for 32 times the line with (\S+)
+Failure Trigger_spec.lua: Trigger processing tempComplexRegexTrigger costs under 128 times as much for 32 times the line with (\w*)
+
+# Qt for WebAssembly has no ICU, and Qt's own Big5-HKSCS codec maps a character outside the BMP into the Private
+# Use Area, as macOS's does
+Failure TBufferEncoding_spec.lua: Tests Big5 decoding keeps the format of the text after a character outside the BMP
+
+# os.execute() has no shell to run in a browser
+Failure Networking_spec.lua: The IRC configuration functions round-trip through the profile setIrcServer keeps the stored password readable by its owner only
+
+# Listed in CI/headless-lua-known-failures.txt, but they pend here before getting that far: the browser build has
+# no 3D mapper, and Qt Multimedia does not start a video while a spec waits
+Not Failure Media_spec.lua: Media playback effects with a generated sound file a Client.Media.Play message that names the video type is played as a video
+Not Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close leaves the miniconsole it played in on screen
+Not Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close takes its label off screen when it ends
+Not Failure Media_spec.lua: Media playback effects with a generated sound file a video that never asked to close leaves its label on screen
+Not Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile plays into the label its key names and the video family reports it
+Not Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile starts nothing when its key names no widget to draw into
+Not Failure Media_spec.lua: Media playback effects with a generated sound file the video pause and stop table forms act only on the key they name
+Not Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
+Not Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
+Not Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
+Not Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing setMapZoom keeps its contract while the modern 3D view shows
+Not Failure zz_Mapper3DView_spec.lua: Tests the blueprint style on an area spread over several levels paints a multi-level area in blueprint and switches back to tiles
+Not Failure zz_Mapper3DView_spec.lua: Tests the modern 3D mapper surviving context rebuilds floats, redocks and switches back to the classic view

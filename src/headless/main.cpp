@@ -20,6 +20,7 @@
 // mudlet-headless: one profile with no window, its main console on standard output. It links mudlet_core
 // alone, so it is also the check that the core runs without Qt Widgets.
 
+#include "HardwareDeviceTypes.h"
 #include "Host.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
@@ -27,7 +28,11 @@
 #include "TriggerMatchPool.h"
 #include "utils.h"
 
+#include <QByteArrayList>
+#include <QColor>
 #include <QCommandLineParser>
+#include <QDir>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QMutex>
 #include <QPointer>
@@ -35,6 +40,7 @@
 #include <QWaitCondition>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cerrno>
 #include <chrono>
@@ -61,12 +67,21 @@
 #include <unistd.h>
 #endif
 
+#if defined(Q_OS_WASM)
+#include "BrowserTransport.h"
+
+#include <QTimer>
+
+#include <emscripten/emscripten.h>
+
+using namespace std::chrono_literals;
+#endif
+
 // A Qt Resource Collection in a static library only reaches the executable if something here names it
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 
 namespace {
 
@@ -74,12 +89,9 @@ enum ExitCode { exitOk = 0, exitFailed = 1, exitUsage = 2, exitOutputFailed = 3,
 
 void initializeQRCResources()
 {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif
@@ -109,9 +121,11 @@ void beginStop()
     gStopDeadlineMs.compare_exchange_strong(notYet, steadyMs() + scmStopWaitMs);
 }
 
+using PollEvents = decltype(pollfd::events);
+
 // What poll() answers for the descriptor once it is ready, or 0 with errno set; EINTR for a write the stop's
 // time ran out on
-short waitFor(const int descriptor, const short events)
+PollEvents waitFor(const int descriptor, const PollEvents events)
 {
     const bool writing = events & POLLOUT;
     pollfd ready[2] = {{descriptor, events, 0}, {gSignalPipe[0], POLLIN, 0}};
@@ -146,7 +160,7 @@ bool waitToWrite(const int descriptor)
 }
 
 // Waits out a descriptor inherited non-blocking, as from a parent that set it on a terminal it shares
-bool retryAfterWaiting(const int descriptor, const short events)
+bool retryAfterWaiting(const int descriptor, const PollEvents events)
 {
     if (errno == EINTR) {
         return true;
@@ -155,7 +169,7 @@ bool retryAfterWaiting(const int descriptor, const short events)
         return false;
     }
     const int waited = errno;
-    const short answered = waitFor(descriptor, events);
+    const auto answered = waitFor(descriptor, events);
     if (!answered) {
         if (errno != EINTR) {
             errno = waited;
@@ -213,6 +227,86 @@ int writeBytes(FILE* stream, const QByteArray& bytes)
 int writeLine(FILE* stream, const QString& text)
 {
     return writeBytes(stream, text.toUtf8() + '\n');
+}
+
+using TextRuns = QList<THeadlessSession::TextRun>;
+
+// The nearest of xterm's 256 colours past the first 16, which terminal themes change
+int xterm256Colour(const QColor& colour)
+{
+    static constexpr std::array<int, 6> levels{0, 95, 135, 175, 215, 255};
+    const auto level = [](const int value) {
+        return value < 48 ? 0 : (value < 115 ? 1 : (value - 35) / 40);
+    };
+    const auto distance = [&colour](const int red, const int green, const int blue) {
+        return (colour.red() - red) * (colour.red() - red) + (colour.green() - green) * (colour.green() - green) + (colour.blue() - blue) * (colour.blue() - blue);
+    };
+    const int red = level(colour.red());
+    const int green = level(colour.green());
+    const int blue = level(colour.blue());
+    const int grey = std::clamp(((colour.red() + colour.green() + colour.blue()) / 3 - 3) / 10, 0, 23);
+    const int greyValue = 8 + 10 * grey;
+    if (distance(greyValue, greyValue, greyValue) < distance(levels[red], levels[green], levels[blue])) {
+        return 232 + grey;
+    }
+    return 16 + 36 * red + 6 * green + blue;
+}
+
+QByteArray sgrCodes(const THeadlessSession::TextRun& run, const bool trueColour)
+{
+    using Style = THeadlessSession::TextStyle;
+    static constexpr std::array<std::pair<Style, const char*>, 9> styleCodes{{{Style::Bold, "1"},
+                                                                              {Style::Italic, "3"},
+                                                                              {Style::Underline, "4"},
+                                                                              {Style::Blink, "5"},
+                                                                              {Style::FastBlink, "6"},
+                                                                              {Style::Reverse, "7"},
+                                                                              {Style::Concealed, "8"},
+                                                                              {Style::StrikeOut, "9"},
+                                                                              {Style::Overline, "53"}}};
+    QByteArrayList codes;
+    for (const auto& [style, code] : styleCodes) {
+        if (run.styles.testFlag(style)) {
+            codes << code;
+        }
+    }
+    const auto colourCode = [trueColour](const QByteArray& layer, const QColor& colour) {
+        if (trueColour) {
+            return layer + ";2;" + QByteArray::number(colour.red()) + ';' + QByteArray::number(colour.green()) + ';' + QByteArray::number(colour.blue());
+        }
+        return layer + ";5;" + QByteArray::number(xterm256Colour(colour));
+    };
+    // The profile's own colours are left to the terminal's theme
+    if (!run.defaultForeground) {
+        codes << colourCode("38", run.foreground);
+    }
+    if (!run.defaultBackground) {
+        codes << colourCode("48", run.background);
+    }
+    return codes.join(';');
+}
+
+// Each run starts from no style, so a terminal that missed a code is put right by the next
+QByteArray colouredLine(const QString& text, const TextRuns& runs, const bool trueColour)
+{
+    QByteArray line;
+    bool styled = false;
+    qsizetype end = 0;
+    for (const THeadlessSession::TextRun& run : runs) {
+        const QByteArray codes = sgrCodes(run, trueColour);
+        if (!codes.isEmpty()) {
+            line += "\x1b[0;" + codes + 'm';
+        } else if (styled) {
+            line += "\x1b[0m";
+        }
+        styled = !codes.isEmpty();
+        line += text.mid(run.start, run.length).toUtf8();
+        end = run.start + run.length;
+    }
+    if (styled) {
+        line += "\x1b[0m";
+    }
+    return line + text.mid(end).toUtf8() + '\n';
 }
 
 QString outputErrorMessage(const int error)
@@ -299,6 +393,9 @@ struct InputChannel
     std::function<void(const QString&)> onEnd;
 };
 
+// The reader runs on a thread of its own, so a Qt built without threads (a browser build) has none of it and
+// leaves standard input unread, as with --no-stdin
+#if QT_CONFIG(thread)
 constexpr int scmMaxQueuedLines = 1024;
 
 // Hands a line, or the end of the input with the reason a failed read gives, to the main thread; false once
@@ -407,6 +504,7 @@ void readStandardInput(const std::shared_ptr<InputChannel>& channel)
     }
     postInput(channel, failure, true);
 }
+#endif
 
 QString uncaughtSignalsMessage(const QString& reason)
 {
@@ -501,13 +599,24 @@ QStringList catchStopSignals()
     return problems;
 }
 
-void forwardResize(int)
+void forwardResize([[maybe_unused]] int signalNumber)
 {
     const int savedErrno = errno;
     const char byte = 0;
     // A full pipe already holds a resize to act on
     [[maybe_unused]] const auto written = ::write(gResizePipe[1], &byte, 1);
     errno = savedErrno;
+}
+
+bool outputIsTerminal()
+{
+#if defined(Q_OS_WASM)
+    // Emscripten calls standard output a terminal, but it goes to the page's console, which shows escape codes as text
+    // and has no size for the game to follow
+    return false;
+#else
+    return ::isatty(STDOUT_FILENO);
+#endif
 }
 
 // In characters, of the terminal standard output goes to; none for a file or a pipe
@@ -573,6 +682,15 @@ QString helpText()
                                        "  --password-env <var>     the environment variable holding the character's\n"
                                        "                           password, for this run only; it is not stored. One\n"
                                        "                           that is not set or is empty is a command line error.\n"
+                                       "  --config-dir <folder>    keeps the profiles, Mudlet.ini and the passwords\n"
+                                       "                           stored for them in this folder, made if need be,\n"
+                                       "                           instead of the GUI's folder and the keychain.\n"
+                                       "  --color <when>           colours the game's lines as the game asked: always,\n"
+                                       "                           never, or auto, the default, which colours them for\n"
+                                       "                           a terminal only, unless NO_COLOR is set or TERM is\n"
+                                       "                           dumb, and never on Windows. 24-bit colour is used\n"
+                                       "                           when COLORTERM is truecolor or 24bit, else the\n"
+                                       "                           nearest of 256.\n"
                                        "  --offline                opens the profile without connecting, as the dialog's\n"
                                        "                           Offline button does.\n"
                                        "  --package <file>         installs a package once the profile has loaded; give\n"
@@ -598,8 +716,11 @@ QString helpText()
                                        "they send the game may be lost; send it from a sysConnectionEvent handler\n"
                                        "instead.\n"
                                        "\n"
-                                       "The profile is saved as it closes; when closeProfile() closes it, only if its\n"
-                                       "\"Auto save on exit\" setting is on. Exit status:\n"
+                                       "The profile is saved as it closes, closeProfile() included, unless its save did\n"
+                                       "not load or it is closed before its map loads, as at the top level of its own\n"
+                                       "script, so that its last good save is not written over; that is not a failed\n"
+                                       "save. A closeProfile() from a sysLoadEvent handler closes it, and saves it, once\n"
+                                       "its load has ended. Exit status:\n"
                                        "  0      the profile closed, as closeMudlet() or closeProfile() do, standard\n"
                                        "         input ended, or standard output's reader went away.\n"
                                        "  1      the profile could not be opened, it, or a profile one of its scripts\n"
@@ -610,7 +731,8 @@ QString helpText()
                                        "         while another profile loaded or, without --offline, sent the game\n"
                                        "         something while there was no connection.\n"
                                        "  2      the command line was wrong, such as a new profile's name, or\n"
-                                       "         connection details, the connection dialog would not take.\n"
+                                       "         connection details, the connection dialog would not take, or a\n"
+                                       "         --config-dir that cannot be used.\n"
                                        "  3      standard output was closed when the run began, or could not be\n"
                                        "         written, other than by its reader going away, as `| head` does.\n"
                                        "  4      the connection ended or could not be made, with --exit-on-disconnect;\n"
@@ -655,9 +777,7 @@ int usageError(const QString& message)
     return exitUsage;
 }
 
-} // namespace
-
-int main(int argc, char* argv[])
+int run(int argc, char* argv[])
 {
 #if !defined(Q_OS_WINDOWS)
     // One of these the run began without would be the next descriptor opened, such as Qt's event descriptor,
@@ -713,6 +833,10 @@ int main(int argc, char* argv[])
     parser.addOption(offlineOption);
     const QCommandLineOption packageOption(qsl("package"), qsl("Package to install once the profile has loaded"), qsl("file"));
     parser.addOption(packageOption);
+    const QCommandLineOption configDirOption(qsl("config-dir"), qsl("Folder to keep the profiles and settings in"), qsl("folder"));
+    parser.addOption(configDirOption);
+    const QCommandLineOption colorOption(qsl("color"), qsl("When to colour the game's lines: auto, always or never"), qsl("when"), qsl("auto"));
+    parser.addOption(colorOption);
 
     // Help and version need no platform plugin, so they are answered before there is one. Qt's own options
     // are still in this list, so it is read leniently, and single-dash words whole, as the GUI's src/main.cpp
@@ -724,6 +848,8 @@ int main(int argc, char* argv[])
     }
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     parser.parse(rawArguments);
+    // Read before anything reads Mudlet.ini, which is the one in it; checked once the run is set up
+    const QString configDir = parser.value(configDirOption).isEmpty() ? QString() : QDir::cleanPath(QFileInfo(parser.value(configDirOption)).absoluteFilePath());
 #if !defined(Q_OS_WINDOWS)
     // A reader that goes away (`mudlet-headless -p x | head`) would otherwise kill the profile mid-session.
     // Caught, not ignored: an ignored signal stays ignored in every program a script starts.
@@ -733,7 +859,7 @@ int main(int argc, char* argv[])
         // Only for the translation, as in the GUI
         QCoreApplication printApp(argc, argv);
         setApplicationNames();
-        MudletApp::loadTranslationsForCommandLine(true);
+        MudletApp::loadTranslationsForCommandLine(true, configDir);
         if (const int error = standardOutputClosed ? EBADF : writeLine(stdout, parser.isSet(helpOption) ? helpText() : versionText()); error && error != EPIPE) {
             writeLine(stderr, outputErrorMessage(error));
             return exitOutputFailed;
@@ -741,11 +867,18 @@ int main(int argc, char* argv[])
         return exitOk;
     }
 
-    // Nothing is drawn, so no display is needed unless one is asked for
+    // Nothing is drawn, so no display is needed unless one is asked for. In a browser the page is the display,
+    // and Qt's wasm platform the only one there is.
+#if defined(Q_OS_WASM)
+    const bool platformChosenHere = false;
+#else
     const bool platformChosenHere = qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
+#endif
     if (platformChosenHere) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
+    // Setting the environment is a data race once the application's threads are reading it
+    nameHardwareDeviceTypes();
     // Deleted before main() returns, as the GUI's src/main.cpp does its own, so Qt's cleanup runs ahead of static
     // destruction
     auto* app = new QGuiApplication(argc, argv);
@@ -755,7 +888,7 @@ int main(int argc, char* argv[])
     }
     setApplicationNames();
     // Kept for the whole run: with no mudlet object, nothing loads the interface's translations later
-    MudletApp::loadTranslationsForRun();
+    MudletApp::loadTranslationsForRun(configDir);
     MudletApp::setDefaultMediaBackend();
 
     // Strict this time: the application object has taken out the options that were Qt's
@@ -774,7 +907,7 @@ int main(int argc, char* argv[])
         exitCode = usageError(QCoreApplication::translate("headless", "--tls and --no-tls cannot both be given."));
     }
     // Last-wins would quietly drop one; for -p the GUI would open each
-    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption}) {
+    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption, &configDirOption, &colorOption}) {
         if (exitCode == exitOk && parser.values(*option).size() > 1) {
             //: Command line error of the headless runner; %1 is an option, such as --host
             exitCode = usageError(QCoreApplication::translate("headless", "%1 was given more than once.").arg(qsl("--") + option->names().constLast()));
@@ -791,12 +924,24 @@ int main(int argc, char* argv[])
     if (parser.isSet(tlsOption) || parser.isSet(noTlsOption)) {
         options.tls = parser.isSet(tlsOption);
     }
+#if defined(Q_OS_WASM)
+    // A browser has no sockets, so the page connects for the profile when it can
+    options.supplyTransport = pageSuppliesTransport();
+#endif
     if (bool isNumber = false; exitCode == exitOk && parser.isSet(portOption)) {
         options.port = parser.value(portOption).toInt(&isNumber);
         // Its range is the session's to check, as for any frontend; 0 there keeps what is stored
         if (!isNumber || !options.port) {
             //: Command line error of the headless runner; %1 is what was given as the port
             exitCode = usageError(QCoreApplication::translate("headless", "The port must be a number from 1 to 65535, not '%1'.").arg(parser.value(portOption)));
+        }
+    }
+    if (exitCode == exitOk && parser.isSet(configDirOption)) {
+        if (parser.value(configDirOption).isEmpty()) {
+            //: Command line error of the headless runner; --config-dir names the folder to keep the profiles in
+            exitCode = usageError(QCoreApplication::translate("headless", "--config-dir was given nothing; leave it out to keep the profiles where the GUI keeps them."));
+        } else {
+            options.configDir = configDir;
         }
     }
     if (exitCode == exitOk && parser.isSet(passwordEnvOption)) {
@@ -811,6 +956,23 @@ int main(int argc, char* argv[])
                     QCoreApplication::translate("headless", "The environment variable %1 is not set or is empty, so there is no password to log in with.").arg(parser.value(passwordEnvOption)));
         }
     }
+    bool coloured = false;
+    if (const QString when = parser.value(colorOption); exitCode == exitOk) {
+        if (when == qsl("always")) {
+            coloured = true;
+        } else if (when == qsl("auto")) {
+#if !defined(Q_OS_WINDOWS)
+            // Not on Windows, whose console shows the codes as text unless told otherwise. NO_COLOR as
+            // https://no-color.org/ asks.
+            coloured = outputIsTerminal() && qEnvironmentVariableIsEmpty("NO_COLOR") && qgetenv("TERM") != "dumb";
+#endif
+        } else if (when != qsl("never")) {
+            //: Command line error of the headless runner; %1 is what was given; auto, always and never are not to be translated
+            exitCode = usageError(QCoreApplication::translate("headless", "--color takes auto, always or never, not '%1'.").arg(when));
+        }
+    }
+    const QByteArray colourTerm = qgetenv("COLORTERM").toLower();
+    const bool trueColour = colourTerm == "truecolor" || colourTerm == "24bit";
     if (exitCode == exitOk && standardOutputClosed) {
         writeLine(stderr, outputErrorMessage(EBADF));
         exitCode = exitOutputFailed;
@@ -821,20 +983,39 @@ int main(int argc, char* argv[])
     }
 
     auto session = std::make_unique<THeadlessSession>();
+#if defined(Q_OS_WASM)
+    if (options.supplyTransport) {
+        bridgeTransportToPage(session.get());
+    }
+    bridgeConfigSavesToPage(session.get());
+#endif
     // quit() does nothing before exec() runs, and a load that pumps events can ask for one before then
     bool quitAsked = false;
-    const auto quit = [&quitAsked]() {
+#if defined(Q_OS_WASM)
+    // exec() never returns in a browser, so a quit starts the close that follows it on the desktop; set once the
+    // steps have run
+    std::function<void()> closeInBrowser;
+#endif
+    const auto quit = [&]() {
         quitAsked = true;
+#if defined(Q_OS_WASM)
+        // A timer fires only from the browser's own loop, never from an event loop pump, so the close starts where
+        // exec() would have returned; not 0ms, which Qt posts as an event instead of starting a timer
+        if (closeInBrowser) {
+            QTimer::singleShot(1ms, app, std::exchange(closeInBrowser, {}));
+        }
+#else
         QCoreApplication::quit();
+#endif
     };
     ErrorStream& errors = errorStream();
     const QtMessageHandler previousMessageHandler = qInstallMessageHandler(logThroughErrorStream);
     int outputError = 0;
-    QObject::connect(session.get(), &THeadlessSession::outputLine, [quit, &outputError, &errors](const QString&, const QString& text, bool) {
+    QObject::connect(session.get(), &THeadlessSession::outputLine, [quit, &outputError, &errors, coloured, trueColour](const QString&, const QString& text, bool, const TextRuns& runs) {
         if (outputError) {
             return;
         }
-        outputError = writeLine(stdout, text);
+        outputError = coloured ? writeBytes(stdout, colouredLine(text, runs, trueColour)) : writeLine(stdout, text);
         if (!outputError) {
             return;
         }
@@ -969,8 +1150,10 @@ int main(int argc, char* argv[])
             return;
         }
         readerStarted = true;
+#if QT_CONFIG(thread)
         input->receiver = inputReceiver.get();
         std::thread(readStandardInput, input).detach();
+#endif
     };
     QObject::connect(session.get(), &THeadlessSession::connected, app, [&everConnected, &startReading]() {
         everConnected = true;
@@ -980,6 +1163,22 @@ int main(int argc, char* argv[])
         attemptEnded = true;
         startReading();
     });
+
+    const auto endRun = [&]() {
+        errors.endLine();
+        session.reset();
+#if defined(Q_OS_WINDOWS)
+        SetConsoleCtrlHandler(forwardConsoleEvent, FALSE);
+#else
+        signalNotifier.reset();
+#endif
+
+        // Joins the match helpers while the application object still exists; see TriggerMatchPool::shutdown()
+        TriggerMatchPool::shutdown();
+        delete app;
+        qInstallMessageHandler(previousMessageHandler);
+        return exitCode;
+    };
 
     bool luaFailed = false;
     bool packageFailed = false;
@@ -994,7 +1193,7 @@ int main(int argc, char* argv[])
                 session->setScreenSize(size->width(), size->height());
             }
         };
-        if (::isatty(STDOUT_FILENO)) {
+        if (outputIsTerminal()) {
             if (const QString problem = catchResizes(); !problem.isEmpty()) {
                 //: Warning from the headless runner; %1 is the system's reason
                 errors.report(QCoreApplication::translate("headless", "cannot catch SIGWINCH, so the game will not be told when the terminal is resized: %1").arg(problem));
@@ -1007,6 +1206,9 @@ int main(int argc, char* argv[])
                     followTerminal();
                 });
             }
+            // A script's setMainWindowSize() cannot resize the terminal, so the game is told the terminal's size again;
+            // given from the handler, so the session takes it as its answer and a script asking again settles
+            QObject::connect(session.get(), &THeadlessSession::mainWindowResizeRequested, app, followTerminal);
             followTerminal();
         }
 #endif
@@ -1057,50 +1259,79 @@ int main(int argc, char* argv[])
             everConnected = true;
         }
         startReading();
+        const auto beforeShutdown = [&]() {
+            // One that ended a wait on standard output may still be in the pipe, its notifier not run since; it still
+            // decides the exit status.
+            drainStopSignals();
+#if !defined(Q_OS_WINDOWS)
+            resizeNotifier.reset();
+#endif
+            if (linesNotSent) {
+                //: Error from the headless runner; %1 is how many lines of standard input sent the game something while there was no connection, which was lost
+                errors.report(QCoreApplication::translate("headless", "standard input was read while there was no connection to the game to send it to; lines not sent: %1").arg(linesNotSent));
+            }
+            {
+                const QMutexLocker lock(&input->mutex);
+                input->receiver = nullptr;
+                input->drained.wakeAll();
+            }
+            inputReceiver.reset();
+        };
+        const auto afterShutdown = [&](const bool shutDown) {
+            if (!shutDown) {
+                errors.report(session->errorString());
+            } else {
+                for (const QString& profile : session->unsavedProfiles()) {
+                    //: Error from the headless runner when a profile it closed could not be saved; %1 is its name
+                    errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
+                }
+            }
+            // As --help gives it
+            if (!shutDown || session->saveFailed()) {
+                exitCode = exitFailed;
+            } else if (stopSignal) {
+                exitCode = exitSignalBase + stopSignal;
+            } else if (outputError && outputError != EPIPE && outputError != EINTR) {
+                exitCode = exitOutputFailed;
+            } else if (disconnected) {
+                exitCode = exitDisconnected;
+            } else if (luaFailed || packageFailed || stepsNotSent > 0 || inputFailed || inputDropped) {
+                exitCode = exitFailed;
+            }
+        };
+#if defined(Q_OS_WASM)
+        // Queued, as the end of the run deletes the session that sends it. The page reads the status from its exit.
+        QObject::connect(
+                session.get(),
+                &THeadlessSession::shutdownFinished,
+                app,
+                [&](const bool shutDown) {
+                    afterShutdown(shutDown);
+                    emscripten_force_exit(endRun());
+                },
+                Qt::QueuedConnection);
+        closeInBrowser = [&]() {
+            beforeShutdown();
+            session->shutdownAsync(true);
+        };
+        if (quitAsked) {
+            quit();
+        }
+        // Hands the page back to the browser, keeping this stack, and does not return
+        app->exec();
+#else
         if (!quitAsked) {
             exitCode = app->exec();
         }
-        // One that ended a wait on standard output may still be in the pipe, its notifier not run since; it still
-        // decides the exit status.
-        drainStopSignals();
-#if !defined(Q_OS_WINDOWS)
-        resizeNotifier.reset();
+        beforeShutdown();
+        afterShutdown(session->shutdown(true));
 #endif
-        if (linesNotSent) {
-            //: Error from the headless runner; %1 is how many lines of standard input sent the game something while there was no connection, which was lost
-            errors.report(QCoreApplication::translate("headless", "standard input was read while there was no connection to the game to send it to; lines not sent: %1").arg(linesNotSent));
-        }
-        {
-            const QMutexLocker lock(&input->mutex);
-            input->receiver = nullptr;
-            input->drained.wakeAll();
-        }
-        inputReceiver.reset();
-        const bool shutDown = session->shutdown(true);
-        if (!shutDown) {
-            errors.report(session->errorString());
-        } else {
-            for (const QString& profile : session->unsavedProfiles()) {
-                //: Error from the headless runner when a profile it closed could not be saved; %1 is its name
-                errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
-            }
-        }
-        // As --help gives it
-        if (!shutDown || session->saveFailed()) {
-            exitCode = exitFailed;
-        } else if (stopSignal) {
-            exitCode = exitSignalBase + stopSignal;
-        } else if (outputError && outputError != EPIPE && outputError != EINTR) {
-            exitCode = exitOutputFailed;
-        } else if (disconnected) {
-            exitCode = exitDisconnected;
-        } else if (luaFailed || packageFailed || stepsNotSent > 0 || inputFailed || inputDropped) {
-            exitCode = exitFailed;
-        }
     } else {
-        // A new profile's name, or connection details, that the connection dialog would not take came from the
-        // command line
-        exitCode = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails ? usageError(session->errorString()) : exitFailed;
+        // A new profile's name, connection details that the connection dialog would not take, or the config
+        // folder came from the command line
+        const bool fromTheCommandLine = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails
+                                        || started == THeadlessSession::StartResult::invalidConfigDir;
+        exitCode = fromTheCommandLine ? usageError(session->errorString()) : exitFailed;
         if (exitCode == exitFailed) {
             errors.report(session->errorString());
         }
@@ -1113,17 +1344,17 @@ int main(int argc, char* argv[])
             errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
         }
     }
-    errors.endLine();
-    session.reset();
-#if defined(Q_OS_WINDOWS)
-    SetConsoleCtrlHandler(forwardConsoleEvent, FALSE);
-#else
-    signalNotifier.reset();
-#endif
+    return endRun();
+}
 
-    // Joins the match helpers while the application object still exists; see TriggerMatchPool::shutdown()
-    TriggerMatchPool::shutdown();
-    delete app;
-    qInstallMessageHandler(previousMessageHandler);
-    return exitCode;
+} // namespace
+
+int main(int argc, char* argv[])
+{
+#if defined(Q_OS_WASM)
+    // Returning from main() leaves a browser's page running with its status unread
+    emscripten_force_exit(run(argc, argv));
+#else
+    return run(argc, argv);
+#endif
 }

@@ -221,6 +221,18 @@ describe("Tests StringUtils.lua functions", function()
       local expected = { "", "a", "b", "" }
       assert.same(expected, str:split(","))
     end)
+
+    it("should skip empty matches of a delimiter pattern instead of hanging", function()
+      local hook, mask, count = debug.gethook()
+      finally(function() debug.sethook(hook, mask, count) end)
+      debug.sethook(function() error("string.split did not terminate", 0) end, "", 1000000)
+      assert.same({ "a", "b" }, ("a b"):split(" *"))
+      assert.same({ "a", "b", "c" }, ("a   b c"):split("%s*"))
+      assert.same({ "a", "b", "c" }, ("a, b,c"):split(", *"))
+      assert.same({ "abc" }, ("abc"):split("x*"))
+      assert.same({ "hello world" }, ("hello world"):split("%f[%w]"))
+      assert.same({ "" }, (""):split(" *"))
+    end)
   end)
 
   describe("Tests the functionality of string.starts", function()
@@ -595,6 +607,34 @@ describe("Tests StringUtils.lua functions", function()
       end
       assert.equals("inner/outer", inner())
       assert.equals("[inner/outer] outer", f("[{inner()}] {outerName}"))
+    end)
+
+    it("should read the function's own locals when return wraps f in parentheses", function()
+      local x, y = "caller", "caller"
+      local function own()
+        local x, y = "own", "own"
+        return (f("{x} {x .. '!'}"))
+      end
+      local function ownNames()
+        local x, y = "own", "own"
+        return (f("{x}/{y}"))
+      end
+      assert.equals("own own!", own())
+      assert.equals("own/own", ownNames())
+    end)
+
+    -- wrappers such as MDK's echofile.f rely on the tail call to reach their caller's locals
+    it("should let a wrapper doing return f(str) read its caller's locals", function()
+      local function wrapper(str)
+        return f(str)
+      end
+      local function namesWrapper(str)
+        local other = "wrapper"
+        return f(str)
+      end
+      local str, other = "caller", "caller"
+      assert.equals("caller caller!", wrapper("{str} {str .. '!'}"))
+      assert.equals("caller/caller", namesWrapper("{str}/{other}"))
     end)
 
     it("should interpolate a variable named like one of f's own locals", function()

@@ -19,6 +19,7 @@
 
 #include <QDataStream>
 #include <QDeadlineTimer>
+#include <QElapsedTimer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -121,8 +122,8 @@ private slots:
     // first sound, so even that one is placed.
     void test_aGameThatSendsMediaHasItsFirstSoundPlaced()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        if (const QString backend = qEnvironmentVariable("QT_MEDIA_BACKEND"); !backend.isEmpty() && backend != qsl("ffmpeg")) {
+            QSKIP("A backend other than FFmpeg is named, so it is never checked.");
         }
         QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the game said anything.");
         QString package = qsl("Client.Media.Default");
@@ -503,6 +504,64 @@ private slots:
                          },
                          heard),
                  qPrintable(qsl("Moved east, the tone came out at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
+    }
+
+    // updateMusic() reaches the music's audio, not only the volume it reports, and glides over its duration
+    void test_updateMusicGlidesTheMusicsVolume()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("theme.wav"), clipMs, 8000));
+        data.setMediaType(TMediaData::MediaTypeMusic);
+        data.setMediaKey(qsl("theme"));
+        data.setMediaVolume(100);
+        media()->playMedia(data);
+        QVERIFY2(waitForStarted(), "The music never started playing.");
+        // Before the first audio there is nothing to glide from, and a change is made at once
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     [this]() {
+                                         return media()->firstMixedVoice() && media()->firstMixedVoice()->receivedAudio();
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noPanningReason());
+        const int voice = media()->firstMixedVoice()->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The music's audio never reached the shared output.");
+        const float start = loudestOnEachSide(20).first;
+        QVERIFY2(start > 0.1F, qPrintable(qsl("At volume 100 the music came out at only %1.").arg(start)));
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("updateMusic({key = 'theme', volume = 10, duration = 3000})")));
+        QElapsedTimer sinceUpdate;
+        sinceUpdate.start();
+        // Polled, as one read after a fixed wait lands anywhere in the glide if the runner stalls
+        int readsPartway = 0;
+        while (sinceUpdate.elapsed() < 3700) {
+            const float level = loudestOnEachSide(20).first;
+            if (level > start * 0.2F && level < start * 0.8F) {
+                ++readsPartway;
+            }
+            QTest::qWait(50ms);
+        }
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         // A band, not a ceiling: a read that lands between two pieces of audio is silence
+                         [start](const float l, const float) {
+                             return l > start * 0.05F && l < start * 0.15F;
+                         },
+                         heard,
+                         2s),
+                 qPrintable(qsl("Updated to volume 10, the music stayed at %1 (from %2).").arg(heard.first).arg(start)));
+        QVERIFY2(readsPartway >= 10, qPrintable(qsl("Through a 3 s glide from %1, only %2 reads were between 0.2 and 0.8 of the way down: it did not glide.").arg(start).arg(readsPartway)));
     }
 
     // A game moves a sound by sending its play and an update together, before any of it is heard
@@ -1145,21 +1204,22 @@ private:
     // Measured, not assumed: QAudioBufferOutput is documented to work only on Qt's FFmpeg backend
     QString noPanningReason() const
     {
-        return qsl("This Qt Multimedia backend (\"%1\") hands no audio to a voice, so a placed sound plays as recorded here. Needs Qt's FFmpeg backend.")
+        return qsl("The media backend Qt loaded for QT_MEDIA_BACKEND=\"%1\" hands no audio to a voice, so a placed sound plays as recorded here. "
+                   "Needs Qt's FFmpeg backend, which a Qt built without it replaces with another.")
                 .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")));
     }
 
-    // Asking starts the one-time probe of a backend nobody named, which takes a moment to answer
+    // Asking starts the one-time probe, which takes a moment to answer; a backend other than FFmpeg is never
+    // probed. FFmpeg named is not taken on trust here: a Qt without it plays through another backend.
     static bool backendPlaces()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            return !TMediaVoice::unsupported();
-        }
-        return QTest::qWaitFor(
+        const bool answered = QTest::qWaitFor(
                 []() {
-                    return !TMediaVoice::unsupported();
+                    TMediaVoice::unsupported();
+                    return TMediaVoice::probePassed() || TMediaVoice::probeFailed() || !TMediaVoice::probeStarted();
                 },
                 QDeadlineTimer(6s));
+        return answered && !TMediaVoice::unsupported();
     }
 
     TMediaData playingData(const QString& fileName) const

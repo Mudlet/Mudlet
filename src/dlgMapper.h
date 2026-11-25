@@ -35,7 +35,6 @@ class QFrame;
 class QLabel;
 class QProgressBar;
 class QPushButton;
-struct MapInfoProperties;
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 class QOpenGLWidget;
@@ -58,7 +57,6 @@ public:
     // The member variable is the source for this bit of information:
     bool isIn3DMode() const { return mIs3DMode; }
     bool isFloatAndDockable() const;
-    int getCurrentShownAreaIndex();
     void setFont(const QFont&);
     void refreshColours();
     // Redraws whichever of the 2D and 3D views exist, for settings both of them read
@@ -90,6 +88,7 @@ public:
     void clearRoomSelection() override { mp2dMap->clearSelection(); }
     int shownAreaId() const override;
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
+    std::pair<bool, QString> centerViewOn(int roomId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {
         return mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
@@ -118,25 +117,6 @@ public slots:
     void updateInfoMenu();
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);
-
-    // Returns where the box ends, down from the top
-    static int paintMapInfo(const QElapsedTimer& renderTimer,
-                            QPainter& painter,
-                            Host* pHost,
-                            TMap* pMap,
-                            int roomID,
-                            int displayAreaId,
-                            int selectionSize,
-                            QColor& infoColor,
-                            int xOffset,
-                            int yOffset,
-                            int widgetWidth,
-                            int fontHeight,
-                            // Invalid for the profile's info box background
-                            const QColor& background = QColor(),
-                            // Empty for the profile's display font's
-                            const QString& fontFamily = QString());
-    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

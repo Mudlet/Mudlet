@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Builds, packages and install-tests an .rpm; run it via CI/linux-packages/build (source checkout as context).
 
-ARG BASE_IMAGE=fedora:44
+ARG BASE_IMAGE=fedora:45
 
 FROM ${BASE_IMAGE} AS builder
 

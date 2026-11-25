@@ -85,6 +85,8 @@ public:
     static void refreshClaudeDesktopEntry();
 
     static QString claudeDesktopConfigDir();
+    // Split out so a test on any platform can point it at a temporary tree.
+    static QString claudeDesktopConfigDirOnWindows(const QString& localAppData, const QString& appData);
     static QString claudeDesktopConfigFilePath();
     static QString mudletBinaryPath();
     static QJsonObject claudeDesktopEntry(const QString& command);

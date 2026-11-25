@@ -42,8 +42,9 @@ EAction::EAction(Host* pHost, const QIcon& icon, const QString& name, const int 
 
 void EAction::slot_execute(bool checked)
 {
-    mpHost->getActionUnit()->getAction(mID)->mButtonState = checked;
-    mpHost->getActionUnit()->getAction(mID)->execute();
+    if (TAction* pAction = mpHost->getActionUnit()->getAction(mID)) {
+        pAction->press(checked);
+    }
     // Deliberately no doCleanup() here: a menu item runs nested inside a bar's
     // slot_pressed() (TEasyButtonBar::showMenu() spins a modal event loop), which
     // dereferences its own button after this returns - flushing here could free

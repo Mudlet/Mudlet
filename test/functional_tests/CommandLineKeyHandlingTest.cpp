@@ -63,6 +63,13 @@
 
 using namespace std::chrono_literals;
 
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
+
 class CommandLineKeyHandlingTest : public QObject
 {
     Q_OBJECT
@@ -104,6 +111,13 @@ private:
 
     static void type(TCommandLine* pCommandLine, const QString& text) { QTest::keyClicks(pCommandLine, text); }
 
+    static void addAutoClearRows()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
+
     // Real macOS arrow keys arrive with the keypad modifier set, and TCommandLine's
     // Up/Down handlers only recognise them there when it is present, so a synthesised
     // event has to carry it too or the key falls through to the editor.
@@ -119,6 +133,14 @@ private:
     }
 
     static QString selection(const TCommandLine* pCommandLine) { return pCommandLine->textCursor().selectedText(); }
+
+    static void select(TCommandLine* pCommandLine, const int from, const int to)
+    {
+        QTextCursor cursor = pCommandLine->textCursor();
+        cursor.setPosition(from);
+        cursor.setPosition(to, QTextCursor::KeepAnchor);
+        pCommandLine->setTextCursor(cursor);
+    }
 
     // Puts text into the command line without going through the keys, for the
     // cases whose subject is what a key does to text that is already there - a
@@ -404,6 +426,23 @@ private slots:
         QVERIFY2(waitForServerToReceive("east"), "the second of the two lines never reached the game");
     }
 
+    // An action that resets itself on the first of several lines leaves the rest to go to the game
+    void test_linesAfterAnActionResetsItselfGoToTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("cmdLineActionSaw = ''")));
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) cmdLineActionSaw = text resetCmdLineAction('%1') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("to the action"));
+        press(pCommandLine, Qt::Key_Return, Qt::ShiftModifier);
+        type(pCommandLine, qsl("to the game"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("cmdLineActionSaw"), qsl("to the action"));
+        QVERIFY2(waitForServerToReceive("to the game"), qPrintable(qsl("the game never received the second line - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+    }
+
     // The preference decides what is left in the box afterwards: cleared, or
     // kept and selected so the next thing typed replaces it.
     void test_autoClearPreferenceDecidesWhatIsLeftBehind()
@@ -422,6 +461,106 @@ private slots:
         type(pCleared, qsl("cleared"));
         press(pCleared, Qt::Key_Return);
         QCOMPARE(pCleared->toPlainText(), QString());
+    }
+
+    // An alias that fills the line in for the player, like "t bob" writing
+    // "tell bob ", must not have that cleared, or selected for the next key
+    // to replace.
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data() { addAutoClearRows(); }
+
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specPrefillAlias = tempAlias([[^specPrefill (\\w+)$]], [[printCmdLine('%1', 'tell ' .. matches[2] .. ' ')]])").arg(mLineName)));
+        const auto killPrefillAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specPrefillAlias)"));
+        });
+
+        type(pCommandLine, qsl("specPrefill bob"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob "));
+        QCOMPARE(selection(pCommandLine), QString());
+        type(pCommandLine, qsl("hi"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob hi"));
+    }
+
+    // Writing back the very text that was sent still counts as the script's
+    void test_aCommandAnAliasWritesBackIsLeftAsWritten()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specStickyAlias = tempAlias([[^specSticky$]], [[printCmdLine('%1', 'specSticky')]])").arg(mLineName)));
+        const auto killStickyAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specStickyAlias)"));
+        });
+
+        type(pCommandLine, qsl("specSticky"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("specSticky"));
+    }
+
+    // A setCmdLineAction() field that writes to its line, as packages' settings
+    // fields do, is still cleared or selected for the next value to replace
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected_data() { addAutoClearRows(); }
+
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        const QString expected = autoClear ? QString() : qsl("250");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
+    }
+
+    // As does a one-shot field whose action resets itself before writing its value back
+    void test_anActionFieldThatResetsItselfKeepsItsValueSelected()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = false;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) resetCmdLineAction('%1') printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("250"));
+        QCOMPARE(selection(pCommandLine), qsl("250"));
+    }
+
+    // An alias that leaves the line alone has it cleared or selected as usual
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect_data() { addAutoClearRows(); }
+
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specQuietAlias = tempAlias([[^specQuiet$]], [[specQuietSaw = getCmdLine('%1')]])").arg(mLineName)));
+        const auto killQuietAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specQuietAlias)"));
+        });
+
+        type(pCommandLine, qsl("specQuiet"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("specQuietSaw"), qsl("specQuiet"));
+        const QString expected = autoClear ? QString() : qsl("specQuiet");
+        QCOMPARE(pCommandLine->toPlainText(), expected);
+        QCOMPARE(selection(pCommandLine), expected);
     }
 
     // Up walks back through what was sent, Down comes forward again, and the
@@ -515,6 +654,230 @@ private slots:
         QCOMPARE(pCommandLine->textCursor().position(), 3);
     }
 
+    // Down after Up's completion steps back to the newer match and then to what was
+    // typed, rather than banking the completed line and clearing the box.
+    void test_downWalksBackThroughUpsCompletions()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl("ok at sign"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("lo"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+
+        // Back on what was typed, Down banks it as it does any fresh text
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
+    // Up's completion to just what was typed, with no newer match left, is the player's own line, so Down banks it at once
+    void test_downBanksALineUpCompletedToItself()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look"));
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // Up past a longer match onto one that is just what was typed leaves nothing selected, yet Down still goes back
+    void test_downWalksBackFromACompletionThatIsWhatWasTyped()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl(" at sign"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // With "Highlight history" turned off mid-walk, Down banks the line as it would without one
+    void test_downBanksACompletionOnceHighlightHistoryIsOff()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look at sign"));
+        sendCommand(pCommandLine, qsl("look"));
+        type(pCommandLine, qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        mpHost->mHighlightHistory = false;
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        press(pCommandLine, Qt::Key_Up);
+        const QString after = pCommandLine->toPlainText();
+        mpHost->mHighlightHistory = true;
+        QCOMPARE(after, qsl("look at sign"));
+    }
+
+    // A key that changes nothing between Up and Down leaves the walk where it was
+    void test_aKeyThatChangesNothingKeepsTheHistoryWalk()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Shift);
+        QCOMPARE(selection(pCommandLine), qsl("ok"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
+    // Up after accepting a completion looks for longer lines from the newest again
+    void test_upAfterAcceptingACompletionSearchesFromTheNewest()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look at sign"));
+        sendCommand(pCommandLine, qsl("look at sign 2"));
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        press(pCommandLine, Qt::Key_End);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign 2"));
+        QCOMPARE(selection(pCommandLine), qsl(" 2"));
+    }
+
+    // Once the completion is accepted, the line is the player's own and Down banks it
+    void test_downBanksAnAcceptedCompletion()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look"));
+        sendCommand(pCommandLine, qsl("look at sign"));
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_End);
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
+    // A selection in the middle of the line is the player's own text, not a completion tail.
+    void test_upWithAMidLineSelectionKeepsTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("north"));
+
+        const QString typed = qsl("say abcdefghij KLMNOPQRST");
+        setText(pCommandLine, typed);
+        select(pCommandLine, 4, 9);
+        QCOMPARE(selection(pCommandLine), qsl("abcde"));
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+        QCOMPARE(selection(pCommandLine), qsl("abcde"));
+    }
+
+    // The completed tail starts where the typed prefix ends in UTF-16 units, so
+    // a second Up can cut it again and step on to the next older entry.
+    void test_upKeepsCyclingWhenThePrefixHoldsAnEmoji()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        // QTest cannot type an emoji, so these are put in place before Return
+        for (const QString& command : {qsl("say \U0001F600 ho"), qsl("say \U0001F600 hi")}) {
+            setText(pCommandLine, command);
+            press(pCommandLine, Qt::Key_Return);
+            press(pCommandLine, Qt::Key_Escape);
+        }
+
+        const QString prefix = qsl("say \U0001F600");
+        setText(pCommandLine, prefix);
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \U0001F600 hi"));
+        QCOMPARE(selection(pCommandLine), qsl(" hi"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \U0001F600 ho"));
+        QCOMPARE(selection(pCommandLine), qsl(" ho"));
+    }
+
+    // Shift+End or a double-clicked last word ends where a completion tail does,
+    // but was never filled in by Up, so it is not cut off either.
+    void test_upWithASelectionThePlayerMadeAtTheEndKeepsTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("north"));
+
+        const QString typed = qsl("say hello world");
+        setText(pCommandLine, typed);
+        select(pCommandLine, 10, typed.size());
+        QCOMPARE(selection(pCommandLine), qsl("world"));
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+        QCOMPARE(selection(pCommandLine), qsl("world"));
+    }
+
+    // With a selection that is not a completion tail, the whole line is what
+    // the history entries have to start with.
+    void test_upWithAMidLineSelectionCompletesTheWholeLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("say hi there friend"));
+        sendCommand(pCommandLine, qsl("say hello"));
+
+        setText(pCommandLine, qsl("say hi there"));
+        select(pCommandLine, 4, 6);
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say hi there friend"));
+        QCOMPARE(selection(pCommandLine), qsl(" friend"));
+    }
+
     // A password typed at a game's login prompt arrives with remote echo on -
     // past the hidden-input box, after an Esc - and must not be left in a
     // history the next player at the keyboard can page through.
@@ -605,6 +968,29 @@ private slots:
         press(pCommandLine, Qt::Key_Tab);
 
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
+    }
+
+    // Punctuation ends a word as a space does, so a Tab after it has no part-word to
+    // complete and must not glue some word from the game's output onto the line
+    void test_tabDoesNothingAfterPunctuation_data()
+    {
+        QTest::addColumn<QString>("typed");
+        QTest::newRow("comma") << qsl("qzxpterodactyl,");
+        QTest::newRow("full stop after a space") << qsl("look .");
+        QTest::newRow("exclamation mark") << qsl("say hello qzxpterodactyl!");
+    }
+
+    void test_tabDoesNothingAfterPunctuation()
+    {
+        QFETCH(QString, typed);
+        mpHost->mainConsoleView()->print(qsl("a qzxpterodactyl circles overhead\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, typed);
+        press(pCommandLine, Qt::Key_Tab);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
     }
 
     // Typing a space accepts the completion. A Tab straight after it must not
@@ -834,6 +1220,55 @@ private slots:
         QCOMPARE(pLayer->maximumHeight(), oneRow);
     }
 
+    // A completion long enough to wrap needs the line to grow as typing would
+    void test_tabCompletionThatWrapsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto cleanUp = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLineSuggestions('main')"));
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+        QVERIFY(runLua(qsl("addCmdLineSuggestion('main', 'qzxwrap' .. string.rep('a', 600))")));
+
+        pMain->setFocus();
+        type(pMain, qsl("qzxwr"));
+        press(pMain, Qt::Key_Tab);
+        qApp->processEvents();
+
+        QVERIFY(pMain->toPlainText().size() > 600);
+        const int completedHeight = pLayer->maximumHeight();
+        QVERIFY2(completedHeight > oneRow, qPrintable(qsl("a wrapped completion left the command line %1 high, one row %2").arg(completedHeight).arg(oneRow)));
+    }
+
+    // The context menu's Paste, a middle-click and a drop bypass the key handler,
+    // so the line has to grow for a pasted block of rows by itself
+    void test_pastingSeveralRowsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QGuiApplication::clipboard()->setText(qsl("row one\nrow two\nrow three"));
+        pMain->paste();
+        qApp->processEvents();
+
+        QCOMPARE(pMain->document()->blockCount(), 3);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("three pasted rows left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+    }
+
     // Escape leaves completion mode, and selects the line so the next thing
     // typed replaces it.
     void test_escapeSelectsTheWholeLine()
@@ -970,6 +1405,211 @@ private slots:
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
 
         QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the scrollback pane's selection").arg(pClipboard->text().left(60))));
+    }
+
+    // A real keyboard sends Ctrl on its own ahead of the C, and the line spell checks
+    // that press - with no word at the caret after "('')"
+    void test_pressingCtrlKeepsTheGameWindowsSelectionForCopy()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool spellCheckWas = mpHost->getEnableSpellCheck();
+        mpHost->setEnableSpellCheck(true);
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, windowSize, spellCheckWas]() {
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+            mpHost->setEnableSpellCheck(spellCheckWas);
+        });
+
+        const QString sentinel = qsl("qzxupperpaneline");
+        pConsole->print(qsl("%1\n").arg(sentinel));
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+        type(pCommandLine, qsl("lua echo('')"));
+        pCommandLine->selectAll();
+
+        // A selection in a pane of no height cannot be worked out
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
+
+        QTest::keyPress(pCommandLine, Qt::Key_Control, Qt::ControlModifier);
+        const bool keptAfterCtrl = !pConsole->mUpperPane->mSelectedRegion.isEmpty();
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+        QTest::keyRelease(pCommandLine, Qt::Key_Control);
+
+        QVERIFY2(keptAfterCtrl, "pressing Ctrl on its own cleared the game window's selection");
+        QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the game window's selection").arg(pClipboard->text().left(60))));
+    }
+
+    // A miniconsole hands its focus to the main command line, so Ctrl+C after
+    // selecting in one lands there; it must copy that selection, not an older
+    // one still highlighted in the game window
+    void test_copyTakesTheLatestSelectionFromAMiniconsole()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const QString mainSentinel = qsl("qzxgamewindowline");
+        pConsole->print(qsl("%1\n").arg(mainSentinel));
+        const QString miniSentinel = qsl("qzxminiconsoleline");
+        QVERIFY(runLua(qsl("createMiniConsole('copyFromMini', 0, 0, 400, 200)\necho('copyFromMini', '%1\\n')").arg(miniSentinel)));
+        TConsole* pMini = pConsole->subConsoleWidget(qsl("copyFromMini"));
+        QVERIFY(pMini);
+
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, pMini, windowSize]() {
+            pConsole->clearSelection();
+            pMini->clearSelection();
+            runLua(qsl("hideWindow('copyFromMini')"));
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+        });
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+
+        // A selection in a pane of no height cannot be worked out
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0 && pMini->mUpperPane->height() > 0, "the windows were never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        pMini->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(!pMini->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the miniconsole");
+
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(miniSentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the miniconsole's selection").arg(pClipboard->text().left(60))));
+
+        // Selecting in the game window again makes it the latest
+        pConsole->mUpperPane->slot_selectAll();
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(mainSentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the game window's selection").arg(pClipboard->text().left(60))));
+
+        // A hidden miniconsole keeps its selection, but the player can no longer see it
+        pMini->mUpperPane->slot_selectAll();
+        QVERIFY(runLua(qsl("hideWindow('copyFromMini')")));
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(mainSentinel), qPrintable(qsl("Ctrl+C copied '%1' from a hidden miniconsole rather than the game window's selection").arg(pClipboard->text().left(60))));
+
+        // Selecting on the line after the miniconsole makes the line's text the latest
+        QVERIFY(runLua(qsl("showWindow('copyFromMini')")));
+        pMini->mUpperPane->slot_selectAll();
+        const QString lineText = qsl("qzxcommandlinetext");
+        type(pCommandLine, lineText);
+        pCommandLine->selectAll();
+        QVERIFY2(pMini->mUpperPane->mSelectedRegion.isEmpty(), "selecting on the command line left the miniconsole's selection behind");
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QCOMPARE(pClipboard->text(), lineText);
+    }
+
+    // A double-click on a separator leaves a region that copies nothing, which
+    // must not stop the game window's selection from being copied
+    void test_copySkipsAMiniconsoleSeparatorDoubleClick()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const QString mainSentinel = qsl("qzxgamewindowseparator");
+        pConsole->print(qsl("%1\n").arg(mainSentinel));
+        QVERIFY(runLua(qsl("createMiniConsole('copySeparator', 0, 0, 400, 200)\necho('copySeparator', 'qzx mini\\n')")));
+        TConsole* pMini = pConsole->subConsoleWidget(qsl("copySeparator"));
+        QVERIFY(pMini);
+
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, pMini, windowSize]() {
+            pConsole->clearSelection();
+            pMini->clearSelection();
+            runLua(qsl("hideWindow('copySeparator')"));
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+        });
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        TTextEdit* pPane = pMini->mUpperPane;
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0 && pPane->height() > 0, "the windows were never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        const int line = pPane->mpBuffer->lineBuffer.indexOf(qsl("qzx mini"));
+        QVERIFY2(line >= 0, "the miniconsole never got its line");
+        const QPointF space((3 + 0.5) * pPane->mFontWidth, (line - pPane->imageTopLine() + 0.5) * pPane->mFontHeight);
+        for (const QEvent::Type type : {QEvent::MouseButtonPress, QEvent::MouseButtonRelease, QEvent::MouseButtonPress, QEvent::MouseButtonRelease}) {
+            const bool down = type == QEvent::MouseButtonPress;
+            QMouseEvent event(type, space, pPane->mapToGlobal(space.toPoint()), Qt::LeftButton, down ? Qt::LeftButton : Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(pPane, &event);
+        }
+        QVERIFY2(!pPane->mSelectedRegion.isEmpty(), "the double-click never registered, so this proves nothing");
+        QVERIFY2(pConsole->mpLastSelectedPane == pPane, "the double-click did not make the miniconsole the latest selection");
+        QVERIFY2(!pPane->hasSelectedText(), "the double-click on the space selected something, so this proves nothing");
+
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QVERIFY2(pClipboard->text().contains(mainSentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the game window's selection").arg(pClipboard->text().left(60))));
+    }
+
+    // Switching spell checking off strips the marks from every command line,
+    // which must not count as the player selecting text in one of them
+    void test_switchingSpellCheckOffKeepsTheGameWindowsSelection()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool spellCheckWas = mpHost->getEnableSpellCheck();
+        mpHost->setEnableSpellCheck(true);
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, windowSize, spellCheckWas]() {
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+            mpHost->setEnableSpellCheck(spellCheckWas);
+        });
+
+        pConsole->print(qsl("qzxupperpaneline\n"));
+        type(pCommandLine, qsl("some typed words"));
+        QVERIFY(!pCommandLine->textCursor().hasSelection());
+
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+
+        mpHost->setEnableSpellCheck(false);
+
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "switching spell checking off cleared the game window's selection");
     }
 
     // #10764: a key put in a group made by permGroup(name, "key") reported
@@ -1231,20 +1871,23 @@ private slots:
     {
         QTest::addColumn<Host::CaretShortcut>("shortcut");
         QTest::addColumn<Qt::Key>("key");
-        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6;
-        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab;
+        QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
+        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6 << Qt::KeyboardModifiers();
+        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab << Qt::KeyboardModifiers();
+        QTest::newRow("Ctrl+Tab") << Host::CaretShortcut::CtrlTab << Qt::Key_Tab << Qt::KeyboardModifiers(controlKey);
     }
 
     void test_theChosenCaretKeyTurnsCaretModeOn()
     {
         QFETCH(Host::CaretShortcut, shortcut);
         QFETCH(Qt::Key, key);
+        QFETCH(Qt::KeyboardModifiers, modifiers);
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         QVERIFY(!mpHost->caretEnabled());
 
-        // with no caret key chosen the press is the command line's own
-        press(pCommandLine, key);
+        // with no caret key chosen the press leaves caret mode alone
+        press(pCommandLine, key, modifiers);
         QVERIFY2(!mpHost->caretEnabled(), "caret mode came on with no caret key chosen");
 
         mpHost->mCaretShortcut = shortcut;
@@ -1257,9 +1900,93 @@ private slots:
             QTest::qWait(80ms);
         });
 
-        press(pCommandLine, key);
+        QKeyEvent override(QEvent::ShortcutOverride, key, modifiers);
+        QVERIFY2(pCommandLine->claimsShortcutOverride(&override), "the chosen caret key was left to the application's shortcuts");
+
+        press(pCommandLine, key, modifiers);
 
         QVERIFY2(mpHost->caretEnabled(), "the chosen caret key did not turn caret mode on");
+    }
+
+    // Ctrl+Tab is "next profile" by default, so Tab as the caret key must leave it alone
+    void test_tabAsTheCaretKeyLeavesCtrlTabToTheApplication()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
+        QVERIFY2(!pCommandLine->claimsShortcutOverride(&override), "Tab as the caret key claimed Ctrl+Tab from the profile-switching shortcut");
+
+        press(pCommandLine, Qt::Key_Tab, controlKey);
+
+        QVERIFY2(!mpHost->caretEnabled(), "Ctrl+Tab turned caret mode on when Tab is the caret key");
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutTurnsCaretModeOn()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode on");
+#endif
+    }
+
+    // A plain Tab from macOS carries the same native key code, but its press does follow, so it must not be posted another
+    void test_plainTabAsTheCaretKeyIsPressedOnceOnMacOS()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS posts a key press for a claimed Tab");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+        const quint64 handOffsBefore = mpHost->mKeyboardHandOffs;
+
+        // As QNSView's keyDown sends it: the override, then the press
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+        QKeyEvent press(QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        QApplication::sendEvent(pCommandLine, &press);
+        QCoreApplication::processEvents();
+
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(mpHost->mKeyboardHandOffs, handOffsBefore + 1);
+#endif
     }
 };
 
