@@ -783,6 +783,7 @@ private:
     void searchTimers(const QString& text);
     void searchKeys(const QString& text);
     void searchVariables(const QString& text);
+    void searchAgainForVariables();
     void recursiveSearchTriggers(TTrigger*, const QString&);
     void recursiveSearchAlias(TAlias*, const QString& text);
     void recursiveSearchScripts(TScript*, const QString& text);

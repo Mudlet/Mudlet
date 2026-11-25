@@ -2909,6 +2909,7 @@ void dlgTriggerEditor::slot_toggleHiddenVariables(bool state)
     if (showHiddenVars != state) {
         showHiddenVars = state;
         repopulateVars();
+        searchAgainForVariables();
     }
 }
 
@@ -2917,7 +2918,17 @@ void dlgTriggerEditor::slot_toggleFunctionVariables(bool state)
     if (mShowFunctionVariables != state) {
         mShowFunctionVariables = state;
         repopulateVars();
+        searchAgainForVariables();
     }
+}
+
+// A result opens through its variable's row, so one found before the rows changed could open nothing
+void dlgTriggerEditor::searchAgainForVariables()
+{
+    if (mSearchTerm.isEmpty() || !(mSearchOptions & enums::EditorSearchOptionIncludeVariables)) {
+        return;
+    }
+    slot_searchMudletItems(comboBox_searchTerms->findText(mSearchTerm, Qt::MatchFixedString | Qt::MatchCaseSensitive));
 }
 
 void dlgTriggerEditor::slot_viewStatsAction()

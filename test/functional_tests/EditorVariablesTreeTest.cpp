@@ -277,6 +277,11 @@ private:
         pTerms->addItem(term);
         mpEditor->slot_searchMudletItems(0);
         QCoreApplication::processEvents();
+        return currentSearchResultTitles();
+    }
+
+    QStringList currentSearchResultTitles() const
+    {
         QStringList titles;
         const QTreeWidget* pResults = mpEditor->treeWidget_searchResults;
         for (int i = 0; i < pResults->topLevelItemCount(); ++i) {
@@ -989,9 +994,15 @@ private slots:
         QVERIFY2(!mentioning(shown, qsl("qaToolboxRun")).isEmpty() && !mentioning(shown, qsl("qaToolboxCall")).isEmpty(),
                  "the search does not find the functions even with the switch on, so this case says nothing");
 
-        mpEditor->slot_clearSearchResults();
+        // Results on show are searched for again, as one for a function would open nothing once its row is gone
         pSwitch->setChecked(false);
         QCoreApplication::processEvents();
+        const QStringList leftOnShow = currentSearchResultTitles();
+        const QStringList functionsLeftOnShow = mentioning(leftOnShow, qsl("qaToolboxRun")) + mentioning(leftOnShow, qsl("qaToolboxCall"));
+        QVERIFY2(functionsLeftOnShow.isEmpty(), qPrintable(qsl("turning the switch off left these results on show: %1").arg(functionsLeftOnShow.join(qsl(", ")))));
+        QVERIFY2(!mentioning(leftOnShow, qsl("qaToolboxLabel")).isEmpty(), "turning the switch off lost the result for a member that is not a function");
+
+        mpEditor->slot_clearSearchResults();
         const QStringList hidden = searchResultTitles(qsl("qaToolbox"));
         qInfo().noquote() << qsl("  with functions left out the search finds: %1").arg(hidden.join(qsl(", ")));
         const QStringList functionsFound = mentioning(hidden, qsl("qaToolboxRun")) + mentioning(hidden, qsl("qaToolboxCall"));
