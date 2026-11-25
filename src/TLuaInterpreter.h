@@ -500,6 +500,7 @@ public:
     static int getLineCount(lua_State*);
     static int getLineNumber(lua_State*);
     static int silenceLine(lua_State*);
+    static int getLineSilencing(lua_State*);
     static int silenceText(lua_State*);
     static int getColumnNumber(lua_State*);
     static int selectCaptureGroup(lua_State*);

@@ -7585,11 +7585,18 @@ void TBuffer::silenceText(const int lineNumber, const QString& text)
 
 void TBuffer::silenceTextInCurrentTriggerLine(const QString& text)
 {
-    if (!triggerPassUnderWay() || mTriggerPassLineTaken) {
+    if (!triggerPassUnderWay() || mTriggerPassLineTaken || text.isEmpty()) {
         return;
     }
 
-    silenceText(mPreTriggerPassLineNumber, text);
+    const int first = triggerPassSpanFirst(mPreTriggerPassLineNumber, mTriggerPassLineTailFrom);
+    if (first < 0) {
+        return;
+    }
+
+    for (int line = first, last = std::max(first, mTriggerPassLineLastSegment); line <= last; ++line) {
+        silenceText(line, text);
+    }
 }
 
 bool TBuffer::isCharacterSilenced(const int lineNumber, const int column) const
@@ -7890,6 +7897,7 @@ TChar TBuffer::currentFormat() const
 
 void TBuffer::clear()
 {
+    mSilenceIncomingLines = false;
     // Clearing the display is not gagging: flush any deferred log text before
     // the deleteLines() calls below would discard it, so a received line that
     // was still pending for logging is not lost from the log file.

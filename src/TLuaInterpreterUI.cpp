@@ -1822,6 +1822,18 @@ int TLuaInterpreter::silenceLine(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::getLineSilencing(lua_State* L)
+{
+    if (lua_gettop(L) != 0) {
+        lua_pushfstring(L, "%s: no arguments expected!", __func__);
+        return lua_error(L);
+    }
+
+    auto pModel = getHostFromLua(L).mainConsoleModelOrNull();
+    lua_pushboolean(L, pModel && pModel->buffer.getLineSilencing());
+    return 1;
+}
+
 int TLuaInterpreter::silenceText(lua_State* L)
 {
     const int argumentCount = lua_gettop(L);

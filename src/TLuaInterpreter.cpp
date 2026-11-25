@@ -7577,6 +7577,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLines", TLuaInterpreter::getLines);
     lua_register(pGlobalLua, "getLineNumber", TLuaInterpreter::getLineNumber);
     lua_register(pGlobalLua, "silenceLine", TLuaInterpreter::silenceLine);
+    lua_register(pGlobalLua, "getLineSilencing", TLuaInterpreter::getLineSilencing);
     lua_register(pGlobalLua, "silenceText", TLuaInterpreter::silenceText);
     lua_register(pGlobalLua, "insertHTML", TLuaInterpreter::insertHTML);
     lua_register(pGlobalLua, "insertText", TLuaInterpreter::insertText);

@@ -558,7 +558,7 @@ void TTextEdit::showNewLines()
                 }
                 newLines.append(text.sliced(audibleStart));
             }
-            if (newLines.size() > lineStart) {
+            if (lineText.isEmpty() || newLines.size() > lineStart) {
                 newLines.append('\n');
             }
         }

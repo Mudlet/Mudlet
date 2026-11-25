@@ -653,6 +653,7 @@ public:
     void silenceText(int lineNumber, const QString& text);
     void silenceTextInCurrentTriggerLine(const QString& text);
     void setSilenceIncomingLines(bool enabled) { mSilenceIncomingLines = enabled; }
+    bool getLineSilencing() const { return mSilenceIncomingLines; }
     bool isCharacterSilenced(int lineNumber, int column) const;
     // Colors of the current trigger-pass line as committed, before any
     // trigger ran; nullptr when lineNumber is not the line being processed:
