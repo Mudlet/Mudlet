@@ -3584,12 +3584,13 @@ describe("Tests UI functions", function()
 
     it("should say it lays itself out for any screen only while it is shown", function()
       local real, said = setAdaptiveLayout, {}
-      setAdaptiveLayout = function(owner, adaptive)
+      -- busted gives each spec globals of its own, so a stub the package is to call goes in _G
+      _G.setAdaptiveLayout = function(owner, adaptive)
         said[#said + 1] = owner .. "=" .. tostring(adaptive)
         return true
       end
       finally(function()
-        setAdaptiveLayout = real
+        _G.setAdaptiveLayout = real
       end)
       clickClose()
       expandAlias("baseui show", false)
@@ -3605,14 +3606,15 @@ describe("Tests UI functions", function()
       end)
 
       after_each(function()
-        getMainWindowInfo = realInfo
+        _G.getMainWindowInfo = realInfo
         BaseUI.fitDock()
         BaseUI.unread = savedUnread
         BaseUI.refreshChatTabs()
       end)
 
+      -- in _G, where the package reads it, as setAdaptiveLayout's stub above is
       local function sizedAs(widthClass, heightClass, pixelScale)
-        getMainWindowInfo = function()
+        _G.getMainWindowInfo = function()
           return { widthClass = widthClass, heightClass = heightClass, pixelScale = pixelScale or 1 }
         end
         BaseUI.fitDock()
@@ -3652,7 +3654,7 @@ describe("Tests UI functions", function()
 
       it("should take either of the main window's size classes being compact", function()
         local function compactFor(widthClass, heightClass)
-          getMainWindowInfo = function()
+          _G.getMainWindowInfo = function()
             return { widthClass = widthClass, heightClass = heightClass }
           end
           return BaseUI.compactWindow()
@@ -3662,11 +3664,11 @@ describe("Tests UI functions", function()
         assert.is_true(compactFor("compact", "compact"))
         assert.is_false(compactFor("medium", "medium"))
         assert.is_false(compactFor("expanded", "expanded"))
-        getMainWindowInfo = function()
+        _G.getMainWindowInfo = function()
           return nil, "no main window"
         end
         assert.is_false(BaseUI.compactWindow())
-        getMainWindowInfo = nil
+        _G.getMainWindowInfo = nil
         assert.is_false(BaseUI.compactWindow())
       end)
 
@@ -3758,7 +3760,7 @@ describe("Tests UI functions", function()
         end
         withBars({ "hp" })
         sizedAs("compact", "medium")
-        getMainWindowInfo = realInfo
+        _G.getMainWindowInfo = realInfo
         BaseUI.fitDock()
         assertOnRightBorder()
         assert.is_false(shown(BaseUI.vitalsBar))
@@ -3773,7 +3775,7 @@ describe("Tests UI functions", function()
         BaseUI.container:move("10%", "10%")
         sizedAs("compact", "medium")
         assert.is_true(BaseUI.container.hidden)
-        getMainWindowInfo = realInfo
+        _G.getMainWindowInfo = realInfo
         BaseUI.fitDock()
         assert.is_falsy(BaseUI.container.attached)
         assert.are.equal("10%", BaseUI.container.x)
