@@ -974,6 +974,46 @@ private slots:
         QCOMPARE(chunks.first().bytes, banner);
     }
 
+    // Playback refuses a whole replay over one chunk longer than BUFFER_SIZE (100000), the most a read can be, and
+    // what is held back while it could still be a token's name goes out with the next read
+    void heldBackNameDoesNotTakeAChunkPastTheLongestARead()
+    {
+        constexpr qsizetype longestRead = 100000;
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        QByteArray fullRead = "Vitals {}" + end;
+        fullRead.append(longestRead - fullRead.size(), 'x');
+        const QList<QByteArray> reads{QByteArrayLiteral("\xFF\xFA\xC9") + "Char.", fullRead};
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, 0, StreamStart::PlainNotNegotiated);
+
+        QVERIFY(!chunks.isEmpty());
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            QVERIFY2(chunk.bytes.size() <= longestRead, qPrintable(qsl("a chunk of %1 bytes would make the replay unplayable").arg(chunk.bytes.size())));
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, reads.first() + reads.last());
+    }
+
+    // The parser takes an MCCP start right after an escaped IAC, and the compressed stream starts clean
+    void tokenRightAfterACompressionStartFollowingAnEscapedIacIsLeftOut()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QByteArray compressed = qCompress(gmcp + "Char.Login.Token {\"token\": \"SECRET\"}" + end + "after\r\n", 9).mid(4);
+        const QByteArray read = gmcp + "Core.Foo {}" + QByteArrayLiteral("\xFF\xFF\xFA\x56\xFF\xF0") + compressed;
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({read}, 0, StreamStart::PlainOfferingMccp2);
+
+        QVERIFY(!chunks.isEmpty());
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QVERIFY2(recorded.contains("after"), "the compressed stream was not recorded");
+        QVERIFY2(!recorded.contains("SECRET"), "the reconnect token was recorded");
+    }
+
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
     // which aborts the process, so anything after it would never report. The
     // sentinels give it teeth on Windows too, where CI builds without ASan.

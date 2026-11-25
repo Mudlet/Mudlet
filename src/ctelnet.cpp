@@ -6318,8 +6318,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         // Processing can end the recording, e.g. a script disconnecting
         if (length > 0 && mRecordReplay) {
             const QByteArray recorded = redactedForReplay(data, length);
-            if (!recorded.isEmpty()) {
-                recordReplayChunk(waitToRecord, recorded.constData(), static_cast<qint32>(recorded.size()));
+            // What redaction held back from the read before can take this past the most playback accepts in a chunk
+            for (qsizetype from = 0; from < recorded.size(); from += static_cast<qsizetype>(BUFFER_SIZE)) {
+                const auto size = std::min(static_cast<qsizetype>(BUFFER_SIZE), recorded.size() - from);
+                recordReplayChunk(waitToRecord, recorded.constData() + from, static_cast<qint32>(size));
                 waitToRecord = 0;
                 waitRecorded = true;
             }
@@ -6455,6 +6457,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                 recordPart(heldBackToRecord, static_cast<qint32>(buffer + i - 2 - heldBackToRecord));
                                 heldBackRecorded = true;
                             }
+                            // The parser starts the compressed stream clean, and the start sequence that got it there is not recorded
+                            mReplayRedaction = ReplayRedaction::Text;
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;
 
