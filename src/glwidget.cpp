@@ -325,6 +325,26 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
     update();
 }
 
+void GLWidget::syncView(const int areaId, const int x, const int y, const int z, const int roomId)
+{
+    setViewCenter(areaId, x, y, z);
+    // Held while the player is still in this room, as the 2D map's view is, rather than dropped on the next paint
+    mRID = roomId;
+}
+
+bool GLWidget::followingPlayer() const
+{
+    if (!mShiftMode || !mpMap) {
+        return true;
+    }
+    // The area it was taken to was deleted, as the modern view has it
+    if (mpMap->mpRoomDB && !mpMap->mpRoomDB->getArea(mAID)) {
+        return true;
+    }
+    // As paintGL() decides it
+    return mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName);
+}
+
 void GLWidget::paintGL()
 {
     // Start frame timing

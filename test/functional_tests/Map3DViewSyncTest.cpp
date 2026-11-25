@@ -18,8 +18,8 @@
  ***************************************************************************/
 
 /*
- * Switching the mapper between the 2D map and the modern 3D view hands the
- * shown area and center from one to the other.
+ * Switching the mapper between the 2D map and a 3D view, the modern one or the
+ * classic one, hands the shown area and center from one to the other.
  *
  * Why not a spec: where each view is centered is mMapCenterX/Y on the 2D map
  * and on the 3D widget, which no Lua call reports.
@@ -322,6 +322,70 @@ private slots:
         pMapper->show3DView(false);
 
         QCOMPARE(pMapper->mp2dMap->mMapCenterZ, 1);
+        QVERIFY(pMapper->mp2dMap->mShiftMode);
+    }
+
+private:
+    // The mapper with the classic 3D view in place of the modern one, shown in 2D, viewing, and with a level of rooms
+    // at z 4 that the 2D map's level buttons skip to. The returned guard puts back what it found.
+    auto classic3DViewAnd2DMapViewing(dlgMapper* pMapper)
+    {
+        T2DMap* p2dMap = pMapper->mp2dMap;
+        const bool savedViewOnly = p2dMap->mMapViewOnly;
+        const bool savedModern = mpHost->experimentEnabled(qsl("experiment.3dmap.modernmapper"));
+        const int savedZ = map()->mpRoomDB->getRoom(kMovedToRoomId)->z();
+        auto restore = qScopeGuard([this, pMapper, p2dMap, savedViewOnly, savedModern, savedZ]() {
+            pMapper->show3DView(false);
+            p2dMap->mMapViewOnly = savedViewOnly;
+            map()->setRoomCoordinates(kMovedToRoomId, 5, 5, savedZ);
+            mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), savedModern);
+            pMapper->recreate3DView();
+        });
+        mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), false);
+        pMapper->recreate3DView();
+        pMapper->show3DView(true);
+        pMapper->show3DView(false);
+        map()->setRoomCoordinates(kMovedToRoomId, 5, 5, 4);
+        p2dMap->mMapViewOnly = true;
+        return restore;
+    }
+
+private slots:
+    // Viewing, the level buttons take the 2D map on to the next level with rooms, while the hidden classic 3D view
+    // they move as well steps a single level; shown, the classic view opens on the 2D map's level all the same, and
+    // keeps it until the player moves
+    void test_theClassic3DViewOpensOnTheLevelThe2DMapSkippedTo()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        const auto restore = classic3DViewAnd2DMapViewing(pMapper);
+        QVERIFY2(!mpHost->experimentEnabled(qsl("experiment.3dmap.modernmapper")), "the modern 3D view could not be turned off");
+        auto* pClassic = qobject_cast<GLWidget*>(pMapper->glWidget);
+        QVERIFY2(pClassic, "the 3D view is not the classic one");
+
+        pMapper->toolButton_shiftZup->click();
+        QCOMPARE(pMapper->mp2dMap->mMapCenterZ, 4);
+        pMapper->show3DView(true);
+
+        QCOMPARE(pClassic->viewCenter().z(), 4.0f);
+        QVERIFY2(!pClassic->followingPlayer(), "the classic view would go back to the player's level on its first paint");
+    }
+
+    // As with the modern view, the classic 3D view moved while shown carries over to the 2D map
+    void test_aClassic3DViewPannedCarriesOverTo2D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        const auto restore = classic3DViewAnd2DMapViewing(pMapper);
+        QVERIFY2(!mpHost->experimentEnabled(qsl("experiment.3dmap.modernmapper")), "the modern 3D view could not be turned off");
+        auto* pClassic = qobject_cast<GLWidget*>(pMapper->glWidget);
+        QVERIFY2(pClassic, "the 3D view is not the classic one");
+        pMapper->show3DView(true);
+
+        pClassic->slot_shiftRight();
+        pMapper->show3DView(false);
+
+        QCOMPARE(qRound(pMapper->mp2dMap->mMapCenterX), 1);
         QVERIFY(pMapper->mp2dMap->mShiftMode);
     }
 

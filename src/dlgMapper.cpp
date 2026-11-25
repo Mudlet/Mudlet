@@ -935,32 +935,47 @@ void dlgMapper::connect3DViewControls()
 
 void dlgMapper::sync3DViewFrom2D()
 {
-    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
-    if (!modernWidget || !mpMap->mpRoomDB->getArea(mp2dMap->mAreaID)) {
+    if (!mpMap->mpRoomDB->getArea(mp2dMap->mAreaID)) {
         return;
     }
     // The 2D map's y-axis points down the screen
-    modernWidget->syncView(mp2dMap->mAreaID, qRound(mp2dMap->mMapCenterX), qRound(-mp2dMap->mMapCenterY), mp2dMap->mMapCenterZ, mp2dMap->mRoomID);
+    const int x = qRound(mp2dMap->mMapCenterX);
+    const int y = qRound(-mp2dMap->mMapCenterY);
+    // The classic view needs it as much: the level buttons step it, hidden, a level at a time, while the 2D map,
+    // viewing, goes on to the next level with rooms
+    if (auto* classicWidget = qobject_cast<GLWidget*>(glWidget)) {
+        classicWidget->syncView(mp2dMap->mAreaID, x, y, mp2dMap->mMapCenterZ, mp2dMap->mRoomID);
+    } else if (auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+        modernWidget->syncView(mp2dMap->mAreaID, x, y, mp2dMap->mMapCenterZ, mp2dMap->mRoomID);
+    }
 }
 
 void dlgMapper::sync2DViewFrom3D()
 {
-    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
-    if (!modernWidget) {
+    bool followingPlayer = false;
+    int areaId = 0;
+    QVector3D center;
+    // Read first: switchArea() recenters the 3D view as well
+    if (auto* classicWidget = qobject_cast<GLWidget*>(glWidget)) {
+        followingPlayer = classicWidget->followingPlayer();
+        areaId = classicWidget->shownAreaId();
+        center = classicWidget->viewCenter();
+    } else if (auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+        followingPlayer = modernWidget->followingPlayer();
+        areaId = modernWidget->shownAreaId();
+        center = modernWidget->viewCenter();
+    } else {
         return;
     }
-    if (modernWidget->followingPlayer()) {
+    if (followingPlayer) {
         mp2dMap->mShiftMode = false;
         resetAreaComboBoxToPlayerRoomArea();
         return;
     }
 
-    const int areaId = modernWidget->shownAreaId();
     if (!mpMap->mpRoomDB->getArea(areaId)) {
         return;
     }
-    // Read first: switchArea() recenters the 3D view as well
-    const QVector3D center = modernWidget->viewCenter();
     // The 3D view only centers on whole rooms, so if it was not moved the 2D map keeps its own center
     if (areaId == mp2dMap->mAreaID && qRound(center.x()) == qRound(mp2dMap->mMapCenterX) && qRound(center.y()) == qRound(-mp2dMap->mMapCenterY) && qRound(center.z()) == mp2dMap->mMapCenterZ) {
         return;

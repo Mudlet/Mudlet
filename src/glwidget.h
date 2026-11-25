@@ -33,6 +33,7 @@
 #include <QElapsedTimer>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QVector3D>
 
 class Host;
 class QLabel;
@@ -50,6 +51,11 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    // As the modern view's: the 2D map's center, held while the player is in roomId
+    void syncView(int areaId, int x, int y, int z, int roomId);
+    bool followingPlayer() const;
+    int shownAreaId() const { return mAID; }
+    QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
