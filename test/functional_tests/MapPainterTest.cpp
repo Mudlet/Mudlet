@@ -471,6 +471,23 @@ private slots:
         checkPairs({DIR_NORTH, DIR_EAST}, {DIR_NORTHEAST, DIR_NORTHWEST});
     }
 
+    // An exit looping back into its own room is not its own way back: it keeps its arrow unless the reverse exit loops
+    // there too
+    void aLoopIsOneWayUnlessTheReverseExitLoopsToo()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_NORTH));
+        TMapPainter::ExitToPaint north;
+        north.destination = pWestRoom;
+        north.destinationId = scmWestRoom;
+        north.direction = DIR_NORTH;
+
+        QVERIFY2(TMapPainter::exitIsOneWay(*pWestRoom, north, true), "a loop alone was drawn as two-way, with no arrow");
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_SOUTH));
+        QVERIFY(!TMapPainter::exitIsOneWay(*pWestRoom, north, true));
+        QCOMPARE(TMapPainter::wayBack(*pWestRoom, north), DIR_SOUTH);
+    }
+
     // The map and its exported image decide one-way alike: with the east room's one way back, west, paired with the
     // exit east, the exit north is one-way there too
     void anExitNoExitBackPairsWithIsOneWay()

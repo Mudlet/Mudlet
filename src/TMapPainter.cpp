@@ -147,6 +147,11 @@ int TMapPainter::wayBack(const TRoom& room, const ExitToPaint& exit)
     if (!exit.destination || exit.direction < DIR_NORTH || exit.direction > DIR_SOUTHWEST) {
         return 0;
     }
+    // A loop is no way back from itself: it pairs only with the reverse exit, and only if that loops too
+    if (exit.destination->getId() == room.getId()) {
+        const int reverse = TMap::scmReverseDirections.value(exit.direction);
+        return room.getExit(reverse) == room.getId() ? reverse : 0;
+    }
     // Worked out from the room with the lower ID, so that both rooms come to the same pairs whichever one asks
     const bool roomFirst = room.getId() <= exit.destination->getId();
     const TRoom& first = roomFirst ? room : *exit.destination;
