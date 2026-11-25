@@ -646,6 +646,7 @@ private:
     // Where redactedForReplay() has got to, kept between reads as a message can be split across them
     enum class ReplayRedaction { Text, Iac, NegotiatedOption, SubnegotiationOption, GmcpName, Withheld, WithheldIac };
     ReplayRedaction mReplayRedaction = ReplayRedaction::Text;
+    bool mReplayRedactionUnseeded = false;
     QByteArray mReplayGmcpName;
     int mCycleCountMTTS = 0;
     QSet<QString> newEnvironVariablesSent;
