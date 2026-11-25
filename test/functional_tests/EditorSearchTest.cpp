@@ -635,10 +635,11 @@ private slots:
         QCOMPARE(totalResultRows(), 0);
     }
 
-    // Variables live in the Lua state rather than in a unit, so they are only
-    // walked when the option asks for it
+    // Variables live in the Lua state rather than in a unit, so from any view
+    // but their own they are only walked when the option asks for it
     void test_variablesAreOnlySearchedWhenAskedFor()
     {
+        mpEditor->slot_showScripts();
         search(qsl("qaSearchVariable"));
         QVERIFY2(!topLevelResultFor(qsl("Variable")), "a variable was searched without the option being set");
 
@@ -950,17 +951,33 @@ private slots:
         QVERIFY2(!offerToSearchVariables(), "the offer stayed once variables were searched");
     }
 
-    // Outside the Variables view only an empty result needs the offer
+    // Outside the Variables view only an empty result needs the offer; in it the variables are searched whatever the
+    // option says, so there is nothing to offer
     void test_theOfferOnlyShowsWhereAVariableWasLikelySought()
     {
+        // Through the profile, where taking the offer in an earlier case left the option on
+        mpHost->setSearchOptions(enums::EditorSearchOptionNone);
+        QVERIFY2(!mpEditor->mSearchOptions.testFlag(enums::EditorSearchOptionIncludeVariables), "SETUP: variables are already searched from every view, so the assertions below cannot fail");
         mpEditor->slot_showScripts();
         search(mLoneNeedle);
         QVERIFY(totalResultRows() > 0);
         QVERIFY2(!offerToSearchVariables(), "a search that found items elsewhere still offered to search variables");
 
+        search(qsl("qaSearchVariable"));
+        QVERIFY2(!topLevelResultFor(qsl("Variable")), "a search from another view searched variables without the option being set");
+        QVERIFY2(offerToSearchVariables(), "a search from another view that found nothing did not offer to search variables");
+
         mpEditor->slot_showVariables();
-        search(mLoneNeedle);
-        QVERIFY2(offerToSearchVariables(), "a search from the Variables view left variables out without saying so");
+        search(qsl("qaSearchVariable"));
+        QVERIFY2(topLevelResultFor(qsl("Variable")), "a search from the Variables view left the variables out");
+        QVERIFY2(!offerToSearchVariables(), "a search from the Variables view offered to search the variables it had searched");
+
+        search(qsl("qaNothingMatchesThis"));
+        QVERIFY2(!offerToSearchVariables(), "a search from the Variables view that found nothing offered to search the variables it had searched");
+
+        QVERIFY2(!mpEditor->mSearchOptions.testFlag(enums::EditorSearchOptionIncludeVariables), "searching from the Variables view turned the option on");
+        QVERIFY2(!mpEditor->mpAction_searchIncludeVariables->isChecked(), "searching from the Variables view ticked the option");
+        QVERIFY2(!mpHost->mSearchOptions.testFlag(enums::EditorSearchOptionIncludeVariables), "searching from the Variables view saved the option with the profile");
     }
 
     void test_doubleClickingTheOfferOpensNothingElse_data()
@@ -990,8 +1007,9 @@ private slots:
         const auto restoreInterval = qScopeGuard([savedInterval]() {
             QApplication::setDoubleClickInterval(savedInterval);
         });
-        mpEditor->slot_showVariables();
-        search(mNeedle);
+        // Only a variable matches the needle and this view leaves variables out, so the search ends in the offer
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
         QTreeWidgetItem* offer = offerToSearchVariables();
         QVERIFY(offer);
         auto* tree = mpEditor->treeWidget_searchResults;

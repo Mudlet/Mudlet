@@ -987,7 +987,8 @@ private slots:
             openTheVariablesView();
         });
         openTheVariablesView();
-        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        // Off, as the Variables view searches variables, and searches them again, whatever the option says
+        mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
 
         const QStringList shown = searchResultTitles(qsl("qaToolbox"));
         qInfo().noquote() << qsl("  with functions shown the search finds: %1").arg(shown.join(qsl(", ")));

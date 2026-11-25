@@ -1542,7 +1542,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     mpAction_searchIncludeVariables = new QAction(tr("Include variables"), this);
     mpAction_searchIncludeVariables->setObjectName(qsl("mpAction_searchIncludeVariables"));
-    mpAction_searchIncludeVariables->setToolTip(utils::richText(tr("Search variables (slower)")));
+    //: Tooltip on "Include variables" in the menu behind the magnifier of the editor's search field, also shown on the "Search variables too" row of the search results
+    mpAction_searchIncludeVariables->setToolTip(utils::richText(tr("Search variables from every view (slower). The Variables view always searches them.")));
     mpAction_searchIncludeVariables->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
 
@@ -2922,10 +2923,16 @@ void dlgTriggerEditor::slot_toggleFunctionVariables(bool state)
     }
 }
 
+// In the Variables view the variables are already read, and are what is being looked for
+bool dlgTriggerEditor::searchCoversVariables() const
+{
+    return mCurrentView == EditorViewType::cmVarsView || mSearchOptions.testFlag(enums::EditorSearchOptionIncludeVariables);
+}
+
 // A result opens through its variable's row, so one found before the rows changed could open nothing
 void dlgTriggerEditor::searchAgainForVariables()
 {
-    if (mSearchTerm.isEmpty() || !(mSearchOptions & enums::EditorSearchOptionIncludeVariables)) {
+    if (mSearchTerm.isEmpty() || !searchCoversVariables()) {
         return;
     }
     slot_searchMudletItems(comboBox_searchTerms->findText(mSearchTerm, Qt::MatchFixedString | Qt::MatchCaseSensitive));
@@ -3674,7 +3681,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
     searchTimers(s);
     searchKeys(s);
 
-    if (mSearchOptions & enums::EditorSearchOptionIncludeVariables) {
+    const bool variablesSearched = searchCoversVariables();
+    if (variablesSearched) {
         searchVariables(s);
     }
 
@@ -3703,8 +3711,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         treeWidget_searchResults->addTopLevelItem(pNotice);
     }
 
-    // Variables are left out unless asked for, which reads as "not found" to someone looking for one
-    if (!(mSearchOptions & enums::EditorSearchOptionIncludeVariables) && (noMatches || mCurrentView == EditorViewType::cmVarsView)) {
+    // Variables left out of the search read as "not found" to someone looking for one
+    if (!variablesSearched && noMatches) {
         //: Clickable last row of the editor's search results when variables were left out of the search; clicking it turns on "Include variables" and searches again
         auto* pOffer = new QTreeWidgetItem(QStringList{tr("Search variables too")});
         pOffer->setData(0, uiDesign::SearchResultDelegate::RowKindRole, static_cast<int>(uiDesign::SearchResultDelegate::ActionRow));
