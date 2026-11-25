@@ -137,11 +137,14 @@ FAKE_XVFB_RUN = """#!/bin/sh
 echo "$$ $2" >> "$XVFB_RECORD"
 number="${2#--server-num=}"
 DISPLAY=":$number"
-XAUTHORITY="fake-xauthority-$number"
+XAUTHORITY="fake-xauthority-$number$XVFB_RUN_TAG"
 export DISPLAY XAUTHORITY
 shift 2
 exec "$@"
 """
+
+# Late enough that the runner looks for the slot file before this run has written it
+SLOW_XVFB_RUN = FAKE_XVFB_RUN.replace('exec "$@"', 'sleep 0.3\nexec "$@"')
 
 SILENT_XVFB_RUN = """#!/bin/sh
 echo "$$ $2" >> "$XVFB_RECORD"
@@ -625,6 +628,16 @@ class RunLuaSpecs(unittest.TestCase):
         self.assertEqual(status, 0, output + self.errors)
         self.assertEqual(len(self.fake_servers()), 3)
         self.assertEqual([record["display"] for record in self.stub_records()], [":210"])
+
+    def test_a_work_directory_used_before_gets_the_new_x_server(self):
+        self.specs("Alpha_spec.lua")
+        work = os.path.join(self.directory.name, "work")
+        environment = self.fake_xvfb_run(SLOW_XVFB_RUN)
+        for tag in ("-first", "-second"):
+            status, output = self.run_runner("--jobs", "1", "--xvfb", "--work-dir", work, environment=dict(environment, XVFB_RUN_TAG=tag))
+            self.assertEqual(status, 0, output + self.errors)
+            self.assertEqual(self.stub_records()[-1]["xauthority"], "fake-xauthority-210" + tag)
+        self.fake_servers()
 
     def test_gives_up_quickly_when_an_x_server_does_not_come_up(self):
         self.specs("Alpha_spec.lua")
