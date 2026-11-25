@@ -59,6 +59,8 @@ public:
     }
     ~TMediaPlayer()
     {
+        // Qt 6.12 leaves a detached QAudioBufferOutput pointing at its player, so a voice outliving it crashes (QTBUG-152293)
+        delete mpRetiredVoice;
         if (mMediaPlayer) {
             // The unload below releases the media file, and announces itself wherever it
             // changes something - sourceChanged from clearing the source, playbackStateChanged
@@ -253,15 +255,16 @@ public:
     // hands over no audio keeps it on an output of its own.
     bool setMixed(bool mixed)
     {
+        // A player mixed while FFmpeg named was still being checked is moved off once the check found no audio
+        if (mixed && TMediaVoice::unsupported()) {
+            mixed = false;
+        }
         if (!mMediaPlayer || mixed == (mpVoice != nullptr)) {
             return mpVoice != nullptr;
         }
         // Its timer steps the output being replaced
         stopVolumeGlide();
         if (mixed) {
-            if (TMediaVoice::unsupported()) {
-                return false;
-            }
             QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
             mpVoice = std::make_unique<TMediaVoice>(mMediaPlayer.get());
             mpVoice->setGain(oldOutput ? oldOutput->volume() : 1.0f, 0);
@@ -284,7 +287,11 @@ public:
         // can be reached from the voice's own signal
         mMediaPlayer->setAudioBufferOutput(nullptr);
         QObject::disconnect(mMediaPlayer.get(), nullptr, mpVoice.get(), nullptr);
-        mpVoice.release()->deleteLater();
+        // Retired, it can no longer move this player, so the one retired before it is not mid-signal
+        QObject::disconnect(mpVoice.get(), nullptr, nullptr, nullptr);
+        delete mpRetiredVoice;
+        mpRetiredVoice = mpVoice.release();
+        mpRetiredVoice->deleteLater();
         mMediaPlayer->setAudioOutput(output);
         return false;
     }
@@ -358,6 +365,8 @@ private:
     int mVolumeGlideTarget = 0;
     // After mMediaPlayer, so it is destroyed first and can still detach itself from the player
     std::unique_ptr<TMediaVoice> mpVoice;
+    // Moved off the mix and deleted later, unless the player goes first
+    QPointer<TMediaVoice> mpRetiredVoice;
 };
 
 class TMedia : public QObject

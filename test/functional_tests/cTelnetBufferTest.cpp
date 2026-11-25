@@ -191,7 +191,10 @@ private:
     // stream, each after a pause, and returns the chunks written to it.
     enum class StreamStart { Compressed, PlainOfferingMccp1, PlainOfferingMccp2, PlainNotNegotiated };
 
-    QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const StreamStart start = StreamStart::Compressed)
+    // Recording starts after the first unrecordedReads reads, or with startAtPrompt at the
+    // first prompt after them, while that read is still being parsed.
+    QList<RecordedChunk>
+    recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const StreamStart start = StreamStart::Compressed, const qsizetype unrecordedReads = 0, const bool startAtPrompt = false)
     {
         cTelnet& telnet = mpHost->mTelnet;
         QTemporaryDir dir;
@@ -210,7 +213,7 @@ private:
             telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
             telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
         });
-        if (!dir.isValid() || !telnet.startReplayRecording(fileName)) {
+        if (!dir.isValid()) {
             return {};
         }
         // the end of an earlier test's stream left a decompressor set up
@@ -223,17 +226,47 @@ private:
             telnet.mMCCP_version_1 = start == StreamStart::PlainOfferingMccp1;
             telnet.mMCCP_version_2 = start == StreamStart::PlainOfferingMccp2;
         }
-        for (const QByteArray& read : reads) {
+        const auto process = [&telnet, pauseMs](const QByteArray& read) {
             QTest::qSleep(pauseMs);
             QByteArray backing = read;
             backing.append(scmTerminatorSlot);
             telnet.processSocketData(backing.data(), static_cast<int>(read.size()), false);
+        };
+        for (const QByteArray& read : reads.first(unrecordedReads)) {
+            process(read);
+        }
+        bool started = false;
+        if (startAtPrompt) {
+            const QMetaObject::Connection startOnPrompt = connect(
+                    &telnet,
+                    &cTelnet::signal_promptReceived,
+                    &telnet,
+                    [&telnet, &fileName, &started] {
+                        started = telnet.startReplayRecording(fileName);
+                    },
+                    Qt::SingleShotConnection);
+            for (const QByteArray& read : reads.sliced(unrecordedReads)) {
+                process(read);
+            }
+            disconnect(startOnPrompt);
+        } else {
+            started = telnet.startReplayRecording(fileName);
+            for (const QByteArray& read : reads.sliced(unrecordedReads)) {
+                process(read);
+            }
+        }
+        if (!started) {
+            return {};
         }
         // a disconnect while the reads were processed has already saved it
         if (telnet.mRecordReplay && !telnet.stopReplayRecording()) {
             return {};
         }
+        return readRecording(fileName);
+    }
 
+    QList<RecordedChunk> readRecording(const QString& fileName)
+    {
         QFile file(fileName);
         if (!file.open(QIODevice::ReadOnly)) {
             return {};
@@ -1042,6 +1075,194 @@ private slots:
 
         QCOMPARE(chunks.size(), 1);
         QCOMPARE(chunks.first().bytes, read);
+    }
+
+    // A reconnect token is recorded as its name alone, as the parser sees it: after a BOM, in any case, ended by
+    // any IAC but an escaped one, and after a negotiation whose option is an IAC. A name merely like it is kept.
+    void replayRecordingLeavesOutTheLoginToken()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QByteArray ga = QByteArrayLiteral("\xFF\xF9");
+        const QByteArray willIac = QByteArrayLiteral("\xFF\xFB\xFF");
+        const QByteArray lookalike = gmcp + "Char.Login.TokenX {\"token\": \"kept\"}" + end;
+        const QByteArray vitals = gmcp + "Char.Vitals {\"hp\": 1}" + end;
+        const QList<QByteArray> reads{
+                "before\r\n" + gmcp + "\xEF\xBB",
+                "\xBF"
+                "Char.Lo",
+                "gin.Token {\"account\": \"acct:char\", \"tok",
+                "en\": \"SECRET\xFF\xFFONE\"}" + end + lookalike,
+                gmcp + "char.login.token {\"token\": \"SECRET-TWO\"}" + gmcp + "Char.Login.Token {\"token\": \"SECRET-THREE\"}" + ga + "between\r\n",
+                gmcp + "Char.Login.Token" + end + gmcp + "Char.Login" + end + willIac + gmcp + "Char.Login.Token {\"token\": \"SECRET-FOUR\"}" + end + vitals + "after\r\n",
+        };
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, 0, StreamStart::PlainNotNegotiated);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded,
+                 "before\r\n" + gmcp
+                         + "\xEF\xBB\xBF"
+                           "Char.Login.Token"
+                         + end + lookalike + gmcp + "char.login.token" + gmcp + "Char.Login.Token" + ga + "between\r\n" + gmcp + "Char.Login.Token" + end + gmcp + "Char.Login" + end + willIac + gmcp
+                         + "Char.Login.Token" + end + vitals + "after\r\n");
+    }
+
+    // A read with nothing left to record once its token is left out writes no chunk, and its wait goes to the next
+    void readWithOnlyALoginTokenInItKeepsItsWait()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QList<QByteArray> reads{
+                "before\r\n" + gmcp,
+                "Char.Lo",
+                "gin.Token {\"token\": ",
+                "\"SECRET\"",
+                "}" + end + "after\r\n",
+        };
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, pauseMs, StreamStart::PlainNotNegotiated);
+
+        QCOMPARE(chunks.size(), 3);
+        QCOMPARE(chunks.at(0).bytes, "before\r\n" + gmcp);
+        QCOMPARE(chunks.at(1).bytes, QByteArrayLiteral("Char.Login.Token"));
+        QCOMPARE(chunks.at(2).bytes, end + "after\r\n");
+        for (qsizetype i = 1; i < chunks.size(); ++i) {
+            QVERIFY2(chunks.at(i).delay > pauseMs * 3 / 2, qPrintable(qsl("chunk %1 waited %2 ms, so the pause before a read with nothing to record was lost").arg(i).arg(chunks.at(i).delay)));
+        }
+    }
+
+    // Most games compress, so the token usually arrives inside an MCCP stream
+    void compressedLoginTokenIsLeftOutOfTheReplay()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QByteArray text = "before\r\n" + gmcp + "Char.Login.Token {\"token\": \"SECRET\"}" + end + "after\r\n";
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed.left(compressed.size() / 2), compressed.mid(compressed.size() / 2)}, 0);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, "before\r\n" + gmcp + "Char.Login.Token" + end + "after\r\n");
+    }
+
+    // Recording can start partway through a token the game is still sending, so the rest of it is left out too
+    void recordingStartedInsideALoginTokenLeavesOutItsRest()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QList<QByteArray> reads{
+                gmcp + "Char.Login.Token {\"account\": \"acct:char\", \"to",
+                "ken\": \"SECRET\"}" + end + "after\r\n",
+        };
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, 0, StreamStart::PlainNotNegotiated, 1);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, end + "after\r\n");
+    }
+
+    // Recording can start from a nested event loop while a read is parsed, and the rest of that read can open a token
+    void recordingStartedMidReadLeavesOutATokenOpenedLaterInIt()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QByteArray ga = QByteArrayLiteral("\xFF\xF9");
+        const QList<QByteArray> reads{
+                "prompt" + ga + gmcp + "Char.Login.Token {\"account\": \"acct:char\", \"to",
+                "ken\": \"SECRET\"}" + end + "after\r\n",
+        };
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, 0, StreamStart::PlainNotNegotiated, 0, true);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, end + "after\r\n");
+    }
+
+    // Connecting resets the parser, so a recording started offline inside a subnegotiation does not stay inside it
+    void recordingStartedBeforeConnectingKeepsWhatTheGameSends()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString fileName = dir.filePath(qsl("recording.dat"));
+        QByteArray unfinished = QByteArrayLiteral("\xFF\xFA\xC9") + "Char.Vitals {";
+        const auto unfinishedSize = static_cast<int>(unfinished.size());
+        unfinished.append(scmTerminatorSlot);
+        telnet.processSocketData(unfinished.data(), unfinishedSize, false);
+        QVERIFY(telnet.startReplayRecording(fileName));
+        telnet.reset();
+        const QByteArray banner = QByteArrayLiteral("Welcome\r\n");
+        QByteArray read = banner;
+        read.append(scmTerminatorSlot);
+        telnet.processSocketData(read.data(), static_cast<int>(banner.size()), false);
+        QVERIFY(telnet.stopReplayRecording());
+
+        const QList<RecordedChunk> chunks = readRecording(fileName);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, banner);
+    }
+
+    // Playback refuses a whole replay over one chunk longer than BUFFER_SIZE (100000), the most a read can be, and
+    // what is held back while it could still be a token's name goes out with the next read
+    void heldBackNameDoesNotTakeAChunkPastTheLongestARead()
+    {
+        constexpr qsizetype longestRead = 100000;
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        QByteArray fullRead = "Vitals {}" + end;
+        fullRead.append(longestRead - fullRead.size(), 'x');
+        const QList<QByteArray> reads{QByteArrayLiteral("\xFF\xFA\xC9") + "Char.", fullRead};
+
+        const QList<RecordedChunk> chunks = recordCompressedReads(reads, 0, StreamStart::PlainNotNegotiated);
+
+        QVERIFY(!chunks.isEmpty());
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            QVERIFY2(chunk.bytes.size() <= longestRead, qPrintable(qsl("a chunk of %1 bytes would make the replay unplayable").arg(chunk.bytes.size())));
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, reads.first() + reads.last());
+    }
+
+    // The parser takes an MCCP start right after an escaped IAC, and the compressed stream starts clean
+    void tokenRightAfterACompressionStartFollowingAnEscapedIacIsLeftOut()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray end = QByteArrayLiteral("\xFF\xF0");
+        const QByteArray compressed = qCompress(gmcp + "Char.Login.Token {\"token\": \"SECRET\"}" + end + "after\r\n", 9).mid(4);
+        const QByteArray read = gmcp + "Core.Foo {}" + QByteArrayLiteral("\xFF\xFF\xFA\x56\xFF\xF0") + compressed;
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({read}, 0, StreamStart::PlainOfferingMccp2);
+
+        QVERIFY(!chunks.isEmpty());
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QVERIFY2(recorded.contains("after"), "the compressed stream was not recorded");
+        QVERIFY2(!recorded.contains("SECRET"), "the reconnect token was recorded");
+    }
+
+    void unterminatedGmcpNameBeforeACompressionStartIsKept()
+    {
+        const QByteArray gmcp = QByteArrayLiteral("\xFF\xFA\xC9");
+        const QByteArray read = gmcp + "Char.Lo" + QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0") + qCompress("You see a room.\r\n", 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({read}, 0, StreamStart::PlainOfferingMccp2);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, gmcp + "Char.Lo" + "You see a room.\r\n");
     }
 
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,

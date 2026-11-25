@@ -670,6 +670,26 @@ describe("Tests connectExitStub with a direction code on a map without those roo
     assert.are.equal(b, getRoomExits(a)["east"])
     assert.are.equal(a, getRoomExits(b)["west"])
   end)
+
+  it("connectExitStub refuses a number past int's range as a toID", function()
+    local area = addAreaName("connectExitStub huge")
+    finally(function() deleteArea(area) end)
+    local a = createRoomID(12); addRoom(a); setRoomArea(a, area)
+    for _, id in ipairs({2147483648, -2147483649, math.huge, -math.huge, 0/0}) do
+      assert.error_matches(function() connectExitStub(a, id) end, "toID", nil, true, tostring(id))
+    end
+  end)
+
+  it("connectExitStub treats a number that rounds past int's range as a missing room", function()
+    local area = addAreaName("connectExitStub rounds huge")
+    finally(function() deleteArea(area) end)
+    local a = createRoomID(12); addRoom(a); setRoomArea(a, area)
+    for _, id in ipairs({2147483647.5, -2147483648.5}) do
+      local ok, err = connectExitStub(a, id)
+      assert.is_nil(ok, tostring(id))
+      assert.is_string(err, tostring(id))
+    end
+  end)
 end)
 
 -- A shared in-memory fixture: three areas and ten rooms wired into a
@@ -8430,6 +8450,92 @@ describe("Tests the app-wide mapper options in getConfig and setConfig", functio
     assert.is_true(setConfig("mapStitchAreas", true))
     assert.is_true(getConfig("mapStitchAreas"))
   end)
+
+  it("round-trips mapDeletedRoomExitsAsStubs, which is off unless turned on", function()
+    local original = getConfig("mapDeletedRoomExitsAsStubs")
+    finally(function() setConfig("mapDeletedRoomExitsAsStubs", original) end)
+
+    assert.are.equal("boolean", type(original))
+    assert.is_true(setConfig("mapDeletedRoomExitsAsStubs", true))
+    assert.is_true(getConfig("mapDeletedRoomExitsAsStubs"))
+    assert.is_true(getConfig().mapDeletedRoomExitsAsStubs)
+    assert.is_true(setConfig("mapDeletedRoomExitsAsStubs", false))
+    assert.is_false(getConfig("mapDeletedRoomExitsAsStubs"))
+  end)
+end)
+
+describe("Tests the exits mapDeletedRoomExitsAsStubs leaves when a room is deleted", function()
+  local areaName, otherAreaName = "DeletedRoomStubsSpec", "DeletedRoomStubsSpecOther"
+  local areaId, otherAreaId, original
+
+  local function newRoom(area)
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    setRoomArea(id, area)
+    return id
+  end
+
+  local function sortedStubs(roomId)
+    local stubs = getExitStubs1(roomId)
+    table.sort(stubs)
+    return stubs
+  end
+
+  before_each(function()
+    original = getConfig("mapDeletedRoomExitsAsStubs")
+    areaId = addAreaName(areaName)
+    otherAreaId = addAreaName(otherAreaName)
+  end)
+
+  after_each(function()
+    setConfig("mapDeletedRoomExitsAsStubs", original)
+    deleteArea(areaName)
+    if getAreaTable()[otherAreaName] then
+      deleteArea(otherAreaName)
+    end
+  end)
+
+  it("leaves the exits to a deleted room as stubs only while turned on, and a special exit to it never", function()
+    for _, keep in ipairs({false, true}) do
+      setConfig("mapDeletedRoomExitsAsStubs", keep)
+      local from, to = newRoom(areaId), newRoom(areaId)
+      setExit(from, to, 1)
+      setExit(from, to, 9)
+      addSpecialExit(from, to, "climb")
+
+      deleteRoom(to)
+
+      assert.are.same(keep and {1, 9} or {}, sortedStubs(from))
+      assert.is_nil(next(getRoomExits(from)), "deleting a room left an exit to it")
+      assert.is_nil(next(getSpecialExitsSwap(from)), "deleting a room left a special exit to it")
+      deleteRoom(from)
+    end
+  end)
+
+  it("keeps the door and the lock of an exit left as a stub", function()
+    setConfig("mapDeletedRoomExitsAsStubs", true)
+    local from, to = newRoom(areaId), newRoom(areaId)
+    setExit(from, to, "n")
+    setDoor(from, "n", 2)
+    lockExit(from, "n", true)
+
+    deleteRoom(to)
+
+    assert.are.same({1}, sortedStubs(from))
+    assert.are.equal(2, getDoors(from).n)
+    assert.is_true(hasExitLock(from, "n"))
+  end)
+
+  it("removes rather than stubs the exits into an area that is deleted", function()
+    setConfig("mapDeletedRoomExitsAsStubs", true)
+    local from, to = newRoom(areaId), newRoom(otherAreaId)
+    setExit(from, to, "n")
+
+    deleteArea(otherAreaName)
+
+    assert.are.same({}, sortedStubs(from))
+    assert.is_nil(next(getRoomExits(from)))
+  end)
 end)
 
 describe("Tests closing another profile that opened a map widget", function()
@@ -8747,5 +8853,150 @@ describe("Tests setMapMenuPriority and getMapMenuPriority", function()
     assert.equals(2147483647, getMapMenuPriority("specPriorityEvent"))
     assert.is_true(setMapMenuPriority("specPriorityEvent", -2147483648.5))
     assert.equals(-2147483648, getMapMenuPriority("specPriorityEvent"))
+  end)
+end)
+
+describe("Tests getAreaExploration and getAreaConnections", function()
+  local north, south, island, lonely
+  local n1, n2, s1, s2, i1, l1
+  local missingAreaId = 990000003
+
+  setup(function()
+    north = addAreaName("ExplorationSpecNorth")
+    south = addAreaName("ExplorationSpecSouth")
+    island = addAreaName("ExplorationSpecIsland")
+    lonely = addAreaName("ExplorationSpecLonely")
+
+    local function makeRoom(area, x)
+      local id = createRoomID()
+      addRoom(id)
+      setRoomArea(id, area)
+      setRoomCoordinates(id, x, 0, 0)
+      return id
+    end
+
+    n1 = makeRoom(north, 0)
+    n2 = makeRoom(north, 1)
+    s1 = makeRoom(south, 0)
+    s2 = makeRoom(south, 1)
+    i1 = makeRoom(island, 0)
+    l1 = makeRoom(lonely, 0)
+
+    setExit(n1, n2, "east"); setExit(n2, n1, "west")
+    setExit(n2, s1, "south"); setExit(s1, n2, "north")
+    addSpecialExit(n1, s1, "climb down")
+    setExit(s1, s2, "east"); setExit(s2, s1, "west")
+    -- the only way to the island, and none back
+    addSpecialExit(s2, i1, "row boat")
+
+    setExitStub(n1, "north", true)
+    setExitStub(n1, "up", true)
+    setExitStub(s2, "down", true)
+  end)
+
+  teardown(function()
+    for _, id in ipairs({n1, n2, s1, s2, i1, l1}) do
+      deleteRoom(id)
+    end
+    for _, name in ipairs({"ExplorationSpecNorth", "ExplorationSpecSouth", "ExplorationSpecIsland", "ExplorationSpecLonely"}) do
+      deleteArea(name)
+    end
+  end)
+
+  describe("getAreaExploration", function()
+    it("counts the area's rooms and the exits in it not mapped yet", function()
+      assert.are.same({rooms = 2, openExits = 2, roomsWithOpenExits = {n1}}, getAreaExploration(north))
+      assert.are.same({rooms = 2, openExits = 1, roomsWithOpenExits = {s2}}, getAreaExploration(south))
+    end)
+
+    it("finds nothing left to map in an area without exit stubs", function()
+      assert.are.same({rooms = 1, openExits = 0, roomsWithOpenExits = {}}, getAreaExploration(island))
+    end)
+
+    it("returns nil and a message for an area that does not exist", function()
+      local result, message = getAreaExploration(missingAreaId)
+      assert.is_nil(result)
+      assert.is_string(message)
+    end)
+
+    it("raises an error for an area ID that is not a number", function()
+      assert.has_error(function() getAreaExploration("ExplorationSpecNorth") end)
+    end)
+  end)
+
+  describe("getAreaConnections", function()
+    it("lists each neighbouring area with the exits to it and the entrances from it, ordered by room", function()
+      assert.are.same({
+        [south] = {
+          exits = {{from = n1, to = s1, exit = "climb down"}, {from = n2, to = s1, exit = "south"}},
+          entrances = {{from = s1, to = n2, exit = "north"}},
+        },
+      }, getAreaConnections(north))
+    end)
+
+    it("shows a one-way link as exits on one side and entrances on the other", function()
+      local fromSouth = getAreaConnections(south)
+      assert.are.same({{from = s2, to = i1, exit = "row boat"}}, fromSouth[island].exits)
+      assert.are.same({}, fromSouth[island].entrances)
+
+      assert.are.same({
+        [south] = {exits = {}, entrances = {{from = s2, to = i1, exit = "row boat"}}},
+      }, getAreaConnections(island))
+    end)
+
+    it("leaves out exits between rooms of the same area", function()
+      assert.is_nil(getAreaConnections(north)[north])
+    end)
+
+    it("lists no area whose only way in is a special exit with no name, which a map file can hold", function()
+      local backupPath = getMudletHomeDir() .. "/exploration_spec_backup.dat"
+      local jsonPath = getMudletHomeDir() .. "/exploration_spec_unnamed.json"
+      -- loading replaces the whole map, so the one the rest of the suite uses is put back afterwards
+      assert.is_true(saveMap(backupPath))
+      finally(function()
+        assert.is_true(loadMap(backupPath))
+        os.remove(backupPath)
+        os.remove(jsonPath)
+      end)
+      -- Lua refuses a special exit with no name, so it is renamed in the file
+      assert.is_true(addSpecialExit(l1, i1, "explorationSpecUnnamed"))
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local text = file:read("*a")
+      file:close()
+      local renamed, count = text:gsub('"explorationSpecUnnamed"', '""')
+      assert.are.equal(1, count)
+      file = assert(io.open(jsonPath, "w"))
+      file:write(renamed)
+      file:close()
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.is_nil(getAreaConnections(island)[lonely])
+    end)
+
+    it("counts a link into the default area, whose ID is -1, on both sides", function()
+      local pit = createRoomID()
+      addRoom(pit)
+      resetRoomArea(pit)
+      finally(function()
+        removeSpecialExit(s1, "fall")
+        deleteRoom(pit)
+      end)
+      addSpecialExit(s1, pit, "fall")
+
+      assert.are.same({{from = s1, to = pit, exit = "fall"}}, getAreaConnections(south)[-1].exits)
+      -- Only the entry for this link: the default area is shared, and may link to other areas besides
+      assert.are.same({exits = {}, entrances = {{from = s1, to = pit, exit = "fall"}}}, getAreaConnections(-1)[south])
+    end)
+
+    it("returns an empty table for an area with no links to others", function()
+      assert.are.same({}, getAreaConnections(lonely))
+    end)
+
+    it("returns nil and a message for an area that does not exist", function()
+      local result, message = getAreaConnections(missingAreaId)
+      assert.is_nil(result)
+      assert.is_string(message)
+    end)
   end)
 end)
