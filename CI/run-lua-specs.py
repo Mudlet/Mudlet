@@ -228,6 +228,11 @@ def start_x_servers(jobs, work_dir, interrupted):
     servers = []
     for slot in range(1, jobs + 1):
         slot_file = os.path.join(work_dir, f"slot-{slot}.display")
+        # A --work-dir used before still holds the file of a server that has stopped
+        try:
+            os.remove(slot_file)
+        except FileNotFoundError:
+            pass
         with open(os.path.join(work_dir, f"slot-{slot}.log"), "wb") as log:
             # A server number of its own for each slot, so the xvfb-run calls do not race for one
             command = ["xvfb-run", "--auto-servernum", f"--server-num={200 + 10 * slot}", "sh", "-c", XVFB_HOLDER, "sh", slot_file]
