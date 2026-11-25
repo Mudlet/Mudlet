@@ -175,7 +175,6 @@ private slots:
     void slot_toggleEmergencyStop();
     void slot_toggleTimeStamp();
     void slot_toggleMultiView();
-    void slot_toggleFullScreen();
 
     // Discord and IRC slots for detached window context
     void slot_profileDiscord();
@@ -242,6 +241,7 @@ private:
     QAction* mpActionMuteAPI{nullptr};
     QAction* mpActionMuteGame{nullptr};
     QAction* mpActionFullScreenView{nullptr};
+    QAction* mpMenuFullScreenAction{nullptr};
     QAction* mpActionToggleToolBar{nullptr};
     QAction* mpActionAbout{nullptr};
     QAction* mpActionReconnectStandalone{nullptr};
@@ -291,9 +291,6 @@ private:
 
     // Flag to track if window is being minimized (to allow hiding during minimize)
     bool mIsBeingMinimized{false};
-
-    // Flag to allow hiding during window flag changes (always on top, etc.)
-    bool mIsChangingWindowFlags{false};
 
     // Flag to prevent duplicate reattach operations on this window
     bool mReattachInProgress{false};

@@ -34,6 +34,7 @@
 #include <QVariant>
 
 class QAbstractButton;
+class QAbstractScrollArea;
 class QAction;
 class QBoxLayout;
 class QGridLayout;
@@ -146,6 +147,10 @@ QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& to
 // The gap is part of the bar's width, so room kept for the bar keeps the gap too. Pass the window's direction: Qt
 // moves the bar to the left right to left, but leaves a style sheet margin where it was.
 QString scrollBarGapStyleSheet(const QString& scrollAreaSelector, const Qt::LayoutDirection direction);
+
+// The vertical bar's width is taken from the viewport at all times and only the bar comes and goes, so what the
+// area shows keeps one width whether or not it scrolls
+void keepRoomForVerticalScrollBar(QAbstractScrollArea* pArea);
 
 // The view's delegate must paint the accent bar with paintAccentBar(): a coloured border-left bends into an arc at
 // the corner radius, so the border here is only a transparent gutter. rowGutter includes the bar's width.

@@ -25,6 +25,7 @@
 
 #include <QAbstractButton>
 #include <QAbstractItemView>
+#include <QAbstractScrollArea>
 #include <QAction>
 #include <QApplication>
 #include <QBoxLayout>
@@ -56,6 +57,7 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QRegularExpression>
+#include <QScrollBar>
 #include <QSpinBox>
 #include <QStandardPaths>
 #include <QtMath>
@@ -119,6 +121,8 @@ constexpr int scmInputArrowSize = 8;
 constexpr int scmInputStepperArrowSize = 7;
 // Twice the body's pressed wash, since the half is drawn over a body already carrying it
 constexpr qreal scmSplitHalfPressedWash = 2 * scmSoftWashStrength;
+// Black rather than the text tone, which lightens a dark surface: a press has to sink past the hover on both appearances
+constexpr qreal scmPressedSinkStrength = 0.10;
 constexpr int scmSidebarItemGutter = 10;
 constexpr int scmSidebarItemPadding = scmSidebarItemGutter - scmAccentBarWidth;
 constexpr int scmSidebarFocusRingWidth = 1;
@@ -699,6 +703,50 @@ QString scrollBarGapStyleSheet(const QString& scrollAreaSelector, const Qt::Layo
                  QString::number(scmScrollBarGap));
 }
 
+namespace {
+// QScrollBar shows itself whatever its range as a touchpad swipe begins, and on a style change that ends transient
+// bars; neither moves the range, so no rangeChanged comes to hide it again
+class EmptyScrollBarHider : public QObject
+{
+public:
+    explicit EmptyScrollBarHider(QScrollBar* pBar)
+    : QObject(pBar)
+    , mpBar(pBar)
+    {
+        pBar->installEventFilter(this);
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        // Inside the Show event, before the event loop can paint the bar; a queued hide leaves it a frame to show in
+        if (pWatched == mpBar && pEvent->type() == QEvent::Show && mpBar->maximum() <= mpBar->minimum()) {
+            mpBar->hide();
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    QScrollBar* mpBar = nullptr;
+};
+} // namespace
+
+void keepRoomForVerticalScrollBar(QAbstractScrollArea* pArea)
+{
+    // Qt then sizes the viewport as if the bar always shows; it shows and hides only the bar's container
+    pArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    QScrollBar* pBar = pArea->verticalScrollBar();
+    // Otherwise a hidden bar collapses its container to no height, and on showing is drawn a layout pass late
+    QSizePolicy policy = pBar->sizePolicy();
+    policy.setRetainSizeWhenHidden(true);
+    pBar->setSizePolicy(policy);
+    QObject::connect(pBar, &QAbstractSlider::rangeChanged, pBar, [pBar](const int minimum, const int maximum) {
+        pBar->setVisible(maximum > minimum);
+    });
+    new EmptyScrollBarHider(pBar);
+    pBar->setVisible(pBar->maximum() > pBar->minimum());
+}
+
 QString itemRowStyleSheet(const QString& viewSelector, const ThemeTokens& tokens, const QColor& surface, const int rowGutter)
 {
     const QColor selectedRow = blend(surface, tokens.accent, scmAccentWashStrength);
@@ -1199,6 +1247,9 @@ QString buttonStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefi
     // A split button must stay a QToolButton, so the opted-in ones join the push button rules
     const QString menuButton = qsl("QToolButton[%1=\"true\"]").arg(QString::fromLatin1(scmProp_menuButton));
 
+    QColor pressedSink(Qt::black);
+    pressedSink.setAlphaF(scmPressedSinkStrength);
+
     QString rules =
             scoped({qsl("QPushButton"), menuButton})
             + qsl(" { background-color: %1; color: %2; border: %3px solid %4; border-radius: %5px; padding: %6px %7px; min-height: %8px; }")
@@ -1206,7 +1257,7 @@ QString buttonStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefi
                       .arg(QString::number(scmInputPaddingVertical), QString::number(scmButtonPaddingHorizontal), QString::number(scmInputContentHeight))
             + scoped({qsl("QPushButton:hover"), menuButton + qsl(":hover")})
             + qsl(" { border: %2px solid %1; background-color: %3; }").arg(tokens.accent.name(), QString::number(scmInputBorderWidth), tokens.hoverSoft)
-            + scoped({qsl("QPushButton:pressed"), menuButton + qsl(":pressed")}) + qsl(" { background-color: %1; }").arg(tokens.accentSoft)
+            + scoped({qsl("QPushButton:pressed"), menuButton + qsl(":pressed")}) + qsl(" { background-color: %1; }").arg(rgba(layered(tokens.accentWash, pressedSink)))
             + scoped({qsl("QPushButton:focus"), menuButton + qsl(":focus")}) + qsl(" { border: %2px solid %1; }").arg(tokens.accent.name(), QString::number(scmInputBorderWidth))
             + scoped({qsl("QPushButton:disabled"), menuButton + qsl(":disabled")})
             + qsl(" { color: %1; border: %3px solid %2; background-color: transparent; }").arg(tokens.disabledText.name(), disabledBorderColour(tokens).name(), QString::number(scmInputBorderWidth));
