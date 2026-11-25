@@ -481,6 +481,8 @@ enum class MenuDrawnBy { NativeMenuBar, BaseStyle, ScriptSheet };
 // on its Highlight, or as at rest under a script's sheet. On a base style's menu a switched-on entry's picture carries
 // the outline itself: the accent over its wash at rest, the glyph's own ink under the pointer and unavailable.
 void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const MenuDrawnBy drawnBy);
+// The glyph as that outline holds it: smaller, about its centre, on a picture of its own size
+QPixmap glyphInsideOutline(const QPixmap& glyph);
 
 struct CardMetrics
 {

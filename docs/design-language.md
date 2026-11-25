@@ -489,8 +489,15 @@ mark into every switch's `On` pictures: a 1px outline round the picture's edge,
 with no wash under the pointer, and in `disabledText` while it is unavailable.
 Each keeps the glyph's own raster, as a style scales whatever it is handed down to
 its icon size, glyph and all; the outline's width is the menu's pixel, measured
-from the style's `PM_SmallIconSize`, so it stands in the margin Lucide leaves round
-a glyph, and a glyph drawn out to the 2-unit line (the speaker, the pin) touches it.
+from the style's `PM_SmallIconSize` asked with the menu's font, as Fusion sizes the
+icon it draws from that font's dpi, and rounded up to whole pixels of the picture.
+Lucide draws its outermost line at 2 units of 24, 0.83px in at a 16px icon, so the
+speaker and the pin would touch an outline at the edge: `glyphInsideOutline()`
+draws every outlined glyph at `scmOutlinedGlyphScale` (0.83) of its size, about its
+centre, which leaves a whole menu pixel clear inside the outline at 16px. At that
+size the smaller glyphs are softer than the ones switched off: the speaker's cross
+closes up into a dot and the underscore of the input line's prompt spreads over
+two rows of pixels.
 Who draws the menus is `MenuDrawnBy`, which `mudlet::restyleToolBarIcons()` passes:
 `NativeMenuBar` while `QMenuBar::isNativeMenuBar()`, as a native menu draws its own
 tick beside the picture it copies, `ScriptSheet` while a script's sheet names

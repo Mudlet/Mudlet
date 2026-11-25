@@ -42,7 +42,9 @@
 #include <QScopeGuard>
 #include <QSet>
 #include <QSignalBlocker>
+#include <QStyle>
 #include <QtTest/QtTest>
+#include <cmath>
 #include <tuple>
 
 #include "PixelTestHelper.h"
@@ -105,6 +107,21 @@ private:
     static QImage drawnWhole(const QIcon& icon, const QIcon::Mode mode, const QIcon::State state)
     {
         return icon.pixmap(QSize(uiDesign::scmGlyphRasterSize, uiDesign::scmGlyphRasterSize), 1.0, mode, state).toImage().convertToFormat(QImage::Format_ARGB32);
+    }
+
+    // A switched-on entry's picture holds its glyph smaller inside the outline, so a glyph compared with it is scaled alike
+    static QImage drawnInsideTheOutline(const QIcon& icon, const QIcon::Mode mode, const QIcon::State state)
+    {
+        const QSize raster(uiDesign::scmGlyphRasterSize, uiDesign::scmGlyphRasterSize);
+        return uiDesign::glyphInsideOutline(icon.pixmap(raster, 1.0, mode, state)).toImage().convertToFormat(QImage::Format_ARGB32);
+    }
+
+    // With the menu's font, as when Fusion draws the row: without it the metric is 16 offscreen on macOS, drawn at 21
+    static int menuIconSizeOf(const QMenu* pMenu)
+    {
+        QStyleOption option;
+        option.initFrom(pMenu);
+        return pMenu->style()->pixelMetric(QStyle::PM_SmallIconSize, &option, pMenu);
     }
 
     // Where a glyph's line covers a pixel whole, nothing drawn under the glyph can show
@@ -478,7 +495,7 @@ private slots:
                     const QImage onTheBar = drawnAt(pTwin->icon(), QIcon::Normal, state);
                     // Switched on, the entry's picture carries the outline round the glyph, so only the glyph's line is the bar's
                     const bool outlined = state == QIcon::On && pEntry->isCheckable();
-                    const QImage lineOnTheBar = outlined ? drawnWhole(pTwin->icon(), QIcon::Normal, state) : QImage();
+                    const QImage lineOnTheBar = outlined ? drawnInsideTheOutline(pTwin->icon(), QIcon::Normal, state) : QImage();
                     const int apart = outlined ? solidPixelsChanged(lineOnTheBar, drawnWhole(pEntry->icon(), QIcon::Normal, state)) : pixelsApart(inTheMenu, onTheBar);
                     QVERIFY2(!outlined || solidPixelsOf(lineOnTheBar) > 0,
                              qPrintable(qsl("%1: the toolbar's %2 has no pixel its line covers whole, so nothing of it was compared").arg(said, twinName)));
@@ -641,7 +658,7 @@ private slots:
             qApp->setAttribute(Qt::AA_DontShowIconsInMenus, iconsHidden);
         });
         // Coloured, the glyph is the same picture either way, so whatever differs is the state drawn round it
-        const QImage glyphOff = drawnWhole(pEntry->icon(), QIcon::Normal, QIcon::Off);
+        const QImage glyphOff = drawnInsideTheOutline(pEntry->icon(), QIcon::Normal, QIcon::Off);
         QVERIFY2(solidPixelsOf(glyphOff) > 0 && solidPixelsChanged(glyphOff, drawnWhole(pEntry->icon(), QIcon::Normal, QIcon::On)) == 0,
                  "Compact input line's glyph changes with its state, so this case would pass on the glyph alone");
 
@@ -816,6 +833,63 @@ private slots:
 
         QVERIFY2(!switches.isEmpty(), "the six menus hold no entry that switches on and off, so nothing below was checked");
         QVERIFY2(astray.isEmpty(), qPrintable(astray.join(qsl("; "))));
+    }
+
+    // Lucide draws a glyph's outermost line 0.83px in from the edge of a 16px icon, where the 1px outline runs, so the speaker
+    // and the pin would touch it. Read along the straight part of each side, clear of the corners the outline curves in at
+    void test_aSwitchedOnEntrysGlyphStandsClearOfItsOutline()
+    {
+        const QList<QAction*> switches = switchesOfTheMenuBar();
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const int size = uiDesign::scmGlyphRasterSize;
+
+        QStringList touching;
+        QStringList gaps;
+        int bandsRead = 0;
+        for (QAction* pSwitch : switches) {
+            const QMenu* pMenu = menuHolding(pSwitch);
+            // The picture is scaled down to the menu's icon size, so a pixel of the menu is this many of the picture's
+            const qreal pictureToMenu = static_cast<qreal>(size) / menuIconSizeOf(pMenu);
+            // The outline is drawn in whole pixels of the picture; the band runs from past its inner edge to a pixel short of one
+            // menu pixel further in
+            const int outlineEnds = static_cast<int>(std::ceil(pictureToMenu));
+            const int bandFrom = outlineEnds + 1;
+            const int bandTo = static_cast<int>(std::floor(outlineEnds + pictureToMenu)) - 2;
+            const int straightFrom = static_cast<int>(std::ceil(uiDesign::scmRadiusChip * pictureToMenu));
+            const auto sidesAt = [size](const int depth, const int along) {
+                return QList<QPoint>{{along, depth}, {along, size - 1 - depth}, {depth, along}, {size - 1 - depth, along}};
+            };
+            int nearestInk = size;
+            for (const auto& [mode, modeSaidAs] :
+                 QList<std::pair<QIcon::Mode, QString>>{{QIcon::Normal, qsl("at rest")}, {QIcon::Active, qsl("Active")}, {QIcon::Selected, qsl("Selected")}, {QIcon::Disabled, qsl("unavailable")}}) {
+                const QImage on = drawnWhole(pSwitch->icon(), mode, QIcon::On);
+                // At rest the band holds the wash, and anything more there is the glyph
+                const int washAlpha = (mode == QIcon::Normal ? tokens.accentWash.alpha() : 0) + scmInkTolerance;
+                int inked = 0;
+                for (int depth = outlineEnds; depth < size / 2; ++depth) {
+                    for (int along = straightFrom; along < size - straightFrom; ++along) {
+                        for (const QPoint& at : sidesAt(depth, along)) {
+                            if (qAlpha(on.pixel(at)) > washAlpha) {
+                                nearestInk = qMin(nearestInk, depth);
+                                if (depth >= bandFrom && depth <= bandTo) {
+                                    ++inked;
+                                }
+                            }
+                        }
+                    }
+                }
+                bandsRead += bandTo >= bandFrom ? 1 : 0;
+                if (inked > 0) {
+                    touching << qsl("%1 %2 (%3 pixels)").arg(saidAs(pSwitch), modeSaidAs, QString::number(inked));
+                }
+            }
+            gaps << qsl("%1 %2").arg(pSwitch->objectName(), QString::number((nearestInk - outlineEnds) / pictureToMenu, 'f', 2));
+        }
+        qInfo().noquote() << qsl("  menu pixels clear between the outline and the nearest glyph ink: %1").arg(gaps.join(qsl(", ")));
+
+        QVERIFY2(!switches.isEmpty(), "the six menus hold no entry that switches on and off, so nothing below was checked");
+        QVERIFY2(bandsRead == switches.size() * 4, "the band inside the outline is narrower than a pixel of the picture, so nothing was read there");
+        QVERIFY2(touching.isEmpty(), qPrintable(qsl("switched on, these glyphs reach into the menu pixel inside their outline: %1").arg(touching.join(qsl(", ")))));
     }
 
     // A native menu - the macOS menu bar, a desktop's global menu - draws its own tick beside the picture it copies, and a

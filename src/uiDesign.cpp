@@ -62,6 +62,7 @@
 #include <QStandardPaths>
 #include <QtMath>
 #include <QStyle>
+#include <QStyleOption>
 #include <QStyleOptionGroupBox>
 #include <QStyleOptionViewItem>
 #include <QSvgRenderer>
@@ -152,6 +153,8 @@ constexpr int scmMenuItemPaddingTrailing = scmButtonPaddingHorizontal;
 constexpr int scmMenuItemMarkInset = (scmMenuItemPaddingLeading - scmChoiceIndicatorSize) / 2;
 // Room round a switched-on entry's glyph for its wash; the box moves back by as much, so the glyph stays put
 constexpr int scmMenuIconWashPadding = 2;
+// Brings Lucide's outermost line, 0.83px in at a 16px icon, a menu pixel clear of the 1px outline outlinedGlyph() draws
+constexpr qreal scmOutlinedGlyphScale = 0.83;
 
 constexpr qreal scmTypeRatio_caption = 0.85;
 constexpr qreal scmTypeRatio_title = 1.15;
@@ -1909,8 +1912,15 @@ QPixmap outlinedGlyph(const QPixmap& glyph, const QColor& outline, const QColor&
 {
     const QMenu* pMenu = menuHolding(pAction);
     const QStyle* pStyle = pMenu ? pMenu->style() : QApplication::style();
-    const qreal pictureToMenu = static_cast<qreal>(glyph.width()) / qMax(1, pStyle->pixelMetric(QStyle::PM_SmallIconSize, nullptr, pMenu));
-    const qreal outlineWidth = scmInputBorderWidth * pictureToMenu;
+    // With the menu's font, which Fusion sizes the drawn icon by: without it the metric is 16 offscreen on macOS, drawn at 21
+    QStyleOption option;
+    if (pMenu) {
+        option.initFrom(pMenu);
+    }
+    const int iconSize = pStyle->pixelMetric(QStyle::PM_SmallIconSize, pMenu ? &option : nullptr, pMenu);
+    const qreal pictureToMenu = static_cast<qreal>(glyph.width()) / qMax(1, iconSize);
+    // In whole pixels of the picture, or the one only partly covered is averaged into the menu pixel the outline lands on
+    const qreal outlineWidth = std::ceil(scmInputBorderWidth * pictureToMenu);
     const qreal inset = outlineWidth / 2.0;
     const qreal radius = scmRadiusChip * pictureToMenu - inset;
 
@@ -1921,11 +1931,22 @@ QPixmap outlinedGlyph(const QPixmap& glyph, const QColor& outline, const QColor&
     painter.setPen(QPen(outline, outlineWidth));
     painter.setBrush(wash.isValid() ? QBrush(wash) : QBrush(Qt::NoBrush));
     painter.drawRoundedRect(QRectF(outlined.rect()).adjusted(inset, inset, -inset, -inset), radius, radius);
-    painter.drawPixmap(0, 0, glyph);
+    painter.drawPixmap(0, 0, glyphInsideOutline(glyph));
     painter.end();
     return outlined;
 }
 } // namespace
+
+QPixmap glyphInsideOutline(const QPixmap& glyph)
+{
+    const QSize inner = glyph.size() * scmOutlinedGlyphScale;
+    QPixmap inside(glyph.size());
+    inside.fill(Qt::transparent);
+    QPainter painter(&inside);
+    painter.drawPixmap((glyph.width() - inner.width()) / 2, (glyph.height() - inner.height()) / 2, glyph.scaled(inner, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+    painter.end();
+    return inside;
+}
 
 void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const MenuDrawnBy drawnBy)
 {
