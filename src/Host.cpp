@@ -8411,6 +8411,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
     // anything draws in them
     if (change == MainAreaChange::font && !mMainAreaCells) {
         emit signal_mainAreaLaidOut();
+        checkMainWindowClasses();
         return;
     }
     if (!mMainAreaCells) {
@@ -8427,6 +8428,8 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
     }
     emit signal_mainAreaLaidOut();
     if (change == MainAreaChange::font || change == MainAreaChange::load) {
+        // In characters the main window's pixels follow the font
+        checkMainWindowClasses();
         return;
     }
 
