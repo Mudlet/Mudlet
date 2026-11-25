@@ -3013,12 +3013,14 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAdaptiveLayout
 int TLuaInterpreter::setAdaptiveLayout(lua_State* L)
 {
-    const QString owner = getVerifiedString(L, __func__, 1, "owner");
-    if (owner.isEmpty()) {
+    if (!checkStringArg(L, __func__, 1, "owner")) {
+        return lua_error(L);
+    }
+    if (!*lua_tostring(L, 1)) {
         return warnArgumentValue(L, __func__, "owner must not be an empty string");
     }
     const bool adaptive = getVerifiedBool(L, __func__, 2, "adaptive");
-    getHostFromLua(L).setAdaptiveLayout(owner, adaptive);
+    getHostFromLua(L).setAdaptiveLayout(QString{lua_tostring(L, 1)}, adaptive);
     lua_pushboolean(L, true);
     return 1;
 }
