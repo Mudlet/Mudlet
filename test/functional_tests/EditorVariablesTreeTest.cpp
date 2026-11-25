@@ -302,8 +302,8 @@ private slots:
         QCOMPARE(pTable->checkState(0), Qt::Unchecked);
     }
 
-    // The kept dot is round like every other view's switch, kept or not: the corners of the box it is drawn in are left
-    // as the row was, where a square, rounded or not, would cover them at least in part
+    // The kept dot is round like every other view's switch, kept, not kept or kept in part: the corners of the box it is
+    // drawn in are left as the row was, where a square, rounded or not, would cover them at least in part
     void test_theKeptDotIsRound()
     {
         openTheVariablesView();
@@ -311,8 +311,11 @@ private slots:
         QVERIFY(pString);
         QCOMPARE(pString->checkState(0), Qt::Unchecked);
 
-        const auto checkRound = [this, pString](const QString& state) {
-            const QRect hit = keptRectOf(pString);
+        QTreeWidgetItem* pTable = variableRow(qsl("myKeyed"));
+        QVERIFY(pTable);
+
+        const auto checkRound = [this](QTreeWidgetItem* pRow, const QString& state, const bool halfFilled) {
+            const QRect hit = keptRectOf(pRow);
             const QImage shot = viewport()->grab().toImage().convertToFormat(QImage::Format_ARGB32);
             // In device pixels, which the grab is in on a scaled screen
             const qreal ratio = shot.devicePixelRatio();
@@ -338,9 +341,28 @@ private slots:
             for (const QPoint& corner : {drawn.topLeft(), drawn.topRight(), drawn.bottomLeft(), drawn.bottomRight()}) {
                 QVERIFY2(shot.pixel(corner) == surface, qPrintable(failed(qsl("the dot covers its corner at %1,%2, so it is not round").arg(corner.x()).arg(corner.y()))));
             }
+            if (halfFilled) {
+                // Inside the ring, a quarter of the way in from either side
+                const int middle = drawn.center().y();
+                QVERIFY2(shot.pixel(drawn.left() + drawn.width() / 4, middle) != surface, qPrintable(failed(qsl("the left half of the dot is not filled in"))));
+                QVERIFY2(shot.pixel(drawn.right() - drawn.width() / 4, middle) == surface, qPrintable(failed(qsl("the right half of the dot is filled in too"))));
+            }
         };
 
-        checkRound(qsl("not-kept"));
+        checkRound(pString, qsl("not-kept"), false);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        // Keeping one of the table's two members keeps the table in part
+        QTreeWidgetItem* pMember = memberRow(pTable, qsl("alpha"));
+        QVERIFY(pMember);
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pMember).center());
+        QCoreApplication::processEvents();
+        QCOMPARE(pTable->checkState(0), Qt::PartiallyChecked);
+        checkRound(pTable, qsl("kept-in-part"), true);
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pMember).center());
+        QCoreApplication::processEvents();
+        QCOMPARE(pTable->checkState(0), Qt::Unchecked);
         if (QTest::currentTestFailed()) {
             return;
         }
@@ -351,7 +373,7 @@ private slots:
             QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pString).center());
             QCoreApplication::processEvents();
         });
-        checkRound(qsl("kept"));
+        checkRound(pString, qsl("kept"), false);
     }
 
     // The profile cannot save a Lua function
