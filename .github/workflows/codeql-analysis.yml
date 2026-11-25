@@ -32,6 +32,11 @@ jobs:
             os: ubuntu-latest
 
     steps:
+    # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+    - name: Note the folder above the checkout
+      shell: bash
+      run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
     - name: Checkout repository
       uses: actions/checkout@v7
       with:
@@ -45,7 +50,7 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}
-        dir: ${{github.workspace}}/..
+        dir: ${{env.WORK_ROOT}}
         # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
         # and a copy per runner image, module set and ref took over 40% of the
         # repository's 10GB cache quota - more than every ccache put together.

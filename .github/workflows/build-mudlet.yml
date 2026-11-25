@@ -104,6 +104,11 @@ jobs:
             pgo: 'true'
 
     steps:
+    # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+    - name: Note the folder above the checkout
+      shell: bash
+      run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
     - name: Checkout Mudlet source code
       uses: actions/checkout@v7
       with:
@@ -113,7 +118,7 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: ${{matrix.qt}}
-        dir: ${{github.workspace}}/..
+        dir: ${{env.WORK_ROOT}}
         # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
         # and a copy per runner image, module set and ref took over 40% of the
         # repository's 10GB cache quota - more than every ccache put together.
@@ -194,7 +199,7 @@ jobs:
           fi
         done
 
-        echo "CCACHE_DIR=${{github.workspace}}/../ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${WORK_ROOT}/ccache" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -294,7 +299,7 @@ jobs:
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
-        echo "CCACHE_DIR=${{github.workspace}}/../ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${WORK_ROOT}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
         ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
@@ -309,7 +314,7 @@ jobs:
       if: runner.os == 'Linux'
       uses: actions/cache/restore@v6
       with:
-        path: ${{github.workspace}}/../xcb-util-cursor-stage
+        path: ${{env.WORK_ROOT}}/xcb-util-cursor-stage
         key: xcb-util-cursor-0.1.6-${{matrix.os}}-${{runner.arch}}
 
     - name: (Linux) Build xcb-util-cursor 0.1.6
@@ -345,7 +350,7 @@ jobs:
 
         # staged rather than installed directly: the install step below copies
         # from this tree whether it was built here or restored from the cache
-        make DESTDIR="${{github.workspace}}/../xcb-util-cursor-stage" install
+        make DESTDIR="${WORK_ROOT}/xcb-util-cursor-stage" install
 
     - name: (Linux) Save xcb-util-cursor 0.1.6 cache
       if: >-
@@ -353,14 +358,14 @@ jobs:
         && steps.cache-xcb-cursor.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
-        path: ${{github.workspace}}/../xcb-util-cursor-stage
+        path: ${{env.WORK_ROOT}}/xcb-util-cursor-stage
         key: xcb-util-cursor-0.1.6-${{matrix.os}}-${{runner.arch}}
 
     - name: (Linux) Install xcb-util-cursor 0.1.6
       if: runner.os == 'Linux'
       run: |
         # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
-        sudo cp -a "${{github.workspace}}/../xcb-util-cursor-stage/." /
+        sudo cp -a "${WORK_ROOT}/xcb-util-cursor-stage/." /
 
         # Update library cache so linker finds new version
         sudo ldconfig
@@ -437,7 +442,7 @@ jobs:
       if: env.MUDLET_PGO_BUILD != 'true'
       uses: actions/cache/restore@v6
       with:
-        path: ${{github.workspace}}/../ccache
+        path: ${{env.WORK_ROOT}}/ccache
         key: ccache-${{ matrix.ccache_id }}-sha-
         restore-keys: ccache-${{ matrix.ccache_id }}-sha-
 
@@ -518,7 +523,7 @@ jobs:
         && env.MUDLET_PGO_BUILD != 'true'
       uses: actions/cache/save@v6
       with:
-        path: ${{github.workspace}}/../ccache
+        path: ${{env.WORK_ROOT}}/ccache
         key: ccache-${{matrix.ccache_id}}-sha-${{ github.sha }}
 
     - name: check ccache stats post build
@@ -538,7 +543,7 @@ jobs:
           sudo apt-get install libgstreamer-plugins-base1.0-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xvfb libfuse2 -y
         fi
       env:
-        BUILD_FOLDER: ${{github.workspace}}/../b/ninja
+        BUILD_FOLDER: ${{env.WORK_ROOT}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
@@ -555,17 +560,17 @@ jobs:
     - name: Train, then do the profile-guided build
       if: env.MUDLET_PGO_BUILD == 'true'
       run: |
-        ${{github.workspace}}/CI/pgo-train.sh ${{github.workspace}}/../b/ninja
+        ${{github.workspace}}/CI/pgo-train.sh ${WORK_ROOT}/b/ninja
         # Reconfigures the first pass's tree, so its LTO options carry over
-        cmake -B ${{github.workspace}}/../b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
-        cmake --build ${{github.workspace}}/../b/ninja
+        cmake -B ${WORK_ROOT}/b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
+        cmake --build ${WORK_ROOT}/b/ninja
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
-      working-directory: '${{github.workspace}}/../b/ninja'
+      working-directory: '${{env.WORK_ROOT}}/b/ninja'
       run: ctest --output-on-failure -j $(nproc)
       env:
         QT_QPA_PLATFORM: offscreen
@@ -580,7 +585,7 @@ jobs:
 
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS' && matrix.run_tests == 'true'
-      working-directory: '${{github.workspace}}/../b/ninja'
+      working-directory: '${{env.WORK_ROOT}}/b/ninja'
       # Twice the cores: most of these tests wait on timers and sockets rather than compute.
       # On the 3-core arm64 runner -j6 took the run from 330s to 213s, and -j9 was slower (245s).
       run: ctest --output-on-failure -j $(( 2 * $(sysctl -n hw.ncpu) ))
@@ -588,7 +593,7 @@ jobs:
     # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
       if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
-      run: ctest --test-dir ${{github.workspace}}/../b/ninja -L functional --output-on-failure -j $(nproc)
+      run: ctest --test-dir ${WORK_ROOT}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
@@ -603,7 +608,7 @@ jobs:
         echo "ARCH=$ARCH" >> $GITHUB_ENV
         ${{github.workspace}}/CI/after_success.sh
       env:
-        BUILD_FOLDER: ${{github.workspace}}/../b/ninja
+        BUILD_FOLDER: ${{env.WORK_ROOT}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
@@ -670,17 +675,17 @@ jobs:
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
-      run: cp ${{github.workspace}}/../b/ninja/src/mudlet ${{github.workspace}}/src
+      run: cp ${WORK_ROOT}/b/ninja/src/mudlet ${{github.workspace}}/src
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       run: |
-        if [ -d "${{github.workspace}}/../b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
-          cp -r ${{github.workspace}}/../b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
-        elif [ -d "${{github.workspace}}/../b/ninja/Mudlet PTB.app" ]; then
-          cp -r "${{github.workspace}}/../b/ninja/Mudlet PTB.app" ~/Desktop/Mudlet.app
+        if [ -d "${WORK_ROOT}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
+          cp -r ${WORK_ROOT}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
+        elif [ -d "${WORK_ROOT}/b/ninja/Mudlet PTB.app" ]; then
+          cp -r "${WORK_ROOT}/b/ninja/Mudlet PTB.app" ~/Desktop/Mudlet.app
         else
-          cp -r ${{github.workspace}}/../b/ninja/src/mudlet.app ~/Desktop/Mudlet.app
+          cp -r ${WORK_ROOT}/b/ninja/src/mudlet.app ~/Desktop/Mudlet.app
         fi
         cd ~/Desktop
         sudo codesign --remove-signature ~/Desktop/Mudlet.app

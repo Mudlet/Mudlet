@@ -57,6 +57,11 @@ jobs:
       SAVE_CCACHE: ${{ github.event_name == 'push' }}
       CCACHE_COMPRESSLEVEL: ${{ github.event_name == 'push' && '19' || '1' }}
     steps:
+      # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+      - name: Note the folder above the checkout
+        shell: bash
+        run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v7
         with:
           submodules: recursive
@@ -80,7 +85,7 @@ jobs:
           host: all_os
           target: wasm
           arch: wasm_singlethread
-          dir: ${{github.workspace}}/..
+          dir: ${{env.WORK_ROOT}}
           # Uncached for the reason build-mudlet.yml gives
           cache: false
           modules: qt5compat qtmultimedia qtspeech
@@ -104,8 +109,8 @@ jobs:
           eval "$(luarocks path --local --lua-version 5.1)"
           echo "LUA_PATH=$LUA_PATH" >> "$GITHUB_ENV"
           echo "LUA_CPATH=$LUA_CPATH" >> "$GITHUB_ENV"
-          echo "MUDLET_WASM_DEPS=${{github.workspace}}/../wasm-deps" >> "$GITHUB_ENV"
-          echo "CCACHE_DIR=${{github.workspace}}/../ccache" >> "$GITHUB_ENV"
+          echo "MUDLET_WASM_DEPS=${WORK_ROOT}/wasm-deps" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=${WORK_ROOT}/ccache" >> "$GITHUB_ENV"
 
       - name: Restore the wasm libraries
         id: wasm-deps
