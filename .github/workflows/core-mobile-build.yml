@@ -40,7 +40,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.11.3'
-          dir: ${{ runner.workspace }}
+          dir: ${{github.workspace}}/..
           cache: false
           modules: qt5compat qtmultimedia qtspeech
 

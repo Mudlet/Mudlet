@@ -80,7 +80,7 @@ jobs:
           host: all_os
           target: wasm
           arch: wasm_singlethread
-          dir: ${{ runner.workspace }}
+          dir: ${{github.workspace}}/..
           # Uncached for the reason build-mudlet.yml gives
           cache: false
           modules: qt5compat qtmultimedia qtspeech
@@ -104,8 +104,8 @@ jobs:
           eval "$(luarocks path --local --lua-version 5.1)"
           echo "LUA_PATH=$LUA_PATH" >> "$GITHUB_ENV"
           echo "LUA_CPATH=$LUA_CPATH" >> "$GITHUB_ENV"
-          echo "MUDLET_WASM_DEPS=${{ runner.workspace }}/wasm-deps" >> "$GITHUB_ENV"
-          echo "CCACHE_DIR=${{ runner.workspace }}/ccache" >> "$GITHUB_ENV"
+          echo "MUDLET_WASM_DEPS=${{github.workspace}}/../wasm-deps" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=${{github.workspace}}/../ccache" >> "$GITHUB_ENV"
 
       - name: Restore the wasm libraries
         id: wasm-deps

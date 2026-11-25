@@ -45,7 +45,7 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}/..
         # Deliberately uncached: the Qt tree is 335MB on Linux and 389MB on macOS,
         # and a copy per runner image, module set and ref took over 40% of the
         # repository's 10GB cache quota - more than every ccache put together.

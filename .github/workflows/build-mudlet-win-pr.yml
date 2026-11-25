@@ -70,14 +70,14 @@ jobs:
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
-        path: ${{runner.workspace}}/ccache
+        path: ${{github.workspace}}/../ccache
         key: ccache-${{matrix.ccache_id}}-sha-
         restore-keys: ccache-${{matrix.ccache_id}}-sha-
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
       env:
-        CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_DIR: ${{github.workspace}}/../ccache
       run: |
         ccache --zero-stats --show-stats -v
         ccache --show-compression
@@ -100,7 +100,7 @@ jobs:
     - name: check ccache stats post build
       shell: msys2 {0}
       env:
-        CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_DIR: ${{github.workspace}}/../ccache
       run: |
         ccache --show-stats -v
         ccache --show-compression

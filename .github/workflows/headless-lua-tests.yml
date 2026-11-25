@@ -62,7 +62,7 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.11.3'
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}/..
         # Uncached for the reason build-mudlet-pr.yml gives
         cache: false
         modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
@@ -118,7 +118,7 @@ jobs:
         sudo update-alternatives --set gcc /usr/bin/gcc-${GCC_VERSION}
         sudo update-alternatives --set g++ /usr/bin/g++-${GCC_VERSION}
 
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${{github.workspace}}/../ccache" >> $GITHUB_ENV
 
         # lua-yajl generates the translation statistics during the build
         ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
@@ -144,7 +144,7 @@ jobs:
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
-        path: ${{runner.workspace}}/ccache
+        path: ${{github.workspace}}/../ccache
         key: ccache-ubuntu-gcc-asan-sha-
         restore-keys: ccache-ubuntu-gcc-asan-sha-
 
@@ -181,7 +181,7 @@ jobs:
       run: |
         log="${{runner.temp}}/headless-lua-tests.log"
         mkdir -p "${XDG_CONFIG_HOME}/mudlet/profiles"
-        cp ${{runner.workspace}}/b/ninja/src/mudlet-headless ${{github.workspace}}/src
+        cp ${{github.workspace}}/../b/ninja/src/mudlet-headless ${{github.workspace}}/src
         status=0
         ${{github.workspace}}/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
           2>&1 | tee "${log}" || status=$?
