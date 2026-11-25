@@ -176,6 +176,14 @@ def find_specs(tests_dir):
     return specs
 
 
+def portable_markers(command):
+    # Mudlet looks for portable.txt before XDG_CONFIG_HOME, beside its executable (links resolved)
+    # and then in ~/.config/mudlet, and keeps every profile in the folder that file names
+    program = shutil.which(command[0]) or command[0]
+    folders = (os.path.dirname(os.path.realpath(program)), os.path.join(os.path.expanduser("~"), ".config", "mudlet"))
+    return [marker for marker in (os.path.join(folder, "portable.txt") for folder in folders) if os.path.isfile(marker)]
+
+
 def check_setup(arguments):
     if arguments.jobs < 1:
         raise SetupProblem(f"--jobs must be 1 or more, not {arguments.jobs}")
@@ -186,6 +194,9 @@ def check_setup(arguments):
             raise SetupProblem("no Mudlet command after --")
         if arguments.xvfb and not shutil.which("xvfb-run"):
             raise SetupProblem("--xvfb was given, but xvfb-run is not on PATH")
+        markers = portable_markers(arguments.command)
+        if markers:
+            raise SetupProblem(f"with {' and '.join(markers)} in place, every Mudlet process keeps its profile in one portable folder, not in a config root of its own; move {plural(len(markers), 'it', 'them')} away for this run")
     tests_dir = os.path.abspath(arguments.tests_dir or default_tests_dir())
     specs = find_specs(tests_dir)
     if not specs:

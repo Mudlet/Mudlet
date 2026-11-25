@@ -14,6 +14,7 @@ import json
 import os
 import queue
 import re
+import shlex
 import signal
 import subprocess
 import sys
@@ -193,6 +194,8 @@ class RunLuaSpecs(unittest.TestCase):
         self.marker = os.path.join(self.directory.name, "busted-tests-failed")
         os.makedirs(self.tests)
         os.makedirs(self.records)
+        self.home = os.path.join(self.directory.name, "home")
+        os.makedirs(self.home)
         with open(self.stub, "w", encoding="utf-8") as out:
             out.write(STUB)
 
@@ -214,13 +217,17 @@ class RunLuaSpecs(unittest.TestCase):
         if tests_dir:
             arguments += ["--tests-dir", self.tests]
         arguments += list(options)
+        if command is True:
+            command = [sys.executable, "-I", self.stub]
         if command:
-            arguments += ["--", sys.executable, "-I", self.stub]
+            arguments += ["--", *command]
         return arguments
 
     def runner_environment(self, environment):
         env = {key: value for key, value in os.environ.items() if key not in ("GITHUB_ACTIONS", "PROBE", "STUB_BARRIER", "STUB_FIXTURE_HOLD", "STUB_RELEASE", "TESTS_DIRECTORY")}
         env["STUB_RECORD_DIR"] = self.records
+        # A portable.txt in the real home's .config/mudlet would make the runner refuse every run here
+        env["HOME"] = self.home
         env.update(environment or {})
         return env
 
@@ -304,6 +311,20 @@ class RunLuaSpecs(unittest.TestCase):
                 os.kill(int(pid), signal.SIGKILL)
                 self.fail(f"the fake X server {pid} was left running")
         return sorted(argument for _, argument in servers)
+
+    def stand_in_mudlet(self, folder):
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, "mudlet")
+        with open(path, "w", encoding="utf-8") as out:
+            out.write(f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -I {shlex.quote(self.stub)} "$@"\n')
+        os.chmod(path, 0o700)
+        return path
+
+    def portable_marker(self, folder):
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, "portable.txt")
+        open(path, "w").close()
+        return path
 
     def test_runs_every_spec_file_once_in_a_process_of_its_own(self):
         expected = self.specs("Alpha_spec.lua", "Beta_spec.lua", "sub/Nested_spec.lua")
@@ -569,6 +590,45 @@ class RunLuaSpecs(unittest.TestCase):
             self.assertEqual(status, 2, said)
             self.assertIn(said, self.errors)
         self.assertEqual(os.listdir(self.records), [])
+
+    def test_refuses_to_run_with_a_portable_txt_beside_mudlet(self):
+        self.specs("Alpha_spec.lua")
+        mudlet = self.stand_in_mudlet(os.path.join(self.directory.name, "app"))
+        status, output = self.run_runner(command=[mudlet])
+        self.assertEqual(status, 0, output + self.errors)
+        self.assertEqual(len(self.stub_records()), 1)
+        marker = self.portable_marker(os.path.dirname(mudlet))
+        status, output = self.run_runner(command=[mudlet])
+        self.assertEqual(status, 2, output)
+        self.assertIn(os.path.realpath(marker), self.errors)
+        self.assertEqual(len(self.stub_records()), 1)
+
+    def test_refuses_to_run_with_a_portable_txt_beside_mudlet_reached_through_a_link(self):
+        self.specs("Alpha_spec.lua")
+        mudlet = self.stand_in_mudlet(os.path.join(self.directory.name, "app"))
+        links = os.path.join(self.directory.name, "links")
+        os.makedirs(links)
+        os.symlink(mudlet, os.path.join(links, "mudlet"))
+        marker = self.portable_marker(os.path.dirname(mudlet))
+        status, output = self.run_runner(command=["mudlet"], environment={"PATH": links + os.pathsep + os.environ.get("PATH", "")})
+        self.assertEqual(status, 2, output)
+        self.assertIn(os.path.realpath(marker), self.errors)
+        self.assertEqual(self.stub_records(), [])
+
+    def test_refuses_to_run_with_a_portable_txt_in_the_home_config_folder(self):
+        self.specs("Alpha_spec.lua")
+        marker = self.portable_marker(os.path.join(self.home, ".config", "mudlet"))
+        status, output = self.run_runner()
+        self.assertEqual(status, 2, output)
+        self.assertIn(marker, self.errors)
+        self.assertEqual(self.stub_records(), [])
+
+    def test_lists_the_spec_files_with_a_portable_txt_in_place(self):
+        self.specs("Alpha_spec.lua", "Beta_spec.lua")
+        self.portable_marker(os.path.join(self.home, ".config", "mudlet"))
+        status, output = self.run_runner("--list")
+        self.assertEqual(status, 0, output + self.errors)
+        self.assertEqual(output.splitlines()[1:], ["  Alpha_spec.lua", "  Beta_spec.lua"])
 
 
 if __name__ == "__main__":

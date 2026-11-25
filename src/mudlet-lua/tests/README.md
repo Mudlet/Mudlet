@@ -137,6 +137,10 @@ the others. The runner recognises them by a fixture's variable in their text
 `MUDLET_TEST_DISCORD_*`), so a new spec file that reads one is handled the same
 way. `--fixture-env K=V` sets a variable for those spec files alone.
 
+The runner stops before it starts anything when a `portable.txt` is in place
+beside the Mudlet executable or in `~/.config/mudlet`: Mudlet then keeps every
+profile in the folder that file names, so the processes would share one profile.
+
 `--logs` picks whose output is printed, each spec file's as soon as it has
 finished: `all`, `failed` or `none` (default: `all` on GitHub Actions, `failed`
 elsewhere). The slowest spec files, the failures with their reasons and the totals
