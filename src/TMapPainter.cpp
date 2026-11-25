@@ -1662,10 +1662,15 @@ QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint&
         return QPointF(center.x() + unit.x() * mRoomWidth / 2.0, center.y() + unit.y() * mRoomHeight / 2.0);
     };
 
-    // Shaped as it always was, into the reverse exit or else the first exit back: the pairs of wayBack() decide only
-    // which exits are one-way and which custom line stands in for a line
-    const QVarLengthArray<int, 8> exitsBack = exitsLeadingBack(room, exit.direction, destination);
-    const int backDirection = exitsBack.isEmpty() ? 0 : exitsBack.first();
+    // Into the exit back it pairs with, so that both lines of a pair take one path; an exit with no pair goes in as it
+    // always did, through the reverse exit or else the first exit back
+    const int backDirection = [&] {
+        if (const int paired = wayBack(room, exit)) {
+            return paired;
+        }
+        const QVarLengthArray<int, 8> exitsBack = exitsLeadingBack(room, exit.direction, destination);
+        return exitsBack.isEmpty() ? 0 : exitsBack.first();
+    }();
 
     // One end bending turns the line off the other end's axis too, so then both leave through their stubs
     if (liesAhead(room, exit.direction, destination) && (!backDirection || liesAhead(destination, backDirection, room))) {

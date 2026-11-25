@@ -488,6 +488,41 @@ private slots:
         QCOMPARE(TMapPainter::wayBack(*pWestRoom, north), DIR_SOUTH);
     }
 
+    // With several pairs between two rooms, each line goes in through the exit back it pairs with, so both lines of a
+    // pair take one path: the west room's exit east pairs with the east room's exit northwest, not its first exit back
+    void bothLinesOfAPairTakeOnePath()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        QVERIFY(map()->setExit(scmEastRoom, scmWestRoom, DIR_NORTHEAST));
+        QVERIFY(map()->setExit(scmEastRoom, scmWestRoom, DIR_NORTHWEST));
+        TMapPainter::View pathView = view();
+        pathView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(pathView);
+        TMapPainter::ExitToPaint east;
+        east.destination = pEastRoom;
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint northwest;
+        northwest.destination = pWestRoom;
+        northwest.destinationId = scmWestRoom;
+        northwest.direction = DIR_NORTHWEST;
+        QCOMPARE(TMapPainter::wayBack(*pWestRoom, east), DIR_NORTHWEST);
+        const QPointF westCentre = onImage(QPointF(0, 0));
+        const QPointF eastCentre = onImage(QPointF(2, 0));
+
+        const QVector<QPointF> eastPath = painter.exitLinePath(*pWestRoom, east, westCentre, eastCentre);
+        const QVector<QPointF> northwestPath = painter.exitLinePath(*pEastRoom, northwest, eastCentre, westCentre);
+
+        // Out of the west room's east stub and in through the east room's northwest stub, and the same path back
+        const QVector<QPointF> expected{westCentre, onImage(QPointF(0.5, 0)), onImage(QPointF(1.5, 0.5)), eastCentre};
+        QCOMPARE(eastPath, expected);
+        QCOMPARE(northwestPath, QVector<QPointF>(expected.crbegin(), expected.crend()));
+    }
+
     // The map and its exported image decide one-way alike: with the east room's one way back, west, paired with the
     // exit east, the exit north is one-way there too
     void anExitNoExitBackPairsWithIsOneWay()
