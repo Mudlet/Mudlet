@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "uiDesign.h"
+
 #include <QtCore/qnamespace.h>
 
 #include <algorithm>
@@ -43,8 +45,11 @@ inline constexpr qreal scmTreeChevronArm = 2.6;
 inline constexpr qreal scmTreeChevronPenWidth = 1.4;
 // Matches scmGlyphSize in SearchResultDelegate.cpp, the panel's other list
 inline constexpr int scmTreeMarkSize = 16;
+// The variables tree's kept mark at the dot's place is a form's check box. The sheet's size is the box inside its
+// hairline, and a style adds the hairline round that.
+inline constexpr int scmTreeKeptMarkSize = scmChoiceIndicatorSize + 2 * scmInputBorderWidth;
 // Left whether or not a row has a mark, so every row of a tree is one height
-inline constexpr int scmTreeSlotHeight = std::max({scmTreeMarkSize, scmTreeDotDiameter, scmTreeChevronBox});
+inline constexpr int scmTreeSlotHeight = std::max({scmTreeMarkSize, scmTreeDotDiameter, scmTreeKeptMarkSize, scmTreeChevronBox});
 inline constexpr int scmTreeFallbackIndentStep = 20;
 // The decoration key holds the depth, so a deep enough tree would otherwise grow the cache a level at a time
 inline constexpr int scmTreeDecorationCacheLimit = 256;

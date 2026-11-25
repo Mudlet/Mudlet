@@ -1562,25 +1562,72 @@ tree in both appearances and holds that red to `scmQuietMinimumRatio` against
 the surface the rows sit on.
 
 The seventh tree reads the same two slots differently, on the same row.
-`VariableTreeDelegate` draws a kept square where the dot stands: filled in the
-blue a running dot is filled in when the variable is saved with the profile,
-hollow when it is not, half when only some of a table is, and absent for a row
-the profile cannot keep - a function, a reference, a table past the size limit -
-which is written in `disabledText` with the reason as its tooltip. Beside it
-stands a mark for the value's type: `editor-variables.png` for a table (a table
-is braces everywhere, the sidebar included), `editor-type-string.png` (quote),
-`editor-type-number.png` (hash), `editor-type-boolean.png` (toggle),
-`editor-type-function.png` and `editor-type-other.png` (box). After the name -
+`VariableTreeDelegate` draws a check box where the dot stands, for whether the
+variable is kept - saved with the profile: ticked when it is, the dash when only
+some of a table is, empty when it is not, and absent for a row the profile
+cannot keep - a function, a reference, a table past the size limit - which
+keeps the box's room and is written in `disabledText` with the reason as its
+tooltip. It is the forms' own check box rather than a drawing of one: the
+tree's sheet carries `itemCheckMarkStyleSheet()`, and the delegate has the
+tree's style paint that `::indicator` rule into the row's decoration
+(`PE_IndicatorItemViewItemCheck`), so its size, corner, fill, hairline, tick and
+dash are the ones `choiceStyleSheet()` gives a check box on a form, in both
+appearances. A chosen row carries the same box, as a ticked row in the package
+exporter's tree does, since the rule has no look of its own for a chosen row.
+It is a check box and not a dot because the dot in the other six trees means
+"on", and a variable is not on or off but kept with the profile or not; a box
+holding a tick, a dash or nothing is the three-way reading every reader already
+knows, and the Variables tree used a check box for this before the redesign. The
+box is 15px, `scmTreeKeptMarkSize`: the sheet's `scmChoiceIndicatorSize` is the
+13px inside the hairline, and a style adds the hairline round it, so a form's
+box measures 15px on screen too. Against the dot's 9px, the slot takes that size
+from `dotSlotSize()`, so a variable's name starts 6px further along than an
+item's name does in the other six trees. Beside the check box stands a mark for
+the value's type: `editor-variables.svg` for a table (a table
+is braces everywhere, the sidebar included), `editor-type-string.svg` (quote),
+`editor-type-number.svg` (hash), `editor-type-boolean.svg` (toggle),
+`editor-type-function.svg` and `editor-type-other.svg` (box). After the name -
 an index key is drawn as `[n]` - comes `editor-hidden.png` on a row that is
 hidden while hidden variables are shown, and at the trailing edge as much of the
 value as the panel leaves room for, in `chipFont()`: the string in quotes, the
 number, `true` or `false`, `{ n keys }` or `{ n items }`. Everything a row is
 drawn from is written into the row's data roles when it is built or written back
 (`setVariableRowData()`, `refreshVariableRow()`), so painting never reaches into
-Lua or counts a table. A click on the square asks the editor for the toggle
+Lua or counts a table. A click on the check box asks the editor for the toggle
 (`slot_toggleVariableKept()`), which is where the rule about which members of a
-table may be kept lives. The switch under the tree says how many globals it
-holds back (`editorHiddenVariablesCount`).
+table may be kept lives; a click on the name only chooses the row. The switch
+over the tree, "Show hidden variables", carries the same check box -
+`choiceStyleSheet()` set on the switch alone, as it sits in none of the forms
+the editor sets those rules on - and says how many globals it holds back
+(`editorHiddenVariablesCount`).
+
+Under it, on a row of its own, stands "Show functions" (`editorShowFunctions`),
+with the same box from the same rule, the same leading edge and the same
+keyboard-only focus. Two rows rather than one because the pane is narrow: both
+switches' words and the count on one line would be cut short in a longer
+language. The two rows are the lines of one block, `scmEditorRowControlGap`
+(8px) apart as the wrapped lines of a form's option row are, and the block
+stands `scmEditorColumnSpacing` (12px) off the search field above it and the
+tree under it, as a column's blocks stand off each other, so the pair reads as
+one group rather than as the foot of the search field or the head of the tree.
+Part of each of those gaps is already there - the search row's own margin, the
+pane's spacing and the margin the style leaves over the trees - so
+`fitVariableSwitchGaps()` takes those again on a change of view or style, and
+sets no gap at all while the switches are hidden, since a layout whose rows
+are all hidden still takes the height of its margins. The switch starts on, so
+nothing changes for a player who never touches it.
+Off, a variable holding a Lua function gets no row at any depth - a table's
+member as well as a global - and the search does not find it, which is how the
+hidden switch treats a hidden variable. Like that switch it is a member of the
+editor (`mShowFunctionVariables` beside `showHiddenVars`), kept while the
+profile is open and saved nowhere, and the count beside "Show hidden variables"
+still counts hidden globals only. A row left out changes what its table's box
+reads, not what the profile keeps: Qt works a table's box out from its members'
+rows (`Qt::ItemIsAutoTristate`), and a function's row is never left ticked, so a
+table whose other members are all kept shows the dash while its functions are
+listed and the tick while they are not. What is written into the profile comes
+from `VarUnit::savedVars`, which neither switch touches; a click on a box or a
+row acts on what that box shows.
 
 ## 3. Naming
 
@@ -1896,6 +1943,7 @@ The editor's forms add these, which its tests reach it by:
 | `editorSoundFile` | The read-only field that names a trigger's sound file and opens the chooser |
 | `editorVariableTypes` | The row holding a variable's key and value pickers |
 | `editorHiddenVariablesCount` | The count beside the "Show hidden variables" switch |
+| `editorShowFunctions` | The "Show functions" switch, on the row under "Show hidden variables" |
 | `editorCodeHeaderTitle` | The word on the code pane's heading: "Lua script", or "Value" in the variables view |
 | `editorNotice*` glyph files | The banner's three pictures |
 

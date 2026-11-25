@@ -19,21 +19,27 @@
 
 /*
  * Guards VariableTreeDelegate: the variables tree keeps the six item trees' row
- * grammar, and its kept square, type mark and value preview behave.
+ * grammar, and its kept check box, type mark and value preview behave. Also the
+ * two switches over the tree, the one for functions among them.
  *
  * Run with: ctest -R EditorVariablesTreeTest -V
  */
 
+#include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QIcon>
 #include <QImage>
 #include <QLabel>
+#include <QPainter>
 #include <QPalette>
 #include <QPixmap>
 #include <QScopeGuard>
+#include <QStyleOptionButton>
 #include <QStyleOptionViewItem>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
+#include <algorithm>
 
 #include "EditorTreeRowMetrics.h"
 #include "Host.h"
@@ -41,6 +47,7 @@
 #include "LuaInterface.h"
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
+#include "SearchResultDelegate.h"
 #include "TLuaInterpreter.h"
 #include "TTreeWidget.h"
 #include "TVar.h"
@@ -83,6 +90,14 @@ private:
     // Antialiasing blends a stroke's edge into the background; only its middle
     // lands on the colour itself
     static constexpr int scmInkTolerance = 24;
+    // Per channel: an antialiased edge drawn onto nothing and then laid over the row rounds a step or two
+    // away from the same edge drawn straight onto the row
+    static constexpr int scmBoxMatchTolerance = 6;
+    // Tick, dash and empty box have to differ by far more than that rounding
+    static constexpr int scmBoxStatesApart = 40;
+    // Between the wrapped lines of an option row on the editor's forms and the stacked check boxes on a settings card;
+    // written out for the same reason as the mark's size
+    static constexpr int scmStackedChoiceGap = 8;
 
     uiDesign::VariableTreeDelegate* delegate() const { return mpEditor->mpVariableTreeDelegate; }
 
@@ -143,6 +158,143 @@ private:
     }
 
     QString previewOf(QTreeWidgetItem* pItem) const { return pItem ? pItem->data(0, uiDesign::scmRole_variablePreview).toString() : QString(); }
+
+    QRect switchBoxInWindow(QCheckBox* pSwitch) const
+    {
+        pSwitch->ensurePolished();
+        QStyleOptionButton option;
+        option.initFrom(pSwitch);
+        const QRect indicator = pSwitch->style()->subElementRect(QStyle::SE_CheckBoxIndicator, &option, pSwitch);
+        return QRect(pSwitch->mapTo(mpEditor, indicator.topLeft()), indicator.size());
+    }
+
+    static QRect inDevicePixels(const QRect& logical, const QImage& shot)
+    {
+        const qreal ratio = shot.devicePixelRatio();
+        return QRect(QPoint(qRound(logical.left() * ratio), qRound(logical.top() * ratio)), QPoint(qRound((logical.right() + 1) * ratio) - 1, qRound((logical.bottom() + 1) * ratio) - 1))
+                .intersected(shot.rect());
+    }
+
+    // A real check box on a form, choiceStyleSheet() and all, rendered onto the surface the mark under test sits
+    // on and cut down to its indicator
+    static QImage formCheckBoxIndicator(const Qt::CheckState state, const QColor& surface, const qreal ratio, const bool onAChosenRow = false)
+    {
+        QCheckBox box;
+        box.setStyleSheet(uiDesign::choiceStyleSheet(uiDesign::themeTokens()));
+        box.setTristate(true);
+        box.setCheckState(state);
+        box.ensurePolished();
+        box.resize(box.sizeHint());
+        QStyleOptionButton option;
+        option.initFrom(&box);
+        const QRect indicator = box.style()->subElementRect(QStyle::SE_CheckBoxIndicator, &option, &box);
+
+        QImage rendered(box.size() * ratio, QImage::Format_ARGB32_Premultiplied);
+        rendered.setDevicePixelRatio(ratio);
+        rendered.fill(onAChosenRow ? QColor(Qt::transparent) : surface);
+        box.render(&rendered, QPoint(), QRegion(), QWidget::DrawChildren);
+        QImage cut = rendered.copy(inDevicePixels(indicator, rendered));
+        cut.setDevicePixelRatio(ratio);
+        if (!onAChosenRow) {
+            return cut;
+        }
+
+        // A row's decoration carries no Selected picture of its own, so a chosen row's every mark is drawn
+        // through the tint QIcon has the application style generate for one
+        QStyleOption tintOption;
+        tintOption.palette = QGuiApplication::palette();
+        const QPixmap tinted = QApplication::style()->generatedIconPixmap(QIcon::Selected, QPixmap::fromImage(cut), &tintOption);
+        QImage onTheRow(cut.size(), QImage::Format_ARGB32);
+        onTheRow.setDevicePixelRatio(ratio);
+        onTheRow.fill(surface);
+        QPainter painter(&onTheRow);
+        painter.drawImage(QPoint(0, 0), tinted.toImage());
+        painter.end();
+        return onTheRow;
+    }
+
+    // The largest difference in any channel at whichever place inside searched, in the grab's pixels, the
+    // two agree best: the slack round a mark covers where a half pixel of centring rounds to
+    static int worstDifferenceAtTheBestFit(const QImage& shot, const QRect& searched, const QImage& wanted)
+    {
+        int best = 255;
+        for (int top = searched.top(); top + wanted.height() <= searched.bottom() + 1; ++top) {
+            for (int left = searched.left(); left + wanted.width() <= searched.right() + 1; ++left) {
+                int worst = 0;
+                for (int y = 0; y < wanted.height() && worst < best; ++y) {
+                    for (int x = 0; x < wanted.width() && worst < best; ++x) {
+                        const QColor read = shot.pixelColor(left + x, top + y);
+                        const QColor drawn = wanted.pixelColor(x, y);
+                        worst = std::max({worst, std::abs(read.red() - drawn.red()), std::abs(read.green() - drawn.green()), std::abs(read.blue() - drawn.blue())});
+                    }
+                }
+                best = std::min(best, worst);
+            }
+        }
+        return best;
+    }
+
+    // Guards the comparison itself: a reference the platform drew would match a tree the platform drew
+    static QStringList notTheDesignsBox(const QImage& empty, const QImage& ticked, const QColor& surface)
+    {
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        QStringList misses;
+        const QColor centre = empty.pixelColor(empty.width() / 2, empty.height() / 2);
+        if (!TestPixels::readsAs(centre, tokens.field, 2)) {
+            misses << qsl("the reference box is filled %1 rather than the field tone %2").arg(centre.name(), tokens.field.name());
+        }
+        const QColor tickedEdge = ticked.pixelColor(ticked.width() / 2, 0);
+        if (!TestPixels::readsAs(tickedEdge, tokens.accent, 8)) {
+            misses << qsl("a ticked reference box is outlined %1 rather than in the accent %2").arg(tickedEdge.name(), tokens.accent.name());
+        }
+        const QColor corner = empty.pixelColor(0, 0);
+        const QColor edge = empty.pixelColor(empty.width() / 2, 0);
+        if (TestPixels::distance(corner, surface) >= TestPixels::distance(edge, surface)) {
+            misses << qsl("the reference box's corner %1 is drawn as fully as its edge %2, so it is not rounded").arg(corner.name(), edge.name());
+        }
+        return misses;
+    }
+
+    // Every row under the heading by its dotted path, and the ones standing for a function among them
+    static void collectRows(QTreeWidgetItem* pParent, const QString& prefix, QStringList& paths, QStringList& functions)
+    {
+        for (int i = 0; pParent && i < pParent->childCount(); ++i) {
+            QTreeWidgetItem* pRow = pParent->child(i);
+            const QString path = prefix.isEmpty() ? pRow->text(0) : qsl("%1.%2").arg(prefix, pRow->text(0));
+            paths << path;
+            if (pRow->data(0, Qt::UserRole).toInt() == LUA_TFUNCTION) {
+                functions << path;
+            }
+            collectRows(pRow, path, paths, functions);
+        }
+    }
+
+    // The heading of each item the search found, which for a variable is the expression that reaches it
+    QStringList searchResultTitles(const QString& term)
+    {
+        QComboBox* pTerms = mpEditor->comboBox_searchTerms;
+        pTerms->clear();
+        pTerms->addItem(term);
+        mpEditor->slot_searchMudletItems(0);
+        QCoreApplication::processEvents();
+        QStringList titles;
+        const QTreeWidget* pResults = mpEditor->treeWidget_searchResults;
+        for (int i = 0; i < pResults->topLevelItemCount(); ++i) {
+            titles << pResults->topLevelItem(i)->data(0, uiDesign::SearchResultDelegate::TitleRole).toString();
+        }
+        return titles;
+    }
+
+    static QStringList mentioning(const QStringList& titles, const QString& name)
+    {
+        QStringList found;
+        for (const QString& title : titles) {
+            if (title.contains(name)) {
+                found << title;
+            }
+        }
+        return found;
+    }
 
     // Mirrors updateHiddenVariablesCount(), so a case knows the expected count
     // without reading the label it checks
@@ -217,6 +369,18 @@ private slots:
         mSession.stop();
     }
 
+    // First of the cases: a change of appearance restyles both switches, which would cover for one the editor opened
+    // without its rules
+    void test_theFunctionsSwitchOpensWithTheHiddenSwitchsRules()
+    {
+        QCheckBox* pHiddenSwitch = mpEditor->checkBox_displayAllVariables;
+        QCheckBox* pFunctionsSwitch = mpEditor->mpCheckBox_showFunctionVariables;
+        QVERIFY2(pFunctionsSwitch != nullptr, "the Variables view has no switch for functions");
+        QVERIFY2(!pHiddenSwitch->styleSheet().isEmpty(), "the switch for hidden variables opens with no rules of its own, so this case says nothing");
+        QVERIFY2(pFunctionsSwitch->styleSheet() == pHiddenSwitch->styleSheet(), "the switch for functions opens without the check box rules the switch above it carries");
+        QCOMPARE(pFunctionsSwitch->focusPolicy(), pHiddenSwitch->focusPolicy());
+    }
+
     void test_everyRowIsTheHeightAnItemTreesRowIs()
     {
         QVERIFY2(qobject_cast<uiDesign::VariableTreeDelegate*>(mpVariablesTree->itemDelegateForIndex(QModelIndex())) != nullptr,
@@ -250,28 +414,28 @@ private slots:
         QVERIFY2(uneven.isEmpty(), qPrintable(qsl("the variables tree is not on the item trees' row grammar: %1").arg(uneven.join(qsl("; ")))));
     }
 
-    void test_clickingTheKeptSquareKeepsTheVariable()
+    void test_clickingTheKeptBoxKeepsTheVariable()
     {
         openTheVariablesView();
         QTreeWidgetItem* pString = variableRow(qsl("myString"));
         QVERIFY(pString);
 
-        const QRect square = keptRectOf(pString);
-        QVERIFY2(!square.isEmpty(), "a variable's row reports no square to click");
+        const QRect box = keptRectOf(pString);
+        QVERIFY2(!box.isEmpty(), "a variable's row reports no box to click");
 
-        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, square.center());
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, box.center());
         QCoreApplication::processEvents();
         QCOMPARE(pString->checkState(0), Qt::Checked);
-        QVERIFY2(varUnit()->savedVars.contains(qsl("myString")), "clicking the square did not put the variable among the ones the profile keeps");
+        QVERIFY2(varUnit()->savedVars.contains(qsl("myString")), "clicking the box did not put the variable among the ones the profile keeps");
 
         QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pString).center());
         QCoreApplication::processEvents();
         QCOMPARE(pString->checkState(0), Qt::Unchecked);
-        QVERIFY2(!varUnit()->savedVars.contains(qsl("myString")), "clicking the square a second time did not stop the profile keeping the variable");
+        QVERIFY2(!varUnit()->savedVars.contains(qsl("myString")), "clicking the box a second time did not stop the profile keeping the variable");
 
         const QRect row = mpVariablesTree->visualItemRect(pString);
         const QPoint onTheName(row.right() - 8, row.center().y());
-        QVERIFY2(!keptRectOf(pString).contains(onTheName), "the point this case clicks has to be clear of the square");
+        QVERIFY2(!keptRectOf(pString).contains(onTheName), "the point this case clicks has to be clear of the box");
         QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, onTheName);
         QCoreApplication::processEvents();
         QCOMPARE(mpVariablesTree->currentItem(), pString);
@@ -279,7 +443,7 @@ private slots:
     }
 
     // Qt's tristate cascade ticks every member, and each tick is what enrols it
-    void test_clickingATablesSquareKeepsItsMembers()
+    void test_clickingATablesBoxKeepsItsMembers()
     {
         openTheVariablesView();
         QTreeWidgetItem* pTable = variableRow(qsl("myNested"));
@@ -302,26 +466,227 @@ private slots:
     }
 
     // The profile cannot save a Lua function
-    void test_aFunctionsRowHasNoSquareToClick()
+    void test_aFunctionsRowHasNoBoxToClick()
     {
         openTheVariablesView();
         QTreeWidgetItem* pFunction = variableRow(qsl("myFunction"));
         QTreeWidgetItem* pString = variableRow(qsl("myString"));
         QVERIFY(pFunction && pString);
 
-        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pFunction)), indexOf(pFunction)).isNull(), "a variable the profile cannot keep still reports a square to click");
+        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pFunction)), indexOf(pFunction)).isNull(), "a variable the profile cannot keep still reports a box to click");
 
-        const QRect square = keptRectOf(pString);
+        const QRect box = keptRectOf(pString);
         mpVariablesTree->scrollToItem(pFunction);
         QCoreApplication::processEvents();
         const QRect row = mpVariablesTree->visualItemRect(pFunction);
-        const QPoint whereTheSquareWouldBe(square.center().x(), row.center().y());
+        const QPoint whereTheBoxWouldBe(box.center().x(), row.center().y());
 
-        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, whereTheSquareWouldBe);
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, whereTheBoxWouldBe);
         QCoreApplication::processEvents();
 
         QCOMPARE(pFunction->checkState(0), Qt::Unchecked);
-        QVERIFY2(!varUnit()->savedVars.contains(qsl("myFunction")), "a click where the square would be enrolled a variable the profile cannot keep");
+        QVERIFY2(!varUnit()->savedVars.contains(qsl("myFunction")), "a click where the box would be enrolled a variable the profile cannot keep");
+    }
+
+    // A dot or a square in the running dot's blue read as a switch left behind in a tree that has none
+    void test_eachKeptStateIsTheFormsCheckBox()
+    {
+        openTheVariablesView();
+        QTreeWidgetItem* pString = variableRow(qsl("myString"));
+        QTreeWidgetItem* pNumber = variableRow(qsl("myNumber"));
+        QTreeWidgetItem* pKeyed = variableRow(qsl("myKeyed"));
+        QTreeWidgetItem* pAlpha = memberRow(pKeyed, qsl("alpha"));
+        QVERIFY(pString && pNumber && pKeyed && pAlpha);
+
+        const auto appearanceBefore = mudlet::self()->mAppearance;
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pString).center());
+        QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pAlpha).center());
+        QCoreApplication::processEvents();
+        // Put back, so the cases after this one start where this one did
+        const auto restore = qScopeGuard([this, appearanceBefore, pString, pAlpha]() {
+            mudlet::self()->setAppearance(appearanceBefore);
+            for (QTreeWidgetItem* pRow : {pString, pAlpha}) {
+                if (pRow->checkState(0) == Qt::Checked) {
+                    QTest::mouseClick(viewport(), Qt::LeftButton, Qt::NoModifier, keptRectOf(pRow).center());
+                }
+            }
+            QCoreApplication::processEvents();
+        });
+        QCOMPARE(pString->checkState(0), Qt::Checked);
+        QCOMPARE(pNumber->checkState(0), Qt::Unchecked);
+        QCOMPARE(pKeyed->checkState(0), Qt::PartiallyChecked);
+
+        struct Mark
+        {
+            QString name;
+            QTreeWidgetItem* pRow = nullptr;
+            Qt::CheckState state = Qt::Unchecked;
+            bool chosen = false;
+        };
+        // The chosen row last, since choosing it moves the selection's wash onto it
+        const QList<Mark> marks{{qsl("kept"), pString, Qt::Checked, false},
+                                {qsl("part kept"), pKeyed, Qt::PartiallyChecked, false},
+                                {qsl("not kept"), pNumber, Qt::Unchecked, false},
+                                {qsl("kept on the chosen row"), pString, Qt::Checked, true}};
+
+        QStringList misses;
+        QStringList measured;
+        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
+            TestPixels::setAppearanceAndWait(appearance.second, mpEditor);
+            // Otherwise a run that never switched would measure one appearance twice and pass
+            QCOMPARE(uiDesign::themeTokens().darkPage, appearance.second == enums::Appearance::dark);
+            mpVariablesTree->setCurrentItem(headingRow());
+            QCoreApplication::processEvents();
+
+            for (const Mark& mark : marks) {
+                if (mark.chosen) {
+                    mpVariablesTree->setCurrentItem(mark.pRow);
+                    QCoreApplication::processEvents();
+                }
+                const QRect hit = keptRectOf(mark.pRow);
+                QVERIFY2(!hit.isEmpty(), qPrintable(qsl("%1: the %2 row reports no box").arg(appearance.first, mark.name)));
+                const QImage shot = TestPixels::shot(viewport());
+                // Just before the box is the row's own surface: a table's chevron stands a step further out
+                const QColor surface = TestPixels::sampled(shot, QPoint(hit.left(), hit.center().y()));
+                const QImage wanted = formCheckBoxIndicator(mark.state, surface, shot.devicePixelRatio(), mark.chosen);
+                const int worst = worstDifferenceAtTheBestFit(shot, inDevicePixels(hit, shot), wanted);
+                measured << qsl("%1 %2 on %3: %4 apart at the best fit").arg(appearance.first, mark.name, surface.name(), QString::number(worst));
+                if (worst > scmBoxMatchTolerance) {
+                    misses << qsl("%1: the %2 row's mark is %3 apart in some channel from a form's %4px check box in that state")
+                                      .arg(appearance.first, mark.name, QString::number(worst), QString::number(qRound(wanted.width() / wanted.devicePixelRatio())));
+                }
+            }
+
+            const QColor pane = uiDesign::themeTokens().pane;
+            const QImage empty = formCheckBoxIndicator(Qt::Unchecked, pane, 1.0);
+            const QImage dashed = formCheckBoxIndicator(Qt::PartiallyChecked, pane, 1.0);
+            const QImage ticked = formCheckBoxIndicator(Qt::Checked, pane, 1.0);
+            for (const QString& miss : notTheDesignsBox(empty, ticked, pane)) {
+                misses << qsl("%1: %2").arg(appearance.first, miss);
+            }
+            const int emptyFromDashed = worstDifferenceAtTheBestFit(empty, empty.rect(), dashed);
+            const int dashedFromTicked = worstDifferenceAtTheBestFit(dashed, dashed.rect(), ticked);
+            const int emptyFromTicked = worstDifferenceAtTheBestFit(empty, empty.rect(), ticked);
+            if (std::min({emptyFromDashed, dashedFromTicked, emptyFromTicked}) <= scmBoxStatesApart) {
+                misses << qsl("%1: the three states are not told apart: empty and dash %2 apart, dash and tick %3, empty and tick %4")
+                                  .arg(appearance.first, QString::number(emptyFromDashed), QString::number(dashedFromTicked), QString::number(emptyFromTicked));
+            }
+        }
+        qInfo().noquote() << qsl("  %1").arg(measured.join(qsl("\n  ")));
+        QVERIFY2(misses.isEmpty(), qPrintable(qsl("\n  %1").arg(misses.join(qsl("\n  ")))));
+    }
+
+    // Platform drawn, the switch's box was square and unlike every other box in the window
+    void test_bothSwitchesCarryTheFormsCheckBox()
+    {
+        openTheVariablesView();
+        QCheckBox* pHiddenSwitch = mpEditor->checkBox_displayAllVariables;
+        QCheckBox* pFunctionsSwitch = mpEditor->mpCheckBox_showFunctionVariables;
+        QCheckBox* pFormBox = mpEditor->mpVarsMainArea->checkBox_variable_hidden;
+        QVERIFY2(pHiddenSwitch->isVisible(), "the Variables view is not offering the switch that shows hidden variables");
+        QVERIFY2(pFunctionsSwitch && pFunctionsSwitch->isVisible(), "the Variables view is not offering the switch that shows functions");
+        const QList<QPair<QString, QCheckBox*>> switches{{qsl("hidden variables"), pHiddenSwitch}, {qsl("functions"), pFunctionsSwitch}};
+        QCOMPARE(pFunctionsSwitch->mapTo(mpEditor, QPoint()).x(), pHiddenSwitch->mapTo(mpEditor, QPoint()).x());
+        QVERIFY2(pFunctionsSwitch->mapTo(mpEditor, QPoint()).y() > pHiddenSwitch->mapTo(mpEditor, QPoint()).y(), "the switch for functions is not on a row under the one for hidden variables");
+        QCOMPARE(pFunctionsSwitch->focusPolicy(), pHiddenSwitch->focusPolicy());
+        const auto appearanceBefore = mudlet::self()->mAppearance;
+        const auto restore = qScopeGuard([appearanceBefore]() {
+            mudlet::self()->setAppearance(appearanceBefore);
+            QCoreApplication::processEvents();
+        });
+
+        const auto indicatorAndGap = [](QCheckBox* pBox) {
+            pBox->ensurePolished();
+            QStyleOptionButton option;
+            option.initFrom(pBox);
+            const QRect indicator = pBox->style()->subElementRect(QStyle::SE_CheckBoxIndicator, &option, pBox);
+            const QRect contents = pBox->style()->subElementRect(QStyle::SE_CheckBoxContents, &option, pBox);
+            return qMakePair(indicator, contents.left() - indicator.right() - 1);
+        };
+
+        QStringList misses;
+        QStringList measured;
+        for (const auto& appearance : QList<QPair<QString, enums::Appearance>>{{qsl("dark"), enums::Appearance::dark}, {qsl("light"), enums::Appearance::light}}) {
+            TestPixels::setAppearanceAndWait(appearance.second, mpEditor);
+            QCOMPARE(uiDesign::themeTokens().darkPage, appearance.second == enums::Appearance::dark);
+
+            for (const auto& [name, pSwitch] : switches) {
+                const QString which = qsl("%1, the %2 switch").arg(appearance.first, name);
+                const auto [indicator, gap] = indicatorAndGap(pSwitch);
+                const auto [formIndicator, formGap] = indicatorAndGap(pFormBox);
+                const QImage shot = TestPixels::shot(mpEditor);
+                const QRect inWindow(pSwitch->mapTo(mpEditor, indicator.topLeft()), indicator.size());
+                const QColor surface = TestPixels::sampled(shot, QPoint(inWindow.left() - 2, inWindow.center().y()));
+                const QImage wanted = formCheckBoxIndicator(pSwitch->checkState(), surface, shot.devicePixelRatio());
+                const int slack = uiDesign::scmTreeMarkHitSlack;
+                const int worst = worstDifferenceAtTheBestFit(shot, inDevicePixels(inWindow.adjusted(-slack, -slack, slack, slack), shot), wanted);
+                const QColor ink = pSwitch->palette().color(QPalette::Active, pSwitch->foregroundRole());
+                const QColor formInk = pFormBox->palette().color(QPalette::Active, pFormBox->foregroundRole());
+                measured << qsl("%1: a %2x%3 box on %4, %5 apart from a form's at the best fit, its words %6px after it in %7; a form's %8px after it in %9")
+                                    .arg(which, QString::number(indicator.width()), QString::number(indicator.height()), surface.name(), QString::number(worst))
+                                    .arg(QString::number(gap), ink.name(), QString::number(formGap), formInk.name());
+
+                if (indicator.size() != formIndicator.size()) {
+                    misses << qsl("%1: the switch's box is %2x%3 where a form's is %4x%5")
+                                      .arg(which)
+                                      .arg(indicator.width())
+                                      .arg(indicator.height())
+                                      .arg(formIndicator.width())
+                                      .arg(formIndicator.height());
+                }
+                if (worst > scmBoxMatchTolerance) {
+                    misses << qsl("%1: the switch's box is %2 apart in some channel from a form's check box").arg(which, QString::number(worst));
+                }
+                if (gap != formGap) {
+                    misses << qsl("%1: the switch's words stand %2px after its box where a form's stand %3px after theirs").arg(which, QString::number(gap), QString::number(formGap));
+                }
+                if (ink != formInk) {
+                    misses << qsl("%1: the switch's words are %2 where a form's check box's are %3").arg(which, ink.name(), formInk.name());
+                }
+            }
+        }
+        qInfo().noquote() << qsl("  %1").arg(measured.join(qsl("\n  ")));
+        QVERIFY2(misses.isEmpty(), qPrintable(qsl("\n  %1").arg(misses.join(qsl("\n  ")))));
+    }
+
+    // Touching, the two boxes read as one control; and nearer the search field than the tree, or the other way round,
+    // the pair reads as belonging to one of them
+    void test_theSwitchesStandApartAsOneBlock()
+    {
+        openTheVariablesView();
+        QCheckBox* pHiddenSwitch = mpEditor->checkBox_displayAllVariables;
+        QCheckBox* pFunctionsSwitch = mpEditor->mpCheckBox_showFunctionVariables;
+        QVERIFY2(pHiddenSwitch->isVisible() && pFunctionsSwitch && pFunctionsSwitch->isVisible(), "the Variables view is not offering both switches");
+
+        QWidget* pField = mpEditor->comboBox_searchTerms;
+        const int fieldBottom = pField->mapTo(mpEditor, QPoint(0, pField->height() - 1)).y();
+        const QRect upper = switchBoxInWindow(pHiddenSwitch);
+        const QRect lower = switchBoxInWindow(pFunctionsSwitch);
+        // The tree draws no frame, so the first thing on show in it is its first row, at the top of the viewport
+        const int treeTop = viewport()->mapTo(mpEditor, QPoint()).y();
+        const int aboveTheBlock = upper.top() - fieldBottom - 1;
+        const int inTheBlock = lower.top() - upper.bottom() - 1;
+        const int underTheBlock = treeTop - lower.bottom() - 1;
+        qInfo().noquote() << qsl("  search field to the first box %1px, box to box %2px, second box to the tree %3px")
+                                     .arg(QString::number(aboveTheBlock), QString::number(inTheBlock), QString::number(underTheBlock));
+
+        QVERIFY2(inTheBlock >= scmStackedChoiceGap,
+                 qPrintable(qsl("the two switches' boxes stand %1px apart where stacked check boxes stand at least %2px").arg(QString::number(inTheBlock), QString::number(scmStackedChoiceGap))));
+        // A pixel either way: a box is centred in a switch that its words can make taller than the box
+        QVERIFY2(std::abs(aboveTheBlock - underTheBlock) <= 1,
+                 qPrintable(qsl("the switches stand %1px under the search field but %2px over the tree").arg(QString::number(aboveTheBlock), QString::number(underTheBlock))));
+        QVERIFY2(std::min(aboveTheBlock, underTheBlock) > inTheBlock,
+                 qPrintable(qsl("the switches stand %1px from each other and no further from what is round them, so they do not read as one block").arg(QString::number(inTheBlock))));
+
+        // The gaps belong to the switches: hidden, they must not push the other views' trees down
+        const auto backToVariables = qScopeGuard([this]() {
+            openTheVariablesView();
+        });
+        mpEditor->slot_showTriggers();
+        QCoreApplication::processEvents();
+        QVERIFY2(!pHiddenSwitch->isVisible() && !pFunctionsSwitch->isVisible(), "the switches are still showing outside the Variables view");
+        QVERIFY2(mpEditor->mpLayout_variableSwitches->geometry().height() == 0,
+                 qPrintable(qsl("outside the Variables view the hidden switches still take %1px over the tree").arg(QString::number(mpEditor->mpLayout_variableSwitches->geometry().height()))));
     }
 
     void test_theTrailingEdgeSaysWhatTheValueIs()
@@ -516,7 +881,7 @@ private slots:
     }
 
     // Grayscale icons, as in colour the braces take the old picture's colour rather than the chrome's tone
-    void test_theHeadingRowCarriesTheBracesAndNoSquare()
+    void test_theHeadingRowCarriesTheBracesAndNoBox()
     {
         mudlet::self()->setColouredIcons(false);
         const auto restore = qScopeGuard([]() {
@@ -527,7 +892,7 @@ private slots:
         QVERIFY(pHeading);
         QCOMPARE(pHeading->text(0), qsl("Variables"));
 
-        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pHeading)), indexOf(pHeading)).isNull(), "the tree's own heading row reports a square the profile could keep it by");
+        QVERIFY2(delegate()->dotHitRect(delegate()->rowOption(indexOf(pHeading)), indexOf(pHeading)).isNull(), "the tree's own heading row reports a box the profile could keep it by");
         QVERIFY2(delegate()->typeGlyphFile(indexOf(pHeading)).isEmpty(), "the tree's own heading row is marked as though it held a Lua value");
 
         // Read from initStyleOption() rather than the item: the heading is the
@@ -544,6 +909,94 @@ private slots:
         const QImage wanted = TestPixels::drawnAt(QIcon(uiDesign::tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/editor-variables.svg")), tokens.mutedText)), scmMarkSize);
         QVERIFY2(!onTheHeading.isNull(), "the tree's heading row carries no picture at all");
         QVERIFY2(onTheHeading == wanted, "the tree's heading row does not carry the braces its sidebar row carries, inked in the tone the editor's chrome is");
+    }
+
+    // A function as a global and as a table's member, since a walk of the globals alone would pass a filter that
+    // skips only globals
+    void test_theFunctionsSwitchLeavesFunctionsOutAtEveryDepth()
+    {
+        QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("qaToolbox = { qaToolboxRun = function() return 2 end, qaToolboxLabel = \"tools\" }\n"
+                                                                     "qaToolboxCall = function() return 3 end\n")),
+                 "the variables this case reads could not be made");
+        QCheckBox* pSwitch = mpEditor->mpCheckBox_showFunctionVariables;
+        QVERIFY2(pSwitch != nullptr, "the Variables view has no switch for functions");
+        const auto restore = qScopeGuard([this, pSwitch]() {
+            pSwitch->setChecked(true);
+            mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("qaToolbox = nil\nqaToolboxCall = nil\n"));
+            openTheVariablesView();
+        });
+        openTheVariablesView();
+        QVERIFY2(pSwitch->isVisible(), "the Variables view is not offering the switch for functions");
+        QVERIFY2(pSwitch->isChecked(), "functions are left out of the Variables view before anybody asked for that");
+
+        QStringList everyRow;
+        QStringList functionRows;
+        collectRows(headingRow(), QString(), everyRow, functionRows);
+        for (const QString& function : {qsl("myFunction"), qsl("qaToolboxCall"), qsl("qaToolbox.qaToolboxRun")}) {
+            QVERIFY2(functionRows.contains(function), qPrintable(qsl("%1 is not listed as a function with the switch on, so this case says nothing about it").arg(function)));
+        }
+        const QSet<QString> keptBefore = varUnit()->savedVars;
+
+        pSwitch->setChecked(false);
+        QCoreApplication::processEvents();
+        QStringList rowsWithout;
+        QStringList functionsWithout;
+        collectRows(headingRow(), QString(), rowsWithout, functionsWithout);
+        qInfo().noquote() << qsl("  %1 rows with functions shown, %2 of them functions; %3 rows without")
+                                     .arg(QString::number(everyRow.size()), QString::number(functionRows.size()), QString::number(rowsWithout.size()));
+        QVERIFY2(functionsWithout.isEmpty(), qPrintable(qsl("with the switch off these functions are still listed: %1").arg(functionsWithout.join(qsl(", ")))));
+        QStringList expected = everyRow;
+        for (const QString& function : std::as_const(functionRows)) {
+            expected.removeAll(function);
+        }
+        QCOMPARE(rowsWithout, expected);
+        QVERIFY2(varUnit()->savedVars == keptBefore, "leaving the functions out changed what the profile keeps");
+        QCOMPARE(mpVariablesTree->currentItem(), headingRow());
+
+        pSwitch->setChecked(true);
+        QCoreApplication::processEvents();
+        QStringList rowsAgain;
+        QStringList functionsAgain;
+        collectRows(headingRow(), QString(), rowsAgain, functionsAgain);
+        QCOMPARE(rowsAgain, everyRow);
+        QVERIFY2(varUnit()->savedVars == keptBefore, "listing the functions again changed what the profile keeps");
+
+        mpEditor->slot_showTriggers();
+        QCoreApplication::processEvents();
+        QVERIFY2(!pSwitch->isVisible(), "the switch for functions is still showing outside the Variables view");
+    }
+
+    // The search walks Lua's tree, not the rows, so it leaves functions out by a test of its own
+    void test_theSearchLeavesFunctionsOutWhileTheSwitchIsOff()
+    {
+        QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("qaToolbox = { qaToolboxRun = function() return 2 end, qaToolboxLabel = \"tools\" }\n"
+                                                                     "qaToolboxCall = function() return 3 end\n")),
+                 "the variables this case searches for could not be made");
+        QCheckBox* pSwitch = mpEditor->mpCheckBox_showFunctionVariables;
+        const enums::EditorSearchOptions optionsBefore = mpEditor->mSearchOptions;
+        const auto restore = qScopeGuard([this, pSwitch, optionsBefore]() {
+            mpEditor->slot_clearSearchResults();
+            mpEditor->setSearchOptions(optionsBefore);
+            pSwitch->setChecked(true);
+            mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("qaToolbox = nil\nqaToolboxCall = nil\n"));
+            openTheVariablesView();
+        });
+        openTheVariablesView();
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+
+        const QStringList shown = searchResultTitles(qsl("qaToolbox"));
+        qInfo().noquote() << qsl("  with functions shown the search finds: %1").arg(shown.join(qsl(", ")));
+        QVERIFY2(!mentioning(shown, qsl("qaToolboxRun")).isEmpty() && !mentioning(shown, qsl("qaToolboxCall")).isEmpty(),
+                 "the search does not find the functions even with the switch on, so this case says nothing");
+
+        mpEditor->slot_clearSearchResults();
+        pSwitch->setChecked(false);
+        QCoreApplication::processEvents();
+        const QStringList hidden = searchResultTitles(qsl("qaToolbox"));
+        qInfo().noquote() << qsl("  with functions left out the search finds: %1").arg(hidden.join(qsl(", ")));
+        const QStringList functionsFound = mentioning(hidden, qsl("qaToolboxRun")) + mentioning(hidden, qsl("qaToolboxCall"));
+        QVERIFY2(functionsFound.isEmpty(), qPrintable(qsl("with the switch off the search still finds: %1").arg(functionsFound.join(qsl(", ")))));
+        QVERIFY2(!mentioning(hidden, qsl("qaToolboxLabel")).isEmpty(), "with the switch off the search lost a member that is not a function");
     }
 };
 
