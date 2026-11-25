@@ -1086,8 +1086,8 @@ is empty, with `retainSizeWhenHidden` so it still takes its place. Only the
 bar comes and goes; the content is never laid out again.
 
 - Call it once on a tree, list or scroll area as it is built. The editor's
-  item trees, its search results and `ContentScrollArea` (the pattern list)
-  do.
+  item trees, its search results, `ContentScrollArea` (the pattern list) and
+  the settings pages (`createScrollPage()`) do.
 - Do not reach for the same result by switching a viewport margin or a layout
   margin when the bar shows or hides. The margin is applied after the bar has
   already changed the viewport, so one frame is painted at the wrong width,
