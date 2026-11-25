@@ -2794,12 +2794,10 @@ function BaseUI.layoutDock()
     BaseUI.layoutCompact()
     return
   end
+  -- The map, not made while the window was compact, waits for the next map or
+  -- vitals event, as on a dock built before the map had rooms: made on a resize,
+  -- it takes over the profile's map widget whenever that has just been closed
   if BaseUI.leaveCompact() then
-    -- not made while the window was compact; a mapper made in a dock still away
-    -- would take over the profile's map widget if that is closed
-    if not BaseUI.container.hidden then
-      BaseUI.checkMapData()
-    end
     if BaseUI.usedGaugeSlots &gt; 0 then
       -- puts the bars back in their places in the vitals panel, which lays the dock out
       BaseUI.layoutGauges()
