@@ -1366,6 +1366,9 @@ public:
     bool mMapperShowGrid = false;
     // The modern 3D view draws the areas next to the one shown past its edges, and previews of those it cannot place
     bool mMapperStitchAreas = true;
+    // Deleting a room leaves the exits that led to it as stubs rather than removing them (mapDeletedRoomExitsAsStubs);
+    // deleting a whole area still removes them
+    bool mMapperDeletedRoomExitsAsStubs = false;
     // What the built-in map buttons (main toolbar, Show Map menu entry and its
     // shortcut, detached window toolbar) do for this profile; scripts set it
     // through setConfig("mapperButton", ...). Deliberately not saved with the
