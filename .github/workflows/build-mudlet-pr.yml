@@ -694,7 +694,7 @@ jobs:
       if: >-
         !cancelled() && steps.build.outcome == 'success'
         && matrix.run_tests == 'true' && runner.os == 'macOS'
-      # Covers both suites, side by side on the 3-core arm64 runner: ctest 440-690s, Lua 550-710s.
+      # Covers both suites, side by side on the 3-core arm64 runner: ctest 440-690s.
       # The Lua run has its own, shorter limit below.
       timeout-minutes: 20
       run: |
@@ -719,16 +719,22 @@ jobs:
         )
         lua_log="${{runner.temp}}/lua-tests.log"
         lua_tests=""
-        # Half again the slowest green run, and short enough of timeout-minutes to leave
-        # stopping the run and reporting on it inside the step
-        lua_budget=1080
-        lua_deadline=$(( SECONDS + lua_budget ))
+        # The runner stops what is still running at the end of its budget and reports on it.
+        # Short enough of timeout-minutes to leave that, the wait for a runner that hangs
+        # itself and the printing of the log inside the step
+        lua_budget=1020
+        lua_deadline=$(( SECONDS + lua_budget + 40 ))
         if [ -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
-          env "${lua_tests_env[@]}" ~/Desktop/Mudlet.app/Contents/MacOS/mudlet \
-            --profile "Mudlet self-test" --mirror --offline > "${lua_log}" 2>&1 &
+          # A Mudlet process per spec file, two at a time beside ctest; they share the
+          # runner's one desktop. Spec files that talk to a fixture run one at a time.
+          env "${lua_tests_env[@]}" python3 -I "${{github.workspace}}/CI/run-lua-specs.py" \
+            --jobs 2 --budget "${lua_budget}" \
+            --failure-marker /tmp/busted-tests-failed \
+            -- ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline \
+            > "${lua_log}" 2>&1 &
           lua_tests=$!
         else
-          echo "No packaged app to run the Lua tests with - an earlier step failed" > "${lua_log}"
+          echo "::error::No packaged app to run the Lua tests with - an earlier step failed" > "${lua_log}"
         fi
 
         cd "${{runner.workspace}}/b/ninja"
@@ -746,27 +752,24 @@ jobs:
           sleep 5
         done
         if [ -n "${lua_tests}" ] && kill -0 "${lua_tests}" 2>/dev/null; then
-          echo "::error::The Lua run was still going after ${lua_budget}s - stopping it"
+          echo "::error::The Lua run was still going 40s after its ${lua_budget}s budget - stopping it"
           kill "${lua_tests}" 2>/dev/null || true
-          sleep 10
+          # Longer than the runner takes to stop what it started and report
+          sleep 15
           kill -9 "${lua_tests}" 2>/dev/null || true
         fi
-        lua_status=0
-        [ -z "${lua_tests}" ] || wait "${lua_tests}" || lua_status=$?
-        echo "::group::Lua tests"
+        # No packaged app fails the Lua half too
+        lua_status=1
+        if [ -n "${lua_tests}" ]; then
+          lua_status=0
+          wait "${lua_tests}" || lua_status=$?
+        fi
+        # No group around it: the runner puts each spec file's output in a group of its own
         cat "${lua_log}"
-        echo "::endgroup::"
         touch "${{runner.temp}}/lua-tests.shown"
 
-        # Mudlet exits 0 whatever its specs did, so a failed spec has to fail this step
-        # itself; the upload steps below go by the ctest result alone.
-        if [ -e /tmp/busted-tests-failed ]; then
-          echo "::error::Lua specs failed - see the Lua tests group above"
-          lua_status=1
-        elif ! grep -Eq '[0-9]+ success(es)? / [0-9]+ failures? / [0-9]+ errors?' "${lua_log}"; then
-          echo "::error::The Lua run ended before its summary line - see the Lua tests group above"
-          [ "${lua_status}" -ne 0 ] || lua_status=1
-        fi
+        # The runner exits non-zero when a spec file failed; the upload steps below go by
+        # the ctest result alone.
         echo "C++ tests exited with ${ctest_status}, the Lua run with ${lua_status}"
         [ "${ctest_status}" -eq 0 ] && [ "${lua_status}" -eq 0 ]
 

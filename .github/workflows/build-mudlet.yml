@@ -856,10 +856,17 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # 200-245s on arm64; a tighter limit fails on runner speed rather than on
-      # anything the suite did
-      timeout-minutes: 12
-      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
+      # A Mudlet process per spec file, two at a time: one fewer than the runner's three cores
+      # leaves one for the fixtures, the window server and Mudlet's helper threads. They share
+      # the runner's one desktop, where on Linux each job slot has an X server of its own. Spec
+      # files that talk to a fixture run one at a time, as a fixture serves one client.
+      # --budget ends inside timeout-minutes, so a hung process is still stopped and reported.
+      timeout-minutes: 20
+      run: |
+        python3 -I "${{github.workspace}}/CI/run-lua-specs.py" \
+          --jobs 2 --budget 1080 \
+          --failure-marker /tmp/busted-tests-failed \
+          -- ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         # Off by default; the flood specs pend without it

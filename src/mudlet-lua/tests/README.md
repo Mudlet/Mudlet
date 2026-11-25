@@ -112,13 +112,13 @@ xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ### Running every spec file in a process of its own
 
 `CI/run-lua-specs.py` runs each spec file in a fresh Mudlet process of its own,
-several at a time, which is how the Linux and Windows CI jobs run them. Each
-process gets a config root of its own (with `mudlet/profiles` created up front)
-and a failure marker of its own, and is handed its spec file as
+several at a time, which is how the Linux, macOS and Windows CI jobs run them.
+Each process gets a config root of its own (with `mudlet/profiles` created up
+front) and a failure marker of its own, and is handed its spec file as
 `TESTS_DIRECTORY`. The run passes only when every spec file passes on its own.
 
-The Linux and Windows CI jobs run each spec file alone, so a spec file must pass
-without any other having run before it.
+The Linux, macOS and Windows CI jobs run each spec file alone, so a spec file
+must pass without any other having run before it.
 
 ```sh
 # Linux: every job slot gets an X server of its own
