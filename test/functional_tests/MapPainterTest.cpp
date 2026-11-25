@@ -347,6 +347,57 @@ private slots:
         QVERIFY2(off.pixelColor(squareCorner) != QColor(Qt::white), qPrintable(saved(off, qsl("special-exit-off"))));
     }
 
+    // A round room in grid mode is drawn rSize of its cell like any other, though its square fills the cell, so its
+    // dot goes on the circle and not where the cell's corner would put it
+    void aRoundGridRoomsSpecialExitDotIsOnItsEdge()
+    {
+        TRoom* pRoom = roomDB()->getRoom(scmWestRoom);
+        QVERIFY(pRoom);
+        pRoom->setSpecialExit(scmEastRoom, qsl("climb tree"));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        auto restore = qScopeGuard([this, savedMarkers]() {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+        });
+        mpHost->mMapperShowSpecialExitMarkers = true;
+        TMapPainter::View roomView = view();
+        roomView.mBubbleMode = true;
+        TMapPainter painter;
+        painter.setView(roomView);
+        QImage image = blankImage();
+        {
+            QPainter imagePainter(&image);
+            QFont roomIdFont;
+            QFont roomNameFont;
+            QPen pen;
+            const QPointF centre = onImage(QPointF(0, 0));
+            painter.drawRoom(imagePainter, roomIdFont, roomNameFont, pen, pRoom, true, false, false, -1, centre.x(), centre.y(), false);
+        }
+        // Half the default rSize of 0.5 is a quarter of the cell from the centre to the room's edge, where the circle
+        // crosses the diagonal, with the same gap around it as outside grid mode
+        const qreal halfRoom = scmRoomPixels / 4.0;
+        const QPointF onCircle = onImage(QPointF(0, 0)) + QPointF(halfRoom, -halfRoom) / std::numbers::sqrt2;
+        // The dot is a few pixels across, so where it is centred tells more than whether one pixel is white
+        QPointF sum;
+        int whitePixels = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y) == QColor(Qt::white)) {
+                    sum += QPointF(x + 0.5, y + 0.5);
+                    ++whitePixels;
+                }
+            }
+        }
+        QVERIFY2(whitePixels > 0, qPrintable(saved(image, qsl("special-exit-round-grid"))));
+        const QPointF dotCentre = sum / whitePixels;
+        QVERIFY2(QLineF(dotCentre, onCircle).length() < 1.0,
+                 qPrintable(qsl("the dot is centred at %1,%2, not on the circle at %3,%4: %5")
+                                    .arg(dotCentre.x())
+                                    .arg(dotCentre.y())
+                                    .arg(onCircle.x())
+                                    .arg(onCircle.y())
+                                    .arg(saved(image, qsl("special-exit-round-grid")))));
+    }
+
     // A room fills rSize of its cell, centred on its coordinates, in its environment's colour
     void aRoomIsFilledWithItsEnvironmentColour()
     {

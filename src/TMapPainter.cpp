@@ -648,8 +648,13 @@ void TMapPainter::drawRoom(QPainter& painter,
     // would still get one
     if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty() && mRoomWidth >= cLodPixelThreshold) {
         // Rooms are drawn one by one, so a neighbour drawn later covers whatever of the dot reaches it
-        const qreal gap = isGridMode ? 0.0 : qMin(mRoomWidth, mRoomHeight) * (1.0 - rSize);
-        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), gap, mBubbleMode);
+        // A round room is drawn rSize of the cell across in grid mode too, where the rectangle fills the cell, so
+        // only a square grid room has no gap around it
+        const qreal gap = (isGridMode && !mBubbleMode) ? 0.0 : qMin(mRoomWidth, mRoomHeight) * (1.0 - rSize);
+        const qreal diameter = mRoomWidth * rSize;
+        const qreal markerWidth = mBubbleMode ? diameter : roomRectangle.width();
+        const qreal markerHeight = mBubbleMode ? diameter : roomRectangle.height();
+        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, markerWidth, markerHeight, gap, mBubbleMode);
     }
 }
 
