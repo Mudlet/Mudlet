@@ -2711,6 +2711,53 @@ private slots:
     }
 
     // The table is as tall as its rows and no taller, and empty it keeps one line that says so
+    // Choosing a long value shrinks the table and scrolls it; the row that was clicked is the one left chosen, not
+    // the row that came to stand under the pointer
+    void aClickedRowStaysChosenWhenTheTableGivesWayToItsValue()
+    {
+        buildMap();
+        QMap<QString, QString> data;
+        for (int key = 0; key < 8; ++key) {
+            data.insert(qsl("key %1").arg(key), qsl("value %1").arg(key));
+        }
+        QStringList lines;
+        for (int line = 0; line < 60; ++line) {
+            lines << qsl("Line %1 of a long value.").arg(line);
+        }
+        const int longRow = 1;
+        data.insert(qsl("key %1").arg(longRow), lines.join(QLatin1Char('\n')));
+        room(scmFirstRoom)->userData = data;
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY2(showTheScriptData(pDlg), "the Script data tab did not come on show");
+        QTableWidget* pTable = pDlg->tableWidget_userData;
+        const int heightBefore = pTable->height();
+        const QPoint onTheRow = pTable->visualItemRect(pTable->item(longRow, 1)).center();
+        QTest::mouseClick(pTable->viewport(), Qt::LeftButton, Qt::NoModifier, onTheRow);
+        QTRY_VERIFY2(pTable->height() < heightBefore, "the table did not give way to the long value");
+
+        QCOMPARE(pTable->currentRow(), longRow);
+        const auto selected = pTable->selectionModel()->selectedRows();
+        QCOMPARE(selected.size(), 1);
+        QCOMPARE(selected.constFirst().row(), longRow);
+        QCOMPARE(pTable->visualItemRect(pTable->item(longRow, 1)).center(), onTheRow);
+
+        // A row too far down to stay under the pointer: still the chosen one, and in sight
+        auto* pLower = openDialogOn({scmFirstRoom});
+        QVERIFY2(showTheScriptData(pLower), "the Script data tab did not come on show");
+        pTable = pLower->tableWidget_userData;
+        const int lastRow = pTable->rowCount() - 1;
+        pTable->item(lastRow, 1)->setText(lines.join(QLatin1Char('\n')));
+        const int tall = pTable->height();
+        QTest::mouseClick(pTable->viewport(), Qt::LeftButton, Qt::NoModifier, pTable->visualItemRect(pTable->item(lastRow, 1)).center());
+        QTRY_VERIFY2(pTable->height() < tall, "the table did not give way to the long value");
+        QCOMPARE(pTable->currentRow(), lastRow);
+        const auto lowerSelected = pTable->selectionModel()->selectedRows();
+        QCOMPARE(lowerSelected.size(), 1);
+        QCOMPARE(lowerSelected.constFirst().row(), lastRow);
+        QVERIFY2(pTable->viewport()->rect().contains(pTable->visualItemRect(pTable->item(lastRow, 1)).center()), "the chosen row was scrolled out of sight");
+    }
+
     void theTableIsAsTallAsItsRows()
     {
         QList<int> heights;

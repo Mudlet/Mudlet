@@ -158,6 +158,10 @@ private:
     bool mKeyColumnFitted = false;
     bool mSizedForShow = false;
     bool mFittingScriptData = false;
+    // The table is given its height only once the mouse button is up: a view chooses the row under the pointer when a
+    // press is over, so rows moved during it would leave the selection on another row than the one clicked
+    bool mTablePressed = false;
+    bool mFitWhenReleased = false;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:

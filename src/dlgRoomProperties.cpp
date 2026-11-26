@@ -45,6 +45,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <QScopedValueRollback>
+#include <QScrollBar>
 #include <QShowEvent>
 #include <QStyleOptionSpinBox>
 #include <QStyleOptionTabWidgetFrame>
@@ -1678,6 +1679,10 @@ void dlgRoomProperties::fitScriptData()
     if (mFittingScriptData || !roomPropertiesScriptData->isVisible()) {
         return;
     }
+    if (mTablePressed) {
+        mFitWhenReleased = true;
+        return;
+    }
     const QScopedValueRollback<bool> fitting(mFittingScriptData, true);
     QTableWidget* pTable = tableWidget_userData;
     QPlainTextEdit* pBox = roomPropertiesValueBox;
@@ -1722,11 +1727,22 @@ void dlgRoomProperties::fitScriptData()
         tableHeight = std::max(tableFloor, room - boxHeight);
         boxHeight = std::max(boxLeast, room - tableHeight);
     }
+    const QModelIndex current = pTable->currentIndex();
+    const int placeBefore = current.isValid() ? pTable->visualRect(current).top() : -1;
     pTable->setFixedHeight(tableHeight);
     pBox->setFixedHeight(boxHeight);
     pLayout->activate();
-    if (pTable->currentIndex().isValid()) {
-        pTable->scrollTo(pTable->currentIndex());
+    if (!current.isValid()) {
+        return;
+    }
+    pTable->scrollTo(current);
+    // Where there is still room for it, the chosen row stays where it was clicked, so the second click of a
+    // double-click meets the same row
+    if (placeBefore >= 0 && placeBefore + pTable->rowHeight(current.row()) <= pTable->viewport()->height()) {
+        const int moved = pTable->visualRect(current).top() - placeBefore;
+        const int step = pTable->verticalScrollMode() == QAbstractItemView::ScrollPerItem ? std::max(1, pTable->rowHeight(current.row())) : 1;
+        QScrollBar* pBar = pTable->verticalScrollBar();
+        pBar->setValue(pBar->value() + moved / step);
     }
 }
 
@@ -1753,6 +1769,15 @@ bool dlgRoomProperties::eventFilter(QObject* pWatched, QEvent* pEvent)
     } else if (pWatched == tableWidget_userData->viewport()) {
         if (pEvent->type() == QEvent::Resize) {
             mpUserDataEmpty->setGeometry(tableWidget_userData->viewport()->rect());
+        } else if (pEvent->type() == QEvent::MouseButtonPress) {
+            mTablePressed = true;
+        } else if (pEvent->type() == QEvent::MouseButtonRelease) {
+            mTablePressed = false;
+            if (mFitWhenReleased) {
+                mFitWhenReleased = false;
+                // Queued, so the view is done with the release first
+                QTimer::singleShot(0, this, &dlgRoomProperties::fitScriptData);
+            }
         }
     } else if (pWatched == tableWidget_userData) {
         if (pEvent->type() == QEvent::Show && !mKeyColumnFitted) {
