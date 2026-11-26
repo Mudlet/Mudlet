@@ -504,17 +504,16 @@ jobs:
         run: |
           mkdir -p appcast
 
-          # sparkle:version must match CFBundleVersion in the built app. For a PTB
-          # src/CMakeLists.txt sets that to <version>.<yyyymmdd>, because Sparkle
-          # compares nothing past the first "-" of a version
-          BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
-          if [[ "${RELEASE_TYPE}" == "ptb" ]]; then
-            if [[ "${BUNDLE_VERSION}" =~ ^(.+)-ptb-([0-9]+)-([0-9]+)-([0-9]+)- ]]; then
-              BUNDLE_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
-            else
-              echo "::error::Could not read the build date from PTB tag ${RELEASE_TAG}"
-              exit 1
-            fi
+          # sparkle:version must match CFBundleVersion in the built app, so take the
+          # value the macOS build read from that app. This workflow always runs as it
+          # is on the default branch, also for a build of a commit whose build does
+          # not record it: there the app's version is the tag's, as it always was
+          BUNDLE_VERSION=$(find metadata/ -name 'release-metadata.json' -type f -exec jq -r '.bundle_version // empty' {} + | grep -m1 . || true)
+          if [[ -z "${BUNDLE_VERSION}" ]]; then
+            BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
+          elif [[ ! "${BUNDLE_VERSION}" =~ ^[0-9A-Za-z.-]+$ ]]; then
+            echo "::error::Release metadata carries an unusable bundle version"
+            exit 1
           fi
           export BUNDLE_VERSION
           export RELEASE_VERSION

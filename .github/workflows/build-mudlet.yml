@@ -656,7 +656,8 @@ jobs:
           --arg commit "${BUILD_COMMIT}" \
           --arg ref "${{ github.ref }}" \
           --arg event "${{ github.event_name }}" \
-          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          --arg bundle_version "${MACOS_BUNDLE_VERSION}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event, bundle_version: $bundle_version}' \
           > release-metadata.json
 
     - name: Upload release metadata
