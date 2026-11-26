@@ -126,6 +126,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     OpaqueConsolePaintTest.cpp
     ConnectButtonIconsTest.cpp
     PrimaryButtonStatesTest.cpp
+    UnderlinedTabStripTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them

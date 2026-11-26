@@ -19,7 +19,7 @@
 
 /*
  * Guards the package manager's design-language shell: sheets on the columns,
- * view chips kept in step with the hidden .ui buttons every slot presses, the
+ * view tabs kept in step with the hidden .ui buttons every slot presses, the
  * row delegate's accent bar and version, and the action buttons per view.
  *
  * Run with: ctest -R PackageManagerShellTest -V
@@ -235,16 +235,16 @@ private slots:
 
     // QTabBar makes its first tab current and emits currentChanged, which
     // pressed Explore before the window had chosen a view
-    void test_theWindowOpensWithTheInstalledChipLit()
+    void test_theWindowOpensWithTheInstalledTabChosen()
     {
         dlgPackageManager fresh(nullptr, mpHost);
         auto* pBar = fresh.findChild<QTabBar*>(qsl("packagesViewBar"));
-        QVERIFY2(pBar, "the fresh window has no chip row");
-        qInfo().noquote() << qsl("  a fresh window's chip row reads tab %1, the hidden Installed button is %2checked")
+        QVERIFY2(pBar, "the fresh window has no row of view tabs");
+        qInfo().noquote() << qsl("  a fresh window's view strip reads tab %1, the hidden Installed button is %2checked")
                                      .arg(pBar->currentIndex())
                                      .arg(fresh.pushButton_installed->isChecked() ? QString() : qsl("not "));
         QVERIFY2(pBar->currentIndex() == static_cast<int>(NavigationView::Installed),
-                 qPrintable(qsl("a fresh window lights chip %1 where the Installed view (%2) is what it opens on").arg(pBar->currentIndex()).arg(static_cast<int>(NavigationView::Installed))));
+                 qPrintable(qsl("a fresh window chooses tab %1 where the Installed view (%2) is what it opens on").arg(pBar->currentIndex()).arg(static_cast<int>(NavigationView::Installed))));
         QVERIFY2(fresh.pushButton_installed->isChecked(), "a fresh window's hidden Installed button is not the checked one");
         QVERIFY2(fresh.mCurrentView == NavigationView::Installed, "a fresh window's view is not Installed");
     }
@@ -317,37 +317,37 @@ private slots:
         QVERIFY(mpDialog->readPackageRepositoryFile());
     }
 
-    void test_theViewIsARowOfChipsThatStaysInStepWithTheButtons()
+    void test_theViewIsARowOfTabsThatStaysInStepWithTheButtons()
     {
         QTabBar* pBar = viewBar();
-        QVERIFY2(pBar, "there is no QTabBar named 'packagesViewBar' - the view is not drawn as a row of chips at all");
+        QVERIFY2(pBar, "there is no QTabBar named 'packagesViewBar' - the view is not drawn as a row of tabs at all");
         QCOMPARE(pBar->count(), 3);
-        QVERIFY2(!mpDialog->headerBar->isVisible(), "the old row of navigation buttons is still on show beside the chips");
-        QVERIFY2(!pBar->accessibleName().isEmpty(), "the strip of chips has no accessible name, so a screen reader announces an unnamed tab bar");
+        QVERIFY2(!mpDialog->headerBar->isVisible(), "the old row of navigation buttons is still on show beside the tabs");
+        QVERIFY2(!pBar->accessibleName().isEmpty(), "the strip of tabs has no accessible name, so a screen reader announces an unnamed tab bar");
 
         showView(NavigationView::Explore);
         qInfo().noquote() << qsl("  the Explore button was pressed; the bar reads tab %1").arg(QString::number(pBar->currentIndex()));
         QVERIFY2(pBar->currentIndex() == static_cast<int>(NavigationView::Explore),
-                 qPrintable(qsl("pressing the hidden Explore button left the chip row on tab %1 rather than on %2")
+                 qPrintable(qsl("pressing the hidden Explore button left the view strip on tab %1 rather than on %2")
                                     .arg(QString::number(pBar->currentIndex()), QString::number(static_cast<int>(NavigationView::Explore)))));
 
         pBar->setCurrentIndex(static_cast<int>(NavigationView::Installed));
         TestPixels::settle();
-        qInfo().noquote() << qsl("  the Installed chip was chosen; the buttons read view %1").arg(QString::number(checkedView()));
+        qInfo().noquote() << qsl("  the Installed tab was chosen; the buttons read view %1").arg(QString::number(checkedView()));
         QVERIFY2(checkedView() == static_cast<int>(NavigationView::Installed),
-                 qPrintable(qsl("choosing the Installed chip left the hidden buttons on view %1 rather than on %2")
+                 qPrintable(qsl("choosing the Installed tab left the hidden buttons on view %1 rather than on %2")
                                     .arg(QString::number(checkedView()), QString::number(static_cast<int>(NavigationView::Installed)))));
-        QVERIFY2(mpDialog->packageList->count() >= 2, "choosing the Installed chip did not bring the installed packages back into the list");
+        QVERIFY2(mpDialog->packageList->count() >= 2, "choosing the Installed tab did not bring the installed packages back into the list");
     }
 
-    void test_theUpdatesChipCarriesWhateverTheButtonSays()
+    void test_theUpdatesTabCarriesWhateverTheButtonSays()
     {
         QTabBar* pBar = viewBar();
         QVERIFY(pBar);
         const int updates = static_cast<int>(NavigationView::Updates);
-        qInfo().noquote() << qsl("  the Updates button says \"%1\", the chip says \"%2\"").arg(mpDialog->pushButton_updates->text(), pBar->tabText(updates));
+        qInfo().noquote() << qsl("  the Updates button says \"%1\", the tab says \"%2\"").arg(mpDialog->pushButton_updates->text(), pBar->tabText(updates));
         QVERIFY2(pBar->tabText(updates) == mpDialog->pushButton_updates->text(),
-                 qPrintable(qsl("the Updates chip says \"%1\" where the button it stands for says \"%2\"").arg(pBar->tabText(updates), mpDialog->pushButton_updates->text())));
+                 qPrintable(qsl("the Updates tab says \"%1\" where the button it stands for says \"%2\"").arg(pBar->tabText(updates), mpDialog->pushButton_updates->text())));
     }
 
     void test_theSheetsAreSetOnTheColumnsRatherThanOnTheWindow()
@@ -358,7 +358,7 @@ private slots:
 
         const QString left = mpDialog->leftPanel->styleSheet();
         QVERIFY2(left.contains(tokens.pane.name()), qPrintable(qsl("the list column's sheet never names the pane tone %1, so it is not told apart from the page beside it").arg(tokens.pane.name())));
-        QVERIFY2(left.contains(qsl("QTabBar::tab")), qPrintable(qsl("the list column's sheet draws no chips for the view strip: %1").arg(left.left(200))));
+        QVERIFY2(left.contains(qsl("QTabBar::tab")), qPrintable(qsl("the list column's sheet draws no tabs for the view strip: %1").arg(left.left(200))));
         QVERIFY2(left.contains(qsl("QLineEdit")), qPrintable(qsl("the list column's sheet draws no field, so the search box is platform-drawn: %1").arg(left.left(200))));
         QVERIFY2(left.contains(qsl("QPushButton")), "the list column's sheet draws no button, so Install from a file is platform-drawn");
 

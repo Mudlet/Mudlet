@@ -56,7 +56,7 @@ using namespace std::chrono_literals;
 
 #include <algorithm>
 
-// The tab strip's pane inset, so the search field lines up with the first chip
+// The tab strip's pane inset, so the strip, the search field and the list start on one line inside it
 static constexpr int scmPackagesColumnInset = uiDesign::scmTabPaneInset;
 
 // Not the .ui file's 96px: the picture stands beside the name rather than over it
@@ -186,11 +186,9 @@ void dlgPackageManager::buildShell()
     headerBar->hide();
     mpViewBar = new QTabBar(leftPanel);
     mpViewBar->setObjectName(qsl("packagesViewBar"));
-    mpViewBar->setExpanding(false);
-    mpViewBar->setDrawBase(false);
     mpViewBar->setFocusPolicy(Qt::TabFocus);
     uiDesign::markAsShellSurface(mpViewBar);
-    //: Package manager - what the row of Explore / Installed / Updates chips is, read out to a screen reader
+    //: Package manager - what the row of Explore / Installed / Updates tabs is, read out to a screen reader
     mpViewBar->setAccessibleName(tr("Packages to show"));
     {
         // The first addTab() emits currentChanged, which would click Explore before the view is chosen
@@ -202,9 +200,8 @@ void dlgPackageManager::buildShell()
         }
     }
     uiDesign::prepareTabStrip(mpViewBar);
-    // Aligned by the layout: the macOS style answers Qt::AlignCenter for tab placement,
-    // while Fusion, the dark appearance's base style, answers the leading edge
-    verticalLayout_left->insertWidget(0, mpViewBar, 0, Qt::AlignLeft);
+    // Across the whole column, so its hairline runs over the search field and the list under it
+    verticalLayout_left->insertWidget(0, mpViewBar);
     connect(mpViewBar, &QTabBar::currentChanged, this, [this](const int index) {
         QAbstractButton* pButton = mpNavigationGroup->button(index);
         if (pButton && !pButton->isChecked()) {
@@ -1381,7 +1378,7 @@ void dlgPackageManager::updateUpdatesBadge()
         //: Package manager - navigation button for when there are no updates
         pushButton_updates->setText(tr("Updates"));
     }
-    // The hidden button is what slots and tests read; the chip is what the reader sees
+    // The hidden button is what slots and tests read; the tab is what the reader sees
     if (mpViewBar && mpViewBar->count() > static_cast<int>(NavigationView::Updates)) {
         const int updates = static_cast<int>(NavigationView::Updates);
         mpViewBar->setTabText(updates, pushButton_updates->text());
@@ -1396,7 +1393,8 @@ void dlgPackageManager::applyPackageManagerShellStyle()
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
     const QString leftRules = qsl("#leftPanel { background-color: %1; }").arg(tokens.pane.name())
-                              // Only its QTabBar rules apply; ::pane and ::tab-bar miss on a plain widget
+                              // Only its QTabBar rules apply; ::pane and ::tab-bar miss on a plain widget, and the bar
+                              // draws its own hairline
                               + uiDesign::tabBarStyleSheet(qsl("#leftPanel"), tokens) + uiDesign::inputStyleSheet(tokens, qsl("#leftPanel")) + uiDesign::buttonStyleSheet(tokens, qsl("#leftPanel"));
     leftPanel->setStyleSheet(leftRules);
 
