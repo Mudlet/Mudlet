@@ -2530,15 +2530,20 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
   -- In a compact main window the starter UI's bars and chat buttons hold the top and
   -- bottom borders, which the exact comparisons here need to themselves, and it lays
-  -- itself out again on every resize made here
+  -- itself out again on every resize made here. A hidden strip still counts as on its
+  -- border, since show() takes the border back, so it is let go of the border too.
   local starterFitDock
+  local starterStripBorders = {}
   setup(function()
     if type(BaseUI) == "table" and type(BaseUI.fitDock) == "function" then
       starterFitDock = BaseUI.fitDock
       BaseUI.fitDock = function() end
       for _, strip in ipairs({ "vitalsBar", "chatButtonRow", "chatSheet" }) do
-        if BaseUI[strip] then
-          BaseUI[strip]:hide()
+        local container = BaseUI[strip]
+        if container then
+          container:hide()
+          starterStripBorders[strip] = container.hiddenAttached
+          container.hiddenAttached = nil
         end
       end
     end
@@ -2546,6 +2551,9 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
   teardown(function()
     if starterFitDock then
+      for strip, border in pairs(starterStripBorders) do
+        BaseUI[strip].hiddenAttached = border
+      end
       BaseUI.fitDock = starterFitDock
       BaseUI.fitDock()
     end
