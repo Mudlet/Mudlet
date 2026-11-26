@@ -110,25 +110,9 @@ QString VariableTreeDelegate::variablePreview(TVar* pVar)
     case LUA_TBOOLEAN:
         // Not translated: true and false are values, not descriptions of one
         return pVar->getValue();
-    case LUA_TTABLE: {
-        const QList<TVar*> members = pVar->getChildren(false);
-        if (members.isEmpty()) {
-            return qsl("{ }");
-        }
-        bool everyKeyAnIndex = true;
-        for (const TVar* pMember : members) {
-            if (pMember->getKeyType() != LUA_TNUMBER) {
-                everyKeyAnIndex = false;
-                break;
-            }
-        }
-        if (everyKeyAnIndex) {
-            //: How a Lua table whose every key is a number is summarised at the trailing edge of its row in the editor's Variables view. %1 is how many members it has.
-            return tr("{ %1 items }").arg(members.size());
-        }
-        //: How a Lua table is summarised at the trailing edge of its row in the editor's Variables view. %1 is how many members it has.
-        return tr("{ %1 keys }").arg(members.size());
-    }
+    case LUA_TTABLE:
+        // A bare count, in no language: "keys" against "items" read as two kinds of table
+        return qsl("(%1)").arg(pVar->getChildren(false).size());
     case LUA_TFUNCTION:
         //: Shown at the trailing edge of a row in the editor's Variables view where the variable holds a Lua function rather than a value that can be shown.
         return tr("function");

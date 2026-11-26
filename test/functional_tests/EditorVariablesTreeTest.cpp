@@ -330,8 +330,8 @@ private slots:
         const QList<QPair<QString, QString>> expected{{qsl("myString"), qsl("\"north\"")},
                                                       {qsl("myNumber"), qsl("42")},
                                                       {qsl("myBoolean"), qsl("true")},
-                                                      {qsl("myKeyed"), qsl("{ 2 keys }")},
-                                                      {qsl("myList"), qsl("{ 3 items }")},
+                                                      {qsl("myKeyed"), qsl("(2)")},
+                                                      {qsl("myList"), qsl("(3)")},
                                                       {qsl("myFunction"), qsl("function")},
                                                       {qsl("myParagraph"), qsl("\"first line\u2026\"")},
                                                       {qsl("myLeadingBreak"), qsl("\"after a break\"")}};
