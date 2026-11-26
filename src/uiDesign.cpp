@@ -32,6 +32,7 @@
 #include <QBuffer>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCommonStyle>
 #include <QDateTime>
 #include <QDateTimeEdit>
 #include <QDir>
@@ -66,7 +67,9 @@
 #include <QStyleOptionViewItem>
 #include <QSvgRenderer>
 #include <iterator>
+#include <QStyleOptionTab>
 #include <QTabBar>
+#include <QTabWidget>
 #include <QTimer>
 #include <QToolButton>
 #include <QTransform>
@@ -145,6 +148,7 @@ constexpr int scmDisclosurePaddingVertical = 5;
 constexpr int scmButtonMenuIndicatorInset = 6;
 // Keeps the first and last rows inside the frame's rounded corner
 constexpr int scmMenuSurfacePadding = 4;
+constexpr int scmMenuItemPaddingVertical = 4;
 constexpr int scmMenuItemPaddingLeading = scmChoiceIndicatorSize + scmChoiceLabelSpacing;
 constexpr int scmMenuItemPaddingTrailing = scmButtonPaddingHorizontal;
 // A sub-control is placed from the row's padding box, the edge its highlight starts at, so a mark left there sits on
@@ -1388,26 +1392,40 @@ QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix)
     return rules;
 }
 
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens)
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset)
 {
     // The bar is both a sub-control of the tab widget (::tab-bar) and a QTabBar descendant, so both selectors are used
     const QString bar = tabWidgetSelector + qsl(" QTabBar");
+    const QString inset = QString::number(paneInset);
+    const QString hairline = QString::number(scmInputBorderWidth);
 
-    QString rules = tabWidgetSelector
-                    + qsl("::pane { border: none; background: transparent; margin: %1px; }").arg(QString::number(scmTabPaneInset))
-                    // On the pane's inset, so the chips and the field below start on the same line
-                    + tabWidgetSelector + qsl("::tab-bar { left: %1px; }").arg(QString::number(scmTabStripInset)) + bar
-                    + qsl(" { background: transparent; border: none; }")
-                    // The transparent border keeps the word still when :focus colours it
-                    + bar
-                    + qsl("::tab { background: transparent; color: %1; border: %2px solid transparent; border-radius: %3px;"
-                          " padding: %4px %5px; margin-right: %6px; }")
-                              .arg(tokens.mutedText.name(), QString::number(scmInputBorderWidth), QString::number(scmRadiusChip), QString::number(scmTabPaddingVertical))
-                              .arg(QString::number(scmTabPaddingHorizontal), QString::number(scmTabGap))
-                    + bar + qsl("::tab:hover { background-color: %1; color: %2; }").arg(tokens.hoverSoft, tokens.accentText.name()) + bar
-                    + qsl("::tab:selected { background-color: %1; color: %2; }").arg(tokens.accentSoft, tokens.accentText.name())
-                    // Focus as the accent border, the way every other control in the design shows it
-                    + bar + qsl("::tab:focus { border-color: %1; }").arg(tokens.accent.name()) + bar + qsl("::tab:disabled { color: %1; }").arg(tokens.disabledText.name());
+    QString rules =
+            // The pane's top edge is the hairline, lifted onto the bar's bottom row so the chosen tab's underline covers it
+            tabWidgetSelector
+            + qsl("::pane { background: transparent; border: none; border-top: %1px solid %2; margin: 0px %3px %3px %3px; padding-top: %3px; top: -%1px; }").arg(hairline, tokens.border.name(), inset)
+            + tabWidgetSelector
+            + qsl("::tab-bar { left: %1px; }").arg(inset)
+            // A rule of its own, so QStyleSheetStyle places a corner widget from the lifted pane: the application style
+            // would place it from a pane of its own, which stands the widget a row clear of the hairline
+            + tabWidgetSelector + qsl("::left-corner, ") + tabWidgetSelector
+            + qsl("::right-corner { left: 0px; }")
+            // No outline: QCommonStyle frames a focused tab's word, and the underline already says where the keyboard is
+            + bar
+            + qsl(" { background: transparent; border: none; outline: none; }")
+            // Every state is measured at the chosen weight, as this rule's font is what QStyleSheetStyle sizes each tab by;
+            // the strip's style sets the word of a tab not chosen back to the bar's own weight
+            + bar
+            + qsl("::tab { background: transparent; color: %1; font-weight: %2; border: none; border-bottom: %3px solid transparent;"
+                  " padding: %4px 0px %5px 0px; margin: 0px %6px 0px 0px; }")
+                      .arg(tokens.mutedText.name(), QString::number(static_cast<int>(scmTabChosenWeight)), QString::number(scmTabUnderlineWidth), QString::number(scmTabPaddingTop))
+                      .arg(QString::number(scmTabUnderlineAir), QString::number(scmTabGap))
+            + bar + qsl("::tab:hover { color: %1; }").arg(tokens.accentText.name()) + bar
+            + qsl("::tab:selected { color: %1; border-bottom-color: %2; }").arg(tokens.accentText.name(), tokens.accent.name())
+            // After :selected, which it would otherwise lose the tie to
+            + bar
+            + qsl("::tab:focus { border-bottom: %1px solid %2; padding-bottom: %3px; }")
+                      .arg(QString::number(scmTabFocusUnderlineWidth), tokens.accent.name(), QString::number(scmTabPaddingBottom - scmTabFocusUnderlineWidth))
+            + bar + qsl("::tab:disabled { color: %1; }").arg(tokens.disabledText.name());
 
     // Left out if the cache cannot be written, so the tab keeps the platform's own cross
     const QString quietCross = themedGlyphFile(qsl(":/icons/editor-clear.svg"), tokens.mutedText, scmTabCloseBoxSize, scmTabCloseGlyphSize);
@@ -1444,9 +1462,10 @@ public:
         pButton->installEventFilter(this);
     }
 
-    // With a ::tab box, SE_TabBarTabRightButton places the button on the tab's raw rect, outside the chip.
+    // With a ::tab box, SE_TabBarTabRightButton places the button on the tab's raw rect, which puts it in the trailing
+    // gap and centres it on the whole tab rather than on the word, which stands higher for the underline below it.
     // layoutTab() applies it with move(), so each QEvent::Move puts it back; moving sends another, hence the compare.
-    void placeInsideThePadding(QWidget* pButton)
+    void placeBesideTheWord(QWidget* pButton)
     {
         auto* pTabBar = qobject_cast<QTabBar*>(parent());
         if (!pTabBar || !pButton || pButton->parentWidget() != pTabBar) {
@@ -1457,11 +1476,15 @@ public:
                 if (pTabBar->tabButton(i, side) != pButton) {
                     continue;
                 }
-                // The chip is the tab rect less scmTabGap on its trailing side; Qt has already centred the button vertically
                 const QRect tab = pTabBar->tabRect(i);
-                const int padding = scmInputBorderWidth + scmTabPaddingHorizontal;
-                QRect wanted = pButton->geometry();
-                wanted.moveLeft(side == QTabBar::RightSide ? tab.right() - scmTabGap - padding - pButton->width() + 1 : tab.left() + padding);
+                const QRect line(tab.left(), tab.top() + scmTabPaddingTop, tab.width() - scmTabGap, tab.height() - scmTabPaddingTop - scmTabPaddingBottom);
+                QRect wanted(QPoint(0, 0), pButton->size());
+                if (side == QTabBar::RightSide) {
+                    wanted.moveRight(line.right());
+                } else {
+                    wanted.moveLeft(line.left());
+                }
+                wanted.moveTop(line.top() + (line.height() - wanted.height()) / 2);
                 wanted = QStyle::visualRect(pTabBar->layoutDirection(), tab, wanted);
                 if (pButton->pos() != wanted.topLeft()) {
                     pButton->move(wanted.topLeft());
@@ -1481,12 +1504,155 @@ protected:
                 keep(pButton);
             }
         } else if (pEvent->type() == QEvent::Move) {
-            placeInsideThePadding(qobject_cast<QWidget*>(pWatched));
+            placeBesideTheWord(qobject_cast<QWidget*>(pWatched));
         }
         return QObject::eventFilter(pWatched, pEvent);
     }
 };
+
+// What QStyleSheetStyle leaves to the style under it while the strip's sheet draws the tabs: the word, the base and
+// where the tabs line up. The rest goes to the application style, as it would for a bar with no style of its own.
+class TabStripStyle : public QCommonStyle
+{
+public:
+    void polish(QWidget* pWidget) override { qApp->style()->polish(pWidget); }
+    void unpolish(QWidget* pWidget) override { qApp->style()->unpolish(pWidget); }
+
+    void drawPrimitive(PrimitiveElement element, const QStyleOption* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
+    {
+        // The platform's own base is a band behind the whole bar on macOS
+        if (element == PE_FrameTabBarBase && pOption) {
+            paintTabStripHairline(pPainter, pOption->rect, themeTokens());
+            return;
+        }
+        qApp->style()->drawPrimitive(element, pOption, pPainter, pWidget);
+    }
+
+    void drawControl(ControlElement element, const QStyleOption* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
+    {
+        qApp->style()->drawControl(element, pOption, pPainter, pWidget);
+    }
+
+    void drawComplexControl(ComplexControl control, const QStyleOptionComplex* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
+    {
+        qApp->style()->drawComplexControl(control, pOption, pPainter, pWidget);
+    }
+
+    void drawItemText(QPainter* pPainter, const QRect& rect, int flags, const QPalette& palette, bool enabled, const QString& text, QPalette::ColorRole textRole = QPalette::NoRole) const override
+    {
+        const bool aTabsWord = mTabWordNext && text == mTabWord;
+        mTabWordNext = false;
+        if (!aTabsWord) {
+            qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
+            return;
+        }
+        pPainter->save();
+        if (mTabWordQuiet) {
+            QFont font = pPainter->font();
+            font.setWeight(mQuietWeight);
+            pPainter->setFont(font);
+        }
+        // From the leading edge: a word lighter than the box it was measured for would otherwise stand off the line
+        // every other row of the window starts on
+        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | Qt::AlignLeft, palette, enabled, text, textRole);
+        pPainter->restore();
+    }
+
+    void drawItemPixmap(QPainter* pPainter, const QRect& rect, int alignment, const QPixmap& pixmap) const override { qApp->style()->drawItemPixmap(pPainter, rect, alignment, pixmap); }
+
+    QRect itemTextRect(const QFontMetrics& metrics, const QRect& rect, int flags, bool enabled, const QString& text) const override
+    {
+        return qApp->style()->itemTextRect(metrics, rect, flags, enabled, text);
+    }
+
+    QRect itemPixmapRect(const QRect& rect, int flags, const QPixmap& pixmap) const override { return qApp->style()->itemPixmapRect(rect, flags, pixmap); }
+
+    QRect subElementRect(SubElement element, const QStyleOption* pOption, const QWidget* pWidget = nullptr) const override { return qApp->style()->subElementRect(element, pOption, pWidget); }
+
+    QRect subControlRect(ComplexControl control, const QStyleOptionComplex* pOption, SubControl subControl, const QWidget* pWidget = nullptr) const override
+    {
+        return qApp->style()->subControlRect(control, pOption, subControl, pWidget);
+    }
+
+    SubControl hitTestComplexControl(ComplexControl control, const QStyleOptionComplex* pOption, const QPoint& position, const QWidget* pWidget = nullptr) const override
+    {
+        return qApp->style()->hitTestComplexControl(control, pOption, position, pWidget);
+    }
+
+    QSize sizeFromContents(ContentsType type, const QStyleOption* pOption, const QSize& contentsSize, const QWidget* pWidget = nullptr) const override
+    {
+        return qApp->style()->sizeFromContents(type, pOption, contentsSize, pWidget);
+    }
+
+    int pixelMetric(PixelMetric metric, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
+    {
+        if (metric == PM_TabCloseIndicatorWidth || metric == PM_TabCloseIndicatorHeight) {
+            return scmTabCloseBoxSize;
+        }
+        return qApp->style()->pixelMetric(metric, pOption, pWidget);
+    }
+
+    int styleHint(StyleHint hint, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr, QStyleHintReturn* pReturnData = nullptr) const override
+    {
+        switch (hint) {
+        // The macOS style centres the tabs, which leaves a bar as wide as its pane starting its first word mid-way
+        case SH_TabBar_Alignment:
+            return Qt::AlignLeft;
+        // A strip short of room scrolls; a word cut short no longer says which view it is
+        case SH_TabBar_ElideMode:
+            return Qt::ElideNone;
+        // QCommonStyle asks this of a tab right before it hands its word to drawItemText(), which is given no tab to
+        // tell a chosen word from the rest by
+        case SH_UnderlineShortcut:
+            if (const auto* pTab = qstyleoption_cast<const QStyleOptionTab*>(pOption)) {
+                mTabWordNext = true;
+                mTabWord = pTab->text;
+                mTabWordQuiet = !(pTab->state & State_Selected);
+                mQuietWeight = pWidget ? pWidget->font().weight() : QFont::Normal;
+            }
+            break;
+        default:
+            break;
+        }
+        return qApp->style()->styleHint(hint, pOption, pWidget, pReturnData);
+    }
+
+    QPixmap standardPixmap(StandardPixmap pixmap, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
+    {
+        return qApp->style()->standardPixmap(pixmap, pOption, pWidget);
+    }
+
+    QIcon standardIcon(StandardPixmap icon, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->standardIcon(icon, pOption, pWidget); }
+
+    QPixmap generatedIconPixmap(QIcon::Mode mode, const QPixmap& pixmap, const QStyleOption* pOption) const override { return qApp->style()->generatedIconPixmap(mode, pixmap, pOption); }
+
+    int layoutSpacing(QSizePolicy::ControlType one, QSizePolicy::ControlType other, Qt::Orientation orientation, const QStyleOption* pOption, const QWidget* pWidget) const override
+    {
+        return qApp->style()->layoutSpacing(one, other, orientation, pOption, pWidget);
+    }
+
+private:
+    mutable bool mTabWordNext = false;
+    mutable bool mTabWordQuiet = false;
+    mutable QString mTabWord;
+    mutable QFont::Weight mQuietWeight = QFont::Normal;
+};
+
+// Shared by every strip and never deleted: a bar can outlive any one owner chosen for it
+QStyle* tabStripStyle()
+{
+    static auto* spStyle = new TabStripStyle;
+    return spStyle;
+}
 } // namespace
+
+void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens)
+{
+    if (!pPainter || base.isEmpty()) {
+        return;
+    }
+    pPainter->fillRect(QRect(base.left(), base.bottom() - scmInputBorderWidth + 1, base.width(), scmInputBorderWidth), tokens.border);
+}
 
 void prepareTabStrip(QTabBar* pTabBar)
 {
@@ -1494,13 +1660,20 @@ void prepareTabStrip(QTabBar* pTabBar)
         return;
     }
 
-    // The macOS style fills a document-mode bar with a band of its own that background: transparent cannot remove; it
-    // is the bar's base
-    pTabBar->setDrawBase(false);
-
     QObject* pFound = pTabBar->findChild<QObject*>(QLatin1StringView(TabCloseBoxKeeper::scmName), Qt::FindDirectChildrenOnly);
     auto* pKeeper = pFound ? static_cast<TabCloseBoxKeeper*>(pFound) : new TabCloseBoxKeeper(pTabBar);
     if (!pFound) {
+        // In document mode QTabWidget paints no pane, and the pane's top edge is the hairline here; setDocumentMode()
+        // also sets the bar's base, so it goes first
+        auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget());
+        if (pTabWidget) {
+            pTabWidget->setDocumentMode(false);
+        }
+        // A bar of its own spans its pane and draws the hairline as its base; under a tab widget the pane draws it
+        pTabBar->setDrawBase(!pTabWidget);
+        // Or a bar as wide as its pane stretches its tabs across it
+        pTabBar->setExpanding(false);
+        pTabBar->setStyle(tabStripStyle());
         pTabBar->installEventFilter(pKeeper);
     }
 
@@ -1515,7 +1688,7 @@ void prepareTabStrip(QTabBar* pTabBar)
             }
             anyCut = anyCut || pCross->size() != QSize(scmTabCloseBoxSize, scmTabCloseBoxSize);
             pKeeper->keep(pCross);
-            pKeeper->placeInsideThePadding(pCross);
+            pKeeper->placeBesideTheWord(pCross);
         }
     }
     if (anyCut) {

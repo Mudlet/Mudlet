@@ -40,7 +40,6 @@
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
 #include <QResizeEvent>
-#include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QAction>
@@ -221,12 +220,8 @@ void TDetachedWindow::setupUI()
         mpTabBar->setTabData(0, mCurrentProfileName);
     }
 
-    // QTabBar lays its first tab out at x = 0 and ignores its own contents margins
-    auto pTabStrip = new QHBoxLayout;
-    pTabStrip->setContentsMargins(uiDesign::scmTabStripInset, 0, 0, 0);
-    pTabStrip->setSpacing(0);
-    pTabStrip->addWidget(mpTabBar);
-    mpMainLayout->addLayout(pTabStrip);
+    // Across the whole window, so the hairline the tabs stand on does; the first name's inset is the tab's own
+    mpMainLayout->addWidget(mpTabBar);
 
     // Create a stacked widget to hold multiple consoles
     mpConsoleContainer = new QStackedWidget(centralWidget);

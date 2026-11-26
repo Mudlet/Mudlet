@@ -410,7 +410,9 @@ void dlgNotepad::applyNotepadShellStyle()
             + qsl("QToolButton#notepadAddTab, QWidget#notepadFindBar QToolButton"
                   " { border: none; border-radius: %1px; background: transparent; padding: 2px; }"
                   "QToolButton#notepadAddTab:hover, QWidget#notepadFindBar QToolButton:hover { background-color: %2; }")
-                      .arg(QString::number(uiDesign::scmRadiusChip), tokens.hoverSoft);
+                      .arg(QString::number(uiDesign::scmRadiusChip), tokens.hoverSoft)
+            // Ends where the hairline does, and keeps clear of a crowded strip, which ::tab-bar moves along by the same inset
+            + qsl("QToolButton#notepadAddTab { margin: 0px %1px; }").arg(QString::number(uiDesign::scmTabPaneInset));
     centralwidget->setStyleSheet(centralRules);
 
     const QColor warningColour = uiDesign::stateColor(uiDesign::scmStateHue_warning, tokens.darkPage);
