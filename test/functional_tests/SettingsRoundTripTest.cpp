@@ -2063,6 +2063,59 @@ private slots:
         QCOMPARE(pixelsOf(pPreview, border), 0);
     }
 
+    // With round rooms on, the map preview's rooms are circles as the map's are: just inside the corner of a room's
+    // square is what lies under the room, its middle the room
+    void test_theMapPreviewRoomsAreRoundWithRoundRooms()
+    {
+        const QColor priorWhite = mpHost->mWhite_2;
+        const double priorRoomSize = mpHost->mRoomSize;
+        const bool priorShowBorders = mpHost->mMapperShowRoomBorders;
+        const bool priorAntiAlias = mpHost->mMapperUseAntiAlias;
+        const bool priorRound = mpHost->mBubbleMode;
+        restoreLater([this, priorWhite, priorRoomSize, priorShowBorders, priorAntiAlias, priorRound]() {
+            mpHost->mWhite_2 = priorWhite;
+            mpHost->mRoomSize = priorRoomSize;
+            mpHost->mMapperShowRoomBorders = priorShowBorders;
+            mpHost->mMapperUseAntiAlias = priorAntiAlias;
+            mpHost->mBubbleMode = priorRound;
+            mpHost->mpMap->restore16ColorSet();
+        });
+        mpHost->mRoomSize = 0.8;
+        // No border round the room's edge, and every edge on whole pixels, so only the room is drawn in its colour
+        mpHost->mMapperShowRoomBorders = false;
+        mpHost->mMapperUseAntiAlias = false;
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        QCoreApplication::processEvents();
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsMapColoursPreview"));
+        QVERIFY2(pPreview && pPreview->isVisible(), "there is no map preview on show");
+        const QColor marker(0x13, 0xA7, 0x5D);
+        QVERIFY2(pixelsOf(pPreview, marker) == 0, "SETUP: the map preview already shows the colour standing out");
+        // The room in the middle of the third row: no link runs past its corners and the info box is clear of it
+        mpHost->mWhite_2 = marker;
+
+        for (const bool round : {false, true}) {
+            mpHost->mBubbleMode = round;
+            const QImage picture = pPreview->grab().toImage();
+            QRect square;
+            for (int y = 0; y < picture.height(); ++y) {
+                for (int x = 0; x < picture.width(); ++x) {
+                    if (picture.pixelColor(x, y).rgb() == marker.rgb()) {
+                        square |= QRect(x, y, 1, 1);
+                    }
+                }
+            }
+            const QString shape = round ? qsl("round") : qsl("square");
+            QVERIFY2(square.width() > 16, qPrintable(qsl("SETUP: a %1 room is %2 pixels across, too small to tell a circle from a square").arg(shape).arg(square.width())));
+            QVERIFY2(picture.pixelColor(square.center()).rgb() == marker.rgb(), qPrintable(qsl("the middle of a %1 room is not the room's colour").arg(shape)));
+            const bool cornerFilled = picture.pixelColor(square.topLeft() + QPoint(1, 1)).rgb() == marker.rgb();
+            QVERIFY2(cornerFilled != round,
+                     qPrintable(qsl("with round rooms %1, just inside the corner of a room's square %2")
+                                        .arg(round ? qsl("on") : qsl("off"), cornerFilled ? qsl("is the room's colour") : qsl("is not the room's colour"))));
+        }
+    }
+
     // Each of the sixteen environment colours has a room on show in the map preview, so a change to any of them shows
     void test_theMapPreviewShowsEveryEnvironmentColour()
     {

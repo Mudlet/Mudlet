@@ -67,7 +67,7 @@ public:
     [[nodiscard]] QSize minimumSizeHint() const override;
 
 signals:
-    // Typed; the field already shows it
+    // Typed, also when it is the colour shown; the field already shows it
     void colourEntered(const QColor& colour);
     // Set in the opacity box: the field's colour at the new opacity, which the field already shows. Apart from
     // colourEntered for an owner whose items differ in colour, which can then give each item the opacity alone.

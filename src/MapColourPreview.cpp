@@ -194,18 +194,41 @@ void MapColourPreview::paintEvent(QPaintEvent* pEvent)
         painter.drawLine(centreOf(from), centreOf(to));
     }
 
+    // With round rooms the map draws each room as the circle in the square it would otherwise fill
+    const bool round = host.mBubbleMode;
+    const auto addShape = [round](QPainterPath& path, const QRectF& square) {
+        if (round) {
+            path.addEllipse(square);
+        } else {
+            path.addRect(square);
+        }
+    };
+    const auto drawShape = [&painter, round](const QRectF& square) {
+        if (round) {
+            painter.drawEllipse(square);
+        } else {
+            painter.drawRect(square);
+        }
+    };
+
     // A level down filled and a level up outlined, each shifted off its cell the way the map shifts them
-    const qreal shift = 0.3 * side;
+    const qreal shift = round ? 0.25 * side * host.mRoomSize : 0.3 * side;
     painter.setPen(Qt::NoPen);
     painter.setBrush(host.mLowerLevelColor);
-    painter.drawRect(roomAt(scmLowerLevelCell).translated(-shift, shift));
+    drawShape(roomAt(scmLowerLevelCell).translated(-shift, shift));
     painter.setPen(QPen(host.mUpperLevelColor, 1));
     painter.setBrush(Qt::NoBrush);
-    painter.drawRect(roomAt(scmUpperLevelCell).translated(shift, -shift));
+    drawShape(roomAt(scmUpperLevelCell).translated(shift, -shift));
 
     // The border grows outward from the room, faded on a room under 12px wide as the map fades it
-    const auto drawRoom = [&painter, borderWidth, cell](const QRectF& square, const QColor& fill, const std::optional<QColor>& border) {
-        painter.fillRect(square, fill);
+    const auto drawRoom = [&painter, &addShape, borderWidth, cell, round](const QRectF& square, const QColor& fill, const std::optional<QColor>& border) {
+        if (round) {
+            QPainterPath body;
+            body.addEllipse(square);
+            painter.fillPath(body, fill);
+        } else {
+            painter.fillRect(square, fill);
+        }
         if (!border) {
             return;
         }
@@ -215,8 +238,8 @@ void MapColourPreview::paintEvent(QPaintEvent* pEvent)
         }
         QPainterPath ring;
         ring.setFillRule(Qt::OddEvenFill);
-        ring.addRect(square.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth));
-        ring.addRect(square);
+        addShape(ring, square.adjusted(-borderWidth, -borderWidth, borderWidth, borderWidth));
+        addShape(ring, square);
         painter.fillPath(ring, ink);
     };
     const std::optional<QColor> roomBorder = host.mMapperShowRoomBorders ? std::optional<QColor>(host.mRoomBorderColor) : std::nullopt;

@@ -186,10 +186,7 @@ void ColourValue::commit()
     }
     // Only the colour is typed here; how see-through it is stays as it was
     typedColour.setAlpha(mColour.isValid() ? mColour.alpha() : 255);
-    if (mShows == Shows::Own && typedColour == mColour) {
-        revert();
-        return;
-    }
+    // Taken even when it is the colour shown, which for items that differ is only the first one's
     setColour(typedColour);
     emit colourEntered(typedColour);
 }
