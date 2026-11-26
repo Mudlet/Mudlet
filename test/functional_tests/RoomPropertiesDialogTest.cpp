@@ -1967,6 +1967,48 @@ private slots:
         }
     }
 
+    // The preview shows the border the room will have on the map: its own colour and width where it has them, also
+    // where the map draws no borders, and the map's where it has none
+    void thePreviewDrawsTheRoomsOwnBorder()
+    {
+        buildMap();
+        const bool shownBefore = mpHost->mMapperShowRoomBorders;
+        mpHost->mMapperShowRoomBorders = false;
+        const QColor own(0, 128, 0);
+        room(scmFirstRoom)->mBorderColor = own;
+        room(scmFirstRoom)->mBorderThickness = 3;
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        const auto edge = [pDlg](const int inFromTheLeft) {
+            const QImage image = pDlg->label_preview->grab().toImage();
+            return image.pixelColor(QPointF(inFromTheLeft * image.devicePixelRatio(), pDlg->label_preview->height() / 2 * image.devicePixelRatio()).toPoint());
+        };
+        QCOMPARE(edge(0), own);
+        QCOMPARE(edge(2), own);
+        QVERIFY2(edge(4) != own, "the border is wider than the room's three steps");
+
+        const QColor changed(0, 0, 200);
+        QMetaObject::invokeMethod(pDlg, "slot_borderColorSelected", Q_ARG(QColor, changed));
+        QCOMPARE(edge(0), changed);
+
+        pDlg->spinBox_borderThickness->setValue(1);
+        QCOMPARE(edge(0), changed);
+        QVERIFY2(edge(2) != changed, "the preview kept the old width");
+
+        // With neither a colour nor a width of its own, the room has the map's border, and here the map draws none
+        pDlg->pushButton_resetBorderColor->click();
+        pDlg->spinBox_borderThickness->setValue(0);
+        QVERIFY2(edge(0) != changed, "the preview kept the border that was reset");
+        QCOMPARE(edge(0), edge(4));
+
+        mpHost->mMapperShowRoomBorders = true;
+        pDlg->lineEdit_roomSymbol->setText(qsl("A"));
+        QCOMPARE(edge(0), QColor(mpHost->mRoomBorderColor.rgb()));
+        mpHost->mMapperShowRoomBorders = shownBefore;
+    }
+
     // Removing the symbol must not leave the last one showing, as OK would then
     // save a room without the symbol the preview shows
     void clearingTheSymbolClearsThePreview()

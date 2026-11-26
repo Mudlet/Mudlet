@@ -872,10 +872,22 @@ void dlgRoomProperties::slot_updatePreview()
     }
     pushButton_resetSymbolColor->setEnabled(resetOffered(selectedSymbolColor));
     const bool roundRoom = mpHost->mBubbleMode;
-    // theme-fixed: the room's own color and the map's room border, drawn as the map draws them
+    // As the map decides it: a border of the room's own shows even where the map draws none, in the room's colour
+    // and width where it has them and the map's where it does not
+    const bool bordered = mpHost->mMapperShowRoomBorders || selectedBorderColor.isValid() || mBorderThickness > 0;
+    const QColor borderColor = selectedBorderColor.isValid() ? selectedBorderColor : mpHost->mRoomBorderColor;
+    // The map scales a width with its zoom; here a step is a pixel, held so a wide border leaves the room in sight
+    const int borderWidth = std::clamp(mBorderThickness, 1, scmPreviewTileSize / 4);
+    // theme-fixed: the room's own color and its border, drawn as the map draws them
     label_preview->setStyleSheet(qsl("background-color: %1; border: %2; border-radius: %3px;")
                                          .arg(mRoomColor.name(),
-                                              mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none"),
+                                              bordered ? qsl("%1px solid rgba(%2, %3, %4, %5)")
+                                                                 .arg(QString::number(borderWidth),
+                                                                      QString::number(borderColor.red()),
+                                                                      QString::number(borderColor.green()),
+                                                                      QString::number(borderColor.blue()),
+                                                                      QString::number(borderColor.alpha()))
+                                                       : qsl("none"),
                                               QString::number(roundRoom ? label_preview->width() / 2 : 0)));
     label_preview->setAccessibleName(newSymbol);
     if (newSymbol.isEmpty()) {
@@ -1283,6 +1295,7 @@ void dlgRoomProperties::slot_borderColorSelected(const QColor& color)
     mBorderColorWasChanged = true;
     showBorderColour();
     emitBorderPreview();
+    slot_updatePreview();
 }
 
 // The field shows the first room's colour, so it is everyone's only while the rooms agree or once one was decided for
@@ -1297,6 +1310,7 @@ void dlgRoomProperties::slot_borderOpacitySelected(const QColor& colour)
     selectedBorderColor = colour;
     mBorderAlphaOnly = colour.alpha();
     emitBorderPreview();
+    slot_updatePreview();
 }
 
 void dlgRoomProperties::slot_resetBorderColor()
@@ -1305,6 +1319,7 @@ void dlgRoomProperties::slot_resetBorderColor()
     mBorderColorWasChanged = true;
     showBorderColour();
     emitBorderPreview();
+    slot_updatePreview();
 }
 
 void dlgRoomProperties::slot_borderThicknessChanged(int value)
@@ -1312,6 +1327,7 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
     mBorderThickness = value;
     mBorderThicknessWasChanged = true;
     emitBorderPreview();
+    slot_updatePreview();
 }
 
 void dlgRoomProperties::initGeneral()
