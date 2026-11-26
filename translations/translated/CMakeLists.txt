@@ -56,16 +56,16 @@ endif()
 set(translation_stats_file "${CMAKE_CURRENT_SOURCE_DIR}/translation-stats.json")
 
 if(LUA_LOCATION)
+  # The generator's output is deliberately not captured: its own warning about a
+  # missing lua-yajl is what explains empty statistics and English-only detection.
   execute_process(
           WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
           COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua
-          RESULT_VARIABLE stats_result
-          OUTPUT_VARIABLE stats_output
-          ERROR_VARIABLE stats_output)
+          RESULT_VARIABLE stats_result)
   if(NOT stats_result EQUAL 0)
     message(WARNING
           "Generating the translation statistics failed with exit code ${stats_result}. "
-          "Its output was:\n${stats_output}")
+          "See the generator output above.")
   endif()
 endif()
 
@@ -77,7 +77,7 @@ if(NOT EXISTS "${translation_stats_file}")
   if(LUA_LOCATION)
     message(FATAL_ERROR
           "The translation statistics generator ran but left no ${translation_stats_file}, "
-          "which mudlet.qrc needs. Its output was:\n${stats_output}")
+          "which mudlet.qrc needs. See its output above.")
   endif()
   message(WARNING
           "No Lua 5.1 interpreter was found, so the translation statistics will be empty. "
