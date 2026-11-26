@@ -56,12 +56,12 @@ SidebarToggle::SidebarToggle(QWidget* pSeam, QWidget* pParent)
     reposition();
 }
 
-void SidebarToggle::setPointingLeft(const bool pointingLeft)
+void SidebarToggle::setPointingAtPane(const bool pointingAtPane)
 {
-    if (mPointingLeft == pointingLeft) {
+    if (mPointingAtPane == pointingAtPane) {
         return;
     }
-    mPointingLeft = pointingLeft;
+    mPointingAtPane = pointingAtPane;
     update();
 }
 
@@ -74,7 +74,9 @@ void SidebarToggle::reposition()
     // mapTo() rather than geometry(): the pane may sit a layout or two deeper
     // than the parent's own children
     const QPoint paneTopLeft = mpSeam->mapTo(pParent, QPoint(0, 0));
-    move(paneTopLeft.x() + mpSeam->width() - width() / 2, paneTopLeft.y() + (mpSeam->height() - height()) / 2);
+    // A mirrored layout puts the pane's trailing edge, the seam, on its left
+    const int x = layoutDirection() == Qt::RightToLeft ? paneTopLeft.x() - width() / 2 : paneTopLeft.x() + mpSeam->width() - width() / 2;
+    move(x, paneTopLeft.y() + (mpSeam->height() - height()) / 2);
     // A neighbour stacked above the pill would hide the half that overlaps it
     raise();
 }
@@ -141,7 +143,7 @@ void SidebarToggle::paintEvent(QPaintEvent* event)
     // whichever way round it is drawn
     const qreal reach = scmChevronArm / 1.6;
     QPolygonF stroke;
-    if (mPointingLeft) {
+    if (pointingLeft()) {
         stroke << QPointF(centre.x() + reach, centre.y() - scmChevronArm) << QPointF(centre.x() - reach, centre.y()) << QPointF(centre.x() + reach, centre.y() + scmChevronArm);
     } else {
         stroke << QPointF(centre.x() - reach, centre.y() - scmChevronArm) << QPointF(centre.x() + reach, centre.y()) << QPointF(centre.x() - reach, centre.y() + scmChevronArm);

@@ -387,6 +387,69 @@ private:
         QCoreApplication::sendPostedEvents();
     }
 
+    // The seam is the sidebar's edge facing the content, which a mirrored shell
+    // puts on the sidebar's left
+    static void measureTheSeam(const Sidebar& sidebar, const QString& mode, QStringList& measured, QStringList& adrift)
+    {
+        QWidget* pPane = sidebar.pane();
+        const uiDesign::SidebarToggle* pToggle = sidebar.toggle();
+        const QPoint paneTopLeft = pPane->mapTo(sidebar.shell(), QPoint(0, 0));
+        const bool mirrored = sidebar.shell()->layoutDirection() == Qt::RightToLeft;
+        const int seamX = mirrored ? paneTopLeft.x() : paneTopLeft.x() + pPane->width();
+        const int fromTheSeam = qRound(pToggle->x() + pToggle->width() / 2.0) - seamX;
+        const int paneMiddle = paneTopLeft.y() + pPane->height() / 2;
+        const int fromTheMiddle = qRound(pToggle->y() + pToggle->height() / 2.0) - paneMiddle;
+        measured << qsl("%1: the sidebar's %2 edge is at x=%3 and the chevron's middle is %4px off it, %5px off the pane's own middle")
+                            .arg(mode, mirrored ? qsl("left") : qsl("right"), QString::number(seamX), QString::number(fromTheSeam), QString::number(fromTheMiddle));
+        // A pixel either way: the pill straddles a line rather than filling
+        // a column, so its middle lands on the boundary between two pixels
+        if (std::abs(fromTheSeam) > 1) {
+            adrift << qsl("%1, %2px off the seam").arg(mode, QString::number(fromTheSeam));
+        }
+        if (std::abs(fromTheMiddle) > 1) {
+            adrift << qsl("%1, %2px off the middle of the pane").arg(mode, QString::number(fromTheMiddle));
+        }
+    }
+
+    // The direction -reverse sets, which every open window follows
+    static void layOutFrom(const Qt::LayoutDirection direction)
+    {
+        QApplication::setLayoutDirection(direction);
+        QCoreApplication::sendPostedEvents();
+    }
+
+    static bool sidebarOnTheRight(const Sidebar& sidebar) { return sidebar.pane()->mapTo(sidebar.shell(), QPoint(0, 0)).x() + sidebar.pane()->width() / 2 > sidebar.shell()->width() / 2; }
+
+    static QString whereTheSidebarIs(const Sidebar& sidebar)
+    {
+        const int left = sidebar.pane()->mapTo(sidebar.shell(), QPoint(0, 0)).x();
+        return qsl("the sidebar spans x=%1 to x=%2 of a shell %3px wide laid out %4")
+                .arg(QString::number(left),
+                     QString::number(left + sidebar.pane()->width()),
+                     QString::number(sidebar.shell()->width()),
+                     sidebar.shell()->layoutDirection() == Qt::RightToLeft ? qsl("right to left") : qsl("left to right"));
+    }
+
+    // For a scope guard, where a QVERIFY2 would only return from the lambda:
+    // the direction and the names the cases after it start from
+    static void backToLeftToRightWithTheNames(const Sidebar& sidebar)
+    {
+        layOutFrom(Qt::LayoutDirectionAuto);
+        if (sidebar.railShowing() && sidebar.toggle() && sidebar.toggle()->isEnabled()) {
+            QTest::mouseClick(sidebar.toggle(), Qt::LeftButton);
+            QCoreApplication::sendPostedEvents();
+        }
+    }
+
+    // The chevron's own square: the frame round it turns accent while the
+    // toggle has focus, which a press can give it
+    static QImage chevronOf(uiDesign::SidebarToggle* pToggle)
+    {
+        QRect square(0, 0, pToggle->width() / 2, pToggle->width() / 2);
+        square.moveCenter(pToggle->rect().center());
+        return pToggle->grab(square).toImage();
+    }
+
 private slots:
     void initTestCase()
     {
@@ -446,7 +509,7 @@ private slots:
         QVERIFY2(!sidebar.anythingStored(), "opening the window wrote a sidebar preference nobody chose, so what a later run opens with is not the default this case reads");
         QVERIFY2(sidebar.toggle() != nullptr, "the window has no sidebar toggle");
         QVERIFY2(sidebar.toggle()->isEnabled(), "the chevron cannot be pressed on a window with room for the names");
-        QVERIFY2(sidebar.toggle()->pointingLeft(), "the names are showing and the chevron does not point at the sidebar");
+        QVERIFY2(sidebar.toggle()->pointingAtPane(), "the names are showing and the chevron does not point at the sidebar");
     }
 
     void test_theToggleRidesTheSeamBesideTheSidebar_data() { addBothWindows(); }
@@ -459,30 +522,13 @@ private slots:
         QVERIFY2(sidebar.toggle() != nullptr, "the window has no sidebar toggle");
         QVERIFY2(sidebar.toggle()->parentWidget() == sidebar.shell(), "the toggle is a child of one of the two things it lies between, which would clip it");
 
-        QWidget* pShell = sidebar.shell();
-        QWidget* pPane = sidebar.pane();
-        uiDesign::SidebarToggle* pToggle = sidebar.toggle();
         QStringList measured;
         QStringList adrift;
         for (const QString& mode : {qsl("with the names showing"), qsl("as a rail")}) {
-            const QPoint paneTopLeft = pPane->mapTo(pShell, QPoint(0, 0));
-            const int seamX = paneTopLeft.x() + pPane->width();
-            const int fromTheSeam = qRound(pToggle->x() + pToggle->width() / 2.0) - seamX;
-            const int paneMiddle = paneTopLeft.y() + pPane->height() / 2;
-            const int fromTheMiddle = qRound(pToggle->y() + pToggle->height() / 2.0) - paneMiddle;
-            measured << qsl("%1: the sidebar ends at x=%2 and the chevron's middle is %3px off it, %4px off the pane's own middle")
-                                .arg(mode, QString::number(seamX), QString::number(fromTheSeam), QString::number(fromTheMiddle));
-            // A pixel either way: the pill straddles a line rather than filling
-            // a column, so its middle lands on the boundary between two pixels
-            if (std::abs(fromTheSeam) > 1) {
-                adrift << qsl("%1, %2px off the seam").arg(mode, QString::number(fromTheSeam));
-            }
-            if (std::abs(fromTheMiddle) > 1) {
-                adrift << qsl("%1, %2px off the middle of the pane").arg(mode, QString::number(fromTheMiddle));
-            }
+            measureTheSeam(sidebar, mode, measured, adrift);
             pressTheToggle(sidebar);
         }
-        qInfo().noquote() << qsl("  %1").arg(measured.join(qsl("; ")));
+        qInfo().noquote() << qsl("  left to right: %1").arg(measured.join(qsl("; ")));
 
         QVERIFY2(adrift.isEmpty(), qPrintable(qsl("the sidebar toggle is not on the seam: %1").arg(adrift.join(qsl("; ")))));
         // The next case starts from the names showing
@@ -494,18 +540,124 @@ private slots:
     void test_theChevronTurnsRoundWithTheMode()
     {
         QVERIFY2(!mEditor.railShowing(), "This case starts from the names showing");
-        QVERIFY2(mEditor.toggle()->pointingLeft(), "The names are showing and the chevron does not point at the sidebar");
+        QVERIFY2(mEditor.toggle()->pointingAtPane(), "The names are showing and the chevron does not point at the sidebar");
         const QImage pointingIn = mEditor.toggle()->grab().toImage();
 
         pressTheToggle(mEditor);
         QVERIFY2(mEditor.railShowing(), "The toggle did not minimise the sidebar");
-        QVERIFY2(!mEditor.toggle()->pointingLeft(), "The sidebar is a rail and the chevron still points at it");
+        QVERIFY2(!mEditor.toggle()->pointingAtPane(), "The sidebar is a rail and the chevron still points at it");
         const QImage pointingOut = mEditor.toggle()->grab().toImage();
         qInfo().noquote() << qsl("  the chevron is %1px by %2px and is drawn two ways").arg(QString::number(mEditor.toggle()->width()), QString::number(mEditor.toggle()->height()));
         QVERIFY2(pointingIn != pointingOut, "The chevron is drawn the same way in both of the sidebar's modes");
 
         pressTheToggle(mEditor);
-        QVERIFY2(!mEditor.railShowing() && mEditor.toggle()->pointingLeft(), "The toggle did not turn back round with the names");
+        QVERIFY2(!mEditor.railShowing() && mEditor.toggle()->pointingAtPane(), "The toggle did not turn back round with the names");
+    }
+
+    void test_theToggleRidesTheSeamRightToLeft_data() { addBothWindows(); }
+
+    void test_theToggleRidesTheSeamRightToLeft()
+    {
+        QFETCH(QString, window);
+        const Sidebar& sidebar = sidebarNamed(window);
+        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("this case starts from the names showing: %1").arg(sidebar.state())));
+        auto restore = qScopeGuard([&sidebar]() {
+            backToLeftToRightWithTheNames(sidebar);
+        });
+
+        layOutFrom(Qt::RightToLeft);
+        QVERIFY2(sidebarOnTheRight(sidebar), qPrintable(qsl("the window did not mirror its layout, so this would measure the left-to-right seam again: %1").arg(whereTheSidebarIs(sidebar))));
+
+        QStringList measured;
+        QStringList adrift;
+        for (const QString& mode : {qsl("with the names showing"), qsl("as a rail")}) {
+            measureTheSeam(sidebar, mode, measured, adrift);
+            pressTheToggle(sidebar);
+        }
+        qInfo().noquote() << qsl("  right to left: %1").arg(measured.join(qsl("; ")));
+
+        QVERIFY2(adrift.isEmpty(), qPrintable(qsl("right to left the sidebar toggle is not on the seam: %1").arg(adrift.join(qsl("; ")))));
+        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("the second press did not put the names back: %1").arg(sidebar.state())));
+    }
+
+    void test_theChevronPointsAtTheSidebarRightToLeft_data() { addBothWindows(); }
+
+    // At the sidebar while a press would give the names up and away from it while
+    // one would bring them back; read off the picture too, as the flag is not what is drawn
+    void test_theChevronPointsAtTheSidebarRightToLeft()
+    {
+        QFETCH(QString, window);
+        const Sidebar& sidebar = sidebarNamed(window);
+        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("this case starts from the names showing: %1").arg(sidebar.state())));
+        uiDesign::SidebarToggle* pToggle = sidebar.toggle();
+        auto restore = qScopeGuard([&sidebar]() {
+            backToLeftToRightWithTheNames(sidebar);
+        });
+
+        QVERIFY2(pToggle->pointingLeft(), "left to right with the names showing, the chevron is not drawn pointing left at the sidebar");
+        const QImage drawnLeft = chevronOf(pToggle);
+        pressTheToggle(sidebar);
+        QVERIFY2(!pToggle->pointingLeft(), "left to right as a rail, the chevron is not drawn pointing right, away from the sidebar");
+        const QImage drawnRight = chevronOf(pToggle);
+        pressTheToggle(sidebar);
+        QVERIFY2(drawnLeft != drawnRight, "the chevron's square is drawn the same both ways round, so it holds nothing to compare");
+
+        layOutFrom(Qt::RightToLeft);
+        QVERIFY2(sidebarOnTheRight(sidebar), qPrintable(qsl("the window did not mirror its layout: %1").arg(whereTheSidebarIs(sidebar))));
+        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("turning the layout round gave the names up: %1").arg(sidebar.state())));
+        QVERIFY2(pToggle->pointingAtPane(), "right to left with the names showing, the chevron is not meant to point at the sidebar");
+        QVERIFY2(!pToggle->pointingLeft(), "right to left with the names showing, the chevron is drawn pointing left, away from the sidebar on the right");
+        const QImage namesRightToLeft = chevronOf(pToggle);
+
+        pressTheToggle(sidebar);
+        QVERIFY2(sidebar.railShowing(), qPrintable(qsl("the toggle did not minimise the sidebar: %1").arg(sidebar.state())));
+        QVERIFY2(!pToggle->pointingAtPane(), "right to left as a rail, the chevron is still meant to point at the sidebar");
+        QVERIFY2(pToggle->pointingLeft(), "right to left as a rail, the chevron is drawn pointing right, at the sidebar on the right");
+        const QImage railRightToLeft = chevronOf(pToggle);
+        pressTheToggle(sidebar);
+
+        const auto drawnPointing = [&drawnLeft, &drawnRight](const QImage& picture) {
+            return picture == drawnLeft ? qsl("left") : (picture == drawnRight ? qsl("right") : qsl("neither way"));
+        };
+        qInfo().noquote() << qsl("  right to left the chevron is drawn pointing %1 with the names showing and %2 as a rail, read in its %3px square")
+                                     .arg(drawnPointing(namesRightToLeft), drawnPointing(railRightToLeft), QString::number(drawnLeft.width()));
+        QVERIFY2(namesRightToLeft == drawnRight,
+                 qPrintable(qsl("right to left with the names showing, the chevron is drawn pointing %1 rather than right, at the sidebar").arg(drawnPointing(namesRightToLeft))));
+        QVERIFY2(railRightToLeft == drawnLeft,
+                 qPrintable(qsl("right to left as a rail, the chevron is drawn pointing %1 rather than left, away from the sidebar").arg(drawnPointing(railRightToLeft))));
+        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("the second press did not put the names back: %1").arg(sidebar.state())));
+    }
+
+    void test_turningTheLayoutRoundTakesTheToggleAlong_data() { addBothWindows(); }
+
+    // On a window already open, with nothing pressed or resized, and back to
+    // exactly where it started
+    void test_turningTheLayoutRoundTakesTheToggleAlong()
+    {
+        QFETCH(QString, window);
+        const Sidebar& sidebar = sidebarNamed(window);
+        QVERIFY2(!sidebar.railShowing(), qPrintable(qsl("this case starts from the names showing: %1").arg(sidebar.state())));
+        uiDesign::SidebarToggle* pToggle = sidebar.toggle();
+        auto restore = qScopeGuard([&sidebar]() {
+            backToLeftToRightWithTheNames(sidebar);
+        });
+        const QRect leftToRight = pToggle->geometry();
+
+        layOutFrom(Qt::RightToLeft);
+        QVERIFY2(sidebarOnTheRight(sidebar), qPrintable(qsl("the window did not mirror its layout: %1").arg(whereTheSidebarIs(sidebar))));
+        const QRect rightToLeft = pToggle->geometry();
+        QStringList measured;
+        QStringList adrift;
+        measureTheSeam(sidebar, qsl("turned round"), measured, adrift);
+
+        layOutFrom(Qt::LayoutDirectionAuto);
+        const QRect turnedBack = pToggle->geometry();
+        qInfo().noquote() << qsl("  the chevron is at x=%1 left to right, x=%2 right to left (%3) and x=%4 turned back")
+                                     .arg(QString::number(leftToRight.x()), QString::number(rightToLeft.x()), measured.join(qsl("; ")), QString::number(turnedBack.x()));
+
+        QVERIFY2(rightToLeft != leftToRight, "turning the layout round left the chevron where it was");
+        QVERIFY2(adrift.isEmpty(), qPrintable(qsl("turning the layout round did not take the chevron to the seam: %1").arg(adrift.join(qsl("; ")))));
+        QCOMPARE(turnedBack, leftToRight);
     }
 
     // The rail keeps each row's text, which a screen reader announces, and shows
@@ -523,7 +675,7 @@ private slots:
         QVERIFY2(mSettings.railShowing(), qPrintable(qsl("the toggle did not take the names away: %1").arg(mSettings.state())));
         QCOMPARE(mSettings.pane()->width(), uiDesign::scmSidebarRailWidth);
         QVERIFY2(mSettings.anythingStored() && !mSettings.storedLabelsShown(), qPrintable(qsl("pressing the toggle did not write the choice down: %1").arg(mSettings.state())));
-        QVERIFY2(!mSettings.toggle()->pointingLeft(), "the sidebar is a rail and the chevron still points into it");
+        QVERIFY2(!mSettings.toggle()->pointingAtPane(), "the sidebar is a rail and the chevron still points into it");
         QCOMPARE(pItem->toolTip(), pItem->text());
         QVERIFY2(mSettings.wordmark()->isHidden(), "the wordmark is drawn beside a rail that has no room for it");
 
@@ -709,6 +861,37 @@ private slots:
         QVERIFY2(paneChosen == paneBefore && rowChosen == rowBefore,
                  qPrintable(qsl("choosing \"%1\" moved the sidebar: pane %2px to %3px, row %4px to %5px")
                                     .arg(name, QString::number(paneBefore), QString::number(paneChosen), QString::number(rowBefore), QString::number(rowChosen))));
+    }
+
+    // As -reverse starts the app: the windows are built mirrored rather than
+    // turned round once open
+    void test_aWindowOpenedRightToLeftHasItsToggleOnTheSeam()
+    {
+        auto restore = qScopeGuard([]() {
+            layOutFrom(Qt::LayoutDirectionAuto);
+        });
+        layOutFrom(Qt::RightToLeft);
+
+        mEditor.mpEditor->close();
+        QCoreApplication::processEvents();
+        delete mEditor.mpEditor;
+        mEditor.mpEditor = nullptr;
+        mEditor.open(mpHost);
+        QVERIFY2(mEditor.mpEditor != nullptr, "A fresh editor should have been created");
+        mEditor.resizeWide();
+
+        mSettings.close();
+        mSettings.open();
+
+        QStringList measured;
+        QStringList adrift;
+        const QList<QPair<QString, Sidebar*>> sidebars{{qsl("editor"), &mEditor}, {qsl("settings"), &mSettings}};
+        for (const auto& [window, pSidebar] : sidebars) {
+            QVERIFY2(sidebarOnTheRight(*pSidebar), qPrintable(qsl("%1 was not built mirrored: %2").arg(window, whereTheSidebarIs(*pSidebar))));
+            measureTheSeam(*pSidebar, qsl("%1 opened right to left %2").arg(window, pSidebar->railShowing() ? qsl("as a rail") : qsl("with the names showing")), measured, adrift);
+        }
+        qInfo().noquote() << qsl("  %1").arg(measured.join(qsl("; ")));
+        QVERIFY2(adrift.isEmpty(), qPrintable(qsl("a window opened right to left has its sidebar toggle off the seam: %1").arg(adrift.join(qsl("; ")))));
     }
 
     // Both windows under each style, so each style is put on once

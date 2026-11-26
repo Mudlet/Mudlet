@@ -37,8 +37,10 @@ public:
     // both that pane and what is beside it, or either would clip the pill.
     SidebarToggle(QWidget* pSeam, QWidget* pParent);
 
-    void setPointingLeft(const bool pointingLeft);
-    [[nodiscard]] bool pointingLeft() const { return mPointingLeft; }
+    void setPointingAtPane(const bool pointingAtPane);
+    [[nodiscard]] bool pointingAtPane() const { return mPointingAtPane; }
+    // The way the chevron is drawn, which a mirrored layout turns round
+    [[nodiscard]] bool pointingLeft() const { return mPointingAtPane != (layoutDirection() == Qt::RightToLeft); }
 
     // Runs by itself when either widget moves, resizes or shows; a caller only
     // needs it for any other change.
@@ -52,7 +54,7 @@ protected:
 
 private:
     QPointer<QWidget> mpSeam;
-    bool mPointingLeft = true;
+    bool mPointingAtPane = true;
 };
 
 } // namespace uiDesign
