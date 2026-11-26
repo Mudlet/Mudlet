@@ -58,6 +58,7 @@
 #include <QTabBar>
 #include <QTableWidget>
 #include <QTemporaryDir>
+#include <QTextBlock>
 #include <QTextCursor>
 #include <QTimer>
 #include <QtTest/QtTest>
@@ -320,6 +321,17 @@ private:
         cursor.movePosition(QTextCursor::End);
         pBox->setTextCursor(cursor);
         QTest::keyClicks(pBox, typed);
+    }
+
+    // Return pressed after the last word of what the value box shows, then the words of the new line
+    static void addALineAtTheEnd(dlgRoomProperties* pDlg, const QString& line)
+    {
+        QPlainTextEdit* pBox = valueBox(pDlg);
+        QTextCursor cursor = pBox->textCursor();
+        cursor.movePosition(QTextCursor::End);
+        pBox->setTextCursor(cursor);
+        QTest::keyClick(pBox, Qt::Key_Return);
+        QTest::keyClicks(pBox, line);
     }
 
     // In place of everything the value box shows, as select all and paste does
@@ -2892,6 +2904,59 @@ private slots:
                  (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("A%1dim hall.\r\nCandles. Lit.").arg(nbsp)}, {qsl("notes"), qsl("Ask%1Ahmet.\r\nTwice. Thrice.").arg(nbsp)}}));
     }
 
+    // The box shows every kind of line break as one and gives back "\n" for each; an edit to one line leaves the
+    // breaks of a value that mixes them all exactly as they were stored
+    void anEditKeepsEveryLineBreakItDidNotReach()
+    {
+        buildMap();
+        const QString lineSeparator(QChar::LineSeparator);
+        const QString paragraphSeparator(QChar::ParagraphSeparator);
+        const QString stored = qsl("one\ntwo\r\nthree\rfour%1five%2six").arg(lineSeparator, paragraphSeparator);
+        room(scmFirstRoom)->userData = {{qsl("first line"), stored}, {qsl("third line"), stored}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(chooseRow(pDlg, qsl("third line")));
+        // A line separator breaks the line within its block, so "three" is the third block and "four" starts the fourth
+        QTextCursor cursor(valueBox(pDlg)->document()->findBlockByNumber(2));
+        QCOMPARE(cursor.block().text(), qsl("three"));
+        cursor.movePosition(QTextCursor::EndOfBlock);
+        valueBox(pDlg)->setTextCursor(cursor);
+        QTest::keyClicks(valueBox(pDlg), qsl("!"));
+        QVERIFY(chooseRow(pDlg, qsl("first line")));
+        valueBox(pDlg)->moveCursor(QTextCursor::Start);
+        QTest::keyClicks(valueBox(pDlg), qsl("Just "));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges.keys(), (QStringList{qsl("first line"), qsl("third line")}));
+        QCOMPARE(mEmitted.userDataChanges.value(qsl("third line")).value_or(QString()), qsl("one\ntwo\r\nthree!\rfour%1five%2six").arg(lineSeparator, paragraphSeparator));
+        QCOMPARE(mEmitted.userDataChanges.value(qsl("first line")).value_or(QString()), qsl("Just one\ntwo\r\nthree\rfour%1five%2six").arg(lineSeparator, paragraphSeparator));
+    }
+
+    // A line added at the end takes the break the value has most, "\n" in a value of one line
+    void aLineAddedTakesTheLineBreakTheValueHasMost()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {
+                {qsl("crlf"), qsl("a\r\nb")}, {qsl("lf"), qsl("a\nb")}, {qsl("one line"), qsl("a")}, {qsl("mostly crlf"), qsl("a\r\nb\r\nc\nd")}, {qsl("mostly lf"), qsl("a\nb\nc\r\nd")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        for (const QString& key : {qsl("crlf"), qsl("lf"), qsl("one line"), qsl("mostly crlf"), qsl("mostly lf")}) {
+            QVERIFY(chooseRow(pDlg, key));
+            addALineAtTheEnd(pDlg, qsl("z"));
+        }
+        pDlg->accept();
+
+        const QMap<QString, QString> expected{{qsl("crlf"), qsl("a\r\nb\r\nz")},
+                                              {qsl("lf"), qsl("a\nb\nz")},
+                                              {qsl("one line"), qsl("a\nz")},
+                                              {qsl("mostly crlf"), qsl("a\r\nb\r\nc\nd\r\nz")},
+                                              {qsl("mostly lf"), qsl("a\nb\nc\r\nd\nz")}};
+        QCOMPARE(mEmitted.userDataChanges.keys(), expected.keys());
+        for (auto it = expected.cbegin(); it != expected.cend(); ++it) {
+            QCOMPARE(mEmitted.userDataChanges.value(it.key()).value_or(QString()), it.value());
+        }
+    }
+
     // A JSON list or table stored with nothing between its entries is laid out to be read, in a fixed-width face, and
     // taking the layout out again gives back the very text that was stored
     void aJsonTableIsShownIndentedAndTheLayoutComesOutAgainWhole()
@@ -2955,6 +3020,27 @@ private slots:
         pDlg->accept();
 
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("gotoMapping"), qsl("{\"forge\":480,\"bank\":1.50,\"cloister\":4.7e2,\"gallery\":[512,0.10]}")}}));
+    }
+
+    // A line separator inside a JSON string is shown as a line break among those of the layout, and an edit to another
+    // entry leaves it in the string rather than taking it out with the layout
+    void aLineBreakInsideAJsonStringOutlivesAnEditElsewhere()
+    {
+        buildMap();
+        const QString lineSeparator(QChar::LineSeparator);
+        room(scmFirstRoom)->userData = {{qsl("greeting"), qsl("{\"say\":\"Well met.%1Mind the step.\",\"times\":1}").arg(lineSeparator)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(chooseRow(pDlg, qsl("greeting")));
+        QString edited = valueBox(pDlg)->toPlainText();
+        QVERIFY2(edited.contains(qsl("\"times\": 1")), qPrintable(edited));
+        edited.replace(qsl("\"times\": 1"), qsl("\"times\": 2"));
+        replaceTheValue(pDlg, edited);
+        const bool warned = !jsonWarning(pDlg)->isHidden();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges.value(qsl("greeting")).value_or(QString()), qsl("{\"say\":\"Well met.%1Mind the step.\",\"times\":2}").arg(lineSeparator));
+        QVERIFY2(!warned, "the edited value no longer reads as JSON");
     }
 
     // Once an edit no longer reads as JSON there is no telling the layout from what was typed, so it is saved as typed
@@ -3070,6 +3156,39 @@ private slots:
         QCOMPARE(lowerSelected.size(), 1);
         QCOMPARE(lowerSelected.constFirst().row(), lastRow);
         QVERIFY2(pTable->viewport()->rect().contains(pTable->visualItemRect(pTable->item(lastRow, 1)).center()), "the chosen row was scrolled out of sight");
+    }
+
+    // A release can go to another window, or to a widget that took the mouse, and never reach the table: the table
+    // waits for the button to be up, not for a release it may never see
+    void aReleaseTheTableNeverSeesDoesNotHoldItBack()
+    {
+        buildMap();
+        QMap<QString, QString> data;
+        for (int key = 0; key < 8; ++key) {
+            data.insert(qsl("key %1").arg(key), qsl("value %1").arg(key));
+        }
+        QStringList lines;
+        for (int line = 0; line < 60; ++line) {
+            lines << qsl("Line %1 of a long value.").arg(line);
+        }
+        const int longRow = 1;
+        data.insert(qsl("key %1").arg(longRow), lines.join(QLatin1Char('\n')));
+        room(scmFirstRoom)->userData = data;
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY2(showTheScriptData(pDlg), "the Script data tab did not come on show");
+        QTableWidget* pTable = pDlg->tableWidget_userData;
+        const int heightBefore = pTable->height();
+        QTest::mousePress(pTable->viewport(), Qt::LeftButton, Qt::NoModifier, pTable->visualItemRect(pTable->item(longRow, 1)).center());
+        const int rowWhilePressed = pTable->currentRow();
+        const int heightWhilePressed = pTable->height();
+        QWidget elsewhere;
+        QTest::mouseRelease(&elsewhere, Qt::LeftButton);
+        QCOMPARE(rowWhilePressed, longRow);
+        QVERIFY2(heightWhilePressed == heightBefore, "the table gave way while the button was still down");
+
+        typeAtTheEndOfTheValue(pDlg, qsl("."));
+        QTRY_VERIFY2(pTable->height() < heightBefore, "the table still waits for a release that went elsewhere");
     }
 
     void theTableIsAsTallAsItsRows()

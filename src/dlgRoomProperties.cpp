@@ -35,6 +35,7 @@
 
 #include <QAbstractTextDocumentLayout>
 #include <QColorDialog>
+#include <QGuiApplication>
 #include <QHeaderView>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -84,6 +85,96 @@ QString plainTextKeepingSpaces(const QPlainTextEdit& edit)
         }
     }
     return text;
+}
+
+// A text cut where the value box starts a new line, which plainTextKeepingSpaces() gives back as "\n" every time;
+// "\r\n" is one break, as QTextCursor::insertText() takes it
+struct LinesAndBreaks
+{
+    QStringList lines;
+    // breaks.at(i) stands between lines.at(i) and lines.at(i + 1)
+    QStringList breaks;
+};
+
+LinesAndBreaks splitAtLineBreaks(const QString& text)
+{
+    LinesAndBreaks result;
+    qsizetype lineStart = 0;
+    for (qsizetype i = 0; i < text.size(); ++i) {
+        qsizetype breakSize = 1;
+        switch (text.at(i).unicode()) {
+        case '\r':
+            if (i + 1 < text.size() && text.at(i + 1) == QLatin1Char('\n')) {
+                breakSize = 2;
+            }
+            break;
+        case '\n':
+        case 0xfdd0: // QTextBeginningOfFrame
+        case 0xfdd1: // QTextEndOfFrame
+        case QChar::ParagraphSeparator:
+        case QChar::LineSeparator:
+            break;
+        default:
+            continue;
+        }
+        result.lines << text.mid(lineStart, i - lineStart);
+        result.breaks << text.mid(i, breakSize);
+        i += breakSize - 1;
+        lineStart = i + 1;
+    }
+    result.lines << text.mid(lineStart);
+    return result;
+}
+
+// Each "\n" of the edited text written as the break the shown text had there. A break beside a line unchanged from
+// the start or the end keeps its own; breaks between changed lines take those of the lines they replace in turn, and
+// past those the break the shown text has most
+QString withShownLineBreaks(const QString& edited, const LinesAndBreaks& shown)
+{
+    const QStringList lines = edited.split(QLatin1Char('\n'));
+    const qsizetype count = lines.size();
+    const qsizetype shownCount = shown.lines.size();
+    const qsizetype fewer = std::min(count, shownCount);
+    qsizetype sameAtStart = 0;
+    while (sameAtStart < fewer && lines.at(sameAtStart) == shown.lines.at(sameAtStart)) {
+        ++sameAtStart;
+    }
+    qsizetype sameAtEnd = 0;
+    while (sameAtStart + sameAtEnd < fewer && lines.at(count - 1 - sameAtEnd) == shown.lines.at(shownCount - 1 - sameAtEnd)) {
+        ++sameAtEnd;
+    }
+
+    QString usual = qsl("\n");
+    QHash<QString, int> uses;
+    int mostUses = 0;
+    for (const QString& lineBreak : shown.breaks) {
+        const int used = ++uses[lineBreak];
+        if (used > mostUses) {
+            mostUses = used;
+            usual = lineBreak;
+        }
+    }
+
+    QString result;
+    result.reserve(edited.size() + count);
+    for (qsizetype line = 0; line < count; ++line) {
+        result.append(lines.at(line));
+        if (line + 1 == count) {
+            break;
+        }
+        // The break standing as far from the end of the shown text as this one does from the end of the edited text
+        const qsizetype fromTheEnd = line + shownCount - count;
+        if (line < sameAtStart && line + 1 < shownCount) {
+            result.append(shown.breaks.at(line));
+        } else if (line + 1 >= count - sameAtEnd && fromTheEnd >= 0) {
+            result.append(shown.breaks.at(fromTheEnd));
+        } else if (line + 1 < shownCount - sameAtEnd) {
+            result.append(shown.breaks.at(line));
+        } else {
+            result.append(usual);
+        }
+    }
+    return result;
 }
 
 QString firstLine(const QString& text)
@@ -635,9 +726,9 @@ void dlgRoomProperties::initLockAndHiddenWords()
                                      //: Check box in the Configure room window: a locked room is never used by a path or a speedwalk, neither as its end nor on the way
                                      : tr("Locked: no path goes to or through this room"));
 
-    /*: Tooltip to give additional information for the checkbox to control the
- state of being hidden when the selection includes multiple rooms and they
- are not all in the same state.*/
+    /*: Tooltip of two check boxes in the Configure room window, the one for hiding rooms and the one for locking
+ them, shown on either when the selection includes multiple rooms that are not all in the same state, so the box is
+ partially checked.*/
     const QString leaveAsTheyAre = utils::richText(tr("Leave as partially checked to not change the state of the selected rooms."));
     checkBox_hidden->setToolTip(checkBox_hidden->isTristate() ? leaveAsTheyAre : QString());
     checkBox_locked->setToolTip(checkBox_locked->isTristate() ? leaveAsTheyAre : QString());
@@ -1634,8 +1725,9 @@ void dlgRoomProperties::showChosenValue()
     const int row = tableWidget_userData->currentRow();
     QTableWidgetItem* pItem = row >= 0 ? tableWidget_userData->item(row, 1) : nullptr;
     const bool mixed = pItem && pItem->data(scmMixedValueRole).toBool();
-    mShownValue = pItem && !mixed ? pItem->text() : QString();
-    mShownAsJson = shownIndented(mShownValue);
+    const QString value = pItem && !mixed ? pItem->text() : QString();
+    mShownAsJson = shownIndented(value);
+    mShownText = mShownAsJson ? jsonIndented(value) : value;
     {
         const QSignalBlocker blocker(roomPropertiesValueBox);
         if (!pItem) {
@@ -1647,7 +1739,7 @@ void dlgRoomProperties::showChosenValue()
             //: Placeholder of the value box on the Script data tab of the Configure room window when the chosen row's value is empty
             roomPropertiesValueBox->setPlaceholderText(tr("No value yet"));
         }
-        roomPropertiesValueBox->setPlainText(mShownAsJson ? jsonIndented(mShownValue) : mShownValue);
+        roomPropertiesValueBox->setPlainText(mShownText);
         roomPropertiesValueBox->setReadOnly(!pItem);
         roomPropertiesValueBox->setFont(mShownAsJson ? uiDesign::fixedPitchFont(font()) : QFont());
     }
@@ -1688,12 +1780,9 @@ void dlgRoomProperties::slot_valueBoxEdited()
     if (!pItem) {
         return;
     }
-    QString value = plainTextKeepingSpaces(*roomPropertiesValueBox);
-    // The box reads "\r\n" as one line break and gives back "\n": a value stored with them gets them back, so a
-    // mapper script matching it as the game sent it still finds the room
-    if (mShownValue.contains(qsl("\r\n"))) {
-        value.replace(QLatin1Char('\n'), qsl("\r\n"));
-    }
+    // The box gives back "\n" for every kind of line break: each gets back the one the value had there, so a mapper
+    // script matching the value as the game sent it still finds the room
+    QString value = withShownLineBreaks(plainTextKeepingSpaces(*roomPropertiesValueBox), splitAtLineBreaks(mShownText));
     if (mShownAsJson) {
         // Saved in the shape it was stored in, the layout taken out again; once it no longer reads as JSON there is
         // no telling layout from content, so it is saved as typed
@@ -1731,6 +1820,11 @@ void dlgRoomProperties::fitScriptData()
 {
     if (mFittingScriptData || !roomPropertiesScriptData->isVisible()) {
         return;
+    }
+    // A release that goes to another window, or to a widget that took the mouse, never reaches the viewport
+    if (mTablePressed && QGuiApplication::mouseButtons() == Qt::NoButton) {
+        mTablePressed = false;
+        mFitWhenReleased = false;
     }
     if (mTablePressed) {
         mFitWhenReleased = true;
