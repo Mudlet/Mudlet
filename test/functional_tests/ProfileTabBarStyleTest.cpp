@@ -207,8 +207,8 @@ private:
                     count += 1.0;
                     sumX += x;
                     sumY += y;
-                    sumXY += double(x) * y;
-                    sumYY += double(y) * y;
+                    sumXY += static_cast<double>(x) * y;
+                    sumYY += static_cast<double>(y) * y;
                 }
             }
         }
@@ -745,7 +745,7 @@ private slots:
         // its twin's quiet one compare: the letters cancel, and what is left is what the mark adds. A line that falls
         // between two rows of pixels is split across them, so two rows are read together
         const auto share = [&strip, &behind](const QRect& box, const int column, const int row, const int reach) {
-            return std::min(1.0, double(TestPixels::distance(QColor(strip.pixel(box.left() + column, box.top() + row)), behind)) / reach);
+            return std::min(1.0, static_cast<double>(TestPixels::distance(QColor(strip.pixel(box.left() + column, box.top() + row)), behind)) / reach);
         };
         const int span = twinRight - twinLeft + 1;
         double addedAbove = 0.0;
