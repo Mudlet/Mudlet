@@ -396,9 +396,9 @@ private:
     void fitCheckBoxesToColumn(QWidget* pColumn);
     void wrapCheckBox(QCheckBox* pCheckBox);
     void unwrapCheckBox(QCheckBox* pCheckBox);
-    // Window widths: below collapseBelow the sidebar becomes an icon rail; fullyExpanded has the names beside
-    // the widest page's column, the most a window with no remembered size opens at; below narrowest even the
-    // rail leaves the widest page too little room
+    // Window widths: below collapseBelow the sidebar becomes an icon rail, which both colour cards two pairs to a
+    // row can put above fullyExpanded, the names beside the widest page's column; below narrowest even the rail
+    // leaves the widest page too little room
     struct SidebarWidths
     {
         int collapseBelow = 0;

@@ -686,9 +686,8 @@ static QLabel* wrapLabelOf(const QCheckBox* pCheckBox)
     return pContainer->findChild<QLabel*>(QString(), Qt::FindDirectChildrenOnly);
 }
 
-// The column is never capped: a page grows with the window and its cards use the room, and the reading column
-// is only the floor sidebarWidths() folds the names at. What is left to do when the cards change is the check
-// box wrapping, measured against that floor.
+// The column is never capped: a page grows with the window and its cards use the room. What is left to do when the
+// cards change is the check box wrapping, measured against the reading column.
 void dlgProfilePreferences::fitColumn(QScrollArea* pScrollArea)
 {
     QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
@@ -3110,14 +3109,13 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
     // The reading column, or the widest page where that is wider
     const int contentColumn = std::max(scmContentColumnWidth, widestPageMinimum);
     widths.fullyExpanded = sidebarAndMargins + std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
-    // One point for every page, so a click in the sidebar never folds or unfolds the names under the pointer, and
-    // the least any page needs, so the names stay for as long as every page fits beside them: a colour card drops
-    // to one pair a row first
-    widths.collapseBelow = sidebarAndMargins + widestPageMinimum + scrollBarWidth;
-    widths.narrowest = uiDesign::scmSidebarRailWidth + contentMargins.left() + contentMargins.right() + widestPageMinimum + scrollBarWidth;
-    // Both colour cards two pairs to a row beside the names, which no page's minimum asks for, as one pair to a row is
-    // a card's minimum; taken up as arrangeColourCards() would, so the window opens with them
+    // Both colour cards two pairs to a row, which no page's minimum asks for, as one pair to a row is a card's minimum;
+    // taken up as arrangeColourCards() would, so the window opens with them beside the names
     const int coloursSideBySide = std::max(groupBox_displayColors->sizeHint().width(), groupBox_mapperColors->sizeHint().width()) + scmColourArrangementHysteresis;
+    // One point for every page, so a click in the sidebar never folds or unfolds the names under the pointer, and room
+    // for both colour cards two pairs to a row: a card that stacked beside the names would spread out again as they fold
+    widths.collapseBelow = sidebarAndMargins + std::max(widestPageMinimum, coloursSideBySide) + scrollBarWidth;
+    widths.narrowest = uiDesign::scmSidebarRailWidth + contentMargins.left() + contentMargins.right() + widestPageMinimum + scrollBarWidth;
     widths.opening = std::max(widths.fullyExpanded, sidebarAndMargins + coloursSideBySide + scrollBarWidth);
     return widths;
 }

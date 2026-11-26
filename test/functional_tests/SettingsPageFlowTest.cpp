@@ -1034,8 +1034,8 @@ private slots:
     }
 
     // Narrowed a few pixels at a time and widened again, the sidebar's names fold at the one width whichever page is
-    // on show, so a click in the sidebar never folds them, and not before the window is down to what the pages need:
-    // a colour card dropping to one pair a row is no reason to
+    // on show, so a click in the sidebar never folds them, and before a colour card drops to one pair a row: the other
+    // way round, the card would stack beside the names and spread out again as they went
     void test_theNamesFoldAtOneWidthOnEveryPage()
     {
         MudletApp::getQSettings()->setValue(qsl("settingsSidebarLabelsShown"), true);
@@ -1045,21 +1045,33 @@ private slots:
             const auto namesShown = [this]() {
                 return !TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool();
             };
+            const bool mapper = page == qsl("mapper");
+            const bool colourCard = mapper || page == qsl("mainDisplay");
+            const auto twoPairs = [this, mapper]() {
+                return mapper ? mapSideBySide() : displayTwoPairsToARow();
+            };
             const int collapseBelow = mpPreferences->sidebarWidths().collapseBelow;
             if (!foldsBelow) {
                 foldsBelow = collapseBelow;
             }
             QVERIFY2(collapseBelow == foldsBelow, qPrintable(qsl("the names fold below %1px on the %2 page and below %3px on the general page").arg(collapseBelow).arg(page).arg(foldsBelow)));
 
+            // Down to the narrowest and back up, through the last width with the names and the first without
             QList<int> widths;
             for (int width = collapseBelow + 240; width >= mpPreferences->minimumWidth(); width -= 3) {
                 widths.append(width);
+                if (width == collapseBelow && width - 1 >= mpPreferences->minimumWidth()) {
+                    widths.append(width - 1);
+                }
             }
-            for (qsizetype index = widths.size() - 2; index >= 0; --index) {
+            const qsizetype narrowingSteps = widths.size();
+            for (qsizetype index = narrowingSteps - 2; index >= 0; --index) {
                 widths.append(widths.at(index));
             }
-            bool sawCardStackedBesideNames = false;
-            for (const int width : widths) {
+            bool hadTwo = true;
+            int changedAt = 0;
+            for (qsizetype index = 0; index < widths.size(); ++index) {
+                const int width = widths.at(index);
                 mpPreferences->resize(width, 760);
                 qApp->processEvents();
                 qApp->processEvents();
@@ -1067,12 +1079,28 @@ private slots:
                          qPrintable(qsl("at %1px the %2 page %3 the names, which fold below %4px").arg(width).arg(page, namesShown() ? qsl("shows") : qsl("folds")).arg(foldsBelow)));
                 const auto* pShown = qobject_cast<QScrollArea*>(mpPreferences->mpStackedWidget_categories->currentWidget());
                 QVERIFY2(pShown && pShown->horizontalScrollBar()->maximum() == 0, qPrintable(qsl("at %1px the %2 page scrolls sideways").arg(width).arg(page)));
-                if (page == qsl("mainDisplay") && namesShown() && !displayTwoPairsToARow()) {
-                    sawCardStackedBesideNames = true;
+                if (!colourCard) {
+                    continue;
                 }
-            }
-            if (page == qsl("mainDisplay")) {
-                QVERIFY2(sawCardStackedBesideNames, "the names were never shown beside the display colours one pair a row, so they folded to keep the card wide");
+                const bool two = twoPairs();
+                if (index == 0) {
+                    QVERIFY2(two, qPrintable(qsl("SETUP: at %1px the %2 page's colours are already one pair a row").arg(width).arg(page)));
+                }
+                QVERIFY2(!namesShown() || two, qPrintable(qsl("at %1px the %2 page shows the names beside its colours one pair a row").arg(width).arg(page)));
+                // Each way, the colours change their arrangement once at most
+                if (index == narrowingSteps) {
+                    changedAt = 0;
+                }
+                if (two != hadTwo) {
+                    QVERIFY2(!changedAt,
+                             qPrintable(qsl("%1 to %2px, the %3 page's colours went back to %4 a row, after changing at %5px")
+                                                .arg(index < narrowingSteps ? qsl("narrowed") : qsl("widened"))
+                                                .arg(width)
+                                                .arg(page, two ? qsl("two pairs") : qsl("one pair"))
+                                                .arg(changedAt)));
+                    changedAt = width;
+                }
+                hadTwo = two;
             }
             delete mpPreferences;
             mpPreferences = nullptr;

@@ -534,15 +534,19 @@ column is only as wide as its own labels and rows - the Main display's leading
 column keeps no room for an opacity box none of its rows has, so the card drops
 to one pair a row no sooner than its rows need - with 24px between the two
 (`setPairSpacing(scmFieldPairGap)`, the gap between the console colours' Normal
-and Light columns). With the sidebar's names
-beside them that takes a 944px window under cocoa in English, where the names
-alone would fold only below 887px. On a page with a colour card the names
-therefore fold first: `sidebarWidths()` raises `collapseBelow` to what the card
-needs side by side, and the card stacks only once even the rail leaves it too
-little. The other way round, narrowing the window stacked the card, then spread
-it out again as the names went. A window with no remembered size opens at the
-width that keeps both colour cards side by side beside the names: past the
-usual 1060px where a wide font needs it, and no wider than the screen.
+and Light columns). Both cards two pairs to a row beside the sidebar's names
+take a 998px window under cocoa in English (994px offscreen), where every page
+alone would fit beside the names down to 874px (868px offscreen). The names
+therefore fold first: `sidebarWidths()` sets `collapseBelow`, one width on every
+page so that a click in the sidebar never folds or unfolds them, to what both
+colour cards need two pairs to a row beside the names, and a card drops to one
+pair a row only once even the rail leaves it too little (the Main display's
+below 853px under cocoa, 844px offscreen). The other way round, narrowing the
+window would stack a card, then spread it out again as the names went. On a
+page without a colour card the names fold at that same width. A window with no
+remembered size opens at the width that keeps both colour cards side by side
+beside the names: past the usual 1060px where a wide font needs it, and no
+wider than the screen.
 
 Which arrangement a card shows is decided in `arrangeColourCards()` and handed
 to the grid with `setPairsPerRow()`, rather than left to the grid's own reading
@@ -1021,19 +1025,18 @@ is `sidebarWidths()` / `updateSidebarMode()` in
 
 - Widths are measured off font metrics, `sizeHint()`s and the actual scrollbar
   width, over every page rather than the one on show, so a page switch does
-  not move the collapse point - unless the page on show is wider than the
-  reading column, when the collapse point follows that page and the names fold
-  rather than the page scrolling sideways. The window's minimum is where even
-  the rail leaves the widest page too little room.
+  not move the collapse point: the names fold where the widest page, or both
+  colour cards two pairs to a row, no longer fit beside them. The window's
+  minimum is where even the rail leaves the widest page too little room.
 - The window has no maximum: a page's column grows with the window and its
-  cards use the room, so the reading column is the floor the names fold at and
-  never a ceiling. A window with no remembered size opens at `opening`, held to
+  cards use the room, so the reading column is never a ceiling. A window with
+  no remembered size opens at `opening`, held to
   the screen's width by `openingWidth()` and never to less than 1060px: `fullyExpanded`, the names beside the widest page's column, or wider
-  where the map's colours need it to stand in their two columns beside the
-  names, at the width `arrangeColourCards()` takes that up at (926px under
-  cocoa, 923px offscreen, against 887px and 892px for `fullyExpanded`).
-  `fullyExpanded` itself still counts each page's minimum, and the map card's
-  minimum is its columns one under the other.
+  where both colour cards need it to stand two pairs to a row beside the
+  names, at the width `arrangeColourCards()` takes that up at (998px under
+  cocoa, 994px offscreen, which is also the width the names fold below,
+  against 887px and 892px for `fullyExpanded`). `fullyExpanded` itself still
+  counts each page's minimum, and a colour card's minimum is one pair to a row.
 - The test is against the window's own width, not the space left over, so
   collapsing cannot flip the condition that caused it. A breakpoint inside a
   scrolling page is held to the same rule: the colour cards are measured with
