@@ -26,8 +26,8 @@
  * sat side by side are columns that stay whole, side by side while both fit and
  * one under the other when they do not. The two colour cards, the Main
  * display's and the map's, are one grid of label-and-row pairs, two to a row
- * with every row one width, and one to a row where two do not fit; under them
- * the console colours are a table with a preview beside it.
+ * with the rows of a column one width, and one to a row where two do not fit;
+ * under them the console colours are a table with a preview beside it.
  *
  * Run with: ctest -R SettingsPageFlowTest -V
  */
@@ -282,17 +282,19 @@ private:
         return mpPreferences->findChild<uiDesign::ColourValue*>(qsl("settingsColour_%1").arg(pChoose->objectName().remove(qsl("pushButton_"))));
     }
 
-    // Both states of a colour grid: every row one width, the leading rows
-    // down one edge and the trailing down another, two pairs to a row; or one
-    // pair to a row, in order, every row down the one edge
+    // Both states of a colour grid: two pairs to a row, the leading rows one
+    // width down one edge and the trailing rows one width down another; or one
+    // pair to a row, in order, every row one width down the one edge
     void verifyColourGrid(const QList<std::pair<QLabel*, QWidget*>>& pairs, const bool twoPairs)
     {
-        const int width = pairs.first().second->width();
         for (int index = 0; index < pairs.size(); ++index) {
             const auto& [pLabel, pRow] = pairs.at(index);
-            QVERIFY2(pRow->width() == width, qPrintable(qsl("the row '%1' is %2px wide where the first is %3px").arg(pRow->objectName()).arg(pRow->width()).arg(width)));
-            QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
             QWidget* pAlignedRow = pairs.at(twoPairs ? index % 2 : 0).second;
+            QVERIFY2(pRow->width() == pAlignedRow->width(),
+                     qPrintable(qsl("the row '%1' is %2px wide where '%3' is %4px").arg(pRow->objectName()).arg(pRow->width()).arg(pAlignedRow->objectName()).arg(pAlignedRow->width())));
+            QVERIFY2(pRow->width() >= pRow->sizeHint().width(),
+                     qPrintable(qsl("the row '%1' is %2px wide, narrower than the %3px its contents need").arg(pRow->objectName()).arg(pRow->width()).arg(pRow->sizeHint().width())));
+            QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
             QVERIFY2(pRow->geometry().left() == pAlignedRow->geometry().left(),
                      qPrintable(qsl("the row '%1' starts at %2px, out of line with '%3' at %4px")
                                         .arg(pRow->objectName())
@@ -714,6 +716,23 @@ private slots:
         }
         auto* pDisplayGrid = dynamic_cast<uiDesign::PairGridLayout*>(pDisplayColours->layout());
         const int displayTwoPairs = pDisplayGrid->sizeHint().width();
+        // Two pairs to a row take what each column's own pairs need: Background's opacity box is the trailing column's
+        // alone, and the leading column keeps no room for one
+        int leadingLabel = 0;
+        int leadingRow = 0;
+        int trailingLabel = 0;
+        int trailingRow = 0;
+        for (qsizetype index = 0; index < displayRows.size(); ++index) {
+            const auto& [pLabel, pRow] = displayRows.at(index);
+            int& label = index % 2 ? trailingLabel : leadingLabel;
+            int& row = index % 2 ? trailingRow : leadingRow;
+            label = std::max(label, pLabel->sizeHint().width());
+            row = std::max(row, pRow->sizeHint().width());
+        }
+        QVERIFY2(leadingRow < trailingRow, qPrintable(qsl("SETUP: the leading rows need %1px, no less than the trailing ones' %2px with the opacity box").arg(leadingRow).arg(trailingRow)));
+        const QMargins displayMargins = pDisplayGrid->contentsMargins();
+        const int gapAcross = pDisplayGrid->horizontalSpacing();
+        QCOMPARE(displayTwoPairs, displayMargins.left() + leadingLabel + gapAcross + leadingRow + pDisplayGrid->pairSpacing() + trailingLabel + gapAcross + trailingRow + displayMargins.right());
         // The cases open in a window of one width, and how much of it two pairs need follows the platform's font
         const int displayRoom = displayTwoPairs + dlgProfilePreferences::scmColourArrangementHysteresis + TestSettings::pageOf(p, qsl("mainDisplay"))->verticalScrollBar()->sizeHint().width();
         if (pDisplayColours->width() < displayRoom) {

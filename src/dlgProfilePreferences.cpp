@@ -2637,9 +2637,9 @@ struct ColourCardContents
     QWidget* pFooterTrailing = nullptr;
 };
 
-// The Main display's colours and the map's are one recipe: label, row, label, row, every row the one width so they
-// line up down the card, and one pair to a row once two no longer fit the column; then the console colours. The card
-// keeps its .ui grid, emptied, with the colours in its one cell.
+// The Main display's colours and the map's are one recipe: label, row, label, row, the rows of a column one width so
+// they line up down the card, and one pair to a row once two no longer fit the column; then the console colours. The
+// card keeps its .ui grid, emptied, with the colours in its one cell.
 static QWidget* layOutColourCard(QGroupBox* pCard, QGridLayout* pCardGrid, const QString& objectName, const ColourCardContents& contents)
 {
     auto* pColours = new QWidget(pCard);

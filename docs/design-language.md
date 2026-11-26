@@ -529,9 +529,12 @@ trailing column is two rows shorter, and the space under it stays empty. Where
 the two columns do not fit side by side the trailing one goes under the leading
 one whole; read across, the see-through colours were shuffled in among the
 others. The Main display's Background may be see-through as well and has the
-card's one opacity box. Side by side each column is only as wide as its own labels
-and rows, with 24px between the two (`setPairSpacing(scmFieldPairGap)`, the gap
-between the console colours' Normal and Light columns). With the sidebar's names
+card's one opacity box, in the trailing column. On both cards, side by side each
+column is only as wide as its own labels and rows - the Main display's leading
+column keeps no room for an opacity box none of its rows has, so the card drops
+to one pair a row no sooner than its rows need - with 24px between the two
+(`setPairSpacing(scmFieldPairGap)`, the gap between the console colours' Normal
+and Light columns). With the sidebar's names
 beside them that takes a 944px window under cocoa in English, where the names
 alone would fold only below 887px. On a page with a colour card the names
 therefore fold first: `sidebarWidths()` raises `collapseBelow` to what the card

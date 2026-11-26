@@ -137,7 +137,8 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   (the card's "Reset all colors to default" stays, on the Main display's card showing "Reset all colors and remove
   the background image" while a script has put a picture behind the main display): the card's own colours a label and a row to a pair
   in `PairGridLayout` - the Main display's read across, two pairs to a row and one to a row in the same
-  order; the map's read down (`ReadingOrder::DownColumns`), a leading column holding the five see-through
+  order, each column as wide as its own rows, so the leading one keeps no room for Background's opacity
+  box; the map's read down (`ReadingOrder::DownColumns`), a leading column holding the five see-through
   colours (`setLeadingPairs(5)`) so their opacity boxes stand in one, and a trailing one of three, side by
   side or the trailing column under the leading one whole, never taking turns. Two to a row or one is decided by
   `arrangeColourCards()` from the width the page gives the card with room kept for its scroll bar

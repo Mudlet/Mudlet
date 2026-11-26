@@ -26,21 +26,20 @@
 namespace uiDesign {
 
 // Pairs of a label and the control it names, two to a row the way a form grid
-// lays them - label, control, label, control - with every control stretched to
-// the one width, so the controls line up down the column whichever side they
-// stand on. Where two pairs no longer fit, it lays one pair to a row rather
-// than widening whatever holds it; a pair never splits. A row can instead
-// carry one widget across the whole width (a divider, a sentence), and the
-// last row a footer: a widget under each half.
+// lays them - label, control, label, control - each side's controls stretched
+// to the one width, so they line up down their column, and each side only as
+// wide as its own controls need. Where two pairs no longer fit, it lays one
+// pair to a row rather than widening whatever holds it; a pair never splits. A
+// row can instead carry one widget across the whole width (a divider, a
+// sentence), and the last row a footer: a widget under each half.
 //
 // The height therefore depends on the width, so this answers heightForWidth()
 // and the widget carrying it has to say so in its size policy.
 //
 // Read down rather than across, the pairs between two full-width rows are two
 // columns, the first half of them (or as many as setLeadingPairs() says) leading
-// and the rest trailing, each column as wide as its own controls need; one pair
-// to a row, the trailing column's pairs follow the leading column's whole rather
-// than taking turns with them.
+// and the rest trailing; one pair to a row, the trailing column's pairs follow
+// the leading column's whole rather than taking turns with them.
 class PairGridLayout : public QLayout
 {
 public:
@@ -96,8 +95,7 @@ private:
         QLayoutItem* pFirst = nullptr;
         QLayoutItem* pSecond = nullptr;
     };
-    // What the columns come to: the labels and the controls of either side.
-    // Read across, every control is given the one width.
+    // What the columns come to: the labels and the controls of either side
     struct Columns
     {
         int leadingLabel = 0;
