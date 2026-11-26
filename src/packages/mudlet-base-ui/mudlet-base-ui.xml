@@ -2292,7 +2292,7 @@ end
 -- window whenever the dock is next shown, hidden or resized after the window is
 -- closed, which the compact layout does on a resize, so the map stays the window's.
 function BaseUI.createMapper()
-  if type(getMapWidgetGeometry) == "function" and getMapWidgetGeometry() then
+  if getMapWidgetGeometry and getMapWidgetGeometry() then
     BaseUI.mapInWindow = true
     return
   end
