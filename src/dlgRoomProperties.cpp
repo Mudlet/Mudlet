@@ -204,6 +204,9 @@ constexpr int scmPreviewTileSize = 48;
 constexpr int scmHeadingLetterSpacing = 106;
 // The shell's margin already holds the tabs off the window's edge, so the pages start on the tab widget's own edge
 constexpr int scmPagesInset = 0;
+// How far a vertical scroll bar stands inside the ends of its frame: clear of the arc of the frame's rounded corners,
+// which the bar's groove would otherwise paint over
+constexpr int scmScrollBarCornerClearance = uiDesign::scmRadiusInput - uiDesign::scmInputBorderWidth;
 
 // Holds the Script data tab to the height the Room tab needs. Its words wrap, and QWidgetItem asks a widget whose
 // contents wrap for the height they want at a width, size policy or not, so the pane says it has no such height
@@ -237,6 +240,58 @@ protected:
 private:
     QColor mMixedInk;
 };
+
+// The header's hairline, drawn once from the frame's one inner edge to the other over the header's own. QTableView
+// makes the header only as wide as the viewport while the vertical bar's column runs the frame's whole height, and
+// right to left QHeaderView paints each section a pixel past its place, leaving the header's first column bare. A
+// spacer as tall as the header heads the bar's column, so the bar starts under the line
+class HeaderLine : public QWidget
+{
+public:
+    explicit HeaderLine(QTableView* pTable)
+    : QWidget(pTable)
+    , mpTable(pTable)
+    , mpBarColumnHead(new QWidget())
+    {
+        setAttribute(Qt::WA_StyledBackground);
+        setAttribute(Qt::WA_TransparentForMouseEvents);
+        pTable->addScrollBarWidget(mpBarColumnHead, Qt::AlignTop);
+        pTable->horizontalHeader()->installEventFilter(this);
+        followTheHeader();
+        raise();
+    }
+
+protected:
+    // Where QTableView places the header, after any resize, restyle, change of font or of direction
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pWatched == mpTable->horizontalHeader() && (pEvent->type() == QEvent::Resize || pEvent->type() == QEvent::Move)) {
+            followTheHeader();
+        }
+        return QWidget::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    void followTheHeader()
+    {
+        const QRect header = mpTable->horizontalHeader()->geometry();
+        const QRect inner = mpTable->contentsRect();
+        mpBarColumnHead->setFixedHeight(header.height());
+        setGeometry(inner.left(), header.bottom() + 1 - uiDesign::scmInputBorderWidth, inner.width(), uiDesign::scmInputBorderWidth);
+    }
+
+    QTableView* mpTable = nullptr;
+    QWidget* mpBarColumnHead = nullptr;
+};
+
+void holdTheBarInsideTheFramesEnds(QAbstractScrollArea* pArea, const int clearance)
+{
+    for (const Qt::Alignment end : {Qt::AlignTop, Qt::AlignBottom}) {
+        auto* pEnd = new QWidget();
+        pEnd->setFixedHeight(clearance);
+        pArea->addScrollBarWidget(pEnd, end);
+    }
+}
 
 // Scripts keep a table as JSON text. Whitespace outside strings is all that indenting adds, so taking it out again
 // gives back the very text that was stored.
@@ -448,6 +503,12 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     tableWidget_userData->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
     uiDesign::keepRoomForVerticalScrollBar(tableWidget_userData);
     uiDesign::keepRoomForVerticalScrollBar(roomPropertiesValueBox);
+    holdTheBarInsideTheFramesEnds(tableWidget_userData, scmScrollBarCornerClearance);
+    // Made after the ends, so the head of the bar's column stands above the top one
+    auto* pHeaderLine = new HeaderLine(tableWidget_userData);
+    pHeaderLine->setObjectName(qsl("roomPropertiesHeaderLine"));
+    // The box's padding holds its bar the rest of the way
+    holdTheBarInsideTheFramesEnds(roomPropertiesValueBox, scmScrollBarCornerClearance - uiDesign::scmInputPaddingVertical);
     mpUserDataEmpty = new QLabel(tableWidget_userData->viewport());
     mpUserDataEmpty->setObjectName(qsl("roomPropertiesScriptDataEmpty"));
     // Where a cell's words start, the margin QStyledItemDelegate leaves inside a cell
@@ -1078,8 +1139,12 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
                            QString::number(uiDesign::scmInputPaddingVertical),
                            QString::number(uiDesign::scmInputPaddingHorizontal),
                            captionSize)
-            + table
-            + qsl(" QHeaderView::section:first { border-right: %1px solid %2; }").arg(hairline, tokens.separator.name())
+            + table + qsl(" QHeaderView::section:first { border-right: %1px solid %2; }").arg(hairline, tokens.separator.name())
+            + qsl("#roomPropertiesHeaderLine { background-color: %1; border: none; }").arg(tokens.separator.name())
+            // QStyleSheetStyle counts a scroll area's padding as frame and stands the bar inside it; the box's bar stands
+            // on its frame, as the table's does, so the two are in one line. Right to left, QAbstractScrollArea mirrors
+            // the contents rect QStyleSheetStyle has already mirrored, so the bar then stands in the left padding
+            + qsl("#roomPropertiesScriptData > #roomPropertiesValueBox { padding-%1: 0px; }").arg(roomPropertiesValueBox->isRightToLeft() ? qsl("left") : qsl("right"))
             // A label, not a placeholder, so held to the text contrast floor
             + qsl("#roomPropertiesScriptDataEmpty { color: %1; background: transparent; }")
                       .arg(uiDesign::readableOn(tokens.field, tokens.disabledText, tokens.text, uiDesign::scmTextMinimumRatio).name())
@@ -1966,8 +2031,9 @@ void dlgRoomProperties::changeEvent(QEvent* pEvent)
     if (!mpValueDelegate) {
         return;
     }
-    // A reader following the system's appearance gets no signal_appearanceChanged when it changes, only these
-    if (pEvent->type() == QEvent::StyleChange || pEvent->type() == QEvent::PaletteChange || pEvent->type() == QEvent::FontChange) {
+    // A reader following the system's appearance gets no signal_appearanceChanged when it changes, only these; the
+    // value box's padding also follows the direction
+    if (pEvent->type() == QEvent::StyleChange || pEvent->type() == QEvent::PaletteChange || pEvent->type() == QEvent::FontChange || pEvent->type() == QEvent::LayoutDirectionChange) {
         applyRoomPropertiesShellStyle();
     }
 }

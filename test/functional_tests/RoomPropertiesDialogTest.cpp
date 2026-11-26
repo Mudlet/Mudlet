@@ -61,6 +61,7 @@
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTimer>
+#include <QtMath>
 #include <QtTest/QtTest>
 
 #include <limits>
@@ -609,6 +610,42 @@ private:
 
     // QTableView hides the size its delegate asks for; its base class answers for it
     static int keysNeed(QTableWidget* pTable) { return static_cast<QAbstractItemView*>(pTable)->sizeHintForColumn(0); }
+
+    static QRect rectInDialog(const dlgRoomProperties* pDlg, const QWidget* pWidget) { return QRect(pWidget->mapTo(pDlg, QPoint()), pWidget->size()); }
+
+    // The device pixels of the square a frame's corner is rounded in, read from that corner inwards
+    static QList<QList<QColor>> cornerOf(const QImage& shot, const QRect& frame, const bool rightCorner, const bool bottomCorner)
+    {
+        const qreal ratio = shot.devicePixelRatio();
+        const int size = qCeil(uiDesign::scmRadiusInput * ratio);
+        const int left = qRound(frame.left() * ratio);
+        const int top = qRound(frame.top() * ratio);
+        const int right = qRound((frame.right() + 1) * ratio) - 1;
+        const int bottom = qRound((frame.bottom() + 1) * ratio) - 1;
+        QList<QList<QColor>> rows;
+        for (int inward = 0; inward < size; ++inward) {
+            QList<QColor> row;
+            for (int along = 0; along < size; ++along) {
+                row << shot.pixelColor(rightCorner ? right - along : left + along, bottomCorner ? bottom - inward : top + inward);
+            }
+            rows << row;
+        }
+        return rows;
+    }
+
+    // Where the two corners part by more than the tolerance, counted in from the corner; empty where they agree
+    static QString whereCornersDiffer(const QList<QList<QColor>>& corner, const QList<QList<QColor>>& reference, const int tolerance)
+    {
+        for (int inward = 0; inward < reference.size(); ++inward) {
+            for (int along = 0; along < reference.at(inward).size(); ++along) {
+                const QColor read = corner.at(inward).at(along);
+                if (!TestPixels::readsAs(read, reference.at(inward).at(along), tolerance)) {
+                    return qsl("%1 along and %2 in, it reads %3 where the frame alone reads %4").arg(along).arg(inward).arg(read.name(), reference.at(inward).at(along).name());
+                }
+            }
+        }
+        return QString();
+    }
 
 private slots:
     void initTestCase()
@@ -3226,6 +3263,164 @@ private slots:
         QCOMPARE(pDlg->findChild<QLabel*>(qsl("roomPropertiesScriptDataEmpty"))->text(), qsl("No script has kept anything with these rooms."));
     }
 
+    // The header's hairline runs from the table's one inner edge to the other, across the column the vertical bar
+    // stands in, and the bar starts under it. The bar keeps clear of the frame's rounded corners, so the frame is
+    // whole, with the bar on show or not and in either direction
+    void theHeaderLineRunsToTheFrameAndTheScrollBarStandsUnderItClearOfTheCorners()
+    {
+        const auto restoreAppearance = qScopeGuard([]() {
+            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+            TestPixels::settle();
+        });
+        // A flat fill or a hairline reads back to a level or two
+        constexpr int inkTolerance = 2;
+        constexpr int radius = uiDesign::scmRadiusInput;
+        for (const int keys : {2, 30}) {
+            for (const Qt::LayoutDirection direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+                buildMap();
+                QMap<QString, QString> data;
+                for (int key = 0; key < keys; ++key) {
+                    data.insert(qsl("key %1").arg(key, 2, 10, QLatin1Char('0')), qsl("value %1").arg(key));
+                }
+                room(scmFirstRoom)->userData = data;
+                auto* pDlg = openDialogOn({scmFirstRoom});
+                pDlg->setLayoutDirection(direction);
+                QVERIFY2(showTheScriptData(pDlg), "the Script data tab did not come on show");
+                QTableWidget* pTable = pDlg->tableWidget_userData;
+                QHeaderView* pHeader = pTable->horizontalHeader();
+                QScrollBar* pBar = pTable->verticalScrollBar();
+                const bool scrolls = keys > 2;
+                const bool barOnTheRight = direction == Qt::LeftToRight;
+
+                for (const auto appearance : {enums::Appearance::light, enums::Appearance::dark}) {
+                    TestPixels::setAppearanceAndWait(appearance, pDlg);
+                    const QString where =
+                            qsl("%1 rows, %2, %3 appearance")
+                                    .arg(QString::number(keys), barOnTheRight ? qsl("left to right") : qsl("right to left"), appearance == enums::Appearance::light ? qsl("light") : qsl("dark"));
+                    QVERIFY2(pBar->isVisible() == scrolls, qPrintable(qsl("%1: the scroll bar is %2").arg(where, pBar->isVisible() ? qsl("on show") : qsl("hidden"))));
+                    const QRect frame = rectInDialog(pDlg, pTable);
+                    const QRect inner(pTable->mapTo(pDlg, pTable->contentsRect().topLeft()), pTable->contentsRect().size());
+                    const int lineRow = pHeader->mapTo(pDlg, QPoint(0, pHeader->height() - 1)).y();
+                    // The handle is drawn inside the bar, at the top of it while the table is scrolled to the top
+                    QVERIFY2(rectInDialog(pDlg, pBar).top() > lineRow,
+                             qPrintable(qsl("%1: the scroll bar starts at y %2, beside the header, whose line is at %3").arg(where).arg(rectInDialog(pDlg, pBar).top()).arg(lineRow)));
+                    if (scrolls) {
+                        pBar->setValue((pBar->minimum() + pBar->maximum()) / 2);
+                        TestPixels::settle();
+                    }
+                    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+                    const QImage shot = TestPixels::shot(pDlg);
+
+                    for (int x = inner.left(); x <= inner.right(); ++x) {
+                        const QColor read = TestPixels::sampled(shot, QPoint(x, lineRow));
+                        QVERIFY2(TestPixels::readsAs(read, tokens.separator, inkTolerance),
+                                 qPrintable(qsl("%1: the header's line reads %2 at x %3, %4 short of the frame's right inner edge, where the line is %5")
+                                                    .arg(where, read.name())
+                                                    .arg(x)
+                                                    .arg(inner.right() - x)
+                                                    .arg(tokens.separator.name())));
+                    }
+
+                    // The straight runs of the hairline, up to where each corner's arc starts
+                    for (int x = frame.left() + radius; x <= frame.right() - radius; ++x) {
+                        for (const int y : {frame.top(), frame.bottom()}) {
+                            const QColor read = TestPixels::sampled(shot, QPoint(x, y));
+                            QVERIFY2(TestPixels::readsAs(read, tokens.border, inkTolerance),
+                                     qPrintable(qsl("%1: the frame reads %2 at %3,%4, not its hairline %5").arg(where, read.name()).arg(x).arg(y).arg(tokens.border.name())));
+                        }
+                    }
+                    for (int y = frame.top() + radius; y <= frame.bottom() - radius; ++y) {
+                        for (const int x : {frame.left(), frame.right()}) {
+                            const QColor read = TestPixels::sampled(shot, QPoint(x, y));
+                            QVERIFY2(TestPixels::readsAs(read, tokens.border, inkTolerance),
+                                     qPrintable(qsl("%1: the frame reads %2 at %3,%4, not its hairline %5").arg(where, read.name()).arg(x).arg(y).arg(tokens.border.name())));
+                        }
+                    }
+
+                    // Each arc on the bar's side, its midpoint included, as the table draws it with nothing in the bar's
+                    // column. Not against a corner on the other side: the four arcs are not antialiased as mirror images.
+                    // Grabbed without processing events, which could lay the column out and show it again
+                    QWidget* pBarColumn = pBar->parentWidget();
+                    pBarColumn->hide();
+                    const QImage bare = pDlg->grab().toImage().convertToFormat(QImage::Format_ARGB32);
+                    pBarColumn->show();
+                    for (const bool bottomCorner : {false, true}) {
+                        const QString differs = whereCornersDiffer(cornerOf(shot, frame, barOnTheRight, bottomCorner), cornerOf(bare, frame, barOnTheRight, bottomCorner), inkTolerance);
+                        QVERIFY2(differs.isEmpty(), qPrintable(qsl("%1: in the frame's corner %2 the scroll bar, %3").arg(where, bottomCorner ? qsl("under") : qsl("over"), differs)));
+                    }
+                }
+                pDlg->reject();
+                QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            }
+        }
+    }
+
+    // The table's bar and the value box's stand in one line: on their frames, at one x, and as far inside the ends of
+    // their frames, the table's counted from under its header's line. The box's words keep a field's padding
+    void theTableAndTheValueBoxStandTheirScrollBarsInOneLine()
+    {
+        for (const Qt::LayoutDirection direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            buildMap();
+            QMap<QString, QString> data;
+            for (int key = 0; key < 30; ++key) {
+                data.insert(qsl("key %1").arg(key, 2, 10, QLatin1Char('0')), qsl("value %1").arg(key));
+            }
+            QStringList lines;
+            for (int line = 0; line < 60; ++line) {
+                lines << qsl("Line %1 of a long value.").arg(line);
+            }
+            data.insert(qsl("key 15"), lines.join(QLatin1Char('\n')));
+            room(scmFirstRoom)->userData = data;
+            auto* pDlg = openDialogOn({scmFirstRoom});
+            pDlg->setLayoutDirection(direction);
+            QVERIFY2(showTheScriptData(pDlg), "the Script data tab did not come on show");
+            QVERIFY(chooseRow(pDlg, qsl("key 15")));
+            TestPixels::settle();
+            const bool rightToLeft = direction == Qt::RightToLeft;
+            const QString where = rightToLeft ? qsl("right to left") : qsl("left to right");
+            QTableWidget* pTable = pDlg->tableWidget_userData;
+            QPlainTextEdit* pBox = valueBox(pDlg);
+            QVERIFY2(pTable->verticalScrollBar()->isVisible() && pBox->verticalScrollBar()->isVisible(), qPrintable(qsl("%1: the two scroll bars are not both on show").arg(where)));
+
+            const QRect table = rectInDialog(pDlg, pTable);
+            const QRect box = rectInDialog(pDlg, pBox);
+            QVERIFY2(table.left() == box.left() && table.width() == box.width(),
+                     qPrintable(qsl("%1: the table is %2 and the box %3").arg(where, TestPixels::describe(table), TestPixels::describe(box))));
+            const QRect tableBar = rectInDialog(pDlg, pTable->verticalScrollBar());
+            const QRect boxBar = rectInDialog(pDlg, pBox->verticalScrollBar());
+            QVERIFY2(tableBar.left() == boxBar.left() && tableBar.right() == boxBar.right(),
+                     qPrintable(qsl("%1: the table's bar spans x %2 to %3, the box's %4 to %5").arg(where).arg(tableBar.left()).arg(tableBar.right()).arg(boxBar.left()).arg(boxBar.right())));
+            const auto fromTheSide = [rightToLeft](const QRect& frame, const QRect& bar) {
+                return rightToLeft ? bar.left() - frame.left() : frame.right() - bar.right();
+            };
+            QVERIFY2(fromTheSide(table, tableBar) == fromTheSide(box, boxBar),
+                     qPrintable(qsl("%1: the table's bar stands %2 from its frame's edge, the box's %3").arg(where).arg(fromTheSide(table, tableBar)).arg(fromTheSide(box, boxBar))));
+
+            const int lineRow = pTable->horizontalHeader()->mapTo(pDlg, QPoint(0, pTable->horizontalHeader()->height() - 1)).y();
+            const int tableAbove = tableBar.top() - lineRow - 1;
+            const int boxAbove = boxBar.top() - box.top() - uiDesign::scmInputBorderWidth;
+            const int tableBelow = table.bottom() - uiDesign::scmInputBorderWidth - tableBar.bottom();
+            const int boxBelow = box.bottom() - uiDesign::scmInputBorderWidth - boxBar.bottom();
+            QVERIFY2(tableAbove == boxAbove && tableBelow == boxBelow,
+                     qPrintable(qsl("%1: the table's bar stands %2 under its header's line and %3 over its frame, the box's %4 under its frame and %5 over it")
+                                        .arg(where)
+                                        .arg(tableAbove)
+                                        .arg(tableBelow)
+                                        .arg(boxAbove)
+                                        .arg(boxBelow)));
+
+            const QRect words = rectInDialog(pDlg, pBox->viewport());
+            const int wordsInset = rightToLeft ? box.right() - words.right() : words.left() - box.left();
+            QVERIFY2(wordsInset == uiDesign::scmInputBorderWidth + uiDesign::scmInputPaddingHorizontal,
+                     qPrintable(qsl("%1: the box's words start %2 inside its frame's edge, not a field's %3")
+                                        .arg(where)
+                                        .arg(wordsInset)
+                                        .arg(uiDesign::scmInputBorderWidth + uiDesign::scmInputPaddingHorizontal)));
+            pDlg->reject();
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+    }
+
     // The weight box is drawn narrow, but keeps the weight's whole range: the dialog saves the weight it shows, so a
     // lower maximum would cut down one a script set
     void theWeightBoxKeepsItsRangeAndAWeightPastFourDigitsSurvivesOk()
@@ -3345,6 +3540,7 @@ private slots:
         QVERIFY(mEmitted.changeName);
         QCOMPARE(mEmitted.newName, qsl("Armoury"));
     }
+
 };
 
 #include "RoomPropertiesDialogTest.moc"
