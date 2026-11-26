@@ -537,7 +537,7 @@ end)
         QVERIFY(writeProfile(name));
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
-        QVERIFY(session.setScreenSize(60, 30));
+        QVERIFY(session.setScreenSize(60, 20));
         QVERIFY(session.runLua(qsl("setFontSize(8)")));
         QVERIFY2(60 * cell(session).width() < 600, qPrintable(mainWindowSize(session)));
         QCOMPARE(luaString(session, qsl("getMainWindowInfo().widthClass")), qsl("compact"));
