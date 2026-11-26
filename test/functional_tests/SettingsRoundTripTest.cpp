@@ -195,7 +195,7 @@ private:
         const qreal ratio = image.devicePixelRatio();
         const int middle = pField->height() / 2;
         // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + inset) pixels
-        const int reach = middle - 5;
+        const int reach = middle - 6;
         QList<int> lightness;
         for (int x = middle - reach; x <= middle + reach; ++x) {
             lightness.append(image.pixelColor(QPointF(x * ratio, (pField->height() / 2) * ratio).toPoint()).lightness());
@@ -1216,7 +1216,7 @@ private slots:
             QVERIFY2(pChoose->text().isEmpty() && !pChoose->icon().isNull(), qPrintable(qsl("%1 is not a glyph button: '%2'").arg(pChoose->objectName(), pChoose->text())));
         }
         QCOMPARE(mpPreferences->pushButton_playerRoomPrimaryColor->accessibleName(), qsl("Outer ring color"));
-        // The compact row of the colour cards, the diameters held to it so each ring's row is one height
+        // A field's height, as every colour row is, the diameters with it so each ring's row is one height
         for (QWidget* pPiece : QList<QWidget*>{pOuter,
                                                pInner,
                                                ringOpacity(qsl("Outer")),
@@ -1225,8 +1225,8 @@ private slots:
                                                mpPreferences->pushButton_playerRoomSecondaryColor,
                                                mpPreferences->spinBox_playerRoomOuterDiameter,
                                                mpPreferences->spinBox_playerRoomInnerDiameter}) {
-            QVERIFY2(pPiece->height() == uiDesign::scmColourWellHeight,
-                     qPrintable(qsl("%1 is %2px tall, the colour cards' rows %3px").arg(pPiece->objectName()).arg(pPiece->height()).arg(uiDesign::scmColourWellHeight)));
+            QVERIFY2(pPiece->height() == uiDesign::scmInputHeight,
+                     qPrintable(qsl("%1 is %2px tall, not a field's %3px").arg(pPiece->objectName()).arg(pPiece->height()).arg(uiDesign::scmInputHeight)));
         }
 
         const QList<std::pair<QString, QSpinBox*>> diameters{{qsl("Outer"), mpPreferences->spinBox_playerRoomOuterDiameter}, {qsl("Inner"), mpPreferences->spinBox_playerRoomInnerDiameter}};

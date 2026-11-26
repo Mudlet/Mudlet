@@ -48,7 +48,6 @@
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QStyleOptionSpinBox>
-#include <QStyleOptionTabWidgetFrame>
 #include <QStyledItemDelegate>
 #include <QTextBlock>
 #include <QTextDocument>
@@ -112,6 +111,8 @@ constexpr int scmTableFloorRows = 4;
 constexpr int scmSpinBoxCursorRoom = 2;
 constexpr int scmPreviewTileSize = 48;
 constexpr int scmHeadingLetterSpacing = 106;
+// The shell's margin already holds the tabs off the window's edge, so the pages start on the tab widget's own edge
+constexpr int scmPagesInset = 0;
 
 // Holds the Script data tab to the height the Room tab needs. Its words wrap, and QWidgetItem asks a widget whose
 // contents wrap for the height they want at a width, size policy or not, so the pane says it has no such height
@@ -389,6 +390,9 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
         uiDesign::markAsShellSurface(pScaffolding);
     }
     uiDesign::prepareTabStrip(tabWidget_room->tabBar());
+    // Sized by keepTheTabsRoomForThePages() alone: QTabWidget's own size asks the base style for a frame round the
+    // pages that the tab recipe's pane does not draw, which would leave a band under the Room tab's last row
+    tabWidget_room->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     dialogButtonBox->button(QDialogButtonBox::Ok)->setProperty(uiDesign::scmProp_primaryButton, true);
 
     // Made after setupUi() set the form's tab order, the colour fields and the opacity box would come after OK and
@@ -962,7 +966,7 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
     // an added row as a field taller than the row it is typed in
     const QString rules =
             qsl("#roomPropertiesShell { background-color: %1; }").arg(tokens.page.name()) + qsl("QWidget[settingsSurface=\"true\"] { background-color: transparent; border: none; }")
-            + uiDesign::tabBarStyleSheet(qsl("#tabWidget_room"), tokens) + uiDesign::inputStyleSheet(tokens, qsl("#tab_general"))
+            + uiDesign::tabBarStyleSheet(qsl("#tabWidget_room"), tokens, scmPagesInset) + uiDesign::inputStyleSheet(tokens, qsl("#tab_general"))
             + uiDesign::inputStyleSheet(tokens, qsl("#roomPropertiesScriptData >")) + uiDesign::choiceStyleSheet(tokens, qsl("#tab_general"))
             + uiDesign::buttonStyleSheet(tokens, qsl("#roomPropertiesShell")) + headings.join(qsl(", "))
             + qsl(" { color: %1; background: transparent; font-size: %2pt; font-weight: bold; }").arg(uiDesign::sectionHeadingInk(tokens, tokens.page).name(), captionSize)
@@ -990,6 +994,12 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
                       .arg(uiDesign::readableOn(tokens.field, tokens.disabledText, tokens.text, uiDesign::scmTextMinimumRatio).name())
             + uiDesign::scrollBarStyleSheet(table, tokens, tokens.field) + uiDesign::scrollBarStyleSheet(qsl("#roomPropertiesValueBox"), tokens, tokens.field);
     roomPropertiesShell->setStyleSheet(rules);
+    // No margin at the sides, so a page's words start where the first tab's word does; the air under the strip and
+    // over the buttons is the style's, which differs between the appearances
+    for (QWidget* pPage : {tab_general, tab_userData}) {
+        const QStyle* pStyle = pPage->style();
+        pPage->layout()->setContentsMargins(0, pStyle->pixelMetric(QStyle::PM_LayoutTopMargin, nullptr, pPage), 0, pStyle->pixelMetric(QStyle::PM_LayoutBottomMargin, nullptr, pPage));
+    }
 
     static_cast<UserDataValueDelegate*>(mpValueDelegate)->setMixedInk(uiDesign::readableOn(tokens.field, tokens.disabledText, tokens.text, uiDesign::scmQuietMinimumRatio));
     tableWidget_userData->viewport()->update();
@@ -1002,28 +1012,9 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
         uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens);
     }
 
-    // The base style measures a spin box and a combo box taller than a line of text, so each is held to the field's height
-    for (QWidget* pControl : {static_cast<QWidget*>(lineEdit_name),
-                              static_cast<QWidget*>(comboBox_area),
-                              static_cast<QWidget*>(lineEdit_hash),
-                              static_cast<QWidget*>(lineEdit_roomSymbol),
-                              static_cast<QWidget*>(comboBox_roomSymbol),
-                              static_cast<QWidget*>(spinBox_borderThickness),
-                              static_cast<QWidget*>(spinBox_weight),
-                              static_cast<QWidget*>(comboBox_weight)}) {
-        uiDesign::holdHeight(pControl, uiDesign::scmInputHeight);
-    }
-
-    // A styled spin box starts its words at its frame, where a line field insets them, so they would not stand in a column
-    for (const QSpinBox* pBox : {spinBox_borderThickness, spinBox_weight}) {
-        if (auto* pEdit = pBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly)) {
-            const bool rightToLeft = pEdit->layoutDirection() == Qt::RightToLeft;
-            pEdit->setTextMargins(rightToLeft ? 0 : uiDesign::scmInputPaddingHorizontal, 0, rightToLeft ? uiDesign::scmInputPaddingHorizontal : 0, 0);
-        }
-    }
-
     uiDesign::keepClickFocusOffControls(roomPropertiesShell);
     uiDesign::letPopupsTakeTheFieldsCorner(roomPropertiesShell);
+    uiDesign::lineUpNumberBoxesWithFields(roomPropertiesShell);
     spaceTheSections();
     alignValueBoxes();
     keepTheTabsRoomForThePages();
@@ -1063,18 +1054,20 @@ void dlgRoomProperties::fitThePreviewColumn()
     horizontalLayout_previewColumn->setSpacing(windowMargin);
     roomPropertiesPreviewLabel->setFixedHeight(colourRow.height());
     uiDesign::invalidateLayoutsUpTo(roomPropertiesPreviewColumn, this);
+    // The Room tab asks for the new spacing as width
+    keepTheTabsRoomForThePages();
 }
 
-// The tab strip's sheet holds a page scmTabPaneInset in from every side of the pane, and QTabWidget adds only the base
-// style's own frame to a page's size when it asks for its own, so the Room tab would come out short of what it needs
+// The pane takes scmPagesInset at its sides, its foot and under its hairline, and the hairline is lifted onto the
+// strip's bottom row, so it adds nothing more
 void dlgRoomProperties::keepTheTabsRoomForThePages()
 {
-    tabWidget_room->setMinimumSize(0, 0);
-    QStyleOptionTabWidgetFrame option;
-    option.initFrom(tabWidget_room);
-    const QSize frame = tabWidget_room->style()->sizeFromContents(QStyle::CT_TabWidget, &option, QSize(0, 0), tabWidget_room);
-    const QSize shortfall = (QSize(2 * uiDesign::scmTabPaneInset, 2 * uiDesign::scmTabPaneInset) - frame).expandedTo(QSize(0, 0));
-    tabWidget_room->setMinimumSize(tabWidget_room->sizeHint() + shortfall);
+    QSize pages;
+    for (int i = 0; i < tabWidget_room->count(); ++i) {
+        pages = pages.expandedTo(tabWidget_room->widget(i)->sizeHint());
+    }
+    const QSize strip = tabWidget_room->tabBar()->sizeHint();
+    tabWidget_room->setMinimumSize(std::max(pages.width() + 2 * scmPagesInset, strip.width() + scmPagesInset), strip.height() + pages.height() + 2 * scmPagesInset);
 }
 
 void dlgRoomProperties::alignValueBoxes()

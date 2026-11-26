@@ -26,8 +26,8 @@
  * sat side by side are columns that stay whole, side by side while both fit and
  * one under the other when they do not. The two colour cards, the Main
  * display's and the map's, are one grid of label-and-row pairs, two to a row
- * with every row one width, and one to a row where two do not fit; under them
- * the console colours are a table with a preview beside it.
+ * with the rows of a column one width, and one to a row where two do not fit;
+ * under them the console colours are a table with a preview beside it.
  *
  * Run with: ctest -R SettingsPageFlowTest -V
  */
@@ -39,7 +39,6 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
-#include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -48,6 +47,7 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QSpinBox>
+#include <QStackedWidget>
 #include <QTranslator>
 
 #include <algorithm>
@@ -282,17 +282,19 @@ private:
         return mpPreferences->findChild<uiDesign::ColourValue*>(qsl("settingsColour_%1").arg(pChoose->objectName().remove(qsl("pushButton_"))));
     }
 
-    // Both states of a colour grid: every row one width, the leading rows
-    // down one edge and the trailing down another, two pairs to a row; or one
-    // pair to a row, in order, every row down the one edge
+    // Both states of a colour grid: two pairs to a row, the leading rows one
+    // width down one edge and the trailing rows one width down another; or one
+    // pair to a row, in order, every row one width down the one edge
     void verifyColourGrid(const QList<std::pair<QLabel*, QWidget*>>& pairs, const bool twoPairs)
     {
-        const int width = pairs.first().second->width();
         for (int index = 0; index < pairs.size(); ++index) {
             const auto& [pLabel, pRow] = pairs.at(index);
-            QVERIFY2(pRow->width() == width, qPrintable(qsl("the row '%1' is %2px wide where the first is %3px").arg(pRow->objectName()).arg(pRow->width()).arg(width)));
-            QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
             QWidget* pAlignedRow = pairs.at(twoPairs ? index % 2 : 0).second;
+            QVERIFY2(pRow->width() == pAlignedRow->width(),
+                     qPrintable(qsl("the row '%1' is %2px wide where '%3' is %4px").arg(pRow->objectName()).arg(pRow->width()).arg(pAlignedRow->objectName()).arg(pAlignedRow->width())));
+            QVERIFY2(pRow->width() >= pRow->sizeHint().width(),
+                     qPrintable(qsl("the row '%1' is %2px wide, narrower than the %3px its contents need").arg(pRow->objectName()).arg(pRow->width()).arg(pRow->sizeHint().width())));
+            QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
             QVERIFY2(pRow->geometry().left() == pAlignedRow->geometry().left(),
                      qPrintable(qsl("the row '%1' starts at %2px, out of line with '%3' at %4px")
                                         .arg(pRow->objectName())
@@ -398,7 +400,7 @@ private:
 
     // A colour's row: its field, then its opacity box where it may be
     // see-through, then the button choosing it, level with one another and at a
-    // colour well's height, so the card is no taller than its wells made it
+    // field's height
     void verifyColourRow(QPushButton* pChoose, const bool seeThrough)
     {
         uiDesign::ColourValue* pField = fieldOf(pChoose);
@@ -415,8 +417,7 @@ private:
         inOrder.append(pChoose);
         for (int index = 0; index < inOrder.size(); ++index) {
             QWidget* pPart = inOrder.at(index);
-            QVERIFY2(pPart->height() == uiDesign::scmColourWellHeight,
-                     qPrintable(qsl("'%1' is %2px tall, not a colour well's %3px").arg(pPart->objectName()).arg(pPart->height()).arg(uiDesign::scmColourWellHeight)));
+            QVERIFY2(pPart->height() == uiDesign::scmInputHeight, qPrintable(qsl("'%1' is %2px tall, not a field's %3px").arg(pPart->objectName()).arg(pPart->height()).arg(uiDesign::scmInputHeight)));
             QVERIFY2(levelWith(pPart, pField), qPrintable(qsl("'%1' is not level with '%2'").arg(pPart->objectName(), pField->objectName())));
             if (index > 0) {
                 QVERIFY2(pPart->geometry().left() > inOrder.at(index - 1)->geometry().right(),
@@ -715,6 +716,23 @@ private slots:
         }
         auto* pDisplayGrid = dynamic_cast<uiDesign::PairGridLayout*>(pDisplayColours->layout());
         const int displayTwoPairs = pDisplayGrid->sizeHint().width();
+        // Two pairs to a row take what each column's own pairs need: Background's opacity box is the trailing column's
+        // alone, and the leading column keeps no room for one
+        int leadingLabel = 0;
+        int leadingRow = 0;
+        int trailingLabel = 0;
+        int trailingRow = 0;
+        for (qsizetype index = 0; index < displayRows.size(); ++index) {
+            const auto& [pLabel, pRow] = displayRows.at(index);
+            int& label = index % 2 ? trailingLabel : leadingLabel;
+            int& row = index % 2 ? trailingRow : leadingRow;
+            label = std::max(label, pLabel->sizeHint().width());
+            row = std::max(row, pRow->sizeHint().width());
+        }
+        QVERIFY2(leadingRow < trailingRow, qPrintable(qsl("SETUP: the leading rows need %1px, no less than the trailing ones' %2px with the opacity box").arg(leadingRow).arg(trailingRow)));
+        const QMargins displayMargins = pDisplayGrid->contentsMargins();
+        const int gapAcross = pDisplayGrid->horizontalSpacing();
+        QCOMPARE(displayTwoPairs, displayMargins.left() + leadingLabel + gapAcross + leadingRow + pDisplayGrid->pairSpacing() + trailingLabel + gapAcross + trailingRow + displayMargins.right());
         // The cases open in a window of one width, and how much of it two pairs need follows the platform's font
         const int displayRoom = displayTwoPairs + dlgProfilePreferences::scmColourArrangementHysteresis + TestSettings::pageOf(p, qsl("mainDisplay"))->verticalScrollBar()->sizeHint().width();
         if (pDisplayColours->width() < displayRoom) {
@@ -1016,8 +1034,8 @@ private slots:
     }
 
     // Narrowed a few pixels at a time and widened again, the sidebar's names fold at the one width whichever page is
-    // on show, so a click in the sidebar never folds them, and not before the window is down to what the pages need:
-    // a colour card dropping to one pair a row is no reason to
+    // on show, so a click in the sidebar never folds them, and before a colour card drops to one pair a row: the other
+    // way round, the card would stack beside the names and spread out again as they went
     void test_theNamesFoldAtOneWidthOnEveryPage()
     {
         MudletApp::getQSettings()->setValue(qsl("settingsSidebarLabelsShown"), true);
@@ -1027,21 +1045,33 @@ private slots:
             const auto namesShown = [this]() {
                 return !TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool();
             };
+            const bool mapper = page == qsl("mapper");
+            const bool colourCard = mapper || page == qsl("mainDisplay");
+            const auto twoPairs = [this, mapper]() {
+                return mapper ? mapSideBySide() : displayTwoPairsToARow();
+            };
             const int collapseBelow = mpPreferences->sidebarWidths().collapseBelow;
             if (!foldsBelow) {
                 foldsBelow = collapseBelow;
             }
             QVERIFY2(collapseBelow == foldsBelow, qPrintable(qsl("the names fold below %1px on the %2 page and below %3px on the general page").arg(collapseBelow).arg(page).arg(foldsBelow)));
 
+            // Down to the narrowest and back up, through the last width with the names and the first without
             QList<int> widths;
             for (int width = collapseBelow + 240; width >= mpPreferences->minimumWidth(); width -= 3) {
                 widths.append(width);
+                if (width == collapseBelow && width - 1 >= mpPreferences->minimumWidth()) {
+                    widths.append(width - 1);
+                }
             }
-            for (qsizetype index = widths.size() - 2; index >= 0; --index) {
+            const qsizetype narrowingSteps = widths.size();
+            for (qsizetype index = narrowingSteps - 2; index >= 0; --index) {
                 widths.append(widths.at(index));
             }
-            bool sawCardStackedBesideNames = false;
-            for (const int width : widths) {
+            bool hadTwo = true;
+            int changedAt = 0;
+            for (qsizetype index = 0; index < widths.size(); ++index) {
+                const int width = widths.at(index);
                 mpPreferences->resize(width, 760);
                 qApp->processEvents();
                 qApp->processEvents();
@@ -1049,12 +1079,28 @@ private slots:
                          qPrintable(qsl("at %1px the %2 page %3 the names, which fold below %4px").arg(width).arg(page, namesShown() ? qsl("shows") : qsl("folds")).arg(foldsBelow)));
                 const auto* pShown = qobject_cast<QScrollArea*>(mpPreferences->mpStackedWidget_categories->currentWidget());
                 QVERIFY2(pShown && pShown->horizontalScrollBar()->maximum() == 0, qPrintable(qsl("at %1px the %2 page scrolls sideways").arg(width).arg(page)));
-                if (page == qsl("mainDisplay") && namesShown() && !displayTwoPairsToARow()) {
-                    sawCardStackedBesideNames = true;
+                if (!colourCard) {
+                    continue;
                 }
-            }
-            if (page == qsl("mainDisplay")) {
-                QVERIFY2(sawCardStackedBesideNames, "the names were never shown beside the display colours one pair a row, so they folded to keep the card wide");
+                const bool two = twoPairs();
+                if (index == 0) {
+                    QVERIFY2(two, qPrintable(qsl("SETUP: at %1px the %2 page's colours are already one pair a row").arg(width).arg(page)));
+                }
+                QVERIFY2(!namesShown() || two, qPrintable(qsl("at %1px the %2 page shows the names beside its colours one pair a row").arg(width).arg(page)));
+                // Each way, the colours change their arrangement once at most
+                if (index == narrowingSteps) {
+                    changedAt = 0;
+                }
+                if (two != hadTwo) {
+                    QVERIFY2(!changedAt,
+                             qPrintable(qsl("%1 to %2px, the %3 page's colours went back to %4 a row, after changing at %5px")
+                                                .arg(index < narrowingSteps ? qsl("narrowed") : qsl("widened"))
+                                                .arg(width)
+                                                .arg(page, two ? qsl("two pairs") : qsl("one pair"))
+                                                .arg(changedAt)));
+                    changedAt = width;
+                }
+                hadTwo = two;
             }
             delete mpPreferences;
             mpPreferences = nullptr;
@@ -1149,7 +1195,7 @@ private slots:
                 for (QWidget* pPart : {static_cast<QWidget*>(pField), static_cast<QWidget*>(pChoose), static_cast<QWidget*>(pLightField), static_cast<QWidget*>(pLightChoose)}) {
                     QVERIFY2(pPart->isVisible() && qAbs(at(pPart).center().y() - at(pName).center().y()) <= 1,
                              qPrintable(qsl("%1: '%2' is not on the row of its name").arg(where, pPart->objectName())));
-                    QCOMPARE(pPart->height(), uiDesign::scmColourWellHeight);
+                    QCOMPARE(pPart->height(), uiDesign::scmInputHeight);
                 }
                 QVERIFY2(at(pName).top() > at(pRowAbove).bottom(), qPrintable(qsl("%1 is not under the row before it").arg(where)));
                 pRowAbove = pName;
@@ -1215,37 +1261,60 @@ private slots:
         }
     }
 
-    // The colour cards' rows were wells a line of words and 8px tall; they are
-    // now fields at the 22px such a well comes to under macOS's 13pt face, and
-    // the table adds its line of headings. The heights compared against were
-    // measured with the wells, in this 1060px dialog: offscreen the Main
-    // display's card was 434px and the map's 442px, under cocoa 448px and
-    // 456px. Each card is to stay within 12px of that: the headings add a line
-    // of words and a row gap (21px offscreen), and each of the 11 or 12 rows
-    // gives back what its well was taller than 22px (1px offscreen, 2px under
-    // cocoa) - about 10px taller offscreen and level under cocoa. The wells
-    // stood the map's eight four to a column, where its leading column holds
-    // five, so that card is allowed one row more on top of that.
-    void test_theColourCardsStayAsTallAsTheirWellsMadeThem()
+    // A line field, a list, a number box and a colour row standing on one row
+    // are one height, whichever page and card they are on. A row scrolled out of
+    // the window is still laid out, so it counts.
+    void test_everySingleLineControlIsAFieldsHeight()
     {
-#if !defined(Q_OS_MACOS)
-        QSKIP("the heights compared against were measured with macOS's interface face");
-#endif
-        const bool offscreen = QGuiApplication::platformName() == qsl("offscreen");
-        if (!offscreen && QGuiApplication::platformName() != qsl("cocoa")) {
-            QSKIP("the heights compared against were measured offscreen and under cocoa");
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        QStringList pages;
+        for (const auto& category : mpPreferences->categoryDefinitions()) {
+            pages << category.key;
         }
-        QVERIFY2(openPreferences(qsl("mainDisplay")), "the settings dialog never appeared");
-        const QList<std::tuple<QString, QGroupBox*, int, int>> cards{{qsl("mainDisplay"), mpPreferences->groupBox_displayColors, offscreen ? 434 : 448, 0},
-                                                                     {qsl("mapper"), mpPreferences->groupBox_mapperColors, offscreen ? 442 : 456, 1}};
-        for (const auto& [page, pCard, before, rowsAdded] : cards) {
+        pages << mpPreferences->mSubpageIndexes.keys();
+        const auto singleLine = [](const QWidget* pWidget) {
+            if (qobject_cast<const QComboBox*>(pWidget) || qobject_cast<const QAbstractSpinBox*>(pWidget)) {
+                return true;
+            }
+            // A list's or a number box's own editor is the inside of that control, not a field beside it
+            const QWidget* pParent = pWidget->parentWidget();
+            return qobject_cast<const QLineEdit*>(pWidget) && !qobject_cast<const QComboBox*>(pParent) && !qobject_cast<const QAbstractSpinBox*>(pParent);
+        };
+        QSet<QWidget*> walkedPages;
+        QStringList offHeight;
+        int walked = 0;
+        for (const QString& page : std::as_const(pages)) {
             mpPreferences->setTab(page);
             qApp->processEvents();
-            const int row = fieldOf(mpPreferences->pushButton_mapInfoBg)->parentWidget()->geometry().top() - fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()->geometry().top();
-            const int allowed = before + rowsAdded * row;
-            QVERIFY2(qAbs(pCard->height() - allowed) <= 12,
-                     qPrintable(qsl("the '%1' card is %2px tall, where its wells made it %3px and its rows add %4px").arg(pCard->title()).arg(pCard->height()).arg(before).arg(rowsAdded * row)));
+            QWidget* pPage = mpPreferences->mpStackedWidget_categories->currentWidget();
+            QVERIFY2(pPage, qPrintable(qsl("the '%1' page is not in the stack").arg(page)));
+            walkedPages.insert(pPage);
+            for (const QWidget* pControl : pPage->findChildren<QWidget*>()) {
+                if (!singleLine(pControl) || !pControl->isVisibleTo(pPage)) {
+                    continue;
+                }
+                ++walked;
+                // The one held taller on purpose: it shows each map style as a picture taller than a field
+                if (pControl == mpPreferences->comboBox_mapStyle) {
+                    QVERIFY2(pControl->height() > uiDesign::scmInputHeight + mpPreferences->comboBox_mapStyle->iconSize().height() / 2,
+                             qPrintable(qsl("the map style list is %1px tall, too short for its %2px pictures").arg(pControl->height()).arg(mpPreferences->comboBox_mapStyle->iconSize().height())));
+                    continue;
+                }
+                if (pControl->height() != uiDesign::scmInputHeight) {
+                    offHeight << qsl("%1: %2 '%3' is %4px").arg(page, QString::fromLatin1(pControl->metaObject()->className()), pControl->objectName()).arg(pControl->height());
+                }
+            }
         }
+        // All but the search results, which hold only cards borrowed from the pages walked here
+        QVERIFY(!walkedPages.contains(mpPreferences->mpScrollArea_searchResults));
+        QCOMPARE(walkedPages.size() + 1, mpPreferences->mpStackedWidget_categories->count());
+        // A walk that stopped finding controls cannot pass as a clean one
+        QVERIFY2(walked >= 100, qPrintable(qsl("only %1 single-line controls were found on %2 pages").arg(walked).arg(pages.size())));
+        // One line each: a failure message is cut short long before a list this long ends
+        for (const QString& control : std::as_const(offHeight)) {
+            qWarning().noquote() << control;
+        }
+        QVERIFY2(offHeight.isEmpty(), qPrintable(qsl("%1 of %2 single-line controls are not a field's %3px - listed above").arg(offHeight.size()).arg(walked).arg(uiDesign::scmInputHeight)));
     }
 
     // However far the window is narrowed, the page fits beside the sidebar or

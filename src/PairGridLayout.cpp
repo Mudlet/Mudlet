@@ -268,11 +268,6 @@ PairGridLayout::Columns PairGridLayout::pairColumns(const bool twoPairs) const
             control = std::max(control, hintWidth(pRow->pSecond));
         }
     }
-    // Read across, every control on the one width, so none is narrower than the widest
-    if (mReadingOrder == ReadingOrder::AcrossRows) {
-        columns.leadingControl = std::max(columns.leadingControl, columns.trailingControl);
-        columns.trailingControl = columns.leadingControl;
-    }
     return columns;
 }
 
@@ -294,8 +289,7 @@ bool PairGridLayout::footersFit(const Columns& columns, const bool twoPairs) con
 }
 
 // Two to a row, a footer piece wider than its pair makes its room in its own
-// label column, since widening the controls would widen those of the other
-// side as well; one to a row, the controls fill the row anyway and it is they
+// label column; one to a row, the controls fill the row anyway and it is they
 // that make the room
 PairGridLayout::Columns PairGridLayout::narrowestColumns(const bool twoPairs) const
 {
@@ -342,22 +336,16 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
     const int gapDown = verticalSpacing();
     const bool twoPairs = mPairsPerRow == PairsPerRow::Automatic ? content.width() >= narrowestContentWidth(true) : mPairsPerRow == PairsPerRow::Two;
 
-    // The labels keep their widths and the controls share what is left: read
-    // across, one width for all of them, and read down, half each on top of
-    // what each column needs. Only where that leaves a footer piece too little
-    // room do the label columns take the narrowest arrangement's widths.
-    const auto stretch = [this, &content, gapAcross, gapBetweenPairs, twoPairs](Columns columns) {
+    // The labels keep their widths and the controls share what is left, half
+    // to each column on top of what it needs. Only where that leaves a footer
+    // piece too little room do the label columns take the narrowest
+    // arrangement's widths.
+    const auto stretch = [&content, gapAcross, gapBetweenPairs, twoPairs](Columns columns) {
         if (!twoPairs) {
             columns.leadingControl = std::max(columns.leadingControl, content.width() - columns.leadingLabel - gapAcross);
             return columns;
         }
-        const int labels = columns.leadingLabel + columns.trailingLabel + 2 * gapAcross + gapBetweenPairs;
-        if (mReadingOrder == ReadingOrder::AcrossRows) {
-            columns.leadingControl = std::max(columns.leadingControl, (content.width() - labels) / 2);
-            columns.trailingControl = columns.leadingControl;
-            return columns;
-        }
-        const int spare = content.width() - labels - columns.leadingControl - columns.trailingControl;
+        const int spare = content.width() - columns.leadingLabel - columns.trailingLabel - 2 * gapAcross - gapBetweenPairs - columns.leadingControl - columns.trailingControl;
         if (spare > 0) {
             columns.leadingControl += spare / 2;
             columns.trailingControl += spare - spare / 2;
@@ -368,11 +356,8 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
     if (!footersFit(columns, twoPairs)) {
         columns = stretch(narrowestColumns(twoPairs));
     }
-    // The controls share an odd pixel out by putting it between the pairs, so the trailing one still ends on the edge
-    const int oddPixel =
-            twoPairs ? std::max(0, content.width() - columns.leadingLabel - columns.trailingLabel - 2 * gapAcross - gapBetweenPairs - columns.leadingControl - columns.trailingControl) : 0;
     const int leadingControlX = content.x() + columns.leadingLabel + gapAcross;
-    const int trailingLabelX = leadingControlX + columns.leadingControl + gapBetweenPairs + oddPixel;
+    const int trailingLabelX = leadingControlX + columns.leadingControl + gapBetweenPairs;
     const int trailingControlX = trailingLabelX + columns.trailingLabel + gapAcross;
     const int leadingHalf = columns.leadingLabel + gapAcross + columns.leadingControl;
     const int trailingHalf = columns.trailingLabel + gapAcross + columns.trailingControl;

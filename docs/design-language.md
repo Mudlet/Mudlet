@@ -248,6 +248,33 @@ surface, a 1px border, `scmRadiusInput`, an accent frame on focus. Framing a
 platform draws inside it, so the sheet claims those two only once it has tinted
 arrow PNGs cached to point at, and otherwise leaves them the platform's frame.
 
+Every single-line control the sheet draws - a line edit, a combo box, a spin
+box, a colour row and its opacity box - is one height, `scmInputHeight` (28px:
+22px of content, 2px of padding and the 1px hairline above and below), so
+controls standing on one row meet at the top and the bottom. The rule lives in
+`inputStyleSheet()` alone: the single-line kinds take `max-height` as well as
+`min-height`, which Qt sets as the widget's maximum and minimum at every polish
+and which also caps its size hint; uncapped, a spin box's hint is 31px under
+macOS and 33px offscreen. `QPlainTextEdit` and `QTextEdit` are not capped, and the editor
+inside a combo box or a spin box has the cap taken off again, so a box held
+taller does not hold its editor at a field's height. A control that has to be
+another height keeps it with `holdHeight()`, called where it is sized, which
+sets its height again after every polish: the Mapper page's 3D map style
+picker, whose pictures are 48px tall; the trigger editor's pattern rows, whose
+type list and line spacer stand at the row's height in the profile's display
+font; and a `ChipRow`'s field, which shares the chips' line.
+
+A spin box's value starts where a field's text does. Qt's stylesheet style
+places the box's editor against the frame on the left and inside the padding on
+the right, which leaves a left-to-right value starting 7px before the text of
+a field above it; a padding rule on the editor moves nothing.
+`lineUpNumberBoxesWithFields(container)` gives the editor a text margin making
+up the difference, mirrored right to left and taken again whenever the box lays
+its editor out. A box `fitNumberBoxes()` looks after and a value centred or
+set at the trailing edge are left alone. It runs from each styled window's
+style pass on the container the input sheet was set on, and again wherever a
+window builds a spin box after that pass.
+
 The list a combo box drops down is the field opened up: the same surface, the
 same hairline and the same `scmRadiusInput` corner as the box it came out of,
 with the accent under the chosen row. It was the card once, and on a card -
@@ -455,8 +482,7 @@ clicks the colour itself: a click on it presses the row's Choose
 while the button is unavailable. Unlike the old well it never stands alone,
 and under the pointer it says it can be clicked: a pointing hand where the
 code has the text cursor, a ring in `accent` in the inset round the swatch, and
-Choose's tooltip. The target is the swatch with that inset, 20px square in a
-compact row, under the usual 24px because Choose beside it does the same.
+Choose's tooltip. The target is the swatch with that inset, 26px square.
 Reset (rotate-ccw) is unavailable while the item has nothing
 to reset; the field is then empty, its placeholder says what the item is drawn
 with - "Automatic" for a room's symbol, the code of the map's border colour for
@@ -479,20 +505,16 @@ edge by half of what that widest value leaves, so "100%" is centred and "60%"
 ends where it does, the percent signs one over the other. Centring each value
 on its own puts every sign somewhere else.
 
-The settings' colour rows are `ColourRowSize::Compact`: field, opacity box and
-buttons at a colour well's 22px (`scmColourWellHeight`), the swatch and its
-inset scaled down with them, so a colour row looks the same in the Player room
-marker card and the colour cards, and the cards holding 30 and 32 colours are
-no taller than their wells made them. The marker's Diameter boxes are held to
-the same height, so a ring's row is one height across. The room properties
-dialog's colour rows stand among fields, so they keep the default size and are
-as tall as those fields (`scmInputHeight`). Its one sheet gives its rows the
-input and button recipes with the rest of its fields and buttons, so Choose and
-Reset have the design's face there too. `holdHeight()` and `fitNumberBoxes()` polish a
-widget before holding it: the first Polish reaches their event filter before
-the style, which then sets the recipe's min-height back, and a dialog that
-sizes itself before it is shown (`adjustSize()`) never gives them a later
-style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
+Every colour row stands at a field's height, `scmInputHeight`: field,
+opacity box and buttons, the buttons square, so a colour row looks the same in
+the room properties dialog, the Player room marker card and the colour cards,
+and meets the fields and lists beside it. The room properties dialog's one
+sheet gives its rows the input and button recipes with the rest of its fields
+and buttons, so Choose and Reset have the design's face there too.
+`holdHeight()` and `fitNumberBoxes()` polish a widget before holding it: the
+first Polish reaches their event filter before the style, which then sets the
+recipe's height limits back, and a dialog that sizes itself before it is shown
+(`adjustSize()`) never gives them a later style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
 way back. On the Main display's card that button also removes a picture a script put behind the main display, so while
 there is one the button shows "Reset all colors and remove the background image", with a tooltip about the picture. The words are set
 when the profile is read in, after a reset and each time the window becomes active again. The card's own colours (Foreground, Background and the command
@@ -509,17 +531,24 @@ trailing column is two rows shorter, and the space under it stays empty. Where
 the two columns do not fit side by side the trailing one goes under the leading
 one whole; read across, the see-through colours were shuffled in among the
 others. The Main display's Background may be see-through as well and has the
-card's one opacity box. Side by side each column is only as wide as its own labels
-and rows, with 24px between the two (`setPairSpacing(scmFieldPairGap)`, the gap
-between the console colours' Normal and Light columns). With the sidebar's names
-beside them that takes a 944px window under cocoa in English, where the names
-alone would fold only below 887px. On a page with a colour card the names
-therefore fold first: `sidebarWidths()` raises `collapseBelow` to what the card
-needs side by side, and the card stacks only once even the rail leaves it too
-little. The other way round, narrowing the window stacked the card, then spread
-it out again as the names went. A window with no remembered size opens at the
-width that keeps both colour cards side by side beside the names: past the
-usual 1060px where a wide font needs it, and no wider than the screen.
+card's one opacity box, in the trailing column. On both cards, side by side each
+column is only as wide as its own labels and rows - the Main display's leading
+column keeps no room for an opacity box none of its rows has, so the card drops
+to one pair a row no sooner than its rows need - with 24px between the two
+(`setPairSpacing(scmFieldPairGap)`, the gap between the console colours' Normal
+and Light columns). Both cards two pairs to a row beside the sidebar's names
+take a 998px window under cocoa in English (994px offscreen), where every page
+alone would fit beside the names down to 874px (868px offscreen). The names
+therefore fold first: `sidebarWidths()` sets `collapseBelow`, one width on every
+page so that a click in the sidebar never folds or unfolds them, to what both
+colour cards need two pairs to a row beside the names, and a card drops to one
+pair a row only once even the rail leaves it too little (the Main display's
+below 853px under cocoa, 844px offscreen). The other way round, narrowing the
+window would stack a card, then spread it out again as the names went. On a
+page without a colour card the names fold at that same width. A window with no
+remembered size opens at the width that keeps both colour cards side by side
+beside the names: past the usual 1060px where a wide font needs it, and no
+wider than the screen.
 
 Which arrangement a card shows is decided in `arrangeColourCards()` and handed
 to the grid with `setPairsPerRow()`, rather than left to the grid's own reading
@@ -671,7 +700,8 @@ the hairline and the first word share one line. The notepad takes the default
 `scmTabPaneInset`; the connection window passes 0, since its form already stands
 inside the dialog's margin, and takes the side margins off both pages' layouts so
 the labels start on the tab widget's own edge, the line the information box under
-them stands on. In document mode a `QTabWidget` paints no pane at all, so
+them stands on. Configure room does the same, as its shell's margin holds the
+strip off the window's edge. In document mode a `QTabWidget` paints no pane at all, so
 `prepareTabStrip()` turns document mode off - the notepad's `.ui` file has it on.
 
 A bare `QTabBar` is laid across the whole width of its pane by the window holding
@@ -1060,19 +1090,18 @@ is `sidebarWidths()` / `updateSidebarMode()` in
 
 - Widths are measured off font metrics, `sizeHint()`s and the actual scrollbar
   width, over every page rather than the one on show, so a page switch does
-  not move the collapse point - unless the page on show is wider than the
-  reading column, when the collapse point follows that page and the names fold
-  rather than the page scrolling sideways. The window's minimum is where even
-  the rail leaves the widest page too little room.
+  not move the collapse point: the names fold where the widest page, or both
+  colour cards two pairs to a row, no longer fit beside them. The window's
+  minimum is where even the rail leaves the widest page too little room.
 - The window has no maximum: a page's column grows with the window and its
-  cards use the room, so the reading column is the floor the names fold at and
-  never a ceiling. A window with no remembered size opens at `opening`, held to
+  cards use the room, so the reading column is never a ceiling. A window with
+  no remembered size opens at `opening`, held to
   the screen's width by `openingWidth()` and never to less than 1060px: `fullyExpanded`, the names beside the widest page's column, or wider
-  where the map's colours need it to stand in their two columns beside the
-  names, at the width `arrangeColourCards()` takes that up at (926px under
-  cocoa, 923px offscreen, against 887px and 892px for `fullyExpanded`).
-  `fullyExpanded` itself still counts each page's minimum, and the map card's
-  minimum is its columns one under the other.
+  where both colour cards need it to stand two pairs to a row beside the
+  names, at the width `arrangeColourCards()` takes that up at (998px under
+  cocoa, 994px offscreen, which is also the width the names fold below,
+  against 887px and 892px for `fullyExpanded`). `fullyExpanded` itself still
+  counts each page's minimum, and a colour card's minimum is one pair to a row.
 - The test is against the window's own width, not the space left over, so
   collapsing cannot flip the condition that caused it. A breakpoint inside a
   scrolling page is held to the same rule: the colour cards are measured with
@@ -2084,7 +2113,7 @@ change of the dialog. OK carries `uiDesign::scmProp_primaryButton`.
 | Name | What it is |
 | --- | --- |
 | `roomPropertiesShell` | The widget holding the tabs and the buttons, which the one sheet is set on: the tab recipe on `#tabWidget_room`, the input recipe scoped to `#tab_general` and to `#roomPropertiesScriptData >`, the choice recipe on `#tab_general`, the button recipe on the shell and the scroll bar recipe on the table and the value box. The child combinator keeps the input recipe off the key a table cell is typed into, which it would draw as a field taller than the row |
-| `tab_general`, `tab_userData` | The Room and Script data tabs. `keepTheTabsRoomForThePages()` holds the tab widget to the Room tab's size hint plus what the tab recipe's `scmTabPaneInset` on every side takes beyond the base style's frame, which is all `QTabWidget` adds when it asks for its own size; it runs again on the first show, once the window is polished as it will be drawn |
+| `tab_general`, `tab_userData` | The Room and Script data tabs, on the tab recipe with no pane inset, since the shell's margin already holds the strip off the window's edge. Each page's layout keeps the style's top and bottom margins and none at its sides, so the words of both pages start on the line the first tab's word does. `keepTheTabsRoomForThePages()` holds the tab widget to what its pages and its strip ask for and, with its size policy `Ignored`, to no more: `QTabWidget` adds the base style's frame round its pages when it asks for its own size, a frame the recipe's pane does not draw, and that would leave a band under the Room tab's last row. It runs again on the first show, once the window is polished as it will be drawn, and whenever the preview column's spacing changes |
 | `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, set apart by space with nothing drawn under them (see "Section headings"): a line's height above the second and third, a quarter of one under each. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, bold, in capitals drawn by the font, inked `sectionHeadingInk(tokens, tokens.page)` |
 | `label_hash`, `roomPropertiesHashCaption` | "Room hash", since a game's own ID for a room may be the room's number and scripts call it the hash: the field says "None" while the room has none, and the caption under it which games fill it in - those that name their rooms with text instead of a number - or, while several rooms are configured, that a hash belongs to one room. `label_hashWarning` takes the caption's place, in the warning hue walked to `scmTextMinimumRatio`, while the hash typed belongs to another room |
 | `roomPropertiesPreviewColumn` | A column of its own beside the four "On the map" rows, spanning them and as wide as it needs, the window as much wider: `roomPropertiesPreviewRule`, a 1px hairline in `border` as tall as those rows, then as much room as the window leaves after the tab's content, which `fitThePreviewColumn()` measures once the tab is laid out, so the tile stands midway between the hairline and the window's edge. In it `roomPropertiesPreviewLabel`, "Preview" as a field label in `mutedText`, centred and given the Room color row's height so it stands on that row's line, and under it `label_preview`, the 48px tile centred in the room left: the room's colour, the room's own border colour and width where it has them (a width step is a pixel, held to a quarter of the tile) and otherwise the map's border while the profile shows borders, round in bubble mode, and the symbol fitted to it by `RoomAppearance::paintSymbol()`, redrawn on every edit |

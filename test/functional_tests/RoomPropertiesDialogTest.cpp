@@ -69,6 +69,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
+#include "PixelTestHelper.h"
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TRoom.h"
@@ -828,6 +829,112 @@ private slots:
         QCOMPARE(pDlg->tabWidget_room->widget(1), pDlg->tab_userData);
     }
 
+    // The tabs every window with tabs has: words on a hairline across the pane, the chosen one in the accent and
+    // semibold on an accent underline with nothing behind it, and the first word starting on the line the words of
+    // both tabs start on
+    void theTabsAreWordsOnAHairlineStartingOnTheContentsEdge()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        const auto restoreAppearance = qScopeGuard([]() {
+            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+            TestPixels::settle();
+        });
+        // A flat fill or a hairline reads back to a level or two
+        constexpr int inkTolerance = 2;
+        QTabBar* pBar = pDlg->tabWidget_room->tabBar();
+        // The tab less its trailing gap, the air over the word and the room under it for the underline
+        const auto wordLine = [pDlg, pBar](const int index) {
+            const QRect tab = pBar->tabRect(index);
+            return QRect(pBar->mapTo(pDlg, QPoint(tab.left(), tab.top() + uiDesign::scmTabPaddingTop)),
+                         QSize(tab.width() - uiDesign::scmTabGap, tab.height() - uiDesign::scmTabPaddingTop - uiDesign::scmTabPaddingBottom));
+        };
+        const int hairlineRow = pBar->mapTo(pDlg, QPoint(0, pBar->height() - 1)).y();
+        const int paneRight = pDlg->tabWidget_room->mapTo(pDlg, QPoint(pDlg->tabWidget_room->width() - 1, 0)).x();
+        const QList<QPair<QWidget*, QList<const QWidget*>>> contentOf{{pDlg->tab_general, {pDlg->label_roomIdValue, pDlg->label_name, pDlg->roomPropertiesMapHeadingText}},
+                                                                      {pDlg->tab_userData, {pDlg->label_userDataInstructions, pDlg->tableWidget_userData, pDlg->pushButton_addUserData}}};
+
+        for (const auto appearance : {enums::Appearance::light, enums::Appearance::dark}) {
+            TestPixels::setAppearanceAndWait(appearance, pDlg);
+            QList<int> firstWordCoverage;
+            for (const auto& [pPage, content] : contentOf) {
+                pDlg->tabWidget_room->setCurrentWidget(pPage);
+                TestPixels::settle();
+                const int chosen = pDlg->tabWidget_room->currentIndex();
+                const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+                const QImage shot = TestPixels::shot(pDlg);
+                const QString where = qsl("%1 appearance, %2 chosen").arg(appearance == enums::Appearance::light ? qsl("light") : qsl("dark"), pBar->tabText(chosen));
+                for (int index = 0; index < pBar->count(); ++index) {
+                    const QRect line = wordLine(index);
+                    const QColor ink = index == chosen ? tokens.accentText : tokens.mutedText;
+                    // Columns past halfway from the page to the word's ink, so antialiased fringes count where they are
+                    // more word than page
+                    int first = -1;
+                    int last = -1;
+                    int covered = 0;
+                    int onThePage = 0;
+                    bool inkRead = false;
+                    for (int x = line.left(); x <= line.right(); ++x) {
+                        for (int y = line.top(); y <= line.bottom(); ++y) {
+                            const QColor read = TestPixels::sampled(shot, QPoint(x, y));
+                            onThePage += TestPixels::readsAs(read, tokens.page, inkTolerance) ? 1 : 0;
+                            inkRead = inkRead || TestPixels::readsAs(read, ink, inkTolerance);
+                            if (2 * TestPixels::distance(read, tokens.page) >= TestPixels::distance(ink, tokens.page)) {
+                                first = first < 0 ? x : first;
+                                last = x;
+                                ++covered;
+                            }
+                        }
+                    }
+                    QVERIFY2(first >= 0 && inkRead, qPrintable(qsl("%1: tab %2's word is not drawn in %3").arg(where, pBar->tabText(index), ink.name())));
+                    QVERIFY2(2 * onThePage > line.width() * line.height(),
+                             qPrintable(qsl("%1: behind tab %2's word only %3 of %4 pixels are the page, so the tab has a face of its own")
+                                                .arg(where, pBar->tabText(index))
+                                                .arg(onThePage)
+                                                .arg(line.width() * line.height())));
+                    for (int row = hairlineRow - uiDesign::scmTabUnderlineWidth + 1; row <= hairlineRow; ++row) {
+                        for (int x = first; x <= last; ++x) {
+                            const QColor read = TestPixels::sampled(shot, QPoint(x, row));
+                            QVERIFY2(TestPixels::readsAs(read, tokens.accent, inkTolerance) == (index == chosen),
+                                     qPrintable(qsl("%1: under tab %2's word, at %3,%4, the strip reads %5 where the accent is %6")
+                                                        .arg(where, pBar->tabText(index))
+                                                        .arg(x)
+                                                        .arg(row)
+                                                        .arg(read.name(), tokens.accent.name())));
+                        }
+                    }
+                    if (index != 0) {
+                        continue;
+                    }
+                    firstWordCoverage.append(covered);
+                    QFont drawn = pBar->font();
+                    if (index == chosen) {
+                        drawn.setWeight(uiDesign::scmTabChosenWeight);
+                    }
+                    const int wordStart = first - std::max(0, qRound(QFontMetricsF(drawn).leftBearing(pBar->tabText(0).at(0))));
+                    for (const QWidget* pContent : content) {
+                        const int contentLeft = pContent->mapTo(pDlg, QPoint()).x();
+                        QVERIFY2(std::abs(wordStart - contentLeft) <= 1,
+                                 qPrintable(qsl("%1: the first tab's word starts at x %2, %3 at %4").arg(where).arg(wordStart).arg(pContent->objectName()).arg(contentLeft)));
+                    }
+                }
+                // The hairline runs on past the last tab to the end of the pane
+                const QColor lineEnd = TestPixels::sampled(shot, QPoint(paneRight, hairlineRow));
+                QVERIFY2(TestPixels::readsAs(lineEnd, tokens.border, inkTolerance),
+                         qPrintable(qsl("%1: at the pane's end the strip's bottom row reads %2, not the hairline %3").arg(where, lineEnd.name(), tokens.border.name())));
+                QVERIFY2(!TestPixels::readsAs(TestPixels::sampled(shot, QPoint(paneRight, hairlineRow - 1)), tokens.border, inkTolerance),
+                         qPrintable(qsl("%1: the row over the hairline is the hairline's colour too").arg(where)));
+            }
+            QVERIFY2(firstWordCoverage.size() == 2 && firstWordCoverage.at(0) > firstWordCoverage.at(1),
+                     qPrintable(qsl("%1 appearance: \"Room\" covers %2 pixels chosen and %3 not, so it is not drawn heavier when chosen")
+                                        .arg(appearance == enums::Appearance::light ? qsl("light") : qsl("dark"))
+                                        .arg(firstWordCoverage.value(0))
+                                        .arg(firstWordCoverage.value(1))));
+        }
+    }
+
     // As tall as the Room tab needs, whichever tab is on show and whatever the Script data tab holds
     void theWindowKeepsItsSizeWhenTheTabOrTheChosenValueChanges()
     {
@@ -847,6 +954,8 @@ private slots:
         pDlg->show();
         QVERIFY(QTest::qWaitForWindowExposed(pDlg));
         const QSize opened = pDlg->size();
+        // No band under the Room tab's last row, and no row cut short
+        QCOMPARE(pDlg->tab_general->height(), pDlg->tab_general->sizeHint().height());
         QVERIFY2(showTheScriptData(pDlg), "the Script data tab did not come on show");
         QVERIFY(chooseRow(pDlg, qsl("key 15")));
         QCoreApplication::processEvents();
@@ -1147,6 +1256,42 @@ private slots:
         }
         QVERIFY(pDlg->pushButton_resetSymbolColor->isEnabled());
         QVERIFY(pDlg->pushButton_resetBorderColor->isEnabled());
+    }
+
+    // The lists standing in for the symbol and the weight where the rooms disagree are as tall as the fields
+    void theListsForRoomsThatDisagreeAreAFieldsHeight()
+    {
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("A");
+        room(scmSecondRoom)->mSymbol = qsl("B");
+        room(scmFirstRoom)->setWeight(3);
+        room(scmSecondRoom)->setWeight(7);
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        for (const QComboBox* pList : {pDlg->comboBox_roomSymbol, pDlg->comboBox_weight}) {
+            QVERIFY2(pList->isVisible(), qPrintable(qsl("%1 is not on show for rooms that disagree").arg(pList->objectName())));
+            QVERIFY2(pList->height() == uiDesign::scmInputHeight, qPrintable(qsl("%1 is %2 tall, not the field's %3").arg(pList->objectName()).arg(pList->height()).arg(uiDesign::scmInputHeight)));
+        }
+    }
+
+    // A number box's value starts where a field's text does, so the values down the column line up
+    void theNumberBoxesStartTheirValuesWhereTheFieldsStartTheirText()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        const auto textStart = [pDlg](QLineEdit* pEdit) {
+            pEdit->setCursorPosition(0);
+            return pEdit->mapTo(pDlg, pEdit->inputMethodQuery(Qt::ImCursorRectangle).toRect().topLeft()).x();
+        };
+        const int fieldText = textStart(pDlg->lineEdit_name);
+        for (QSpinBox* pBox : {pDlg->spinBox_borderThickness, pDlg->spinBox_weight}) {
+            QLineEdit* pEdit = pBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+            QVERIFY(pEdit);
+            QVERIFY2(textStart(pEdit) == fieldText, qPrintable(qsl("%1's value starts at x %2, the name's text at %3").arg(pBox->objectName()).arg(textStart(pEdit)).arg(fieldText)));
+        }
     }
 
     // With no colour of its own the field is empty, says why, and its swatch shows what the room is drawn with

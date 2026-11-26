@@ -200,7 +200,8 @@ inline constexpr int scmRadiusPanel = 8;
 inline constexpr int scmRadiusProminentInput = scmRadiusPanel;
 
 // Set on a form rather than a window, so a code pane keeps the field it paints itself; a window with no form
-// passes the container's selector as selectorPrefix.
+// passes the container's selector as selectorPrefix. Every single-line field, combo box and spin box is held to
+// scmInputHeight; one that has to be taller keeps its own height with holdHeight().
 QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix = QString());
 
 // Exported for a read-only field, which is let down the same way without being disabled
@@ -308,9 +309,13 @@ inline constexpr int scmInputDropDownWidth = 18;
 // size for all of them, each value right-aligned so the suffixes line up down the column, and inset from the
 // trailing edge so the widest value any of them can hold sits in the middle. Kept so across font and style changes.
 // Call once per group.
-void fitNumberBoxes(const QList<QSpinBox*>& boxes, const int height);
-// The input and button recipes set a styled field's or button's min-height again at every polish; this puts the
-// widget back to a height of its own after each, as a compact colour row needs
+void fitNumberBoxes(const QList<QSpinBox*>& boxes);
+// A spin box's value starting where a field's text does, mirrored right to left; a box fitNumberBoxes() looks after
+// and a centred or trailing value are left alone. Call after setting inputStyleSheet(), and again wherever a spin box
+// is built after that pass; re-running is harmless.
+void lineUpNumberBoxesWithFields(QWidget* pRoot);
+// The input and button recipes set a styled field's or button's height limits again at every polish; this puts the
+// widget back to a height of its own after each, for a control that has to be taller than a field
 void holdHeight(QWidget* pWidget, const int height);
 
 qreal contrastRatio(const QColor& first, const QColor& second);

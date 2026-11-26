@@ -597,6 +597,7 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
 
     uiDesign::keepClickFocusOffControls(tabWidget_connectionInfo);
     uiDesign::letPopupsTakeTheFieldsCorner(tabWidget_connectionInfo);
+    uiDesign::lineUpNumberBoxesWithFields(tabWidget_connectionInfo);
     uiDesign::keepClickFocusOffControls(profileAdminArea);
     uiDesign::keepClickFocusOffControls(widget_bottom);
 

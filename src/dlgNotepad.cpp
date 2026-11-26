@@ -456,6 +456,8 @@ void dlgNotepad::applyNotepadShellStyle()
     uiDesign::keepClickFocusOffControls(toolBar);
     uiDesign::letPopupsTakeTheFieldsCorner(centralwidget);
     uiDesign::letPopupsTakeTheFieldsCorner(toolBar);
+    uiDesign::lineUpNumberBoxesWithFields(centralwidget);
+    uiDesign::lineUpNumberBoxesWithFields(toolBar);
 
     mCurrentMatchInk = tokens.marker;
     mOtherMatchInk = uiDesign::blend(tokens.field, tokens.marker, scmNotepadQuietMatchWash);
