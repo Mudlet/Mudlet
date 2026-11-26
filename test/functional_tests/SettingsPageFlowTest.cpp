@@ -39,7 +39,6 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
-#include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -48,6 +47,7 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QSpinBox>
+#include <QStackedWidget>
 #include <QTranslator>
 
 #include <algorithm>
@@ -398,7 +398,7 @@ private:
 
     // A colour's row: its field, then its opacity box where it may be
     // see-through, then the button choosing it, level with one another and at a
-    // colour well's height, so the card is no taller than its wells made it
+    // field's height
     void verifyColourRow(QPushButton* pChoose, const bool seeThrough)
     {
         uiDesign::ColourValue* pField = fieldOf(pChoose);
@@ -415,8 +415,7 @@ private:
         inOrder.append(pChoose);
         for (int index = 0; index < inOrder.size(); ++index) {
             QWidget* pPart = inOrder.at(index);
-            QVERIFY2(pPart->height() == uiDesign::scmColourWellHeight,
-                     qPrintable(qsl("'%1' is %2px tall, not a colour well's %3px").arg(pPart->objectName()).arg(pPart->height()).arg(uiDesign::scmColourWellHeight)));
+            QVERIFY2(pPart->height() == uiDesign::scmInputHeight, qPrintable(qsl("'%1' is %2px tall, not a field's %3px").arg(pPart->objectName()).arg(pPart->height()).arg(uiDesign::scmInputHeight)));
             QVERIFY2(levelWith(pPart, pField), qPrintable(qsl("'%1' is not level with '%2'").arg(pPart->objectName(), pField->objectName())));
             if (index > 0) {
                 QVERIFY2(pPart->geometry().left() > inOrder.at(index - 1)->geometry().right(),
@@ -1149,7 +1148,7 @@ private slots:
                 for (QWidget* pPart : {static_cast<QWidget*>(pField), static_cast<QWidget*>(pChoose), static_cast<QWidget*>(pLightField), static_cast<QWidget*>(pLightChoose)}) {
                     QVERIFY2(pPart->isVisible() && qAbs(at(pPart).center().y() - at(pName).center().y()) <= 1,
                              qPrintable(qsl("%1: '%2' is not on the row of its name").arg(where, pPart->objectName())));
-                    QCOMPARE(pPart->height(), uiDesign::scmColourWellHeight);
+                    QCOMPARE(pPart->height(), uiDesign::scmInputHeight);
                 }
                 QVERIFY2(at(pName).top() > at(pRowAbove).bottom(), qPrintable(qsl("%1 is not under the row before it").arg(where)));
                 pRowAbove = pName;
@@ -1215,37 +1214,60 @@ private slots:
         }
     }
 
-    // The colour cards' rows were wells a line of words and 8px tall; they are
-    // now fields at the 22px such a well comes to under macOS's 13pt face, and
-    // the table adds its line of headings. The heights compared against were
-    // measured with the wells, in this 1060px dialog: offscreen the Main
-    // display's card was 434px and the map's 442px, under cocoa 448px and
-    // 456px. Each card is to stay within 12px of that: the headings add a line
-    // of words and a row gap (21px offscreen), and each of the 11 or 12 rows
-    // gives back what its well was taller than 22px (1px offscreen, 2px under
-    // cocoa) - about 10px taller offscreen and level under cocoa. The wells
-    // stood the map's eight four to a column, where its leading column holds
-    // five, so that card is allowed one row more on top of that.
-    void test_theColourCardsStayAsTallAsTheirWellsMadeThem()
+    // A line field, a list, a number box and a colour row standing on one row
+    // are one height, whichever page and card they are on. A row scrolled out of
+    // the window is still laid out, so it counts.
+    void test_everySingleLineControlIsAFieldsHeight()
     {
-#if !defined(Q_OS_MACOS)
-        QSKIP("the heights compared against were measured with macOS's interface face");
-#endif
-        const bool offscreen = QGuiApplication::platformName() == qsl("offscreen");
-        if (!offscreen && QGuiApplication::platformName() != qsl("cocoa")) {
-            QSKIP("the heights compared against were measured offscreen and under cocoa");
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        QStringList pages;
+        for (const auto& category : mpPreferences->categoryDefinitions()) {
+            pages << category.key;
         }
-        QVERIFY2(openPreferences(qsl("mainDisplay")), "the settings dialog never appeared");
-        const QList<std::tuple<QString, QGroupBox*, int, int>> cards{{qsl("mainDisplay"), mpPreferences->groupBox_displayColors, offscreen ? 434 : 448, 0},
-                                                                     {qsl("mapper"), mpPreferences->groupBox_mapperColors, offscreen ? 442 : 456, 1}};
-        for (const auto& [page, pCard, before, rowsAdded] : cards) {
+        pages << mpPreferences->mSubpageIndexes.keys();
+        const auto singleLine = [](const QWidget* pWidget) {
+            if (qobject_cast<const QComboBox*>(pWidget) || qobject_cast<const QAbstractSpinBox*>(pWidget)) {
+                return true;
+            }
+            // A list's or a number box's own editor is the inside of that control, not a field beside it
+            const QWidget* pParent = pWidget->parentWidget();
+            return qobject_cast<const QLineEdit*>(pWidget) && !qobject_cast<const QComboBox*>(pParent) && !qobject_cast<const QAbstractSpinBox*>(pParent);
+        };
+        QSet<QWidget*> walkedPages;
+        QStringList offHeight;
+        int walked = 0;
+        for (const QString& page : std::as_const(pages)) {
             mpPreferences->setTab(page);
             qApp->processEvents();
-            const int row = fieldOf(mpPreferences->pushButton_mapInfoBg)->parentWidget()->geometry().top() - fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()->geometry().top();
-            const int allowed = before + rowsAdded * row;
-            QVERIFY2(qAbs(pCard->height() - allowed) <= 12,
-                     qPrintable(qsl("the '%1' card is %2px tall, where its wells made it %3px and its rows add %4px").arg(pCard->title()).arg(pCard->height()).arg(before).arg(rowsAdded * row)));
+            QWidget* pPage = mpPreferences->mpStackedWidget_categories->currentWidget();
+            QVERIFY2(pPage, qPrintable(qsl("the '%1' page is not in the stack").arg(page)));
+            walkedPages.insert(pPage);
+            for (const QWidget* pControl : pPage->findChildren<QWidget*>()) {
+                if (!singleLine(pControl) || !pControl->isVisibleTo(pPage)) {
+                    continue;
+                }
+                ++walked;
+                // The one held taller on purpose: it shows each map style as a picture taller than a field
+                if (pControl == mpPreferences->comboBox_mapStyle) {
+                    QVERIFY2(pControl->height() > uiDesign::scmInputHeight + mpPreferences->comboBox_mapStyle->iconSize().height() / 2,
+                             qPrintable(qsl("the map style list is %1px tall, too short for its %2px pictures").arg(pControl->height()).arg(mpPreferences->comboBox_mapStyle->iconSize().height())));
+                    continue;
+                }
+                if (pControl->height() != uiDesign::scmInputHeight) {
+                    offHeight << qsl("%1: %2 '%3' is %4px").arg(page, QString::fromLatin1(pControl->metaObject()->className()), pControl->objectName()).arg(pControl->height());
+                }
+            }
         }
+        // All but the search results, which hold only cards borrowed from the pages walked here
+        QVERIFY(!walkedPages.contains(mpPreferences->mpScrollArea_searchResults));
+        QCOMPARE(walkedPages.size() + 1, mpPreferences->mpStackedWidget_categories->count());
+        // A walk that stopped finding controls cannot pass as a clean one
+        QVERIFY2(walked >= 100, qPrintable(qsl("only %1 single-line controls were found on %2 pages").arg(walked).arg(pages.size())));
+        // One line each: a failure message is cut short long before a list this long ends
+        for (const QString& control : std::as_const(offHeight)) {
+            qWarning().noquote() << control;
+        }
+        QVERIFY2(offHeight.isEmpty(), qPrintable(qsl("%1 of %2 single-line controls are not a field's %3px - listed above").arg(offHeight.size()).arg(walked).arg(uiDesign::scmInputHeight)));
     }
 
     // However far the window is narrowed, the page fits beside the sidebar or

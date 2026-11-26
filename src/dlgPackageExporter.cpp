@@ -1008,6 +1008,7 @@ void dlgPackageExporter::applyPackageExporterShellStyle()
     for (QWidget* pContainer : {ui->widget_newOrExistingPackageName, mpSelectionColumn, mpDetailsColumn, mpFoot}) {
         uiDesign::keepClickFocusOffControls(pContainer);
         uiDesign::letPopupsTakeTheFieldsCorner(pContainer);
+        uiDesign::lineUpNumberBoxesWithFields(pContainer);
     }
 
     // Last: it measures off the fonts and borders set above

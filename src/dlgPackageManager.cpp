@@ -1486,6 +1486,8 @@ void dlgPackageManager::applyPackageManagerShellStyle()
     uiDesign::keepClickFocusOffControls(rightPanel);
     uiDesign::letPopupsTakeTheFieldsCorner(leftPanel);
     uiDesign::letPopupsTakeTheFieldsCorner(rightPanel);
+    uiDesign::lineUpNumberBoxesWithFields(leftPanel);
+    uiDesign::lineUpNumberBoxesWithFields(rightPanel);
 }
 
 void dlgPackageManager::closeEvent(QCloseEvent* event)

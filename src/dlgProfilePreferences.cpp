@@ -149,6 +149,7 @@ using uiDesign::insertGridRowAtTop;
 using uiDesign::invalidateLayoutsUpTo;
 using uiDesign::keepClickFocusOffControls;
 using uiDesign::letPopupsTakeTheFieldsCorner;
+using uiDesign::lineUpNumberBoxesWithFields;
 using uiDesign::makeChevronRow;
 using uiDesign::markAsShellSurface;
 using uiDesign::measuredCardTitleHeight;
@@ -2543,7 +2544,7 @@ void dlgProfilePreferences::reflowMapperCards()
     const auto ringRow = [this](const QString& ring, QLabel*& pRingName, uiDesign::ColourValue*& pColour, QPushButton* pChoose, QLabel*& pDiameterName, QSpinBox* pDiameter) {
         pRingName = new QLabel(groupBox_playerRoomStyle);
         pRingName->setObjectName(qsl("settingsPlayerRoom%1RingLabel").arg(ring));
-        pColour = new uiDesign::ColourValue(groupBox_playerRoomStyle, uiDesign::ColourRowSize::Compact);
+        pColour = new uiDesign::ColourValue(groupBox_playerRoomStyle);
         pColour->setObjectName(qsl("settingsPlayerRoom%1Colour").arg(ring));
         pColour->opacityBox()->setObjectName(qsl("settingsPlayerRoom%1Opacity").arg(ring));
         pColour->setChooseButton(pChoose);
@@ -2563,9 +2564,8 @@ void dlgProfilePreferences::reflowMapperCards()
             ringRow(qsl("Inner"), mpLabel_playerRoomInnerRing, mpColourValue_playerRoomInner, pushButton_playerRoomSecondaryColor, mpLabel_playerRoomInnerDiameter, spinBox_playerRoomInnerDiameter),
             2,
             0);
-    // One width for both whatever their ranges, so their percent signs stand one over the other as the opacities' do,
-    // and the colour rows' compact height, so a ring's row is one height across
-    uiDesign::fitNumberBoxes({spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter}, uiDesign::scmColourWellHeight);
+    // One width for both whatever their ranges, so their percent signs stand one over the other as the opacities' do
+    uiDesign::fitNumberBoxes({spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter});
     // A typed colour or opacity goes the way one chosen in the colours window does
     for (const auto entry : {&uiDesign::ColourValue::colourEntered, &uiDesign::ColourValue::opacityEntered}) {
         connect(mpColourValue_playerRoomOuter, entry, this, [this](const QColor& colour) {
@@ -2785,12 +2785,11 @@ void dlgProfilePreferences::reflowColourCards()
     constexpr qsizetype mapNamedCount = 9;
     constexpr qsizetype mapLeadingCount = 5;
 
-    // A field for every colour, at a colour well's height so a card of thirty colours stays short; the words are
-    // nameColourControls()'s
+    // A field for every colour; the words are nameColourControls()'s
     const auto giveFields = [this](QGroupBox* pCard, QList<ProfileColour>& colours) {
         for (ProfileColour& colour : colours) {
             const QString stem = colour.pChoose->objectName().remove(qsl("pushButton_"));
-            colour.pValue = new uiDesign::ColourValue(pCard, uiDesign::ColourRowSize::Compact);
+            colour.pValue = new uiDesign::ColourValue(pCard);
             colour.pValue->setObjectName(qsl("settingsColour_%1").arg(stem));
             if (colour.seeThrough) {
                 colour.pValue->opacityBox()->setObjectName(qsl("settingsOpacity_%1").arg(stem));
@@ -3989,11 +3988,11 @@ void dlgProfilePreferences::applyShellStyle()
     }
     restyleSidebarIcons(tokens);
     for (QPushButton* pChoose : {pushButton_playerRoomPrimaryColor, pushButton_playerRoomSecondaryColor}) {
-        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
     }
     for (const QList<ProfileColour>* pColours : {&mDisplayColours, &mMapColours}) {
         for (const ProfileColour& colour : *pColours) {
-            uiDesign::setColourButtonGlyph(colour.pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+            uiDesign::setColourButtonGlyph(colour.pChoose, uiDesign::ColourButton::Choose, tokens);
         }
     }
     // Their frames are in the border token
@@ -4161,6 +4160,7 @@ void dlgProfilePreferences::applyShellStyle()
     // scope and for the same reason: the pages a profile brings with it are
     // built by the time this runs again
     letPopupsTakeTheFieldsCorner(mpStackedWidget_categories);
+    lineUpNumberBoxesWithFields(mpStackedWidget_categories);
     styleProfileMapMenu();
 
     // A different font is a different width for the names, so the sidebar is
@@ -5497,6 +5497,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             // Wider than tall, as the combo box has room across for the preview's rooms to show
             const QSize previewSize(72, 48);
             comboBox_mapStyle->setIconSize(previewSize);
+            // Taller than a field, to show the pictures whole: QComboBox's pixel above and below an icon, inside the
+            // field's padding and frame
+            uiDesign::holdHeight(comboBox_mapStyle, previewSize.height() + 2 + 2 * (uiDesign::scmInputPaddingVertical + uiDesign::scmInputBorderWidth));
             for (const MapStyle& style : MapStyle::all()) {
                 comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
             }

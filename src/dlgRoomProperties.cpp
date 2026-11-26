@@ -131,15 +131,14 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     // init generated dialog
     setupUi(this);
 
-    // Compact, as the colour rows in the settings are, so a colour row looks the same wherever it stands
-    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor, uiDesign::ColourRowSize::Compact);
+    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor);
     mpSymbolColour->setObjectName(qsl("roomPropertiesSymbolColour"));
     //: Room properties dialog, screen reader name of the field showing the room symbol's color as a code, which a code can be typed into
     mpSymbolColour->setAccessibleName(tr("Symbol color"));
     //: Room properties dialog, in the field for the room symbol's color while no color was chosen for it: the symbol is then drawn in black or white, whichever stands out against the room
     mpSymbolColour->setDefaultWord(tr("Automatic"));
     horizontalLayout_widget_symbolColor->insertWidget(horizontalLayout_widget_symbolColor->indexOf(pushButton_setSymbolColor), mpSymbolColour);
-    mpBorderColour = new uiDesign::ColourValue(widget_borderColor, uiDesign::ColourRowSize::Compact);
+    mpBorderColour = new uiDesign::ColourValue(widget_borderColor);
     mpBorderColour->setObjectName(qsl("roomPropertiesBorderColour"));
     //: Room properties dialog, screen reader name of the field showing the room border's color as a code, which a code can be typed into
     mpBorderColour->setAccessibleName(tr("Border color"));
@@ -764,12 +763,13 @@ void dlgRoomProperties::restyleColourRows()
     for (QWidget* pRow : {widget_symbolColor, widget_borderColor}) {
         const QString row = qsl("#%1").arg(pRow->objectName());
         pRow->setStyleSheet(uiDesign::inputStyleSheet(tokens, row) + uiDesign::buttonStyleSheet(tokens, row));
+        uiDesign::lineUpNumberBoxesWithFields(pRow);
     }
     for (QPushButton* pChoose : {pushButton_setSymbolColor, pushButton_setBorderColor}) {
-        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
     }
     for (QPushButton* pReset : {pushButton_resetSymbolColor, pushButton_resetBorderColor}) {
-        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens, uiDesign::ColourRowSize::Compact);
+        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens);
     }
 }
 

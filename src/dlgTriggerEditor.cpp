@@ -2221,12 +2221,14 @@ void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWid
     const QMargins rowMargins = patternWidget->layout()->contentsMargins();
     const int contentHeight = rowHeight - rowMargins.top() - rowMargins.bottom();
     for (QWidget* pControl : {static_cast<QWidget*>(patternWidget->singleLineTextEdit_pattern),
-                              static_cast<QWidget*>(patternWidget->comboBox_patternType),
-                              static_cast<QWidget*>(patternWidget->spinBox_lineSpacer),
                               static_cast<QWidget*>(patternWidget->pushButton_fgColor),
                               static_cast<QWidget*>(patternWidget->pushButton_bgColor),
                               static_cast<QWidget*>(patternWidget->label_prompt)}) {
         pControl->setMaximumHeight(contentHeight);
+    }
+    // The row's height, which the display font can take past a field's, where the input recipe holds these two to one
+    for (QWidget* pControl : {static_cast<QWidget*>(patternWidget->comboBox_patternType), static_cast<QWidget*>(patternWidget->spinBox_lineSpacer)}) {
+        uiDesign::holdHeight(pControl, contentHeight);
     }
 
     patternWidget->comboBox_patternType->setFixedWidth(patternTypeColumnWidth(patternWidget->comboBox_patternType->font()));
@@ -2376,6 +2378,7 @@ void dlgTriggerEditor::createPatternItem(int index)
     // What a drag from the grip means depends on where the other rows are, which only the editor knows
     pItem->label_dragHandle->installEventFilter(this);
     applyPatternWidgetStyle(pItem);
+    uiDesign::lineUpNumberBoxesWithFields(pItem);
     pItem->spinBox_lineSpacer->installEventFilter(this);
 }
 
@@ -17565,8 +17568,9 @@ void dlgTriggerEditor::applyEditorShellStyle()
                                static_cast<QWidget*>(mpActionsMainArea),
                                static_cast<QWidget*>(mpVarsMainArea)}) {
         uiDesign::keepClickFocusOffControls(pMainArea);
-        // Pattern rows are made later, so createPatternItem() does the same for its box
+        // Pattern rows are made later, so createPatternItem() does the same for its boxes
         uiDesign::letPopupsTakeTheFieldsCorner(pMainArea);
+        uiDesign::lineUpNumberBoxesWithFields(pMainArea);
     }
 
     // After the sheets: the Events label is held to the chips' line height, known only once the field rule has landed

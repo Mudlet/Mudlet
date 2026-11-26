@@ -462,7 +462,7 @@ private:
         const qreal ratio = image.devicePixelRatio();
         const int middle = pField->height() / 2;
         // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + inset) pixels
-        const int reach = middle - 5;
+        const int reach = middle - 6;
         QList<QColor> row;
         for (int x = middle - reach; x <= middle + reach; ++x) {
             row.append(image.pixelColor(QPointF(x * ratio, (pField->height() / 2) * ratio).toPoint()));
@@ -899,17 +899,17 @@ private slots:
         QVERIFY2(!pDlg->findChild<QSpinBox*>(qsl("roomPropertiesSymbolOpacity")), "the symbol, which is never see-through, was given an opacity");
         for (QPushButton* pButton : {pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor, pDlg->pushButton_resetSymbolColor, pDlg->pushButton_resetBorderColor}) {
             QVERIFY2(pButton->text().isEmpty() && !pButton->icon().isNull(), qPrintable(qsl("%1 is not a glyph button: '%2'").arg(pButton->objectName(), pButton->text())));
-            QCOMPARE(pButton->size(), QSize(uiDesign::scmColourWellHeight, uiDesign::scmColourWellHeight));
+            QCOMPARE(pButton->size(), QSize(uiDesign::scmInputHeight, uiDesign::scmInputHeight));
         }
-        // The same compact row as the settings' colour cards, its buttons drawn with the design's button face
-        QCOMPARE(pSymbol->height(), uiDesign::scmColourWellHeight);
-        QCOMPARE(pBorder->height(), uiDesign::scmColourWellHeight);
-        QCOMPARE(borderOpacity(pDlg)->height(), uiDesign::scmColourWellHeight);
+        // The same row as the settings' colour cards, at a field's height, its buttons drawn with the design's button face
+        QCOMPARE(pSymbol->height(), uiDesign::scmInputHeight);
+        QCOMPARE(pBorder->height(), uiDesign::scmInputHeight);
+        QCOMPARE(borderOpacity(pDlg)->height(), uiDesign::scmInputHeight);
         QPushButton reference;
         reference.setStyleSheet(uiDesign::buttonStyleSheet(uiDesign::themeTokens()));
         reference.setFixedSize(pDlg->pushButton_setSymbolColor->size());
         const QImage referenceImage = reference.grab().toImage();
-        const QPoint onTheFace(2, uiDesign::scmColourWellHeight / 2);
+        const QPoint onTheFace(2, uiDesign::scmInputHeight / 2);
         for (QPushButton* pButton : {pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor}) {
             const QImage image = pButton->grab().toImage();
             const QColor face = image.pixelColor(onTheFace * image.devicePixelRatio());
@@ -944,7 +944,7 @@ private slots:
         QCOMPARE(pSymbol->placeholderText(), qsl("Automatic"));
         QCOMPARE(pBorder->placeholderText(), mpHost->mRoomBorderColor.name(QColor::HexRgb).toUpper());
         // ...so it is no wider than a field showing a code, as every other colour field is
-        const uiDesign::ColourValue codeOnly(pDlg->widget_borderColor, uiDesign::ColourRowSize::Compact);
+        const uiDesign::ColourValue codeOnly(pDlg->widget_borderColor);
         QCOMPARE(pBorder->width(), codeOnly.sizeHint().width());
         // The symbol is black or white, whichever stands out against the room
         QCOMPARE(swatchOf(pSymbol), QColor(Qt::black));
@@ -1021,7 +1021,7 @@ private slots:
         const QPoint onTheSwatch(middle, middle);
         const QPoint onTheCode(pBorder->width() - middle, middle);
         // In the inset between the swatch and the field's frame
-        const QPoint onTheRing(uiDesign::scmInputBorderWidth + 1, middle);
+        const QPoint onTheRing(uiDesign::scmInputBorderWidth + 2, middle);
         const auto ringInk = [pBorder, onTheRing]() {
             const QImage image = pBorder->grab().toImage();
             return image.pixelColor(onTheRing * image.devicePixelRatio());

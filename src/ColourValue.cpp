@@ -44,32 +44,12 @@ namespace uiDesign {
 
 namespace {
 
-constexpr int rowHeight(const ColourRowSize size)
-{
-    return size == ColourRowSize::Compact ? scmColourWellHeight : scmInputHeight;
-}
-
 // The field left showing round the swatch, as in a colour well, so the two read as one kind of thing
-constexpr int swatchInset(const ColourRowSize size)
-{
-    return size == ColourRowSize::Compact ? 2 : 3;
-}
-
-constexpr int swatchSide(const ColourRowSize size)
-{
-    return rowHeight(size) - 2 * (scmInputBorderWidth + swatchInset(size));
-}
-
+constexpr int scmSwatchInset = 3;
+constexpr int scmSwatchSide = scmInputHeight - 2 * (scmInputBorderWidth + scmSwatchInset);
 // ...and the swatch's corner, an input's corner taken in by that inset so the smaller square keeps the same curve
-constexpr int swatchRadius(const ColourRowSize size)
-{
-    return std::max(2, scmRadiusInput - swatchInset(size));
-}
-
-constexpr int colourButtonGlyphSize(const ColourRowSize size)
-{
-    return size == ColourRowSize::Compact ? 14 : 16;
-}
+constexpr int scmSwatchRadius = std::max(2, scmRadiusInput - scmSwatchInset);
+constexpr int scmColourButtonGlyphSize = 16;
 
 // What QLineEdit leaves for its cursor at either end of the text
 constexpr int scmCursorRoom = 2;
@@ -82,16 +62,12 @@ int percentOf(const int alpha)
 
 } // namespace
 
-ColourValue::ColourValue(QWidget* pParent, const ColourRowSize size)
+ColourValue::ColourValue(QWidget* pParent)
 : QLineEdit(pParent)
-, mSize(size)
 {
     // Every prefix of a code is let through, so a code can be typed a character at a time; commit() decides
     setValidator(new QRegularExpressionValidator(QRegularExpression(qsl("#?[0-9A-Fa-f]{0,6}")), this));
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    if (mSize == ColourRowSize::Compact) {
-        holdHeight(this, rowHeight(mSize));
-    }
     keepTextClearOfSwatch();
 }
 
@@ -155,8 +131,8 @@ QSpinBox* ColourValue::opacityBox()
     mpOpacity->setAccessibleName(opacity);
     connect(mpOpacity, &QSpinBox::valueChanged, this, &ColourValue::takeOpacity);
     mpOpacity->installEventFilter(this);
-    // As tall as the field beside it, where a styled spin box asks for a few pixels more
-    fitNumberBoxes({mpOpacity.data()}, rowHeight(mSize));
+    // As wide as its widest value, where a spin box asks for far more room
+    fitNumberBoxes({mpOpacity.data()});
     showOpacity();
     return mpOpacity;
 }
@@ -246,7 +222,7 @@ void ColourValue::takeOpacity(const int percent)
 void ColourValue::keepTextClearOfSwatch()
 {
     // The text starts where the input recipe's padding would put it beside the swatch
-    const int swatchRoom = swatchInset(mSize) + swatchSide(mSize);
+    const int swatchRoom = scmSwatchInset + scmSwatchSide;
     if (layoutDirection() == Qt::RightToLeft) {
         setTextMargins(0, 0, swatchRoom, 0);
     } else {
@@ -350,7 +326,7 @@ QSize ColourValue::sizeHint() const
     const QMargins margins = textMargins();
     QStyleOptionFrame option;
     initStyleOption(&option);
-    const int height = mSize == ColourRowSize::Compact ? rowHeight(mSize) : QLineEdit::sizeHint().height();
+    const int height = QLineEdit::sizeHint().height();
     const QSize contents(margins.left() + scmCursorRoom + words + scmCursorRoom + margins.right(), height);
     return {style()->sizeFromContents(QStyle::CT_LineEdit, &option, contents, this).width(), height};
 }
@@ -370,7 +346,7 @@ void ColourValue::paintEvent(QPaintEvent* pEvent)
     const ThemeTokens tokens = themeTokens();
     const bool available = isEnabled();
     const qreal half = scmInputBorderWidth / 2.0;
-    const int radius = swatchRadius(mSize);
+    const int radius = scmSwatchRadius;
     const QRect swatch = swatchRect();
 
     QPainter painter(this);
@@ -404,15 +380,13 @@ void ColourValue::setChooseButton(QAbstractButton* pChoose)
 
 QRect ColourValue::swatchRect() const
 {
-    const int inset = scmInputBorderWidth + swatchInset(mSize);
-    const int side = swatchSide(mSize);
-    return QStyle::visualRect(layoutDirection(), rect(), QRect(inset, (height() - side) / 2, side, side));
+    const int inset = scmInputBorderWidth + scmSwatchInset;
+    return QStyle::visualRect(layoutDirection(), rect(), QRect(inset, (height() - scmSwatchSide) / 2, scmSwatchSide, scmSwatchSide));
 }
 
 QRect ColourValue::swatchTarget() const
 {
-    const int inset = swatchInset(mSize);
-    return swatchRect().adjusted(-inset, -inset, inset, inset);
+    return swatchRect().adjusted(-scmSwatchInset, -scmSwatchInset, scmSwatchInset, scmSwatchInset);
 }
 
 // Only a swatch on show stands for Choose: a field showing no colour has none to click
@@ -487,17 +461,12 @@ void ColourValue::leaveEvent(QEvent* pEvent)
     QLineEdit::leaveEvent(pEvent);
 }
 
-void setColourButtonGlyph(QAbstractButton* pButton, const ColourButton kind, const ThemeTokens& tokens, const ColourRowSize size)
+void setColourButtonGlyph(QAbstractButton* pButton, const ColourButton kind, const ThemeTokens& tokens)
 {
-    const int side = rowHeight(size);
     pButton->setText(QString());
-    pButton->setFixedSize(side, side);
-    if (size == ColourRowSize::Compact) {
-        holdHeight(pButton, side);
-    }
+    pButton->setFixedSize(scmInputHeight, scmInputHeight);
     pButton->setIcon(tintedIcon(kind == ColourButton::Choose ? qsl(":/icons/control-choose-colour.svg") : qsl(":/icons/control-reset.svg"), tokens));
-    const int glyph = colourButtonGlyphSize(size);
-    pButton->setIconSize(QSize(glyph, glyph));
+    pButton->setIconSize(QSize(scmColourButtonGlyphSize, scmColourButtonGlyphSize));
 }
 
 } // namespace uiDesign

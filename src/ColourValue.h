@@ -32,9 +32,6 @@ namespace uiDesign {
 
 struct ThemeTokens;
 
-// A row at a form field's height, or at a colour well's for a card holding columns of colours
-enum class ColourRowSize { Normal, Compact };
-
 // A field that shows a colour and takes one typed as #RGB or #RRGGBB, with a swatch of the colour at its leading
 // edge, beside a button that opens the colours window. Drawn by the window's inputStyleSheet(); the swatch is
 // painted from themeTokens() each time, so an appearance change asks nothing of the owner for it.
@@ -44,7 +41,7 @@ class ColourValue : public QLineEdit
 
 public:
     Q_DISABLE_COPY(ColourValue)
-    explicit ColourValue(QWidget* pParent = nullptr, const ColourRowSize size = ColourRowSize::Normal);
+    explicit ColourValue(QWidget* pParent = nullptr);
 
     // An invalid colour leaves the field blank, as clear() does
     void setColour(const QColor& colour);
@@ -109,7 +106,6 @@ private:
     [[nodiscard]] bool onSwatch(const QPoint& position) const;
     void hoverSwatch(const bool over);
 
-    const ColourRowSize mSize;
     QColor mColour;
     Shows mShows = Shows::Nothing;
     QString mDefaultWord;
@@ -124,7 +120,7 @@ enum class ColourButton { Choose, Reset };
 // The icon-only button beside a ColourValue, square at the height of the row it stands in; its words belong in its
 // tooltip and accessible name. The glyph's ink does not follow an appearance change by itself, so call this again on
 // every one.
-void setColourButtonGlyph(QAbstractButton* pButton, const ColourButton kind, const ThemeTokens& tokens, const ColourRowSize size = ColourRowSize::Normal);
+void setColourButtonGlyph(QAbstractButton* pButton, const ColourButton kind, const ThemeTokens& tokens);
 
 } // namespace uiDesign
 

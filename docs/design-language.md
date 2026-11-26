@@ -248,6 +248,33 @@ surface, a 1px border, `scmRadiusInput`, an accent frame on focus. Framing a
 platform draws inside it, so the sheet claims those two only once it has tinted
 arrow PNGs cached to point at, and otherwise leaves them the platform's frame.
 
+Every single-line control the sheet draws - a line edit, a combo box, a spin
+box, a colour row and its opacity box - is one height, `scmInputHeight` (28px:
+22px of content, 2px of padding and the 1px hairline above and below), so
+controls standing on one row meet at the top and the bottom. The rule lives in
+`inputStyleSheet()` alone: the single-line kinds take `max-height` as well as
+`min-height`, which Qt sets as the widget's maximum and minimum at every polish
+and which also caps its size hint; uncapped, a spin box's hint is 31px under
+macOS and 33px offscreen. `QPlainTextEdit` and `QTextEdit` are not capped, and the editor
+inside a combo box or a spin box has the cap taken off again, so a box held
+taller does not hold its editor at a field's height. A control that has to be
+another height keeps it with `holdHeight()`, called where it is sized, which
+sets its height again after every polish: the Mapper page's 3D map style
+picker, whose pictures are 48px tall; the trigger editor's pattern rows, whose
+type list and line spacer stand at the row's height in the profile's display
+font; and a `ChipRow`'s field, which shares the chips' line.
+
+A spin box's value starts where a field's text does. Qt's stylesheet style
+places the box's editor against the frame on the left and inside the padding on
+the right, which leaves a left-to-right value starting 7px before the text of
+a field above it; a padding rule on the editor moves nothing.
+`lineUpNumberBoxesWithFields(container)` gives the editor a text margin making
+up the difference, mirrored right to left and taken again whenever the box lays
+its editor out. A box `fitNumberBoxes()` looks after and a value centred or
+set at the trailing edge are left alone. It runs from each styled window's
+style pass on the container the input sheet was set on, and again wherever a
+window builds a spin box after that pass.
+
 The list a combo box drops down is the field opened up: the same surface, the
 same hairline and the same `scmRadiusInput` corner as the box it came out of,
 with the accent under the chosen row. It was the card once, and on a card -
@@ -455,8 +482,7 @@ clicks the colour itself: a click on it presses the row's Choose
 while the button is unavailable. Unlike the old well it never stands alone,
 and under the pointer it says it can be clicked: a pointing hand where the
 code has the text cursor, a ring in `accent` in the inset round the swatch, and
-Choose's tooltip. The target is the swatch with that inset, 20px square in a
-compact row, under the usual 24px because Choose beside it does the same.
+Choose's tooltip. The target is the swatch with that inset, 26px square.
 Reset (rotate-ccw) is unavailable while the item has nothing
 to reset; the field is then empty, its placeholder says what the item is drawn
 with - "Automatic" for a room's symbol, the code of the map's border colour for
@@ -477,19 +503,16 @@ edge by half of what that widest value leaves, so "100%" is centred and "60%"
 ends where it does, the percent signs one over the other. Centring each value
 on its own puts every sign somewhere else.
 
-Every colour row is `ColourRowSize::Compact`: field, opacity box and buttons
-at a colour well's 22px (`scmColourWellHeight`), the swatch and its inset
-scaled down with them, so a colour row looks the same in the room properties
-dialog, the Player room marker card and the colour cards, and the cards
-holding 30 and 32 colours are no taller than their wells made them. The
-marker's Diameter boxes are held to the same height, so a ring's row is one
-height across. The room properties dialog gives its rows the button recipe
-as well as the input recipe, scoped to the row, so Choose and Reset have the
-design's face there too. `holdHeight()` and `fitNumberBoxes()` polish a
-widget before holding it: the first Polish reaches their event filter before
-the style, which then sets the recipe's min-height back, and a dialog that
-sizes itself before it is shown (`adjustSize()`) never gives them a later
-style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
+Every colour row stands at a field's height, `scmInputHeight`: field,
+opacity box and buttons, the buttons square, so a colour row looks the same in
+the room properties dialog, the Player room marker card and the colour cards,
+and meets the fields and lists beside it. The room properties dialog gives its
+rows the button recipe as well as the input recipe, scoped to the row, so
+Choose and Reset have the design's face there too. `holdHeight()` and
+`fitNumberBoxes()` polish a widget before holding it: the first Polish reaches
+their event filter before the style, which then sets the recipe's height
+limits back, and a dialog that sizes itself before it is shown (`adjustSize()`)
+never gives them a later style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
 way back. On the Main display's card that button also removes a picture a script put behind the main display, so while
 there is one the button shows "Reset all colors and remove the background image", with a tooltip about the picture. The words are set
 when the profile is read in, after a reset and each time the window becomes active again. The card's own colours (Foreground, Background and the command
