@@ -533,7 +533,8 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     auto* pScriptDataPane = new ScriptDataPane(tab_userData);
     pScriptDataPane->setObjectName(qsl("roomPropertiesScriptDataPane"));
     pScriptDataPane->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Ignored);
-    verticalLayout_userData->replaceWidget(roomPropertiesScriptData, pScriptDataPane);
+    // replaceWidget() hands back the old widget's layout item, which is the caller's to free
+    delete verticalLayout_userData->replaceWidget(roomPropertiesScriptData, pScriptDataPane);
     auto* pScriptDataPaneLayout = new QVBoxLayout(pScriptDataPane);
     pScriptDataPaneLayout->setContentsMargins(0, 0, 0, 0);
     pScriptDataPaneLayout->addWidget(roomPropertiesScriptData);
