@@ -315,8 +315,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     // init generated dialog
     setupUi(this);
 
-    // Compact, as the colour rows in the settings are, so a colour row looks the same wherever it stands
-    mpRoomColour = new uiDesign::ColourValue(tab_general, uiDesign::ColourRowSize::Compact);
+    mpRoomColour = new uiDesign::ColourValue(tab_general);
     mpRoomColour->setObjectName(qsl("roomPropertiesRoomColour"));
     //: Room properties dialog, screen reader name of the box showing the room's color and the number the map knows that color by
     mpRoomColour->setAccessibleName(tr("Room color"));
@@ -325,14 +324,14 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     mpRoomColour->setFocusPolicy(Qt::NoFocus);
     mpRoomColour->setChooseButton(pushButton_setRoomColor);
     horizontalLayout_roomColor->insertWidget(0, mpRoomColour);
-    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor, uiDesign::ColourRowSize::Compact);
+    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor);
     mpSymbolColour->setObjectName(qsl("roomPropertiesSymbolColour"));
     //: Room properties dialog, screen reader name of the field showing the room symbol's color as a code, which a code can be typed into
     mpSymbolColour->setAccessibleName(tr("Symbol color"));
     //: Room properties dialog, in the field for the room symbol's color while no color was chosen for it: the symbol is then drawn in black or white, whichever stands out against the room
     mpSymbolColour->setDefaultWord(tr("Automatic"));
     horizontalLayout_widget_symbolColor->insertWidget(horizontalLayout_widget_symbolColor->indexOf(pushButton_setSymbolColor), mpSymbolColour);
-    mpBorderColour = new uiDesign::ColourValue(widget_borderColor, uiDesign::ColourRowSize::Compact);
+    mpBorderColour = new uiDesign::ColourValue(widget_borderColor);
     mpBorderColour->setObjectName(qsl("roomPropertiesBorderColour"));
     //: Room properties dialog, screen reader name of the field showing the room border's color as a code, which a code can be typed into
     mpBorderColour->setAccessibleName(tr("Border color"));
@@ -966,12 +965,32 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
     static_cast<UserDataValueDelegate*>(mpValueDelegate)->setMixedInk(uiDesign::readableOn(tokens.field, tokens.disabledText, tokens.text, uiDesign::scmQuietMinimumRatio));
     tableWidget_userData->viewport()->update();
 
-    uiDesign::setColourButtonGlyph(pushButton_setRoomColor, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+    uiDesign::setColourButtonGlyph(pushButton_setRoomColor, uiDesign::ColourButton::Choose, tokens);
     for (QPushButton* pChoose : {pushButton_setSymbolColor, pushButton_setBorderColor}) {
-        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
     }
     for (QPushButton* pReset : {pushButton_resetSymbolColor, pushButton_resetBorderColor}) {
-        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens, uiDesign::ColourRowSize::Compact);
+        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens);
+    }
+
+    // The base style measures a spin box and a combo box taller than a line of text, so each is held to the field's height
+    for (QWidget* pControl : {static_cast<QWidget*>(lineEdit_name),
+                              static_cast<QWidget*>(comboBox_area),
+                              static_cast<QWidget*>(lineEdit_hash),
+                              static_cast<QWidget*>(lineEdit_roomSymbol),
+                              static_cast<QWidget*>(comboBox_roomSymbol),
+                              static_cast<QWidget*>(spinBox_borderThickness),
+                              static_cast<QWidget*>(spinBox_weight),
+                              static_cast<QWidget*>(comboBox_weight)}) {
+        uiDesign::holdHeight(pControl, uiDesign::scmInputHeight);
+    }
+
+    // A styled spin box starts its words at its frame, where a line field insets them, so they would not stand in a column
+    for (const QSpinBox* pBox : {spinBox_borderThickness, spinBox_weight}) {
+        if (auto* pEdit = pBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly)) {
+            const bool rightToLeft = pEdit->layoutDirection() == Qt::RightToLeft;
+            pEdit->setTextMargins(rightToLeft ? 0 : uiDesign::scmInputPaddingHorizontal, 0, rightToLeft ? uiDesign::scmInputPaddingHorizontal : 0, 0);
+        }
     }
 
     uiDesign::keepClickFocusOffControls(roomPropertiesShell);

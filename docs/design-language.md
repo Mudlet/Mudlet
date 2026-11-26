@@ -479,13 +479,14 @@ edge by half of what that widest value leaves, so "100%" is centred and "60%"
 ends where it does, the percent signs one over the other. Centring each value
 on its own puts every sign somewhere else.
 
-Every colour row is `ColourRowSize::Compact`: field, opacity box and buttons
-at a colour well's 22px (`scmColourWellHeight`), the swatch and its inset
-scaled down with them, so a colour row looks the same in the room properties
-dialog, the Player room marker card and the colour cards, and the cards
-holding 30 and 32 colours are no taller than their wells made them. The
-marker's Diameter boxes are held to the same height, so a ring's row is one
-height across. The room properties dialog's one sheet gives its rows the
+The settings' colour rows are `ColourRowSize::Compact`: field, opacity box and
+buttons at a colour well's 22px (`scmColourWellHeight`), the swatch and its
+inset scaled down with them, so a colour row looks the same in the Player room
+marker card and the colour cards, and the cards holding 30 and 32 colours are
+no taller than their wells made them. The marker's Diameter boxes are held to
+the same height, so a ring's row is one height across. The room properties
+dialog's colour rows stand among fields, so they keep the default size and are
+as tall as those fields (`scmInputHeight`). Its one sheet gives its rows the
 input and button recipes with the rest of its fields and buttons, so Choose and
 Reset have the design's face there too. `holdHeight()` and `fitNumberBoxes()` polish a
 widget before holding it: the first Polish reaches their event filter before
@@ -2024,7 +2025,7 @@ change of the dialog. OK carries `uiDesign::scmProp_primaryButton`.
 | `tab_general`, `tab_userData` | The Room and Script data tabs. `keepTheTabsRoomForThePages()` holds the tab widget to the Room tab's size hint plus what the tab recipe's `scmTabPaneInset` on every side takes beyond the base style's frame, which is all `QTabWidget` adds when it asks for its own size; it runs again on the first show, once the window is polished as it will be drawn |
 | `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, each a row with a hairline in `separator` under it. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` with the preview tile `label_preview` at the trailing end of its row, and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, semibold, in `mutedText` |
 | `roomPropertiesHashCaption` | The caption under the game ID: what the hash is, or that it belongs to one room while several are configured. `label_hashWarning` takes its place, in the warning hue walked to `scmTextMinimumRatio`, while the ID typed belongs to another room |
-| `roomPropertiesRoomColour` | The room's colour as a compact `uiDesign::ColourValue`, read only and out of the tab order: the swatch and, as its default word, the number the map knows the colour by, or "Multiple" with no swatch for rooms that differ. `pushButton_setRoomColor` is its Choose |
+| `roomPropertiesRoomColour` | The room's colour as a `uiDesign::ColourValue` at the field's height, like the tab's other colour rows, read only and out of the tab order: the swatch and, as its default word, the number the map knows the colour by, or "Multiple" with no swatch for rooms that differ. `pushButton_setRoomColor` is its Choose |
 | `roomPropertiesRoomColorLabel`, `roomPropertiesSymbolLabel`, `roomPropertiesWeightLabel` | Labels of the rows the redesign added; with `label_name`, `label_area`, `label_hash`, `label_borderColor` ("Border") and `label_borderThickness` ("Border width") they are chrome in `mutedText` |
 | `roomPropertiesWeightCaption` | "Paths prefer a lower weight. 1 is the default." beside `spinBox_weight`, which is drawn four digits wide (measured as `QAbstractSpinBox` measures itself) with its 1 to 2147483647 range kept, as the dialog saves the weight it shows. The colour boxes, the symbol field and `spinBox_borderThickness` share one width in `alignValueBoxes()`, the widest any of them asks for, so they stand in a column |
 | `roomPropertiesScriptDataPane` | The pane between `tab_userData` and its column. Its words wrap, and a `QWidgetItem` asks a widget whose contents wrap for the height they want at a width whatever its size policy says, so the pane answers that it has no height-for-width and the tab stays out of the window's height |

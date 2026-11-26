@@ -498,7 +498,7 @@ private:
         const qreal ratio = image.devicePixelRatio();
         const int middle = pField->height() / 2;
         // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + inset) pixels
-        const int reach = middle - 5;
+        const int reach = middle - 6;
         QList<QColor> row;
         for (int x = middle - reach; x <= middle + reach; ++x) {
             row.append(image.pixelColor(QPointF(x * ratio, (pField->height() / 2) * ratio).toPoint()));
@@ -1017,17 +1017,28 @@ private slots:
         for (QPushButton* pButton :
              {pDlg->pushButton_setRoomColor, pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor, pDlg->pushButton_resetSymbolColor, pDlg->pushButton_resetBorderColor}) {
             QVERIFY2(pButton->text().isEmpty() && !pButton->icon().isNull(), qPrintable(qsl("%1 is not a glyph button: '%2'").arg(pButton->objectName(), pButton->text())));
-            QCOMPARE(pButton->size(), QSize(uiDesign::scmColourWellHeight, uiDesign::scmColourWellHeight));
+            QCOMPARE(pButton->size(), QSize(uiDesign::scmInputHeight, uiDesign::scmInputHeight));
         }
-        // The same compact row as the settings' colour cards, its buttons drawn with the design's button face
-        QCOMPARE(pSymbol->height(), uiDesign::scmColourWellHeight);
-        QCOMPARE(pBorder->height(), uiDesign::scmColourWellHeight);
-        QCOMPARE(borderOpacity(pDlg)->height(), uiDesign::scmColourWellHeight);
+        // Every field, colour box and number box of the tab stands as tall as the name field
+        for (const QWidget* pControl : {static_cast<const QWidget*>(pDlg->lineEdit_name),
+                                        static_cast<const QWidget*>(pDlg->comboBox_area),
+                                        static_cast<const QWidget*>(pDlg->lineEdit_hash),
+                                        static_cast<const QWidget*>(pDlg->findChild<uiDesign::ColourValue*>(qsl("roomPropertiesRoomColour"))),
+                                        static_cast<const QWidget*>(pDlg->lineEdit_roomSymbol),
+                                        static_cast<const QWidget*>(pSymbol),
+                                        static_cast<const QWidget*>(pBorder),
+                                        static_cast<const QWidget*>(borderOpacity(pDlg)),
+                                        static_cast<const QWidget*>(pDlg->spinBox_borderThickness),
+                                        static_cast<const QWidget*>(pDlg->spinBox_weight)}) {
+            QVERIFY(pControl);
+            QVERIFY2(pControl->height() == uiDesign::scmInputHeight,
+                     qPrintable(qsl("%1 is %2 tall, not the field's %3").arg(pControl->objectName()).arg(pControl->height()).arg(uiDesign::scmInputHeight)));
+        }
         QPushButton reference;
         reference.setStyleSheet(uiDesign::buttonStyleSheet(uiDesign::themeTokens()));
         reference.setFixedSize(pDlg->pushButton_setSymbolColor->size());
         const QImage referenceImage = reference.grab().toImage();
-        const QPoint onTheFace(2, uiDesign::scmColourWellHeight / 2);
+        const QPoint onTheFace(2, uiDesign::scmInputHeight / 2);
         for (QPushButton* pButton : {pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor}) {
             const QImage image = pButton->grab().toImage();
             const QColor face = image.pixelColor(onTheFace * image.devicePixelRatio());
@@ -1063,7 +1074,7 @@ private slots:
         QCOMPARE(pBorder->placeholderText(), mpHost->mRoomBorderColor.name(QColor::HexRgb).toUpper());
         // ...so it needs no more room than a code; the boxes standing one over another share the width the widest of
         // them needs, the border width's "Map default" among them
-        const uiDesign::ColourValue codeOnly(pDlg->widget_borderColor, uiDesign::ColourRowSize::Compact);
+        const uiDesign::ColourValue codeOnly(pDlg->widget_borderColor);
         QCOMPARE(pBorder->sizeHint().width(), codeOnly.sizeHint().width());
         QCOMPARE(pBorder->width(), std::max({roomColour(pDlg)->sizeHint().width(), pSymbol->sizeHint().width(), pBorder->sizeHint().width(), pDlg->spinBox_borderThickness->sizeHint().width()}));
         for (QWidget* pBox :
@@ -1147,7 +1158,7 @@ private slots:
         const QPoint onTheSwatch(middle, middle);
         const QPoint onTheCode(pBorder->width() - middle, middle);
         // In the inset between the swatch and the field's frame
-        const QPoint onTheRing(uiDesign::scmInputBorderWidth + 1, middle);
+        const QPoint onTheRing(uiDesign::scmInputBorderWidth + 2, middle);
         const auto ringInk = [pBorder, onTheRing]() {
             const QImage image = pBorder->grab().toImage();
             return image.pixelColor(onTheRing * image.devicePixelRatio());
