@@ -671,6 +671,11 @@ QColor errorInk(const ThemeTokens& tokens)
     return readableOn(tokens.separator, stateColor(scmStateHue_error, tokens.darkPage), tokens.text, scmTextMinimumRatio);
 }
 
+QColor sectionHeadingInk(const ThemeTokens& tokens, const QColor& surface)
+{
+    return readableOn(surface, stateColor(scmHeadingHue, tokens.darkPage), tokens.text, scmTextMinimumRatio);
+}
+
 QColor primaryPressedInk(const ThemeTokens& tokens)
 {
     QList<QColor> washes;

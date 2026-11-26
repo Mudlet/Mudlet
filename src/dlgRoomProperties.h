@@ -88,6 +88,7 @@ private:
     QColor backgroundBasedColor(QColor);
     void applyRoomPropertiesShellStyle();
     void spaceTheSections();
+    void fitThePreviewColumn();
     // The colour boxes, the symbol field and the border width stand one over another, so they share one width
     void alignValueBoxes();
     void keepTheTabsRoomForThePages();

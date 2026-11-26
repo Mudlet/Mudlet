@@ -45,10 +45,10 @@
         </property>
         <widget class="QWidget" name="tab_general">
          <attribute name="title">
-          <string extracomment="Tab of the Configure room window holding the room's name, area, game ID, how the map draws it and how paths treat it">Room</string>
+          <string extracomment="Tab of the Configure room window holding the room's name, area, hash, how the map draws it and how paths treat it">Room</string>
          </attribute>
          <layout class="QGridLayout" name="gridLayout_room">
-          <item row="0" column="0" colspan="2">
+          <item row="0" column="0" colspan="3">
            <widget class="QWidget" name="roomPropertiesRoomHeading" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_roomHeading">
              <property name="leftMargin">
@@ -83,7 +83,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="1" column="1" colspan="2">
            <widget class="QLineEdit" name="lineEdit_name">
             <property name="placeholderText">
              <string>Room name...</string>
@@ -100,7 +100,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="2" column="1" colspan="2">
            <widget class="QComboBox" name="comboBox_area">
             <property name="accessibleName">
              <string extracomment="Name a screen reader announces for the area field in the Room Properties dialog">Area</string>
@@ -110,31 +110,31 @@
           <item row="3" column="0">
            <widget class="QLabel" name="label_hash">
             <property name="text">
-             <string extracomment="Label in front of the field holding the game's own ID for the room, which mapper scripts and the Lua API call its hash">Game ID (hash)</string>
+             <string extracomment="Label in front of the field holding the room's hash: the name or number the game itself gives the room, which mapper scripts and the Lua API look the room up by">Room hash</string>
             </property>
             <property name="buddy">
              <cstring>lineEdit_hash</cstring>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="3" column="1" colspan="2">
            <widget class="QLineEdit" name="lineEdit_hash">
             <property name="toolTip">
              <string>&lt;p&gt;The game's own number or text for this room, which mapper scripts look the room up by (getRoomIDbyHash). Each one belongs to one room only.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="4" column="1" colspan="2">
            <widget class="QLabel" name="roomPropertiesHashCaption">
             <property name="text">
              <string notr="true">Dummy text replaced when used</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
+          <item row="5" column="1" colspan="2">
            <widget class="QLabel" name="label_hashWarning"/>
           </item>
-          <item row="6" column="0" colspan="2">
+          <item row="6" column="0" colspan="3">
            <widget class="QWidget" name="roomPropertiesMapHeading" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_mapHeading">
              <property name="leftMargin">
@@ -156,61 +156,109 @@
                </property>
               </widget>
              </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="7" column="2" rowspan="4">
+           <widget class="QWidget" name="roomPropertiesPreviewColumn" native="true">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_previewColumn">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
              <item>
-              <spacer name="horizontalSpacer_mapHeading">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </spacer>
+              <widget class="QWidget" name="roomPropertiesPreviewRule" native="true"/>
              </item>
              <item>
-              <widget class="QLabel" name="label_preview">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>20</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>20</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="autoFillBackground">
-                <bool>false</bool>
-               </property>
-               <property name="styleSheet">
-                <string notr="true"/>
-               </property>
-               <property name="frameShape">
-                <enum>QFrame::Box</enum>
-               </property>
-               <property name="text">
-                <string notr="true"/>
-               </property>
-               <property name="scaledContents">
-                <bool>false</bool>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignCenter</set>
-               </property>
-               <property name="margin">
+              <layout class="QVBoxLayout" name="verticalLayout_previewColumn">
+               <property name="spacing">
                 <number>0</number>
                </property>
-              </widget>
+               <item>
+                <widget class="QLabel" name="roomPropertiesPreviewLabel">
+                 <property name="text">
+                  <string notr="true">Dummy text replaced when used</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_previewAbove">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item alignment="Qt::AlignHCenter">
+                <widget class="QLabel" name="label_preview">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="autoFillBackground">
+                  <bool>false</bool>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true"/>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::Box</enum>
+                 </property>
+                 <property name="text">
+                  <string notr="true"/>
+                 </property>
+                 <property name="scaledContents">
+                  <bool>false</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="margin">
+                  <number>0</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_previewBelow">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
              </item>
             </layout>
            </widget>
@@ -502,7 +550,7 @@
             </item>
            </layout>
           </item>
-          <item row="11" column="0" colspan="2">
+          <item row="11" column="0" colspan="3">
            <widget class="QWidget" name="roomPropertiesPathHeading" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_pathHeading">
              <property name="leftMargin">
@@ -537,7 +585,7 @@
             </property>
            </widget>
           </item>
-          <item row="12" column="1">
+          <item row="12" column="1" colspan="2">
            <layout class="QHBoxLayout" name="horizontalLayout_weight">
             <item>
              <widget class="QSpinBox" name="spinBox_weight">
@@ -599,14 +647,14 @@
             </item>
            </layout>
           </item>
-          <item row="13" column="1">
+          <item row="13" column="1" colspan="2">
            <widget class="QCheckBox" name="checkBox_locked">
             <property name="text">
              <string notr="true">Dummy text replaced when used</string>
             </property>
            </widget>
           </item>
-          <item row="14" column="0" colspan="2">
+          <item row="14" column="0" colspan="3">
            <spacer name="verticalSpacer_room">
             <property name="orientation">
              <enum>Qt::Vertical</enum>

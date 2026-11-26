@@ -110,6 +110,8 @@ constexpr int scmValueBoxRestLines = 3;
 constexpr int scmTableFloorRows = 4;
 // QAbstractSpinBox::sizeHint() leaves this for the blinking cursor after its widest value
 constexpr int scmSpinBoxCursorRoom = 2;
+constexpr int scmPreviewTileSize = 48;
+constexpr int scmHeadingLetterSpacing = 106;
 
 // Holds the Script data tab to the height the Room tab needs. Its words wrap, and QWidgetItem asks a widget whose
 // contents wrap for the height they want at a width, size policy or not, so the pane says it has no such height
@@ -363,6 +365,18 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     roomPropertiesJsonWarning->hide();
     label_userDataWarning->hide();
 
+    // Capitals from the font rather than the words, so the words translate as written and a caseless script is left alone
+    QFont headingFont;
+    headingFont.setCapitalization(QFont::AllUppercase);
+    headingFont.setLetterSpacing(QFont::PercentageSpacing, scmHeadingLetterSpacing);
+    for (QLabel* pHeading : {label_roomIdValue, roomPropertiesMapHeadingText, roomPropertiesPathHeadingText}) {
+        pHeading->setFont(headingFont);
+    }
+    label_preview->setFixedSize(scmPreviewTileSize, scmPreviewTileSize);
+    roomPropertiesPreviewRule->setFixedWidth(uiDesign::scmInputBorderWidth);
+    //: Room properties dialog, the word over the tile beside the room color, symbol and border rows that shows the room as the map will draw it
+    roomPropertiesPreviewLabel->setText(tr("Preview"));
+
     auto* pScriptDataPane = new ScriptDataPane(tab_userData);
     pScriptDataPane->setObjectName(qsl("roomPropertiesScriptDataPane"));
     pScriptDataPane->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Ignored);
@@ -457,6 +471,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     tableWidget_userData->installEventFilter(this);
     tableWidget_userData->viewport()->installEventFilter(this);
     roomPropertiesScriptData->installEventFilter(this);
+    tab_general->installEventFilter(this);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -918,7 +933,6 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
     const QString table = qsl("QTableWidget#tableWidget_userData");
 
     const QStringList headings{qsl("#label_roomIdValue"), qsl("#roomPropertiesMapHeadingText"), qsl("#roomPropertiesPathHeadingText")};
-    const QStringList headingRows{qsl("#roomPropertiesRoomHeading"), qsl("#roomPropertiesMapHeading"), qsl("#roomPropertiesPathHeading")};
     const QStringList labels{qsl("#label_name"),
                              qsl("#label_area"),
                              qsl("#label_hash"),
@@ -927,7 +941,8 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
                              qsl("#label_borderColor"),
                              qsl("#label_borderThickness"),
                              qsl("#roomPropertiesWeightLabel"),
-                             qsl("#roomPropertiesValueLabel")};
+                             qsl("#roomPropertiesValueLabel"),
+                             qsl("#roomPropertiesPreviewLabel")};
     const QStringList captions{qsl("#roomPropertiesHashCaption"), qsl("#roomPropertiesWeightCaption"), qsl("#label_userDataInstructions")};
     const QStringList warnings{qsl("#label_hashWarning"), qsl("#roomPropertiesJsonWarning"), qsl("#label_userDataWarning")};
 
@@ -938,9 +953,10 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
             + uiDesign::tabBarStyleSheet(qsl("#tabWidget_room"), tokens) + uiDesign::inputStyleSheet(tokens, qsl("#tab_general"))
             + uiDesign::inputStyleSheet(tokens, qsl("#roomPropertiesScriptData >")) + uiDesign::choiceStyleSheet(tokens, qsl("#tab_general"))
             + uiDesign::buttonStyleSheet(tokens, qsl("#roomPropertiesShell")) + headings.join(qsl(", "))
-            + qsl(" { color: %1; background: transparent; font-size: %2pt; font-weight: 600; }").arg(tokens.mutedText.name(), captionSize) + headingRows.join(qsl(", "))
-            + qsl(" { border-bottom: %1px solid %2; }").arg(hairline, tokens.separator.name()) + labels.join(qsl(", ")) + qsl(" { color: %1; background: transparent; }").arg(tokens.mutedText.name())
-            + captions.join(qsl(", ")) + qsl(" { color: %1; background: transparent; font-size: %2pt; }").arg(tokens.mutedText.name(), captionSize) + warnings.join(qsl(", "))
+            + qsl(" { color: %1; background: transparent; font-size: %2pt; font-weight: bold; }").arg(uiDesign::sectionHeadingInk(tokens, tokens.page).name(), captionSize)
+            + qsl("#roomPropertiesPreviewRule { background-color: %1; }").arg(tokens.border.name()) + labels.join(qsl(", "))
+            + qsl(" { color: %1; background: transparent; }").arg(tokens.mutedText.name()) + captions.join(qsl(", "))
+            + qsl(" { color: %1; background: transparent; font-size: %2pt; }").arg(tokens.mutedText.name(), captionSize) + warnings.join(qsl(", "))
             + qsl(" { color: %1; background: transparent; font-size: %2pt; }").arg(warningInk.name(), captionSize)
             // The table has no recipe of its own: it takes the field's surface, hairline and corner, its header the
             // chrome's words, and its chosen row the accent's wash as a chosen row of a list does
@@ -1005,12 +1021,36 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
 void dlgRoomProperties::spaceTheSections()
 {
     const int line = fontMetrics().height();
-    // The hairline under a heading stands a little below its words, and a section stands apart from the one above
+    // Space alone sets a section apart, so a heading stands well clear of the rows above it and close to its own
     horizontalLayout_roomHeading->setContentsMargins(0, 0, 0, line / 4);
-    horizontalLayout_mapHeading->setContentsMargins(0, line / 2, 0, line / 4);
-    horizontalLayout_pathHeading->setContentsMargins(0, line / 2, 0, line / 4);
+    horizontalLayout_mapHeading->setContentsMargins(0, line, 0, line / 4);
+    horizontalLayout_pathHeading->setContentsMargins(0, line, 0, line / 4);
     // Set rather than left to the style, which on macOS answers per pair of controls and so cannot be added up
     verticalLayout_scriptData->setSpacing(line / 2);
+}
+
+// The room the window leaves after the tab's content is left again after the hairline, which puts the tile midway
+// between the hairline and the window's edge; the word over the tile takes the Room color row's height, so it stands
+// on that row's line. Both are known only once the tab is laid out
+void dlgRoomProperties::fitThePreviewColumn()
+{
+    const QRect content = gridLayout_room->contentsRect();
+    int row = 0;
+    int column = 0;
+    int rowSpan = 0;
+    int columnSpan = 0;
+    gridLayout_room->getItemPosition(gridLayout_room->indexOf(roomPropertiesRoomColorLabel), &row, &column, &rowSpan, &columnSpan);
+    const QRect colourRow = gridLayout_room->cellRect(row, column);
+    if (!content.isValid() || !colourRow.isValid()) {
+        return;
+    }
+    const int windowMargin = std::max(0, width() - tab_general->mapTo(this, QPoint(content.right() + 1, 0)).x());
+    if (horizontalLayout_previewColumn->spacing() == windowMargin && roomPropertiesPreviewLabel->minimumHeight() == colourRow.height()) {
+        return;
+    }
+    horizontalLayout_previewColumn->setSpacing(windowMargin);
+    roomPropertiesPreviewLabel->setFixedHeight(colourRow.height());
+    uiDesign::invalidateLayoutsUpTo(roomPropertiesPreviewColumn, this);
 }
 
 // The tab strip's sheet holds a page scmTabPaneInset in from every side of the pane, and QTabWidget adds only the base
@@ -1317,13 +1357,17 @@ void dlgRoomProperties::initGeneral()
     mOriginalHash = single ? mpHost->mpMap->mpRoomDB->roomIDToHash.value(rooms.first()->getId()) : QString();
     lineEdit_hash->setText(mOriginalHash);
     lineEdit_hash->setEnabled(single);
-    //: Placeholder of Configure room's game ID field, which is disabled when several rooms are being configured, as a game ID belongs to one room
-    lineEdit_hash->setPlaceholderText(single ? QString() : tr("One room at a time"));
-    roomPropertiesHashCaption->setText(single
-                                               //: Caption under the game ID field of the Configure room window: the game's own ID for the room, which scripts look the room up by
-                                               ? tr("What the game calls this room. Scripts find the room by it.")
-                                               //: Caption under the game ID field of the Configure room window when several rooms are configured at once, which disables the field
-                                               : tr("A hash belongs to one room."));
+    lineEdit_hash->setPlaceholderText(single
+                                              //: Placeholder of Configure room's Room hash field while the room has no hash
+                                              ? tr("None")
+                                              //: Placeholder of Configure room's Room hash field, which is disabled when several rooms are being configured, as a hash belongs to one room
+                                              : tr("One room at a time"));
+    roomPropertiesHashCaption->setText(
+            single
+                    //: Caption under the Room hash field of the Configure room window: a game that names its rooms with words rather than numbers gives each room such a name, which scripts keep here and find the room by
+                    ? tr("For games that name their rooms with text instead of a number.")
+                    //: Caption under the Room hash field of the Configure room window when several rooms are configured at once, which disables the field
+                    : tr("A hash belongs to one room."));
     roomPropertiesHashCaption->show();
     label_hashWarning->hide();
     label_userDataWarning->hide();
@@ -1365,8 +1409,8 @@ void dlgRoomProperties::slot_hashChanged(const QString& hash)
         roomPropertiesHashCaption->show();
         return;
     }
-    //: Warning under Configure room's game ID field when the ID typed in already belongs to another room; %1 is that room's ID
-    label_hashWarning->setText(tr("Room %1 has this game ID now and will lose it.").arg(holder));
+    //: Warning under Configure room's Room hash field when the hash typed in already belongs to another room; %1 is that room's ID
+    label_hashWarning->setText(tr("Room %1 has this hash now and will lose it.").arg(holder));
     roomPropertiesHashCaption->hide();
     label_hashWarning->show();
 }
@@ -1761,7 +1805,12 @@ void dlgRoomProperties::fitKeyColumn()
 
 bool dlgRoomProperties::eventFilter(QObject* pWatched, QEvent* pEvent)
 {
-    if (pWatched == roomPropertiesScriptData) {
+    if (pWatched == tab_general) {
+        // As for the Script data column below, the tab's layout has placed its rows by now
+        if (pEvent->type() == QEvent::Resize) {
+            fitThePreviewColumn();
+        }
+    } else if (pWatched == roomPropertiesScriptData) {
         // The layout has given the tab's children their place by now: it sees the event before any filter does
         if (pEvent->type() == QEvent::Resize || pEvent->type() == QEvent::Show) {
             fitScriptData();

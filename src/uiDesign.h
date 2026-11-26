@@ -122,6 +122,11 @@ inline constexpr qreal scmStateHue_update = 0.34;
 inline constexpr qreal scmStateHue_error = 0.01;
 QColor stateColor(const qreal hue, const bool darkPage);
 
+// The same green as scmStateHue_update today, but named apart so either can move without the other
+inline constexpr qreal scmHeadingHue = 0.34;
+// scmHeadingHue walked to scmTextMinimumRatio on surface
+QColor sectionHeadingInk(const ThemeTokens& tokens, const QColor& surface);
+
 // Walked off the separator, the darkest surface any error ink sits on; a caller on a lighter surface walks it on
 // with readableOn() against that surface.
 QColor errorInk(const ThemeTokens& tokens);

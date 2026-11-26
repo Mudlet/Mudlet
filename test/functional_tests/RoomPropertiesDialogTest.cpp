@@ -867,6 +867,106 @@ private slots:
         QCOMPARE(pDlg->size(), opened);
     }
 
+    // Bold capitals in a hue of their own, drawn by the font so the words stay as translated; the space above a
+    // heading sets its section apart, as a line under it would double the one under the tab strip
+    void theSectionHeadingsAreBoldGreenCapitalsWithNoLineUnderThem()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        const auto restoreAppearance = qScopeGuard([]() {
+            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+            QCoreApplication::processEvents();
+        });
+        const QList<QPair<QLabel*, QWidget*>> headings{{pDlg->label_roomIdValue, pDlg->roomPropertiesRoomHeading},
+                                                       {pDlg->roomPropertiesMapHeadingText, pDlg->roomPropertiesMapHeading},
+                                                       {pDlg->roomPropertiesPathHeadingText, pDlg->roomPropertiesPathHeading}};
+        for (const auto appearance : {enums::Appearance::light, enums::Appearance::dark}) {
+            mudlet::self()->setAppearance(appearance);
+            QCoreApplication::processEvents();
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            const QColor ink = uiDesign::sectionHeadingInk(tokens, tokens.page);
+            // Painting settles a widget's palette
+            const QImage shot = pDlg->grab().toImage();
+            const qreal ratio = shot.devicePixelRatio();
+            for (const auto& [pHeading, pRow] : headings) {
+                const QFont font = pHeading->font();
+                QCOMPARE(font.weight(), QFont::Bold);
+                QCOMPARE(font.capitalization(), QFont::AllUppercase);
+                QCOMPARE(font.pointSize(), uiDesign::typeSize(uiDesign::TypeStep::Caption));
+                // By value: the ink is mixed as an HSL colour, and the palette holds it as RGB
+                QVERIFY2(pHeading->palette().color(pHeading->foregroundRole()).rgba() == ink.rgba(),
+                         qPrintable(qsl("%1 is inked %2, not the heading ink %3").arg(pHeading->objectName(), pHeading->palette().color(pHeading->foregroundRole()).name(), ink.name())));
+                // The row's last line of pixels, where a rule under it would be drawn
+                const QRect row(pRow->mapTo(pDlg, QPoint()), pRow->size());
+                const int y = qRound((row.bottom() + 1) * ratio) - 1;
+                int drawn = 0;
+                QColor seen;
+                for (int x = qRound(row.left() * ratio); x < qRound((row.right() + 1) * ratio); ++x) {
+                    if (shot.pixelColor(x, y).rgb() != tokens.page.rgb()) {
+                        ++drawn;
+                        seen = shot.pixelColor(x, y);
+                    }
+                }
+                QVERIFY2(!drawn, qPrintable(qsl("%1 draws %2 pixels of a line along its foot, %3 on the page's %4").arg(pRow->objectName()).arg(drawn).arg(seen.name(), tokens.page.name())));
+            }
+        }
+    }
+
+    // The tile stands in a column of its own beside the four rows that decide how the map draws the room, behind a
+    // hairline as tall as those rows, under the word "Preview" on the Room color row's line and midway between the
+    // hairline and the window's edge
+    void thePreviewStandsInAColumnOfItsOwnBesideTheMapRows()
+    {
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("A");
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QCoreApplication::processEvents();
+        const auto inDialog = [pDlg](const QWidget* pWidget) {
+            return QRect(pWidget->mapTo(pDlg, QPoint()), pWidget->size());
+        };
+        const QWidget* pRule = pDlg->findChild<QWidget*>(qsl("roomPropertiesPreviewRule"));
+        const QLabel* pWord = pDlg->findChild<QLabel*>(qsl("roomPropertiesPreviewLabel"));
+        QVERIFY(pRule && pWord);
+        const QRect tile = inDialog(pDlg->label_preview);
+        const QRect rule = inDialog(pRule);
+        const QRect word = inDialog(pWord);
+        QCOMPARE(tile.size(), QSize(48, 48));
+
+        for (const QWidget* pControl : {static_cast<const QWidget*>(roomColour(pDlg)),
+                                        static_cast<const QWidget*>(pDlg->pushButton_setRoomColor),
+                                        static_cast<const QWidget*>(pDlg->pushButton_resetSymbolColor),
+                                        static_cast<const QWidget*>(pDlg->pushButton_resetBorderColor),
+                                        static_cast<const QWidget*>(pDlg->spinBox_borderThickness),
+                                        static_cast<const QWidget*>(pDlg->checkBox_hidden)}) {
+            QVERIFY2(rule.left() > inDialog(pControl).right(),
+                     qPrintable(qsl("%1 reaches x %2, past the hairline at %3").arg(pControl->objectName()).arg(inDialog(pControl).right()).arg(rule.left())));
+        }
+        QVERIFY(tile.left() > rule.right());
+        QCOMPARE(rule.width(), 1);
+        QCOMPARE(rule.top(), inDialog(pDlg->roomPropertiesRoomColorLabel).top());
+        QCOMPARE(rule.bottom(), inDialog(pDlg->label_borderThickness).bottom());
+        const QImage shot = pDlg->grab().toImage();
+        const qreal ratio = shot.devicePixelRatio();
+        QCOMPARE(shot.pixelColor(qRound(rule.left() * ratio), qRound(rule.center().y() * ratio)).name(), uiDesign::themeTokens().border.name());
+
+        const qreal tileMiddle = tile.left() + tile.width() / 2.0;
+        const qreal fromRule = tileMiddle - (rule.left() + rule.width() / 2.0);
+        const qreal toEdge = pDlg->width() - tileMiddle;
+        QVERIFY2(std::abs(fromRule - toEdge) <= 1.0, qPrintable(qsl("the tile's middle is %1 from the hairline and %2 from the window's edge").arg(fromRule).arg(toEdge)));
+
+        QCOMPARE(pWord->text(), qsl("Preview"));
+        QCOMPARE(pWord->font().pointSizeF(), pDlg->roomPropertiesRoomColorLabel->font().pointSizeF());
+        QCOMPARE(word.center().y(), inDialog(pDlg->roomPropertiesRoomColorLabel).center().y());
+        QVERIFY2(std::abs((word.left() + word.width() / 2.0) - tileMiddle) <= 1.0, "the word is not centred over the tile");
+        // Centred in the room under the word, down to the foot of the hairline
+        QVERIFY2(std::abs((tile.top() - word.bottom() - 1) - (rule.bottom() - tile.bottom())) <= 1,
+                 qPrintable(qsl("the tile stands %1 under the word and %2 over the foot of the hairline").arg(tile.top() - word.bottom() - 1).arg(rule.bottom() - tile.bottom())));
+    }
+
     // The whole point of the placeholders: a field left showing one has to come
     // back as "no decision", or OK would overwrite every room in the selection
     // with the placeholder text.
@@ -2112,7 +2212,7 @@ private slots:
         QVERIFY2(pDlg->label_roomIdValue->textInteractionFlags().testFlag(Qt::TextSelectableByMouse), "the room's ID cannot be selected to copy it");
         QCOMPARE(pDlg->lineEdit_hash->text(), qsl("17146"));
         QVERIFY(pDlg->lineEdit_hash->isEnabled());
-        QCOMPARE(pDlg->findChild<QLabel*>(qsl("roomPropertiesHashCaption"))->text(), qsl("What the game calls this room. Scripts find the room by it."));
+        QCOMPARE(pDlg->findChild<QLabel*>(qsl("roomPropertiesHashCaption"))->text(), qsl("For games that name their rooms with text instead of a number."));
         QVERIFY2(!pDlg->findChild<QWidget*>(qsl("plainTextEdit_description")), "the description still has a field of its own");
         QCOMPARE(userDataKeys(pDlg), QStringList({qsl("description"), qsl("zone")}));
         // A cell shows the first line, the box the whole of it
@@ -2228,7 +2328,7 @@ private slots:
         QVERIFY(pCaption && !pCaption->isHidden());
         pDlg->lineEdit_hash->setText(qsl("500"));
         QVERIFY(!pDlg->label_hashWarning->isHidden());
-        QVERIFY(pDlg->label_hashWarning->text().contains(QString::number(scmSecondRoom)));
+        QCOMPARE(pDlg->label_hashWarning->text(), qsl("Room %1 has this hash now and will lose it.").arg(scmSecondRoom));
         QVERIFY2(pCaption->isHidden(), "the warning is shown beside the caption rather than in its place");
         pDlg->lineEdit_hash->setText(qsl("501"));
         QVERIFY(pDlg->label_hashWarning->isHidden());
@@ -2258,6 +2358,33 @@ private slots:
         pDlg->lineEdit_hash->setText(qsl("1"));
         pDlg->lineEdit_hash->setText(qsl("17146"));
         QVERIFY2(pDlg->label_hashWarning->isHidden(), qPrintable(pDlg->label_hashWarning->text()));
+    }
+
+    // A game's own ID for a room may be the room's number, so the field takes the name scripts know it by, and the
+    // caption says which games fill it in
+    void theHashFieldIsNamedAndExplainedAsTheRoomsHash()
+    {
+        buildMap();
+        QVERIFY(roomDB()->setRoomHash(scmSecondRoom, qsl("500")));
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QCOMPARE(pDlg->label_hash->text(), qsl("Room hash"));
+        QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pDlg->lineEdit_hash);
+        QVERIFY(pInterface);
+        QCOMPARE(pInterface->text(QAccessible::Name), qsl("Room hash"));
+        QVERIFY(pDlg->lineEdit_hash->text().isEmpty());
+        QCOMPARE(pDlg->lineEdit_hash->placeholderText(), qsl("None"));
+        const QLabel* pCaption = pDlg->findChild<QLabel*>(qsl("roomPropertiesHashCaption"));
+        QVERIFY(pCaption);
+        QCOMPARE(pCaption->text(), qsl("For games that name their rooms with text instead of a number."));
+        pDlg->lineEdit_hash->setText(qsl("500"));
+        QCOMPARE(pDlg->label_hashWarning->text(), qsl("Room %1 has this hash now and will lose it.").arg(scmSecondRoom));
+        pDlg->reject();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        QCOMPARE(pDlg->lineEdit_hash->placeholderText(), qsl("One room at a time"));
+        QCOMPARE(pDlg->findChild<QLabel*>(qsl("roomPropertiesHashCaption"))->text(), qsl("A hash belongs to one room."));
     }
 
     void theMapperMovesAGameIdToTheRoomItIsGivenTo()

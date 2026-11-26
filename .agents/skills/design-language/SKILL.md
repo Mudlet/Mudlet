@@ -117,6 +117,7 @@ State colours (ok, warning, error) come from `stateColor(scmStateHue_*, darkPage
 | Toolbar or sidebar glyphs | `tintedIcon(glyph, tokens)` / `restyleActionGlyphs(ActionGlyph ledger, tokens)` | Re-run on every appearance change |
 | A glyph in its old picture's colour | `ActionGlyph::identity` (`scmIdentity_*`) + `restyleToolBarGlyphs(ledger, tokens, coloured)`, or `identityIcon()` | The default, app-wide, on the main toolbar and in the script editor; "Grayscale icons" on the Experiments card turns it off, kept in `Mudlet.ini` as `greyscaleIcons`. Line from `identityInk()`, wash from `glyphFillPixmap()`; a glyph whose lines leave its middle open ships a `<name>-fill.svg`, and one with dots of paint a `<name>-dots.svg`. See `docs/design-language.md` section 2 |
 | A word in a box (chip) | `uiDesign::ChipRow` / `Chip` (`src/ChipRow.h`), `chipFont()` | `scmRadiusChip` |
+| A heading over a section of a form | `sectionHeadingInk(tokens, surface)` | `TypeStep::Caption`, bold, capitals drawn by the font (`QFont::AllUppercase`, letter spacing 106%) so translations keep their words; the ink is `scmHeadingHue` walked to `scmTextMinimumRatio` on the surface it stands on. Space above it sets the section apart, never a hairline under it. Configure room's three headings. See `docs/design-language.md` "Section headings" |
 | Segmented two-way control | Editor's `QRadioButton[editorSegment]` rules | Read before adding a third |
 | A row of "word field word" | `buildControlSentenceRow(row, sentence, controls)` | Placeholders reorder per language |
 | Grip dots on a draggable thing | `gripGlyphFile(colour, alongTheBar)` | Background image, not `image:` (it stretches) |
@@ -148,12 +149,15 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   own labels hidden, their names in the fields' and buttons' accessible names); and beside the table the
   preview, `ConsoleColourPreview` or `MapColourPreview`, hidden below 200px by the same decision
 - Room properties `dlgRoomProperties` ("Configure room") - two tabs as chips, Room and Script data,
-  the window as tall as the Room tab needs on both. The Room tab is three sections under muted
-  headings with a hairline: the room itself (its ID, or the count and IDs of several), with name,
-  area and game ID; "On the map", the preview tile at the end of its heading, with the room colour
-  as a read-only compact colour row showing the map's colour number, the symbol field beside the
-  symbol's colour row, the border's row and the border width beside "Hide on the map", the boxes
-  sharing one width so they stand in a column; and "Pathfinding". The Script data tab is a table
+  the window as tall as the Room tab needs on both. The Room tab is three sections under bold
+  capital headings in `sectionHeadingInk()`, set apart by space rather than a hairline: the room
+  itself (its ID, or the count and IDs of several), with name, area and "Room hash"; "On the map",
+  the room colour as a read-only compact colour row showing the map's colour number, the symbol
+  field beside the symbol's colour row, the border's row and the border width beside "Hide on the
+  map", the boxes sharing one width so they stand in a column, and beside those four rows, behind a
+  1px hairline as tall as they are, a column of its own holding "Preview" on the Room color row's
+  line over the 48px tile, midway between the hairline and the window's edge; and "Pathfinding".
+  Name, area, hash and the Pathfinding rows run across under and over that column. The Script data tab is a table
   of every key scripts keep, `description` included, sized to its rows, over a value box that shows
   and edits the chosen value whole - a compact JSON list or table indented and saved back in the
   shape it was stored in. One sheet on `roomPropertiesShell`; OK is the primary button. See

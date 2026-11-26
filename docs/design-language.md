@@ -941,6 +941,21 @@ The one size on a designed surface that is not a step is the notepad strip's
 font, which on macOS is not the application font, so the number is read off
 `QApplication::font("QToolButton")` and rounded to a whole point.
 
+### Section headings
+
+A heading over a group of rows on a form - Configure room's "Room 478", "On the
+map" and "Pathfinding" - is the caption step in bold, in capitals drawn by the
+font (`QFont::AllUppercase`, letter spacing 106%) rather than typed, so a
+translation keeps its own words and a script without capitals is left alone.
+Its ink is `sectionHeadingInk(tokens, surface)`: `scmHeadingHue` through
+`stateColor()`, walked to `scmTextMinimumRatio` on the surface the heading
+stands on. The hue is the same green as `scmStateHue_update` today and named
+apart from it, so either can move alone.
+
+Space sets a section apart, not a line: a line's height above every heading
+but the first and a quarter of one under it, so a heading reads with the rows
+it heads. A hairline under a heading doubled the line under a tab strip.
+
 ### Cards, not bare group boxes
 
 Content is grouped into cards: a `QGroupBox` carrying the `settingsCard` dynamic
@@ -2023,8 +2038,9 @@ change of the dialog. OK carries `uiDesign::scmProp_primaryButton`.
 | --- | --- |
 | `roomPropertiesShell` | The widget holding the tabs and the buttons, which the one sheet is set on: the tab recipe on `#tabWidget_room`, the input recipe scoped to `#tab_general` and to `#roomPropertiesScriptData >`, the choice recipe on `#tab_general`, the button recipe on the shell and the scroll bar recipe on the table and the value box. The child combinator keeps the input recipe off the key a table cell is typed into, which it would draw as a field taller than the row |
 | `tab_general`, `tab_userData` | The Room and Script data tabs. `keepTheTabsRoomForThePages()` holds the tab widget to the Room tab's size hint plus what the tab recipe's `scmTabPaneInset` on every side takes beyond the base style's frame, which is all `QTabWidget` adds when it asks for its own size; it runs again on the first show, once the window is polished as it will be drawn |
-| `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, each a row with a hairline in `separator` under it. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` with the preview tile `label_preview` at the trailing end of its row, and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, semibold, in `mutedText` |
-| `roomPropertiesHashCaption` | The caption under the game ID: what the hash is, or that it belongs to one room while several are configured. `label_hashWarning` takes its place, in the warning hue walked to `scmTextMinimumRatio`, while the ID typed belongs to another room |
+| `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, set apart by space with nothing drawn under them (see "Section headings"): a line's height above the second and third, a quarter of one under each. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, bold, in capitals drawn by the font, inked `sectionHeadingInk(tokens, tokens.page)` |
+| `label_hash`, `roomPropertiesHashCaption` | "Room hash", since a game's own ID for a room may be the room's number and scripts call it the hash: the field says "None" while the room has none, and the caption under it which games fill it in - those that name their rooms with text instead of a number - or, while several rooms are configured, that a hash belongs to one room. `label_hashWarning` takes the caption's place, in the warning hue walked to `scmTextMinimumRatio`, while the hash typed belongs to another room |
+| `roomPropertiesPreviewColumn` | A column of its own beside the four "On the map" rows, spanning them and as wide as it needs, the window as much wider: `roomPropertiesPreviewRule`, a 1px hairline in `border` as tall as those rows, then as much room as the window leaves after the tab's content, which `fitThePreviewColumn()` measures once the tab is laid out, so the tile stands midway between the hairline and the window's edge. In it `roomPropertiesPreviewLabel`, "Preview" as a field label in `mutedText`, centred and given the Room color row's height so it stands on that row's line, and under it `label_preview`, the 48px tile centred in the room left: the room's colour, the map's border while the profile shows borders, round in bubble mode, and the symbol fitted to it by `RoomAppearance::paintSymbol()`, redrawn on every edit |
 | `roomPropertiesRoomColour` | The room's colour as a `uiDesign::ColourValue` at the field's height, like the tab's other colour rows, read only and out of the tab order: the swatch and, as its default word, the number the map knows the colour by, or "Multiple" with no swatch for rooms that differ. `pushButton_setRoomColor` is its Choose |
 | `roomPropertiesRoomColorLabel`, `roomPropertiesSymbolLabel`, `roomPropertiesWeightLabel` | Labels of the rows the redesign added; with `label_name`, `label_area`, `label_hash`, `label_borderColor` ("Border") and `label_borderThickness` ("Border width") they are chrome in `mutedText` |
 | `roomPropertiesWeightCaption` | "Paths prefer a lower weight. 1 is the default." beside `spinBox_weight`, which is drawn four digits wide (measured as `QAbstractSpinBox` measures itself) with its 1 to 2147483647 range kept, as the dialog saves the weight it shows. The colour boxes, the symbol field and `spinBox_borderThickness` share one width in `alignValueBoxes()`, the widest any of them asks for, so they stand in a column |

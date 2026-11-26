@@ -143,8 +143,8 @@ private:
     static constexpr int scmLeastAuditedOnTheExporterSelection = 3;
     static constexpr int scmLeastAuditedOnTheExporterDetails = 18;
     static constexpr int scmLeastAuditedOnTheExporterFoot = 3;
-    // Measured at 18, 7 and 2; the colour boxes and their buttons count as wells, which this walk skips
-    static constexpr int scmLeastAuditedOnTheRoomTab = 15;
+    // Measured at 20, 7 and 2; the colour boxes and their buttons count as wells, which this walk skips
+    static constexpr int scmLeastAuditedOnTheRoomTab = 17;
     static constexpr int scmLeastAuditedOnTheScriptDataTab = 6;
     static constexpr int scmLeastAuditedUnderTheRoomTabs = 2;
     static constexpr int scmAuditedRoom = 4711;
