@@ -2994,9 +2994,9 @@ describe("Tests UI functions", function()
       local saved, createMapper
 
       before_each(function()
-        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder }
+        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder, inWindow = BaseUI.mapInWindow }
         BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
-        BaseUI.map, BaseUI.mapPlaceholder = nil, nil
+        BaseUI.map, BaseUI.mapPlaceholder, BaseUI.mapInWindow = nil, nil, nil
         BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
         stub(BaseUI, "mapHasData", true)
         stub(BaseUI, "layoutDock")
@@ -3008,6 +3008,7 @@ describe("Tests UI functions", function()
         BaseUI.layoutDock:revert()
         BaseUI.createMapper:revert()
         BaseUI.container, BaseUI.map, BaseUI.mapPlaceholder = saved.container, saved.map, saved.placeholder
+        BaseUI.mapInWindow = saved.inWindow
       end)
 
       it("should not look again once the starter UI has been uninstalled", function()
@@ -3048,6 +3049,55 @@ describe("Tests UI functions", function()
           assert.stub(createMapper).was_called(1)
         end)
       end
+    end)
+
+    -- an embedded mapper refused while the map window is on screen would take the map
+    -- out of that window the next time the dock is shown or hidden after it was closed
+    describe("when the profile's map window is on screen", function()
+      local saved
+
+      before_each(function()
+        saved = {
+          map = BaseUI.map, inWindow = BaseUI.mapInWindow, container = BaseUI.container,
+          placeholder = BaseUI.mapPlaceholder, compact = BaseUI.laidOutCompact,
+        }
+        BaseUI.map, BaseUI.mapInWindow, BaseUI.mapPlaceholder, BaseUI.laidOutCompact = nil, nil, nil, nil
+        BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
+        BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      end)
+
+      after_each(function()
+        BaseUI.map, BaseUI.mapInWindow, BaseUI.container = saved.map, saved.inWindow, saved.container
+        BaseUI.mapPlaceholder, BaseUI.laidOutCompact = saved.placeholder, saved.compact
+      end)
+
+      it("should leave the map to that window rather than make a mapper of its own", function()
+        stub(_G, "getMapWidgetGeometry", function() return 0, 0, 300, 200 end)
+        local embed = stub(_G, "createMapper")
+        -- busted leaves a stub in place when the spec that made it raises
+        local ok, err = pcall(BaseUI.createMapper)
+        local made = BaseUI.map
+        -- while createMapper() is still stubbed: hiding a mapper embeds it
+        if made then
+          pcall(made.delete, made)
+        end
+        _G.getMapWidgetGeometry:revert()
+        _G.createMapper:revert()
+        assert.is_true(ok, tostring(err))
+        assert.stub(embed).was_not_called()
+        assert.is_nil(made)
+      end)
+
+      it("should not try again on a later map event", function()
+        BaseUI.mapInWindow = true
+        local make = stub(BaseUI, "createMapper")
+        stub(BaseUI, "mapHasData", true)
+        local ok, err = pcall(BaseUI.checkMapData)
+        BaseUI.createMapper:revert()
+        BaseUI.mapHasData:revert()
+        assert.is_true(ok, tostring(err))
+        assert.stub(make).was_not_called()
+      end)
     end)
 
     -- the game's interface can be drawing on the profile's one map widget by the
