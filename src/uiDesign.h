@@ -265,9 +265,11 @@ inline constexpr int scmTabCloseGap = 4;
 inline constexpr QFont::Weight scmTabChosenWeight = QFont::DemiBold;
 
 // Call prepareTabStrip() on the bar too. paneInset is the pane's margin at its sides and foot, and where the strip
-// starts: 0 where nothing under the strip needs keeping off a window's edge. A crowded strip's scroll buttons are left
-// alone: their arrows belong to a QToolButton the bar makes, and a face without them is a blank square.
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset = scmTabPaneInset);
+// starts: 0 where nothing under the strip needs keeping off a window's edge. direction is the bar's layoutDirection():
+// Qt never mirrors a sheet's margins, so the gap after each tab is written on its trailing side. A crowded strip's
+// scroll buttons are left alone: their arrows belong to a QToolButton the bar makes, and a face without them is a
+// blank square.
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset = scmTabPaneInset, const Qt::LayoutDirection direction = Qt::LeftToRight);
 
 // Safe before or after the bar holds tabs
 void prepareTabStrip(QTabBar* pTabBar);

@@ -403,8 +403,8 @@ void dlgNotepad::applyNotepadShellStyle()
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
     const QString centralRules =
-            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name()) + uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens)
-            + uiDesign::inputStyleSheet(tokens, qsl("#centralwidget"))
+            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name())
+            + uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens, uiDesign::scmTabPaneInset, tabWidget->layoutDirection()) + uiDesign::inputStyleSheet(tokens, qsl("#centralwidget"))
             + qsl("QWidget#notepadFindBar { background-color: %1; border-top: %2px solid %3; }").arg(tokens.page.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.border.name())
             // Borderless: a frame round a glyph this small reads as a second control
             + qsl("QToolButton#notepadAddTab, QWidget#notepadFindBar QToolButton"

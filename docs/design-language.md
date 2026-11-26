@@ -476,7 +476,7 @@ given both by the code that builds it, before `exec()`.
 ### Tabs
 
 A tab is a word on the line it switches. `tabBarStyleSheet(tabWidgetSelector,
-tokens, paneInset)` and `prepareTabStrip(pTabBar)` draw every strip of tabs that
+tokens, paneInset, direction)` and `prepareTabStrip(pTabBar)` draw every strip of tabs that
 way - the notepad's notes, the package manager's three views, the connection
 window's "My games" / "All games" and "Connect to" / "Options" - and `TTabBar`
 paints the profile strip the same way from the same constants. The words stand

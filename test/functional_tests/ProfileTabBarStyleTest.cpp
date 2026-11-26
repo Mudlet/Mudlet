@@ -191,6 +191,46 @@ private:
         return strongest;
     }
 
+    // dx/dy of the least squares line through a word's ink pixels: an upright word's depends on its letters, and an
+    // italic one's differs from it, as its tops stand right of its feet
+    static double inkLean(const QImage& image, const QRect& scanned, const QColor& behind, const QColor& ink)
+    {
+        const int reach = TestPixels::distance(behind, ink);
+        double count = 0.0;
+        double sumX = 0.0;
+        double sumY = 0.0;
+        double sumXY = 0.0;
+        double sumYY = 0.0;
+        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
+            for (int x = scanned.left(); x <= scanned.right(); ++x) {
+                if (2 * TestPixels::distance(QColor(image.pixel(x, y)), behind) >= reach) {
+                    count += 1.0;
+                    sumX += x;
+                    sumY += y;
+                    sumXY += double(x) * y;
+                    sumYY += double(y) * y;
+                }
+            }
+        }
+        const double spread = count * sumYY - sumY * sumY;
+        return spread > 0.0 ? (count * sumXY - sumX * sumY) / spread : 0.0;
+    }
+
+    // The word drawn here, on the same surface in the same ink, for the grab's lean to be held against
+    static double drawnLean(const QFont& font, const QString& text, const QColor& ink, const QColor& behind, const qreal ratio)
+    {
+        const QFontMetrics metrics(font);
+        QImage drawn(QSize(metrics.horizontalAdvance(text) + 8, metrics.height() + 4) * ratio, QImage::Format_ARGB32);
+        drawn.setDevicePixelRatio(ratio);
+        drawn.fill(behind);
+        QPainter painter(&drawn);
+        painter.setFont(font);
+        painter.setPen(ink);
+        painter.drawText(QPoint(4, 2 + metrics.ascent()), text);
+        painter.end();
+        return inkLean(drawn, drawn.rect(), behind, ink);
+    }
+
     static QRect wordBoxOf(ExposedTabBar& bar, const int index)
     {
         QStyleOptionTab option;
@@ -627,6 +667,140 @@ private slots:
         const QColor accentInk = uiDesign::readableOn(tokens.page, tokens.accentText, tokens.text, uiDesign::scmTextMinimumRatio);
         QVERIFY2(TestPixels::distance(chosenInk, accentInk) < TestPixels::distance(chosenInk, tokens.text),
                  qPrintable(qsl("the chosen tab's word is written in %1, nearer the mark's text ink %2 than the accent's %3").arg(saidAs(chosenInk), saidAs(tokens.text), saidAs(accentInk))));
+    }
+
+    // The italic of a local change and the underline mark change the word's shape, not only its ink, so the grab is
+    // read for the shape: the same word on a twin tab with no mark is the reading to hold it against
+    void test_theItalicAndUnderlineMarksArePainted()
+    {
+        ExposedTabBar bar(nullptr);
+        bar.setAutoFillBackground(true);
+        bar.setTabData(bar.addTab(qsl("Chosen")), qsl("Chosen"));
+        // No descenders, so nothing of the word stands where the underline is drawn
+        bar.setTabData(bar.addTab(qsl("Gorbash")), qsl("Gorbash"));
+        bar.setTabData(bar.addTab(qsl("Gorbash")), qsl("Gorbash-Twin"));
+        bar.resize(scmBarWidth, bar.sizeHint().height());
+        layOutAtItsOwnSize(&bar);
+        bar.setCurrentIndex(0);
+        bar.markActivity(qsl("Gorbash"), true);
+        QCoreApplication::processEvents();
+        QVERIFY2(bar.tabItalic(1) && !bar.tabItalic(2), "SETUP: the local change did not mark the one tab it was for");
+
+        QImage strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        const qreal ratio = strip.devicePixelRatio();
+        const QRect marked = scannedIn(strip, wordBoxOf(bar, 1));
+        const QRect twin = scannedIn(strip, wordBoxOf(bar, 2));
+        const QColor behind = commonestColour(strip.copy(twin));
+        const QColor markedInk = strongestInk(strip, wordBoxOf(bar, 1));
+        const QColor twinInk = strongestInk(strip, wordBoxOf(bar, 2));
+
+        QFont italic = bar.font();
+        italic.setItalic(true);
+        const double uprightLean = drawnLean(bar.font(), bar.tabText(1), markedInk, behind, ratio);
+        const double italicLean = drawnLean(italic, bar.tabText(1), markedInk, behind, ratio);
+        const double markedLean = inkLean(strip, marked, behind, markedInk);
+        const double twinLean = inkLean(strip, twin, behind, twinInk);
+        qInfo().noquote() << qsl("  the marked word leans %1 and its unmarked twin %2, where the word drawn upright leans %3 and in italic %4")
+                                     .arg(QString::number(markedLean, 'f', 3), QString::number(twinLean, 'f', 3), QString::number(uprightLean, 'f', 3), QString::number(italicLean, 'f', 3));
+        if (std::abs(italicLean - uprightLean) > 0.05) {
+            QVERIFY2(std::abs(markedLean - italicLean) < std::abs(markedLean - uprightLean),
+                     qPrintable(qsl("the tab marked for a local change leans %1, nearer the upright word's %2 than the italic's %3, so the mark never reached the painting")
+                                        .arg(QString::number(markedLean, 'f', 3), QString::number(uprightLean, 'f', 3), QString::number(italicLean, 'f', 3))));
+            QVERIFY2(std::abs(twinLean - uprightLean) < std::abs(twinLean - italicLean),
+                     qPrintable(qsl("SETUP: the unmarked twin leans %1, nearer the italic word's %2 than the upright's %3, so the reading cannot tell the two apart")
+                                        .arg(QString::number(twinLean, 'f', 3), QString::number(italicLean, 'f', 3), QString::number(uprightLean, 'f', 3))));
+        } else {
+            qInfo("  this machine's font draws its italic no more slanted than its upright face, so the italic mark is not read off the grab");
+        }
+
+        bar.clearActivity(1);
+        bar.setTabUnderline(1, true);
+        QCoreApplication::processEvents();
+        strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+
+        // The word's box and the air under it, clear of the hairline; measured again, as the tab is no longer sized
+        // for the italic
+        const auto underTheWord = [&bar, &strip](const int index) {
+            const QRect box = wordBoxOf(bar, index);
+            return scannedIn(strip, QRect(box.left(), box.top(), box.width(), bar.tabRect(index).bottom() - uiDesign::scmTabUnderlineWidth - box.top() + 1));
+        };
+        const QRect underlined = underTheWord(1);
+        const QRect twinBox = underTheWord(2);
+        const int markedReach = TestPixels::distance(behind, strongestInk(strip, wordBoxOf(bar, 1)));
+        const int twinReach = TestPixels::distance(behind, twinInk);
+        int twinLeft = -1;
+        int twinRight = -1;
+        for (int x = twinBox.left(); x <= twinBox.right(); ++x) {
+            for (int y = twinBox.top(); y <= twinBox.bottom(); ++y) {
+                if (2 * TestPixels::distance(QColor(strip.pixel(x, y)), behind) >= twinReach) {
+                    twinLeft = twinLeft < 0 ? x - twinBox.left() : twinLeft;
+                    twinRight = x - twinBox.left();
+                    break;
+                }
+            }
+        }
+        QVERIFY2(twinLeft >= 0, "SETUP: the twin's word marks nothing, so there is no width to read the underline against");
+
+        // Each pixel as its share of the way from the surface to its own word's ink, so the marked word's full ink and
+        // its twin's quiet one compare: the letters cancel, and what is left is what the mark adds. A line that falls
+        // between two rows of pixels is split across them, so two rows are read together
+        const auto share = [&strip, &behind](const QRect& box, const int column, const int row, const int reach) {
+            return std::min(1.0, double(TestPixels::distance(QColor(strip.pixel(box.left() + column, box.top() + row)), behind)) / reach);
+        };
+        const int span = twinRight - twinLeft + 1;
+        double addedAbove = 0.0;
+        double mostAdded = 0.0;
+        int mostAddedRow = -1;
+        for (int row = 0; row < std::min(underlined.height(), twinBox.height()); ++row) {
+            double added = 0.0;
+            for (int column = twinLeft; column <= twinRight; ++column) {
+                added += std::max(0.0, share(underlined, column, row, markedReach) - share(twinBox, column, row, twinReach));
+            }
+            if (added + addedAbove > mostAdded) {
+                mostAdded = added + addedAbove;
+                mostAddedRow = row;
+            }
+            addedAbove = added;
+        }
+        qInfo().noquote() << qsl("  the underlined word adds %1 pixels' worth of ink to its twin's across its %2 device pixel width, on rows %3 and %4 of its box")
+                                     .arg(QString::number(mostAdded, 'f', 1), QString::number(span), QString::number(mostAddedRow - 1), QString::number(mostAddedRow));
+        // A font's underline can be thinner than a pixel, so half a pixel's worth per column is what is asked of it
+        QVERIFY2(2 * mostAdded >= span,
+                 qPrintable(qsl("no two rows of the underlined tab's word carry more ink than its twin's across its width (at best %1 of %2 device pixels' worth), so the underline never reached the "
+                                "painting")
+                                    .arg(QString::number(mostAdded, 'f', 1), QString::number(span))));
+    }
+
+    // From the keyboard the chosen underline thickens up into the air under the word
+    void test_theKeyboardThickensTheChosenUnderline()
+    {
+        QVERIFY2(mpTabBar->focusPolicy() & Qt::TabFocus, "SETUP: this bar takes no keyboard focus, so there is no focused strip to read");
+        mpTabBar->setCurrentIndex(0);
+        mpTabBar->show();
+        mpTabBar->activateWindow();
+        if (!QTest::qWaitForWindowActive(mpTabBar)) {
+            QSKIP("the bar cannot be made the active window here, so it cannot hold the focus");
+        }
+        mpTabBar->setFocus(Qt::TabFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY2(mpTabBar->hasFocus(), "SETUP: the bar did not take the focus it was given");
+
+        const QImage strip = TestPixels::shot(mpTabBar);
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const int bottom = mpTabBar->tabRect(0).bottom();
+        const int x = contentOf(0).center().x();
+        for (int row = bottom - uiDesign::scmTabFocusUnderlineWidth + 1; row <= bottom; ++row) {
+            const QColor read = TestPixels::sampled(strip, QPoint(x, row));
+            QVERIFY2(TestPixels::readsAs(read, tokens.accent, scmInkTolerance),
+                     qPrintable(qsl("from the keyboard the chosen underline is not %1px deep: row %2 reads %3 rather than the accent %4")
+                                        .arg(QString::number(uiDesign::scmTabFocusUnderlineWidth), QString::number(row), saidAs(read), saidAs(tokens.accent))));
+        }
+        const QColor overIt = TestPixels::sampled(strip, QPoint(x, bottom - uiDesign::scmTabFocusUnderlineWidth));
+        QVERIFY2(!TestPixels::readsAs(overIt, tokens.accent, scmInkTolerance), "from the keyboard the underline grows deeper than the design's four pixels");
+        QString why;
+        QVERIFY2(carriesNoAccent(strip, *mpTabBar, 1, tokens, &why), qPrintable(qsl("with the focus on the bar a tab that is not chosen reads as chosen: %1").arg(why)));
+        mpTabBar->clearFocus();
+        mpTabBar->hide();
     }
 
     // The marks are kept by the profile's name, so a tab dragged to another place keeps its own

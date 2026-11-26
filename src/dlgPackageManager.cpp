@@ -1395,7 +1395,8 @@ void dlgPackageManager::applyPackageManagerShellStyle()
     const QString leftRules = qsl("#leftPanel { background-color: %1; }").arg(tokens.pane.name())
                               // Only its QTabBar rules apply; ::pane and ::tab-bar miss on a plain widget, and the bar
                               // draws its own hairline
-                              + uiDesign::tabBarStyleSheet(qsl("#leftPanel"), tokens) + uiDesign::inputStyleSheet(tokens, qsl("#leftPanel")) + uiDesign::buttonStyleSheet(tokens, qsl("#leftPanel"));
+                              + uiDesign::tabBarStyleSheet(qsl("#leftPanel"), tokens, uiDesign::scmTabPaneInset, mpViewBar->layoutDirection()) + uiDesign::inputStyleSheet(tokens, qsl("#leftPanel"))
+                              + uiDesign::buttonStyleSheet(tokens, qsl("#leftPanel"));
     leftPanel->setStyleSheet(leftRules);
 
     packageList->setStyleSheet(uiDesign::itemRowStyleSheet(qsl("QListWidget#packageList"), tokens, tokens.pane, PackageItemDelegate::cRowGutter)

@@ -1392,12 +1392,14 @@ QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix)
     return rules;
 }
 
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset)
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset, const Qt::LayoutDirection direction)
 {
     // The bar is both a sub-control of the tab widget (::tab-bar) and a QTabBar descendant, so both selectors are used
     const QString bar = tabWidgetSelector + qsl(" QTabBar");
     const QString inset = QString::number(paneInset);
     const QString hairline = QString::number(scmInputBorderWidth);
+    const QString gap = QString::number(scmTabGap);
+    const QString trailingGap = direction == Qt::RightToLeft ? qsl("0px 0px 0px %1px").arg(gap) : qsl("0px %1px 0px 0px").arg(gap);
 
     QString rules =
             // The pane's top edge is the hairline, lifted onto the bar's bottom row so the chosen tab's underline covers it
@@ -1416,9 +1418,9 @@ QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& to
             // the strip's style sets the word of a tab not chosen back to the bar's own weight
             + bar
             + qsl("::tab { background: transparent; color: %1; font-weight: %2; border: none; border-bottom: %3px solid transparent;"
-                  " padding: %4px 0px %5px 0px; margin: 0px %6px 0px 0px; }")
+                  " padding: %4px 0px %5px 0px; margin: %6; }")
                       .arg(tokens.mutedText.name(), QString::number(static_cast<int>(scmTabChosenWeight)), QString::number(scmTabUnderlineWidth), QString::number(scmTabPaddingTop))
-                      .arg(QString::number(scmTabUnderlineAir), QString::number(scmTabGap))
+                      .arg(QString::number(scmTabUnderlineAir), trailingGap)
             + bar + qsl("::tab:hover { color: %1; }").arg(tokens.accentText.name()) + bar
             + qsl("::tab:selected { color: %1; border-bottom-color: %2; }").arg(tokens.accentText.name(), tokens.accent.name())
             // After :selected, which it would otherwise lose the tie to
@@ -1554,7 +1556,7 @@ public:
         }
         // From the leading edge: a word lighter than the box it was measured for would otherwise stand off the line
         // every other row of the window starts on
-        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | Qt::AlignLeft, palette, enabled, text, textRole);
+        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | QStyle::visualAlignment(mTabWordDirection, Qt::AlignLeft), palette, enabled, text, textRole);
         pPainter->restore();
     }
 
@@ -1608,6 +1610,7 @@ public:
                 mTabWordNext = true;
                 mTabWord = pTab->text;
                 mTabWordQuiet = !(pTab->state & State_Selected);
+                mTabWordDirection = pTab->direction;
                 mQuietWeight = pWidget ? pWidget->font().weight() : QFont::Normal;
             }
             break;
@@ -1634,6 +1637,7 @@ public:
 private:
     mutable bool mTabWordNext = false;
     mutable bool mTabWordQuiet = false;
+    mutable Qt::LayoutDirection mTabWordDirection = Qt::LeftToRight;
     mutable QString mTabWord;
     mutable QFont::Weight mQuietWeight = QFont::Normal;
 };

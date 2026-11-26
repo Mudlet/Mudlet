@@ -555,10 +555,10 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
     const QColor errorColour = uiDesign::errorInk(tokens);
 
     // On the bar itself: a sheet on widget_topLeft would reach the games list, which draws its own selection
-    mpTabBar->setStyleSheet(uiDesign::tabBarStyleSheet(qsl("QWidget#widget_topLeft"), tokens));
+    mpTabBar->setStyleSheet(uiDesign::tabBarStyleSheet(qsl("QWidget#widget_topLeft"), tokens, uiDesign::scmTabPaneInset, mpTabBar->layoutDirection()));
     // No inset: the strip's first word and the form under it start on the tab widget's own edge, the line the
     // information box below them stands on
-    tabWidget_connectionInfo->setStyleSheet(uiDesign::tabBarStyleSheet(qsl("QTabWidget#tabWidget_connectionInfo"), tokens, 0));
+    tabWidget_connectionInfo->setStyleSheet(uiDesign::tabBarStyleSheet(qsl("QTabWidget#tabWidget_connectionInfo"), tokens, 0, tabWidget_connectionInfo->layoutDirection()));
     for (QWidget* pPage : {tab_connection_info, tab_options}) {
         if (QLayout* pForm = pPage->layout()) {
             QStyle* pStyle = pPage->style();
