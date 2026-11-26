@@ -27,7 +27,10 @@
  * choosing another tab moves nothing, no word is cut short, a word under the
  * pointer changes only its ink, and the hairline the tabs stand on runs on past
  * the last tab to the end of what is under the strip. The same windows made
- * right to left are read again, as the mirror image of all of that.
+ * right to left are read again, as the mirror image of all of that. Under a
+ * script's sheet that names QTabBar, on the application or on the window, the
+ * script draws every strip whole and the design steps aside, and it comes back
+ * when the sheet goes, all while the windows stay open.
  *
  * Run with: ctest -R UnderlinedTabStripTest -V
  */
@@ -49,6 +52,7 @@
 #include <QToolButton>
 #include <QtTest/QtTest>
 
+#include <algorithm>
 #include <functional>
 
 #include "Host.h"
@@ -81,6 +85,7 @@ private:
     static constexpr int scmBearingTolerance = 1;
     // The halfway threshold can leave out the faintest column at either end of a word's ink
     static constexpr int scmInkExtentSlack = 2;
+    static constexpr int scmScriptTabMinimumWidth = 120;
 
     struct Strip
     {
@@ -99,6 +104,18 @@ private:
 
     // The row the tabs stand on, which the chosen tab's underline is drawn over
     static int hairlineRow(const Strip& strip) { return strip.pBar->mapTo(strip.pWindow, QPoint(0, strip.pBar->height() - 1)).y(); }
+
+    // Neither scrolled out of the bar nor under one of the scroll buttons a crowded bar makes for itself
+    static bool onShow(const QTabBar* pBar, const QRect& tab)
+    {
+        if (!pBar->rect().contains(tab)) {
+            return false;
+        }
+        const auto arrows = pBar->findChildren<QToolButton*>(Qt::FindDirectChildrenOnly);
+        return std::none_of(arrows.cbegin(), arrows.cend(), [&tab](const QToolButton* pArrow) {
+            return pArrow->isVisible() && pArrow->geometry().intersects(tab);
+        });
+    }
 
     static QColor commonestColour(const QImage& grab, const QRect& logical)
     {
@@ -520,6 +537,129 @@ private:
                      rtl ? rightIn(pLabel, mpConnection) : rightIn(pPage, mpConnection)};
     }
 
+    QList<Strip> everyStrip() const { return {notepadStrip(), packagesStrip(), gamesStrip(), formStrip()}; }
+
+    // theme-fixed: a script's sheet writes colours of its own, and these are what its tabs are read against
+    static QColor scriptTabFill() { return QColor(0x33, 0x33, 0x33); }
+    static QColor scriptTabInk() { return QColor(Qt::white); }
+
+    static QString scriptTabSheet()
+    {
+        return qsl("QTabBar::tab { background: %1; color: %2; min-width: %3px; padding: 8px; }").arg(scriptTabFill().name(), scriptTabInk().name(), QString::number(scmScriptTabMinimumWidth));
+    }
+
+    // The script's sheet draws every tab whole, and nothing of the design's is left on the strip: no style of its own
+    // on the bar, none of tabBarStyleSheet()'s rules in a sheet on the way to it, no underline, no hairline.
+    // pSheetHolder is the window the script's sheet is on, or null for the application's.
+    void readTheScriptsStrip(const Strip& strip, const QWidget* pSheetHolder)
+    {
+        QTabBar* pBar = strip.pBar;
+        QVERIFY2(pBar && pBar->isVisible(), qPrintable(qsl("%1: the strip is not on show").arg(strip.what)));
+        pBar->setCurrentIndex(0);
+        TestPixels::settle();
+        const QString where = qsl("%1 under a script's sheet on %2").arg(strip.what, pSheetHolder ? qsl("the window") : qsl("the application"));
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+
+        QVERIFY2(!pBar->testAttribute(Qt::WA_SetStyle), qPrintable(qsl("%1: the bar still wears a style of its own, which the design set").arg(where)));
+        for (const QWidget* pOnTheWay = pBar; pOnTheWay; pOnTheWay = pOnTheWay->parentWidget()) {
+            if (pOnTheWay == pSheetHolder) {
+                continue;
+            }
+            const QString sheet = pOnTheWay->styleSheet();
+            QVERIFY2(!sheet.contains(qsl("QTabBar")) && !sheet.contains(qsl("::tab")) && !sheet.contains(qsl("::pane")),
+                     qPrintable(qsl("%1: the sheet on %2 still carries the design's tab rules, and it reaches the bar").arg(where, pOnTheWay->objectName())));
+        }
+
+        // A crowded bar under Fusion scrolls, as a plain one does: the package manager's column holds one of the script's
+        // tabs whole
+        QVERIFY2(onShow(pBar, pBar->tabRect(0)), qPrintable(qsl("SETUP: %1 does not show its chosen tab whole, so it cannot be read").arg(where)));
+        const QImage grab = TestPixels::shot(strip.pWindow);
+        for (int index = 0; index < pBar->count(); ++index) {
+            const QRect tab = inWindow(strip, pBar->tabRect(index));
+            QVERIFY2(tab.width() >= scmScriptTabMinimumWidth,
+                     qPrintable(qsl("%1: tab %2 is %3px wide, short of the %4px the script's sheet asks for")
+                                        .arg(where, QString::number(index), QString::number(tab.width()), QString::number(scmScriptTabMinimumWidth))));
+            if (!onShow(pBar, pBar->tabRect(index))) {
+                qInfo().noquote() << qsl("  %1: tab %2 is scrolled out of sight, so its face is not read").arg(where, QString::number(index));
+                continue;
+            }
+            const QColor fill = commonestColour(grab, tab);
+            QVERIFY2(TestPixels::readsAs(fill, scriptTabFill(), scmInkTolerance),
+                     qPrintable(qsl("%1: tab %2 is filled %3 rather than the script's %4").arg(where, QString::number(index), fill.name(), scriptTabFill().name())));
+            const QColor ink = strongestInk(grab, tab, fill);
+            QVERIFY2(TestPixels::readsAs(ink, scriptTabInk(), scmInkTolerance),
+                     qPrintable(qsl("%1: tab %2's word is written in %3 rather than the script's %4").arg(where, QString::number(index), ink.name(), scriptTabInk().name())));
+
+            // Qt's own cross: the size the application style gives it, where Qt lays it at the tab's trailing end rather
+            // than beside the word, a gap short of it
+            auto* pCross = qobject_cast<QAbstractButton*>(pBar->tabButton(index, QTabBar::RightSide));
+            if (!pCross) {
+                continue;
+            }
+            QVERIFY2(pCross->minimumSize() != pCross->maximumSize() && pCross->size() == pCross->sizeHint(),
+                     qPrintable(qsl("%1: tab %2's cross is held at %3 where the style's own is %4")
+                                        .arg(where, QString::number(index), TestPixels::describe(pCross->size()), TestPixels::describe(pCross->sizeHint()))));
+            const QRect cross = inWindow(strip, pCross->geometry());
+            const int shortOfTheEnd = rightToLeft(strip) ? cross.left() - tab.left() : tab.right() - cross.right();
+            QVERIFY2(
+                    shortOfTheEnd < uiDesign::scmTabGap,
+                    qPrintable(qsl("%1: tab %2's cross stands %3px short of the tab's end, beside the word as the design puts it").arg(where, QString::number(index), QString::number(shortOfTheEnd))));
+        }
+
+        // Down to the bar's bottom row, where the design lays the underline
+        QRect chosen = inWindow(strip, pBar->tabRect(0));
+        chosen.setBottom(std::max(chosen.bottom(), hairlineRow(strip)));
+        for (int row = chosen.top(); row <= chosen.bottom(); ++row) {
+            for (int x = chosen.left(); x <= chosen.right(); ++x) {
+                const QColor read = TestPixels::sampled(grab, QPoint(x, row));
+                QVERIFY2(!TestPixels::readsAs(read, tokens.accent, scmInkTolerance),
+                         qPrintable(qsl("%1: the chosen tab carries the design's accent at %2,%3").arg(where, QString::number(x), QString::number(row))));
+            }
+        }
+
+        // Past the last tab on show, over the content's own edge, on the bar's last two rows: the design draws its hairline
+        // on the bottom one. The row under the bar is the content's own, where a note's field starts with its frame.
+        const bool rtl = rightToLeft(strip);
+        int lastOnShow = pBar->count() - 1;
+        while (lastOnShow > 0 && !onShow(pBar, pBar->tabRect(lastOnShow))) {
+            --lastOnShow;
+        }
+        const QRect lastTab = inWindow(strip, pBar->tabRect(lastOnShow));
+        const int from = rtl ? strip.contentLeft : lastTab.right() + 1;
+        const int to = rtl ? lastTab.left() - 1 : strip.contentRight;
+        QVERIFY2(to > from, qPrintable(qsl("SETUP: %1's tabs reach the end of the content, so nothing beyond them could be read").arg(where)));
+        for (int row = hairlineRow(strip) - 1; row <= hairlineRow(strip); ++row) {
+            int border = 0;
+            for (int x = from; x <= to; ++x) {
+                border += TestPixels::readsAs(TestPixels::sampled(grab, QPoint(x, row)), tokens.border, scmInkTolerance) ? 1 : 0;
+            }
+            qInfo().noquote() << qsl("  %1: row %2 reads the design's hairline in %3 of the %4 pixels past the last tab")
+                                         .arg(where, QString::number(row), QString::number(border), QString::number(to - from + 1));
+            QVERIFY2(2 * border < to - from + 1,
+                     qPrintable(qsl("%1: row %2 runs the design's hairline %3 across the content past the last tab").arg(where, QString::number(row), tokens.border.name())));
+        }
+    }
+
+    void readEveryStripAsTheScripts(const QWidget* pSheetHolder = nullptr)
+    {
+        for (const Strip& strip : everyStrip()) {
+            readTheScriptsStrip(strip, pSheetHolder);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+    }
+
+    void readEveryStripAsTheDesigns()
+    {
+        for (const Strip& strip : everyStrip()) {
+            readStrip(strip, qsl("the current"));
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+    }
+
     // The + stands on the strip's line at its far end, its box ending where the hairline and the note do
     void readTheAddButton()
     {
@@ -688,6 +828,19 @@ private slots:
         mSession.stop();
     }
 
+    // A test that stops part way leaves its script's sheet set, which would take the next test's strips
+    void cleanup()
+    {
+        qApp->setStyleSheet(QString());
+        if (mpConnection) {
+            mpConnection->setStyleSheet(QString());
+        }
+        if (mpHost && !mpHost->mProfileStyleSheet.isEmpty()) {
+            mpHost->setProfileStyleSheet(QString());
+        }
+        TestPixels::settle();
+    }
+
     void test_theNotepadsNotes()
     {
         readInBothAppearances([this]() {
@@ -772,6 +925,111 @@ private slots:
             return;
         }
         readTheFormStripsInset();
+    }
+
+    // setAppStyleSheet() while the windows are open: the script takes every strip, and the design comes back when the
+    // sheet goes
+    void test_anApplicationSheetNamingTheTabBarTakesEveryStrip()
+    {
+        qApp->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        readEveryStripAsTheScripts();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        qApp->setStyleSheet(QString());
+        TestPixels::settle();
+        readEveryStripAsTheDesigns();
+    }
+
+    // Windows made while the sheet is set start out as the script's, and the strips change hands again and again
+    // without the windows being made afresh
+    void test_aWindowMadeUnderTheSheetStartsAsTheScripts()
+    {
+        qApp->setStyleSheet(scriptTabSheet());
+        reopenTheWindows();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readEveryStripAsTheScripts();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        for (int round = 0; round < 2; ++round) {
+            qApp->setStyleSheet(QString());
+            TestPixels::settle();
+            readEveryStripAsTheDesigns();
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            qApp->setStyleSheet(scriptTabSheet());
+            TestPixels::settle();
+            readEveryStripAsTheScripts();
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+    }
+
+    // A sheet about something else leaves the design in place, and one changed to name QTabBar takes the strips
+    void test_aSheetNamingNoTabBarLeavesTheDesign()
+    {
+        // theme-fixed: the script's own colour for its buttons, which no strip may take as a reason to step aside
+        qApp->setStyleSheet(qsl("QPushButton { color: %1; }").arg(QColor(Qt::red).name()));
+        TestPixels::settle();
+        readEveryStripAsTheDesigns();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        qApp->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        readEveryStripAsTheScripts();
+    }
+
+    // As a profile's sheet would be: on the dialog itself, which reaches no other window
+    void test_aSheetOnTheConnectionWindowTakesItsStrips()
+    {
+        mpConnection->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        readTheScriptsStrip(gamesStrip(), mpConnection);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readTheScriptsStrip(formStrip(), mpConnection);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readStrip(notepadStrip(), qsl("the current"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readStrip(packagesStrip(), qsl("the current"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        mpConnection->setStyleSheet(QString());
+        TestPixels::settle();
+        readStrip(gamesStrip(), qsl("the current"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readStrip(formStrip(), qsl("the current"));
+    }
+
+    // setProfileStyleSheet() sets the profile's sheet on the notepad's window
+    void test_aProfileSheetTakesTheNotepadsStrip()
+    {
+        mpHost->setProfileStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        QVERIFY2(mpNotepad->styleSheet() == scriptTabSheet(), "SETUP: the profile's sheet did not reach the notepad's window");
+        readTheScriptsStrip(notepadStrip(), mpNotepad);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mpHost->setProfileStyleSheet(QString());
+        TestPixels::settle();
+        readStrip(notepadStrip(), qsl("the current"));
     }
 
     // Last, as it leaves the windows made right to left for cleanupTestCase() to close

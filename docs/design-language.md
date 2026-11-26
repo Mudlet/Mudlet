@@ -610,6 +610,23 @@ keeper puts the cross back at the end of the tab's own extent, on the word's
 line. Its own `move()` sends a second `Move`, so the wanted position is compared
 before it is asked for.
 
+A script's sheet that names `QTabBar` takes a strip's tabs whole, on these
+strips as on the profile strip below: `scriptSheetTakesTheTabs()` answers for
+both, from the application's sheet or the one on the widget a profile's sheet is
+set on, which for a dialog is its own window. Mudlet's sheets go on the widgets
+under the window, so their `QTabBar` rules never count. Left to Qt the two sheets
+would merge property by property - the design's colours and padding winning, the
+script's widths and corners laid over them - which is neither look. While a
+script's sheet holds, `prepareTabStrip()` puts back what it changed (the strip's
+style, the base, document mode, `expanding`, the crosses' size and place) and
+answers false, and the window leaves `tabBarStyleSheet()` out of every sheet that
+reaches the bar; the connection window also gives its pages their own margins
+back, as the pane is Qt's framed one again. A new strip calls `prepareTabStrip()`
+where its window builds its sheets and includes `tabBarStyleSheet()` only when it
+answers true; on the window's `StyleChange`, which comes with every sheet set on
+the application or the window, it builds them again when `tabStripOutOfDate()`
+answers true.
+
 #### The profile strip
 
 The row of profile tabs across the head of the main window, and of every

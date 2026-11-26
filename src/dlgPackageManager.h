@@ -93,6 +93,7 @@ private:
     void clearPackageDetails();
     void closeEvent(QCloseEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void restoreColumnSplit();
     void downloadIcon(const QString& packageName);
     void downloadRepositoryIndex();

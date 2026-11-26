@@ -1452,11 +1452,21 @@ public:
     // signals to want - a qobject_cast for this class matches every QObject
     static constexpr char scmName[] = "uiDesignTabCloseBoxKeeper";
 
-    explicit TabCloseBoxKeeper(QObject* pParent)
-    : QObject(pParent)
+    // Made before the strip is readied, so it holds what the bar had for releaseTabStrip() to put back
+    explicit TabCloseBoxKeeper(QTabBar* pTabBar)
+    : QObject(pTabBar)
+    , mPlainDrawBase(pTabBar->drawBase())
+    , mPlainExpanding(pTabBar->expanding())
     {
         setObjectName(QLatin1StringView(scmName));
+        if (const auto* pTabWidget = qobject_cast<const QTabWidget*>(pTabBar->parentWidget())) {
+            mPlainDocumentMode = pTabWidget->documentMode();
+        }
     }
+
+    bool plainDrawBase() const { return mPlainDrawBase; }
+    bool plainExpanding() const { return mPlainExpanding; }
+    bool plainDocumentMode() const { return mPlainDocumentMode; }
 
     void keep(QAbstractButton* pButton)
     {
@@ -1510,6 +1520,11 @@ protected:
         }
         return QObject::eventFilter(pWatched, pEvent);
     }
+
+private:
+    const bool mPlainDrawBase;
+    const bool mPlainExpanding;
+    bool mPlainDocumentMode = false;
 };
 
 // What QStyleSheetStyle leaves to the style under it while the strip's sheet draws the tabs: the word, the base and
@@ -1648,25 +1663,33 @@ QStyle* tabStripStyle()
     static auto* spStyle = new TabStripStyle;
     return spStyle;
 }
-} // namespace
 
-void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens)
+// There while the strip is readied, and only then
+TabCloseBoxKeeper* keeperOf(const QTabBar* pTabBar)
 {
-    if (!pPainter || base.isEmpty()) {
-        return;
-    }
-    pPainter->fillRect(QRect(base.left(), base.bottom() - scmInputBorderWidth + 1, base.width(), scmInputBorderWidth), tokens.border);
+    QObject* pFound = pTabBar->findChild<QObject*>(QLatin1StringView(TabCloseBoxKeeper::scmName), Qt::FindDirectChildrenOnly);
+    return pFound ? static_cast<TabCloseBoxKeeper*>(pFound) : nullptr;
 }
 
-void prepareTabStrip(QTabBar* pTabBar)
+QList<QAbstractButton*> crossesOf(const QTabBar* pTabBar)
 {
-    if (!pTabBar) {
-        return;
+    QList<QAbstractButton*> crosses;
+    for (int i = 0; i < pTabBar->count(); ++i) {
+        for (const QTabBar::ButtonPosition side : {QTabBar::LeftSide, QTabBar::RightSide}) {
+            auto* pCross = qobject_cast<QAbstractButton*>(pTabBar->tabButton(i, side));
+            if (pCross && !qobject_cast<QToolButton*>(pCross)) {
+                crosses << pCross;
+            }
+        }
     }
+    return crosses;
+}
 
-    QObject* pFound = pTabBar->findChild<QObject*>(QLatin1StringView(TabCloseBoxKeeper::scmName), Qt::FindDirectChildrenOnly);
-    auto* pKeeper = pFound ? static_cast<TabCloseBoxKeeper*>(pFound) : new TabCloseBoxKeeper(pTabBar);
-    if (!pFound) {
+void readyTabStrip(QTabBar* pTabBar)
+{
+    TabCloseBoxKeeper* pKeeper = keeperOf(pTabBar);
+    if (!pKeeper) {
+        pKeeper = new TabCloseBoxKeeper(pTabBar);
         // In document mode QTabWidget paints no pane, and the pane's top edge is the hairline here; setDocumentMode()
         // also sets the bar's base, so it goes first
         auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget());
@@ -1684,21 +1707,74 @@ void prepareTabStrip(QTabBar* pTabBar)
     // Crosses made before the filter was installed are caught here; the StyleChange makes the bar re-lay its tabs from
     // their new size()
     bool anyCut = false;
-    for (int i = 0; i < pTabBar->count(); ++i) {
-        for (const QTabBar::ButtonPosition side : {QTabBar::LeftSide, QTabBar::RightSide}) {
-            auto* pCross = qobject_cast<QAbstractButton*>(pTabBar->tabButton(i, side));
-            if (!pCross || qobject_cast<QToolButton*>(pCross)) {
-                continue;
-            }
-            anyCut = anyCut || pCross->size() != QSize(scmTabCloseBoxSize, scmTabCloseBoxSize);
-            pKeeper->keep(pCross);
-            pKeeper->placeBesideTheWord(pCross);
-        }
+    for (QAbstractButton* pCross : crossesOf(pTabBar)) {
+        anyCut = anyCut || pCross->size() != QSize(scmTabCloseBoxSize, scmTabCloseBoxSize);
+        pKeeper->keep(pCross);
+        pKeeper->placeBesideTheWord(pCross);
     }
     if (anyCut) {
         QEvent styleChanged(QEvent::StyleChange);
         QApplication::sendEvent(pTabBar, &styleChanged);
     }
+}
+
+// The bar a script's sheet then draws behaves as a plain QTabBar: Qt's own measure and place for its crosses, the
+// application style's metrics and hints, the base and document mode it had
+void releaseTabStrip(QTabBar* pTabBar)
+{
+    TabCloseBoxKeeper* pKeeper = keeperOf(pTabBar);
+    if (!pKeeper) {
+        return;
+    }
+    // First: the crosses are measured below by the style they inherit from the bar
+    pTabBar->setStyle(nullptr);
+    if (auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget())) {
+        // It sets the bar's base too, so it goes first
+        pTabWidget->setDocumentMode(pKeeper->plainDocumentMode());
+    }
+    pTabBar->setDrawBase(pKeeper->plainDrawBase());
+    pTabBar->setExpanding(pKeeper->plainExpanding());
+    // Its filters on the bar and on the crosses go with it
+    delete pKeeper;
+    for (QAbstractButton* pCross : crossesOf(pTabBar)) {
+        pCross->setMinimumSize(0, 0);
+        pCross->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        pCross->resize(pCross->sizeHint());
+    }
+    QEvent styleChanged(QEvent::StyleChange);
+    QApplication::sendEvent(pTabBar, &styleChanged);
+}
+} // namespace
+
+void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens)
+{
+    if (!pPainter || base.isEmpty()) {
+        return;
+    }
+    pPainter->fillRect(QRect(base.left(), base.bottom() - scmInputBorderWidth + 1, base.width(), scmInputBorderWidth), tokens.border);
+}
+
+bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder)
+{
+    return qApp->styleSheet().contains(qsl("QTabBar")) || (pScriptSheetHolder && pScriptSheetHolder->styleSheet().contains(qsl("QTabBar")));
+}
+
+bool prepareTabStrip(QTabBar* pTabBar)
+{
+    if (!pTabBar) {
+        return false;
+    }
+    if (scriptSheetTakesTheTabs(pTabBar->window())) {
+        releaseTabStrip(pTabBar);
+        return false;
+    }
+    readyTabStrip(pTabBar);
+    return true;
+}
+
+bool tabStripOutOfDate(const QTabBar* pTabBar)
+{
+    return pTabBar && (keeperOf(pTabBar) != nullptr) == scriptSheetTakesTheTabs(pTabBar->window());
 }
 
 void keepClickFocusOffControls(QWidget* pRoot)
