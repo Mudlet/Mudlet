@@ -53,7 +53,35 @@ if(NOT LUA_LOCATION)
   endif()
 endif()
 
-execute_process(
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua)
+set(translation_stats_file "${CMAKE_CURRENT_SOURCE_DIR}/translation-stats.json")
+
+if(LUA_LOCATION)
+  execute_process(
+          WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+          COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua
+          RESULT_VARIABLE stats_result
+          OUTPUT_VARIABLE stats_output
+          ERROR_VARIABLE stats_output)
+  if(NOT stats_result EQUAL 0)
+    message(WARNING
+          "Generating the translation statistics failed with exit code ${stats_result}. "
+          "Its output was:\n${stats_output}")
+  endif()
+endif()
+
+# mudlet.qrc embeds the statistics, so the compile cannot start without the file.
+# With no interpreter the generator cannot run at all: write the same empty
+# statistics the script itself falls back to when it has no lua-yajl, instead of
+# letting configure succeed and the build fail later on a file no rule makes.
+if(NOT EXISTS "${translation_stats_file}")
+  if(LUA_LOCATION)
+    message(FATAL_ERROR
+          "The translation statistics generator ran but left no ${translation_stats_file}, "
+          "which mudlet.qrc needs. Its output was:\n${stats_output}")
+  endif()
+  message(WARNING
+          "No Lua 5.1 interpreter was found, so the translation statistics will be empty. "
+          "Install Lua 5.1, or pass -DLUA_LOCATION=<interpreter>, to get them.")
+  file(WRITE "${translation_stats_file}" "{}")
+endif()
 
