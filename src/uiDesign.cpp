@@ -68,6 +68,7 @@
 #include <QSvgRenderer>
 #include <iterator>
 #include <QStyleOptionTab>
+#include <QStyleOptionTabWidgetFrame>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTimer>
@@ -1527,9 +1528,9 @@ private:
     bool mPlainDocumentMode = false;
 };
 
-// What QStyleSheetStyle leaves to the style under it while the strip's sheet draws the tabs: the word, the base and
-// where the tabs line up. The rest goes to the application style, as it would for a bar with no style of its own.
-class TabStripStyle : public QCommonStyle
+// Every call goes on to the application style of the moment, so it follows the base style the appearance swaps in.
+// Under a sheet QStyleSheetStyle passes what it does not draw to the style set on a widget, for its children too.
+class ApplicationStyleRelay : public QCommonStyle
 {
 public:
     void polish(QWidget* pWidget) override { qApp->style()->polish(pWidget); }
@@ -1537,11 +1538,6 @@ public:
 
     void drawPrimitive(PrimitiveElement element, const QStyleOption* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
     {
-        // The platform's own base is a band behind the whole bar on macOS
-        if (element == PE_FrameTabBarBase && pOption) {
-            paintTabStripHairline(pPainter, pOption->rect, themeTokens());
-            return;
-        }
         qApp->style()->drawPrimitive(element, pOption, pPainter, pWidget);
     }
 
@@ -1557,22 +1553,7 @@ public:
 
     void drawItemText(QPainter* pPainter, const QRect& rect, int flags, const QPalette& palette, bool enabled, const QString& text, QPalette::ColorRole textRole = QPalette::NoRole) const override
     {
-        const bool aTabsWord = mTabWordNext && text == mTabWord;
-        mTabWordNext = false;
-        if (!aTabsWord) {
-            qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
-            return;
-        }
-        pPainter->save();
-        if (mTabWordQuiet) {
-            QFont font = pPainter->font();
-            font.setWeight(mQuietWeight);
-            pPainter->setFont(font);
-        }
-        // From the leading edge: a word lighter than the box it was measured for would otherwise stand off the line
-        // every other row of the window starts on
-        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | QStyle::visualAlignment(mTabWordDirection, Qt::AlignLeft), palette, enabled, text, textRole);
-        pPainter->restore();
+        qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
     }
 
     void drawItemPixmap(QPainter* pPainter, const QRect& rect, int alignment, const QPixmap& pixmap) const override { qApp->style()->drawItemPixmap(pPainter, rect, alignment, pixmap); }
@@ -1599,6 +1580,63 @@ public:
     QSize sizeFromContents(ContentsType type, const QStyleOption* pOption, const QSize& contentsSize, const QWidget* pWidget = nullptr) const override
     {
         return qApp->style()->sizeFromContents(type, pOption, contentsSize, pWidget);
+    }
+
+    int pixelMetric(PixelMetric metric, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->pixelMetric(metric, pOption, pWidget); }
+
+    int styleHint(StyleHint hint, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr, QStyleHintReturn* pReturnData = nullptr) const override
+    {
+        return qApp->style()->styleHint(hint, pOption, pWidget, pReturnData);
+    }
+
+    QPixmap standardPixmap(StandardPixmap pixmap, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
+    {
+        return qApp->style()->standardPixmap(pixmap, pOption, pWidget);
+    }
+
+    QIcon standardIcon(StandardPixmap icon, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->standardIcon(icon, pOption, pWidget); }
+
+    QPixmap generatedIconPixmap(QIcon::Mode mode, const QPixmap& pixmap, const QStyleOption* pOption) const override { return qApp->style()->generatedIconPixmap(mode, pixmap, pOption); }
+
+    int layoutSpacing(QSizePolicy::ControlType one, QSizePolicy::ControlType other, Qt::Orientation orientation, const QStyleOption* pOption, const QWidget* pWidget) const override
+    {
+        return qApp->style()->layoutSpacing(one, other, orientation, pOption, pWidget);
+    }
+};
+
+// What QStyleSheetStyle leaves to the style under it while the strip's sheet draws the tabs: the word, the base and
+// where the tabs line up. The rest goes to the application style, as it would for a bar with no style of its own.
+class TabStripStyle : public ApplicationStyleRelay
+{
+public:
+    void drawPrimitive(PrimitiveElement element, const QStyleOption* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
+    {
+        // The platform's own base is a band behind the whole bar on macOS
+        if (element == PE_FrameTabBarBase && pOption) {
+            paintTabStripHairline(pPainter, pOption->rect, themeTokens());
+            return;
+        }
+        qApp->style()->drawPrimitive(element, pOption, pPainter, pWidget);
+    }
+
+    void drawItemText(QPainter* pPainter, const QRect& rect, int flags, const QPalette& palette, bool enabled, const QString& text, QPalette::ColorRole textRole = QPalette::NoRole) const override
+    {
+        const bool aTabsWord = mTabWordNext && text == mTabWord;
+        mTabWordNext = false;
+        if (!aTabsWord) {
+            qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
+            return;
+        }
+        pPainter->save();
+        if (mTabWordQuiet) {
+            QFont font = pPainter->font();
+            font.setWeight(mQuietWeight);
+            pPainter->setFont(font);
+        }
+        // From the leading edge: a word lighter than the box it was measured for would otherwise stand off the line
+        // every other row of the window starts on
+        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | QStyle::visualAlignment(mTabWordDirection, Qt::AlignLeft), palette, enabled, text, textRole);
+        pPainter->restore();
     }
 
     int pixelMetric(PixelMetric metric, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
@@ -1635,20 +1673,6 @@ public:
         return qApp->style()->styleHint(hint, pOption, pWidget, pReturnData);
     }
 
-    QPixmap standardPixmap(StandardPixmap pixmap, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
-    {
-        return qApp->style()->standardPixmap(pixmap, pOption, pWidget);
-    }
-
-    QIcon standardIcon(StandardPixmap icon, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->standardIcon(icon, pOption, pWidget); }
-
-    QPixmap generatedIconPixmap(QIcon::Mode mode, const QPixmap& pixmap, const QStyleOption* pOption) const override { return qApp->style()->generatedIconPixmap(mode, pixmap, pOption); }
-
-    int layoutSpacing(QSizePolicy::ControlType one, QSizePolicy::ControlType other, Qt::Orientation orientation, const QStyleOption* pOption, const QWidget* pWidget) const override
-    {
-        return qApp->style()->layoutSpacing(one, other, orientation, pOption, pWidget);
-    }
-
 private:
     mutable bool mTabWordNext = false;
     mutable bool mTabWordQuiet = false;
@@ -1661,6 +1685,46 @@ private:
 QStyle* tabStripStyle()
 {
     static auto* spStyle = new TabStripStyle;
+    return spStyle;
+}
+
+// QTabWidget's size hints are its pages and strip plus CT_TabWidget, a fixed 4px each way in the base styles, while
+// its pages are laid out in SE_TabWidgetTabContents, which follows the sheet's ::pane. Here CT_TabWidget is that room.
+class TabPaneStyle : public ApplicationStyleRelay
+{
+public:
+    QSize sizeFromContents(ContentsType type, const QStyleOption* pOption, const QSize& contentsSize, const QWidget* pWidget = nullptr) const override
+    {
+        const auto* pFrame = qstyleoption_cast<const QStyleOptionTabWidgetFrame*>(pOption);
+        // A tab widget on one of the pages reaches this through the sheet's style without having it set
+        if (type != CT_TabWidget || !pFrame || !pWidget || !pWidget->testAttribute(Qt::WA_SetStyle)) {
+            return ApplicationStyleRelay::sizeFromContents(type, pOption, contentsSize, pWidget);
+        }
+        // Measured by the style QTabWidget lays out with (the sheet's, while one reaches it) on a pane too large for any
+        // side to be cut short. The same room for any contents: heightForWidth() takes it from empty contents.
+        QStyleOptionTabWidgetFrame trial(*pFrame);
+        trial.rect = QRect(0, 0, QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        QSize room = trial.rect.size() - pWidget->style()->subElementRect(SE_TabWidgetTabContents, &trial, pWidget).size();
+        // contentsSize holds the strip already
+        switch (pFrame->shape) {
+        case QTabBar::RoundedWest:
+        case QTabBar::RoundedEast:
+        case QTabBar::TriangularWest:
+        case QTabBar::TriangularEast:
+            room.rwidth() -= pFrame->tabBarSize.width();
+            break;
+        default:
+            room.rheight() -= pFrame->tabBarSize.height();
+            break;
+        }
+        return contentsSize + room;
+    }
+};
+
+// Shared by every tab widget on the recipe and never deleted, as tabStripStyle() is
+QStyle* tabPaneStyle()
+{
+    static auto* spStyle = new TabPaneStyle;
     return spStyle;
 }
 
@@ -1695,6 +1759,7 @@ void readyTabStrip(QTabBar* pTabBar)
         auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget());
         if (pTabWidget) {
             pTabWidget->setDocumentMode(false);
+            pTabWidget->setStyle(tabPaneStyle());
         }
         // A bar of its own spans its pane and draws the hairline as its base; under a tab widget the pane draws it
         pTabBar->setDrawBase(!pTabWidget);
@@ -1731,6 +1796,7 @@ void releaseTabStrip(QTabBar* pTabBar)
     if (auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget())) {
         // It sets the bar's base too, so it goes first
         pTabWidget->setDocumentMode(pKeeper->plainDocumentMode());
+        pTabWidget->setStyle(nullptr);
     }
     pTabBar->setDrawBase(pKeeper->plainDrawBase());
     pTabBar->setExpanding(pKeeper->plainExpanding());

@@ -276,7 +276,8 @@ QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& to
 bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder);
 
 // Answers whether the design draws the strip; false while a script's sheet takes the tabs, and the bar is then put
-// back as it was. Safe before or after the bar holds tabs, and to repeat.
+// back as it was. Safe before or after the bar holds tabs, and to repeat. The bar's QTabWidget then has what its
+// pages, strip and pane need as its size hints.
 bool prepareTabStrip(QTabBar* pTabBar);
 
 // True once a script's sheet has come or gone since prepareTabStrip() last ran: ask on the window's StyleChange and

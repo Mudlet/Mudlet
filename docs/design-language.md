@@ -539,6 +539,12 @@ inside the dialog's margin, and takes the side margins off both pages' layouts s
 the labels start on the tab widget's own edge, the line the information box under
 them stands on. In document mode a `QTabWidget` paints no pane at all, so
 `prepareTabStrip()` turns document mode off - the notepad's `.ui` file has it on.
+`QTabWidget` adds a fixed frame round its pages to its size hints
+(`CT_TabWidget`, 4px each way in the base styles) that this pane does not draw,
+so `prepareTabStrip()` also gives the tab widget a style whose `CT_TabWidget` is
+the room the sheet's pane really takes: a tab widget on the recipe has exactly
+what its pages, its strip and its inset need as its size hint and its minimum,
+and a dialog can size itself from them.
 
 A bare `QTabBar` is laid across the whole width of its pane by the window holding
 it and draws the hairline as its own base. `QStyleSheetStyle` hands

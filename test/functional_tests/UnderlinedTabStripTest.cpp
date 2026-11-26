@@ -30,7 +30,10 @@
  * right to left are read again, as the mirror image of all of that. Under a
  * script's sheet that names QTabBar, on the application or on the window, the
  * script draws every strip whole and the design steps aside, and it comes back
- * when the sheet goes, all while the windows stay open.
+ * when the sheet goes, all while the windows stay open. A tab widget on the
+ * recipe has the size its pages, its strip and its pane need as its size hint,
+ * so given that size it lays its pages out at theirs; under a script's sheet
+ * its hint is that of one the design never touched.
  *
  * Run with: ctest -R UnderlinedTabStripTest -V
  */
@@ -47,6 +50,7 @@
 #include <QPainter>
 #include <QPlainTextEdit>
 #include <QScopeGuard>
+#include <QStackedWidget>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QToolButton>
@@ -66,6 +70,26 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
+
+namespace {
+// Its size hints are the sizes it is given, so a tab widget's own can be held against them
+class SizedWidget : public QWidget
+{
+public:
+    SizedWidget(const QSize& hint, const QSize& least)
+    : mHint(hint)
+    , mLeast(least)
+    {
+    }
+
+    QSize sizeHint() const override { return mHint; }
+    QSize minimumSizeHint() const override { return mLeast; }
+
+private:
+    const QSize mHint;
+    const QSize mLeast;
+};
+} // namespace
 
 class UnderlinedTabStripTest : public QObject
 {
@@ -714,6 +738,98 @@ private:
         QVERIFY2(!inset, qPrintable(qsl("the form's strip stands %1px in from the tab widget's %2 edge, where it starts with no inset").arg(QString::number(inset), rtl ? qsl("right") : qsl("left"))));
     }
 
+    // Given its size hint the tab widget lays its pages out at theirs, with no band under them and nothing cut short,
+    // and its least size is the pages' and the strip's least in the same pane. The pane is the inset at the sides and
+    // the foot and, under the strip, the hairline with the inset below it; the hairline is lifted onto the strip's
+    // bottom row, so it adds no row of its own.
+    void readTheTabWidgetsSize(QTabWidget* pTabs, const int inset, const QString& what)
+    {
+        const QString where = what + (pTabs->layoutDirection() == Qt::RightToLeft ? qsl(", right to left") : QString());
+        auto* pStack = pTabs->findChild<QStackedWidget*>(QString(), Qt::FindDirectChildrenOnly);
+        QVERIFY2(pStack && pTabs->isVisible(), qPrintable(qsl("SETUP: %1 is not on show with its pages").arg(where)));
+        const QTabBar* pBar = pTabs->tabBar();
+
+        QSize pages(0, 0);
+        for (int i = 0; i < pTabs->count(); ++i) {
+            if (pTabs->isTabVisible(i)) {
+                pages = pages.expandedTo(pTabs->widget(i)->sizeHint());
+            }
+        }
+        int cornersWide = 0;
+        int leastCornersWide = 0;
+        int cornersTall = 0;
+        for (const Qt::Corner corner : {Qt::TopLeftCorner, Qt::TopRightCorner}) {
+            const QWidget* pCorner = pTabs->cornerWidget(corner);
+            if (pCorner && pCorner->isVisible()) {
+                cornersWide += pCorner->sizeHint().width();
+                leastCornersWide += pCorner->minimumSizeHint().width();
+                cornersTall = std::max({cornersTall, pCorner->sizeHint().height(), pCorner->minimumSizeHint().height()});
+            }
+        }
+        const int strip = pBar->sizeHint().height();
+        QVERIFY2(cornersTall <= strip && pBar->minimumSizeHint().height() == strip,
+                 qPrintable(qsl("SETUP: %1: a corner widget %2px tall or a strip %3px tall at least stands beside the %4px strip, so the pages' share of the height cannot be told")
+                                    .arg(where, QString::number(cornersTall), QString::number(pBar->minimumSizeHint().height()), QString::number(strip))));
+        // QTabWidget counts a strip that scrolls as 200px wide at most
+        const int stripWide = pTabs->usesScrollButtons() ? std::min(pBar->sizeHint().width(), 200) : pBar->sizeHint().width();
+        QVERIFY2(pages.width() >= stripWide + cornersWide,
+                 qPrintable(qsl("SETUP: %1: the strip and its corner count as %2px, more than the pages' %3px, so the hint's width is not the pages'")
+                                    .arg(where, QString::number(stripWide + cornersWide), QString::number(pages.width()))));
+
+        const QSize wanted(pages.width() + 2 * inset, pages.height() + strip + 2 * inset);
+        const QSize leastPages = pStack->minimumSizeHint();
+        const QSize wantedLeast(std::max(leastPages.width(), pBar->minimumSizeHint().width() + leastCornersWide) + 2 * inset, leastPages.height() + strip + 2 * inset);
+        qInfo().noquote() << qsl("  %1: pages hinting %2 (at least %3) under a %4px strip in a pane inset %5px need %6 (at least %7); the tab widget's hint is %8 (at least %9)")
+                                     .arg(where,
+                                          TestPixels::describe(pages),
+                                          TestPixels::describe(leastPages),
+                                          QString::number(strip),
+                                          QString::number(inset),
+                                          TestPixels::describe(wanted),
+                                          TestPixels::describe(wantedLeast),
+                                          TestPixels::describe(pTabs->sizeHint()),
+                                          TestPixels::describe(pTabs->minimumSizeHint()));
+        QVERIFY2(pTabs->sizeHint() == wanted,
+                 qPrintable(qsl("%1: the tab widget's size hint is %2 where its pages, its strip and the pane round them need %3")
+                                    .arg(where, TestPixels::describe(pTabs->sizeHint()), TestPixels::describe(wanted))));
+        QVERIFY2(pTabs->minimumSizeHint() == wantedLeast,
+                 qPrintable(qsl("%1: the tab widget's minimum size hint is %2 where its pages' least, its strip's and the pane round them need %3")
+                                    .arg(where, TestPixels::describe(pTabs->minimumSizeHint()), TestPixels::describe(wantedLeast))));
+
+        // A tab widget on show places its pages from its own resize event, so they are measured before the window's
+        // layout gives the size back
+        const QSize before = pTabs->size();
+        pTabs->resize(pTabs->sizeHint());
+        const QSize laidOut = pStack->size();
+        const QSize current = pTabs->currentWidget()->size();
+        pTabs->resize(before);
+        QVERIFY2(laidOut == pages && current == pages,
+                 qPrintable(qsl("%1: at its %2 size hint the tab widget lays its pages out at %3, the current one at %4, rather than at their own %5")
+                                    .arg(where, TestPixels::describe(pTabs->sizeHint()), TestPixels::describe(laidOut), TestPixels::describe(current), TestPixels::describe(pages))));
+    }
+
+    // As a dialog sets up its own: the strip prepared before the sheet goes on, and no sheet while a script's takes the
+    // tabs
+    static bool designTheTabWidget(QTabWidget* pTabs, const int inset)
+    {
+        const bool designed = uiDesign::prepareTabStrip(pTabs->tabBar());
+        pTabs->setStyleSheet(designed ? uiDesign::tabBarStyleSheet(qsl("QTabWidget#%1").arg(pTabs->objectName()), uiDesign::themeTokens(), inset, pTabs->layoutDirection()) : QString());
+        return designed;
+    }
+
+    // Neither page is the larger both ways, so each side of the tab widget's size hint comes from a different page
+    static QTabWidget* tabWidgetWithKnownPages(QWidget* pHost, const QString& name, const bool corner)
+    {
+        auto* pTabs = new QTabWidget(pHost);
+        pTabs->setObjectName(name);
+        pTabs->addTab(new SizedWidget(QSize(320, 140), QSize(220, 90)), qsl("First"));
+        pTabs->addTab(new SizedWidget(QSize(260, 180), QSize(180, 120)), qsl("Second"));
+        if (corner) {
+            pTabs->setCornerWidget(new SizedWidget(QSize(24, 18), QSize(24, 18)), Qt::TopRightCorner);
+        }
+        return pTabs;
+    }
+
     void openTheNotepad(const int notes)
     {
         mudlet::self()->slot_notes();
@@ -927,6 +1043,75 @@ private slots:
         readTheFormStripsInset();
     }
 
+    // Either window can size itself from its tab widget
+    void test_eachWindowsTabWidgetHintsWhatItsPagesNeed()
+    {
+        readTheTabWidgetsSize(mpNotepad->tabWidget, uiDesign::scmTabPaneInset, qsl("the notepad's tab widget"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readTheTabWidgetsSize(mpConnection->tabWidget_connectionInfo, 0, qsl("the connection window's form"));
+    }
+
+    // As a dialog on the recipe gets it: with no inset or the default, with a corner widget or none, either way round
+    void test_aTabWidgetOnTheRecipeHintsWhatItsPagesNeed()
+    {
+        for (const Qt::LayoutDirection direction : {Qt::LeftToRight, Qt::RightToLeft}) {
+            for (const int inset : {0, uiDesign::scmTabPaneInset}) {
+                for (const bool corner : {false, true}) {
+                    QWidget host;
+                    host.setLayoutDirection(direction);
+                    host.resize(800, 600);
+                    QTabWidget* pTabs = tabWidgetWithKnownPages(&host, qsl("recipeTabs"), corner);
+                    QVERIFY2(designTheTabWidget(pTabs, inset), "SETUP: a script's sheet takes the tabs with none set");
+                    host.show();
+                    QVERIFY(QTest::qWaitForWindowExposed(&host));
+                    TestPixels::settle();
+                    readTheTabWidgetsSize(pTabs, inset, qsl("a tab widget on the recipe inset %1px with %2").arg(QString::number(inset), corner ? qsl("a corner widget") : qsl("no corner widget")));
+                    if (QTest::currentTestFailed()) {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // While a script's sheet takes the tabs the tab widget's size hints are those of one the design never touched, and
+    // what its pages need again once the sheet goes
+    void test_aScriptSheetLeavesTheTabWidgetQtsOwnSize()
+    {
+        QWidget host;
+        host.resize(800, 800);
+        QTabWidget* pDesigned = tabWidgetWithKnownPages(&host, qsl("designedTabs"), true);
+        QTabWidget* pPlain = tabWidgetWithKnownPages(&host, qsl("plainTabs"), true);
+        pPlain->move(0, 400);
+        QVERIFY2(designTheTabWidget(pDesigned, uiDesign::scmTabPaneInset), "SETUP: a script's sheet takes the tabs with none set");
+        host.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&host));
+
+        qApp->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        QVERIFY2(!designTheTabWidget(pDesigned, uiDesign::scmTabPaneInset), "SETUP: the design keeps the tabs under a script's sheet that names QTabBar");
+        TestPixels::settle();
+        qInfo().noquote() << qsl("  under a script's sheet the tab widget's size hint is %1 (at least %2), one the design never touched has %3 (at least %4)")
+                                     .arg(TestPixels::describe(pDesigned->sizeHint()),
+                                          TestPixels::describe(pDesigned->minimumSizeHint()),
+                                          TestPixels::describe(pPlain->sizeHint()),
+                                          TestPixels::describe(pPlain->minimumSizeHint()));
+        QVERIFY2(pDesigned->sizeHint() == pPlain->sizeHint() && pDesigned->minimumSizeHint() == pPlain->minimumSizeHint(),
+                 qPrintable(qsl("under a script's sheet the tab widget's size hint is %1 (at least %2) where one the design never touched has %3 (at least %4)")
+                                    .arg(TestPixels::describe(pDesigned->sizeHint()),
+                                         TestPixels::describe(pDesigned->minimumSizeHint()),
+                                         TestPixels::describe(pPlain->sizeHint()),
+                                         TestPixels::describe(pPlain->minimumSizeHint()))));
+
+        qApp->setStyleSheet(QString());
+        TestPixels::settle();
+        QVERIFY2(designTheTabWidget(pDesigned, uiDesign::scmTabPaneInset), "SETUP: the design does not take the tabs back once the script's sheet goes");
+        TestPixels::settle();
+        readTheTabWidgetsSize(pDesigned, uiDesign::scmTabPaneInset, qsl("a tab widget on the recipe once the script's sheet went"));
+    }
+
     // setAppStyleSheet() while the windows are open: the script takes every strip, and the design comes back when the
     // sheet goes
     void test_anApplicationSheetNamingTheTabBarTakesEveryStrip()
@@ -1074,6 +1259,14 @@ private slots:
             return;
         }
         readTheFormStripsInset();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readTheTabWidgetsSize(mpNotepad->tabWidget, uiDesign::scmTabPaneInset, qsl("the notepad's tab widget"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        readTheTabWidgetsSize(mpConnection->tabWidget_connectionInfo, 0, qsl("the connection window's form"));
     }
 };
 
