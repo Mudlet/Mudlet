@@ -63,8 +63,13 @@ if(LUA_LOCATION)
           COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua
           RESULT_VARIABLE stats_result)
   if(NOT stats_result EQUAL 0)
+    if(stats_result MATCHES "^[0-9]+$")
+      set(stats_failure "with exit code ${stats_result}")
+    else()
+      set(stats_failure "when running ${LUA_LOCATION}: ${stats_result}")
+    endif()
     message(WARNING
-          "Generating the translation statistics failed with exit code ${stats_result}. "
+          "Generating the translation statistics failed ${stats_failure}. "
           "See the generator output above.")
   endif()
 endif()
@@ -76,7 +81,7 @@ endif()
 if(NOT EXISTS "${translation_stats_file}")
   if(LUA_LOCATION)
     message(FATAL_ERROR
-          "The translation statistics generator ran but left no ${translation_stats_file}, "
+          "The translation statistics generator did not produce ${translation_stats_file}, "
           "which mudlet.qrc needs. See its output above.")
   endif()
   message(WARNING
