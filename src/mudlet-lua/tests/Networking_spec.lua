@@ -1491,7 +1491,7 @@ describe("MMCP effects against a scripted chat peer", function()
   setup(function()
     originalBorders = getBorderSizes()
     if BaseUI then
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalRouteChatLine = BaseUI.routeChatLine
       BaseUI.routeChatLine = function() end
     end
@@ -1507,9 +1507,8 @@ describe("MMCP effects against a scripted chat peer", function()
     if originalRouteChatLine then
       BaseUI.routeChatLine = originalRouteChatLine
     end
-    if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
-      BaseUI.container:hide()
-      BaseUI.container:adjustBorder()
+    if not dockWasShowing and BaseUI.onScreen() then
+      BaseUI.putAway()
     end
   end)
 

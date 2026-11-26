@@ -2897,7 +2897,7 @@ describe("Tests UI functions", function()
     local originalBorders
 
     setup(function()
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalBorders = getBorderSizes()
     end)
 
@@ -2914,9 +2914,8 @@ describe("Tests UI functions", function()
       -- BaseUI.show() docks the chat window on the right border and it stays there,
       -- leaving the main console narrower for every later spec; BaseUI.hide() is
       -- how the base UI itself gives that border back
-      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
-        BaseUI.container:hide()
-        BaseUI.container:adjustBorder()
+      if not dockWasShowing and BaseUI.onScreen() then
+        BaseUI.putAway()
       end
     end)
 
@@ -3225,7 +3224,7 @@ describe("Tests UI functions", function()
       savedTheme = BaseUI.themeName
       savedMain = { getBackgroundColor("main") }
       savedMap = { getMapBackgroundColor() }
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalBorders = getBorderSizes()
       BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
       BaseUI.build()
@@ -3239,10 +3238,8 @@ describe("Tests UI functions", function()
       BaseUI.settings = savedSettings
       BaseUI.setTheme(savedTheme or "midnight", true)
       BaseUI.saveSettings()
-      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
-        BaseUI.container:hide()
-        BaseUI.container:adjustBorder()
-        BaseUI.layoutDock()
+      if not dockWasShowing and BaseUI.onScreen() then
+        BaseUI.putAway()
       end
       assert.are.same(originalBorders, getBorderSizes())
     end)
@@ -3506,7 +3503,7 @@ describe("Tests UI functions", function()
       savedSettings = table.deepcopy(BaseUI.settings)
       savedTheme = BaseUI.themeName
       savedMain = { getBackgroundColor("main") }
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalBorders = getBorderSizes()
       BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
       BaseUI.build()
@@ -3538,13 +3535,14 @@ describe("Tests UI functions", function()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
       BaseUI.createConditionTrigger()
-      if dockWasShowing and BaseUI.container.hidden then
+      if dockWasShowing and not BaseUI.onScreen() then
         BaseUI.container:show()
-      elseif not dockWasShowing and not BaseUI.container.hidden then
-        BaseUI.container:hide()
-        BaseUI.container:adjustBorder()
+        BaseUI.layoutDock()
+      elseif not dockWasShowing and BaseUI.onScreen() then
+        BaseUI.putAway()
+      else
+        BaseUI.layoutDock()
       end
-      BaseUI.layoutDock()
       assert.are.same(originalBorders, getBorderSizes())
     end)
 

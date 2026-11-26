@@ -3,7 +3,7 @@ describe("PCRE regex cases with tempRegexTrigger", function()
     local originalBorders
 
     setup(function()
-        dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+        dockWasShowing = BaseUI ~= nil and BaseUI.onScreen()
         originalBorders = getBorderSizes()
     end)
 
@@ -16,9 +16,8 @@ describe("PCRE regex cases with tempRegexTrigger", function()
     -- leaving the main console narrower for every later spec; BaseUI.hide() is
     -- how the base UI itself gives that border back
     after_each(function()
-        if not dockWasShowing and BaseUI and BaseUI.container and not BaseUI.container.hidden then
-            BaseUI.container:hide()
-            BaseUI.container:adjustBorder()
+        if not dockWasShowing and BaseUI and BaseUI.onScreen() then
+            BaseUI.putAway()
         end
     end)
 

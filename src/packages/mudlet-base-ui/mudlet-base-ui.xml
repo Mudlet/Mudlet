@@ -3605,6 +3605,26 @@ function BaseUI.announce()
   cecho(fitConsole("&lt;cyan&gt;[ Mudlet UI ] The &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar changes how it looks - type &lt;yellow&gt;baseui&lt;cyan&gt; for the rest.&lt;reset&gt;") .. "\n")
 end
 
+-- Whether the dock, or the compact layout standing in for it, is on screen
+function BaseUI.onScreen()
+  if not BaseUI.container or BaseUI.dormant() then
+    return false
+  end
+  return not BaseUI.container.hidden or BaseUI.dockAwayForCompact == true
+end
+
+-- Takes the dock off the screen, and the compact layout's strips with it, giving
+-- their borders back. A compact layout that stood in for the dock would otherwise
+-- show the dock again once the window is roomy.
+function BaseUI.putAway()
+  if BaseUI.container then
+    BaseUI.container:hide()
+    BaseUI.container:adjustBorder()
+  end
+  BaseUI.dockAwayForCompact = nil
+  BaseUI.layoutDock()
+end
+
 function BaseUI.hide()
   BaseUI.settings.hidden = true
   declareAdaptive(false)
@@ -3614,11 +3634,7 @@ function BaseUI.hide()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
   BaseUI.killConditionTrigger()
-  if BaseUI.container then
-    BaseUI.container:hide()
-    BaseUI.container:adjustBorder()
-  end
-  BaseUI.layoutDock()
+  BaseUI.putAway()
   cecho("\n&lt;cyan&gt;[ Mudlet UI ] Hidden - type &lt;yellow&gt;baseui show&lt;cyan&gt; to bring it back.&lt;reset&gt;\n")
 end
 
