@@ -786,10 +786,6 @@ private slots:
             return;
         }
         QVERIFY2(mpNotepad->tabWidget->tabBar()->layoutDirection() == Qt::RightToLeft, "SETUP: the notepad made after the switch is not right to left");
-        // connection_profiles.ui caps widget_topRight at 300px, under its 328px minimum, which right to left stands
-        // the column 28px off its place and over the games list and its strip: the layout's to put right, not the strips'
-        QWidget* pFormColumn = mpConnection->widget_topRight;
-        pFormColumn->setMaximumWidth(std::max(pFormColumn->maximumWidth(), pFormColumn->minimumWidth()));
         TestPixels::setAppearanceAndWait(enums::Appearance::light, mpNotepad);
 
         readStrip(notepadStrip(), qsl("light"));
