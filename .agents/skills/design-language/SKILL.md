@@ -147,9 +147,17 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   "Normal" and "Light" over two columns and the eight names down the side once each (the light twins'
   own labels hidden, their names in the fields' and buttons' accessible names); and beside the table the
   preview, `ConsoleColourPreview` or `MapColourPreview`, hidden below 200px by the same decision
-- The room properties dialog's two colour rows (`dlgRoomProperties`): symbol and border, each a compact
-  colour row with Reset, the border's with its opacity box, styled by `inputStyleSheet()` and
-  `buttonStyleSheet()` set on the row widget alone. The rest of that dialog is still platform drawn
+- Room properties `dlgRoomProperties` ("Configure room") - two tabs as chips, Room and Script data,
+  the window as tall as the Room tab needs on both. The Room tab is three sections under muted
+  headings with a hairline: the room itself (its ID, or the count and IDs of several), with name,
+  area and game ID; "On the map", the preview tile at the end of its heading, with the room colour
+  as a read-only compact colour row showing the map's colour number, the symbol field beside the
+  symbol's colour row, the border's row and the border width beside "Hide on the map", the boxes
+  sharing one width so they stand in a column; and "Pathfinding". The Script data tab is a table
+  of every key scripts keep, `description` included, sized to its rows, over a value box that shows
+  and edits the chosen value whole - a compact JSON list or table indented and saved back in the
+  shape it was stored in. One sheet on `roomPropertiesShell`; OK is the primary button. See
+  `docs/design-language.md` section 3
 - Script editor `dlgTriggerEditor` (toolbar, sidebar, trees via `EditorTreeDelegate` /
   `VariableTreeDelegate` - the Folders view's tree included, see `docs/design-language.md`
   "One sidebar for both windows" - seven forms, pattern rows, options strip, chips, code heading, notice).
@@ -275,8 +283,8 @@ Not yet adopted (platform or Fusion drawn; a new feature there still uses the re
 for anything it adds, and adoption is one window per pull request):
 
 - Main window body: search field, bottom icon buttons, dock title bars
-- Mapper dock `dlgMapper` and its map controls; `dlgRoomProperties` apart from its two colour rows,
-  `dlgRoomExits`, `dlgMapLabel`
+- Mapper dock `dlgMapper` and its map controls; `dlgRoomExits`, `dlgMapLabel`, and the room colour
+  list `dlgRoomProperties` opens
   (whose three colours are already `uiDesign::AlphaColourWell`s, guarded by `MapLabelColourWellTest`)
 - Module manager `dlgModuleManager`
 - Composer `dlgComposer`, IRC `dlgIRC`

@@ -6,247 +6,51 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>318</width>
-    <height>392</height>
+    <width>460</width>
+    <height>480</height>
    </rect>
   </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
   <property name="windowTitle">
-   <string>Room properties</string>
+   <string extracomment="Title of the window the map's &quot;Configure room...&quot; menu entry opens">Configure room</string>
   </property>
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_room_properties">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
-    <widget class="QTabWidget" name="tabWidget_room">
-     <property name="minimumSize">
-      <size>
-       <width>760</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <widget class="QWidget" name="tab_general">
-      <attribute name="title">
-       <string>General</string>
-      </attribute>
-      <layout class="QFormLayout" name="formLayout_general">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_roomId">
-         <property name="text">
-          <string>Room ID:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="label_roomIdValue">
-         <property name="textInteractionFlags">
-          <set>Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_hash">
-         <property name="text">
-          <string>Game ID:</string>
-         </property>
-         <property name="buddy">
-          <cstring>lineEdit_hash</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="lineEdit_hash">
-         <property name="toolTip">
-          <string>&lt;p&gt;The game's own number or text for this room, which mapper scripts look the room up by (getRoomIDbyHash). Each one belongs to one room only.&lt;/p&gt;</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLabel" name="label_hashWarning">
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_name">
-         <property name="text">
-          <string>Name:</string>
-         </property>
-         <property name="buddy">
-          <cstring>lineEdit_name</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="lineEdit_name">
-         <property name="placeholderText">
-          <string>Room name...</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_area">
-         <property name="text">
-          <string>Area:</string>
-         </property>
-         <property name="buddy">
-          <cstring>comboBox_area</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QComboBox" name="comboBox_area">
-         <property name="accessibleName">
-          <string extracomment="Name a screen reader announces for the area field in the Room Properties dialog">Area</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_description">
-         <property name="text">
-          <string>Description:</string>
-         </property>
-         <property name="buddy">
-          <cstring>plainTextEdit_description</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QPlainTextEdit" name="plainTextEdit_description">
-         <property name="tabChangesFocus">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_appearance">
-      <attribute name="title">
-       <string>Appearance</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_appearance">
-       <item>
-        <widget class="QWidget" name="widget_top" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_widget_top">
-          <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
-          </property>
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>9</number>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_layout">
-            <property name="text">
-             <string>Icon:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_preview">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="autoFillBackground">
-             <bool>false</bool>
-            </property>
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::Box</enum>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="scaledContents">
-             <bool>false</bool>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="margin">
-             <number>0</number>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_setRoomColor">
-            <property name="text">
-             <string>Set room color</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_symbol">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="title">
-          <string>Symbol</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_groupBox_symbol">
-          <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_symbolInstructions">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string notr="true">&lt;p&gt;Dummy text replaced when used.&lt;/p&gt;</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QWidget" name="widget_symbolText" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolText">
+    <widget class="QWidget" name="roomPropertiesShell" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout_roomPropertiesShell">
+      <item>
+       <widget class="QTabWidget" name="tabWidget_room">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="documentMode">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="tab_general">
+         <attribute name="title">
+          <string extracomment="Tab of the Configure room window holding the room's name, area, game ID, how the map draws it and how paths treat it">Room</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_room">
+          <item row="0" column="0" colspan="2">
+           <widget class="QWidget" name="roomPropertiesRoomHeading" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_roomHeading">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -260,31 +64,79 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QLineEdit" name="lineEdit_roomSymbol">
-               <property name="accessibleName">
-                <string extracomment="Name a screen reader announces for the room symbol field in the Room Properties dialog">Room symbol</string>
-               </property>
-               <property name="placeholderText">
-                <string>Room symbol...</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="comboBox_roomSymbol">
-               <property name="accessibleName">
-                <string extracomment="Name a screen reader announces for the room symbol field in the Room Properties dialog">Room symbol</string>
-               </property>
-               <property name="editable">
-                <bool>true</bool>
+              <widget class="QLabel" name="label_roomIdValue">
+               <property name="textInteractionFlags">
+                <set>Qt::TextSelectableByMouse</set>
                </property>
               </widget>
              </item>
             </layout>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="widget_symbolColor" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolColor">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_name">
+            <property name="text">
+             <string extracomment="Label in front of the room name field in the Configure room window">Name</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_name</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_name">
+            <property name="placeholderText">
+             <string>Room name...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_area">
+            <property name="text">
+             <string extracomment="Label in front of the field the room's area is picked in, in the Configure room window">Area</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_area</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="comboBox_area">
+            <property name="accessibleName">
+             <string extracomment="Name a screen reader announces for the area field in the Room Properties dialog">Area</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_hash">
+            <property name="text">
+             <string extracomment="Label in front of the field holding the game's own ID for the room, which mapper scripts and the Lua API call its hash">Game ID (hash)</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_hash</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="lineEdit_hash">
+            <property name="toolTip">
+             <string>&lt;p&gt;The game's own number or text for this room, which mapper scripts look the room up by (getRoomIDbyHash). Each one belongs to one room only.&lt;/p&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLabel" name="roomPropertiesHashCaption">
+            <property name="text">
+             <string notr="true">Dummy text replaced when used</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLabel" name="label_hashWarning"/>
+          </item>
+          <item row="6" column="0" colspan="2">
+           <widget class="QWidget" name="roomPropertiesMapHeading" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_mapHeading">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -298,52 +150,14 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QLabel" name="label_symbolColor">
+              <widget class="QLabel" name="roomPropertiesMapHeadingText">
                <property name="text">
-                <string extracomment="Label in front of the box showing the room symbol color">Color:</string>
+                <string extracomment="Heading in the Configure room window over the room's color, symbol, border and whether it is hidden: how the map draws the room">On the map</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_setSymbolColor">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>Color of to use for the room symbol(s)</string>
-               </property>
-               <property name="accessibleName">
-                <string>Set symbol color</string>
-               </property>
-               <property name="text">
-                <string notr="true"/>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_resetSymbolColor">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string extracomment="Tooltip of the button showing only a glyph next to the &quot;Set symbol color&quot; button: it takes the room symbol color chosen here away again, so the symbol is drawn in black or white against the room, which the box beside it calls Automatic.">Reset the symbol color to automatic</string>
-               </property>
-               <property name="accessibleName">
-                <string extracomment="Read out by a screen reader for the button showing only a glyph next to the &quot;Set symbol color&quot; button; it will reset the symbol color back to the original color.">Reset</string>
-               </property>
-               <property name="text">
-                <string notr="true"/>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_symbolColor">
+              <spacer name="horizontalSpacer_mapHeading">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
@@ -355,38 +169,218 @@
                </property>
               </spacer>
              </item>
+             <item>
+              <widget class="QLabel" name="label_preview">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="styleSheet">
+                <string notr="true"/>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::Box</enum>
+               </property>
+               <property name="text">
+                <string notr="true"/>
+               </property>
+               <property name="scaledContents">
+                <bool>false</bool>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="margin">
+                <number>0</number>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_border">
-         <property name="title">
-          <string>Border</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_border">
-          <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_borderInstructions">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
+          <item row="7" column="0">
+           <widget class="QLabel" name="roomPropertiesRoomColorLabel">
             <property name="text">
-             <string notr="true">&lt;p&gt;Dummy text replaced when used.&lt;/p&gt;</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
+             <string extracomment="Label in front of the box showing the room's color and its number, in the Configure room window">Room color</string>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="7" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout_roomColor">
+            <item>
+             <widget class="QPushButton" name="pushButton_setRoomColor">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string extracomment="Tooltip of the button showing only a glyph beside the room color box in the Configure room window; it opens the list of room colors to pick from">Choose the room's color from the map's room colors</string>
+              </property>
+              <property name="accessibleName">
+               <string>Set room color</string>
+              </property>
+              <property name="text">
+               <string notr="true"/>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_roomColor">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="roomPropertiesSymbolLabel">
+            <property name="text">
+             <string extracomment="Label in front of the room symbol field and the symbol's color, in the Configure room window">Symbol</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout_symbol">
+            <item>
+             <widget class="QLineEdit" name="lineEdit_roomSymbol">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string extracomment="Tooltip of the room symbol field in the Configure room window">One or more characters the map draws on the room. Empty it to remove the symbol.</string>
+              </property>
+              <property name="accessibleName">
+               <string extracomment="Name a screen reader announces for the room symbol field in the Room Properties dialog">Room symbol</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_roomSymbol">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string extracomment="Tooltip of the room symbol field in the Configure room window when the chosen rooms have different symbols; it lists the symbols in use, most used first">The symbols these rooms have, most used first. Pick one or type a new one; empty it to remove the symbols.</string>
+              </property>
+              <property name="accessibleName">
+               <string extracomment="Name a screen reader announces for the room symbol field in the Room Properties dialog">Room symbol</string>
+              </property>
+              <property name="editable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="widget_symbolColor" native="true">
+              <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolColor">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="pushButton_setSymbolColor">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string>Color of to use for the room symbol(s)</string>
+                 </property>
+                 <property name="accessibleName">
+                  <string>Set symbol color</string>
+                 </property>
+                 <property name="text">
+                  <string notr="true"/>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_resetSymbolColor">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string extracomment="Tooltip of the button showing only a glyph next to the &quot;Set symbol color&quot; button: it takes the room symbol color chosen here away again, so the symbol is drawn in black or white against the room, which the box beside it calls Automatic.">Reset the symbol color to automatic</string>
+                 </property>
+                 <property name="accessibleName">
+                  <string extracomment="Read out by a screen reader for the button showing only a glyph next to the &quot;Set symbol color&quot; button; it will reset the symbol color back to the original color.">Reset</string>
+                 </property>
+                 <property name="text">
+                  <string notr="true"/>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_symbol">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_borderColor">
+            <property name="text">
+             <string extracomment="Label in front of the box showing the room border color">Border</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
            <widget class="QWidget" name="widget_borderColor" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_widget_borderColor">
              <property name="leftMargin">
@@ -401,13 +395,6 @@
              <property name="bottomMargin">
               <number>0</number>
              </property>
-             <item>
-              <widget class="QLabel" name="label_borderColor">
-               <property name="text">
-                <string extracomment="Label in front of the box showing the room border color">Color:</string>
-               </property>
-              </widget>
-             </item>
              <item>
               <widget class="QPushButton" name="pushButton_setBorderColor">
                <property name="sizePolicy">
@@ -462,117 +449,62 @@
             </layout>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="widget_borderThickness" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_borderThickness">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <widget class="QLabel" name="label_borderThickness">
-               <property name="text">
-                <string>Thickness:</string>
-               </property>
-               <property name="buddy">
-                <cstring>spinBox_borderThickness</cstring>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSpinBox" name="spinBox_borderThickness">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="specialValueText">
-                <string>(use global)</string>
-               </property>
-               <property name="minimum">
-                <number>0</number>
-               </property>
-               <property name="maximum">
-                <number>10</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="checkBox_hidden">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string notr="true">Dummy text replaced when used</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_appearance">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_pathfinding">
-      <attribute name="title">
-       <string>Pathfinding</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_pathfinding_tab">
-       <item>
-        <widget class="QGroupBox" name="groupBox_pathfinding">
-         <property name="title">
-          <string>Pathfinding</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_pathfinding">
-          <property name="sizeConstraint">
-           <enum>QLayout::SetMinimumSize</enum>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_weightInstructions">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_borderThickness">
             <property name="text">
-             <string notr="true">&lt;p&gt;Dummy text replaced when used.&lt;/p&gt;</string>
+             <string extracomment="Label in front of the box setting how thick the room's border is drawn, in the Configure room window">Border width</string>
             </property>
-            <property name="wordWrap">
-             <bool>true</bool>
+            <property name="buddy">
+             <cstring>spinBox_borderThickness</cstring>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="widget_weight" native="true">
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_weight">
+          <item row="10" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout_borderThickness">
+            <item>
+             <widget class="QSpinBox" name="spinBox_borderThickness">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="specialValueText">
+               <string extracomment="Shown in the room border width box while the room has no width of its own and is drawn with the map's border width">Map default</string>
+              </property>
+              <property name="minimum">
+               <number>0</number>
+              </property>
+              <property name="maximum">
+               <number>10</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_hidden">
+              <property name="text">
+               <string extracomment="Check box in the Configure room window that keeps the room off the map; partly checked when only some of the chosen rooms are hidden">Hide on the map</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_borderThickness">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="11" column="0" colspan="2">
+           <widget class="QWidget" name="roomPropertiesPathHeading" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_pathHeading">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -586,189 +518,307 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QSpinBox" name="spinBox_weight">
-               <property name="accessibleName">
-                <string extracomment="Name a screen reader announces for the room weight field in the Room Properties dialog">Room weight</string>
-               </property>
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="specialValueText">
-                <string>1 (default)</string>
-               </property>
-               <property name="minimum">
-                <number>1</number>
-               </property>
-               <property name="maximum">
-                <number>2147483647</number>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="comboBox_weight">
-               <property name="accessibleName">
-                <string extracomment="Name a screen reader announces for the room weight field in the Room Properties dialog">Room weight</string>
-               </property>
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="editable">
-                <bool>true</bool>
+              <widget class="QLabel" name="roomPropertiesPathHeadingText">
+               <property name="text">
+                <string extracomment="Heading in the Configure room window over the room's weight and lock, which decide how paths and speedwalks treat the room">Pathfinding</string>
                </property>
               </widget>
              </item>
             </layout>
            </widget>
           </item>
-          <item>
-           <widget class="QCheckBox" name="checkBox_locked">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
+          <item row="12" column="0">
+           <widget class="QLabel" name="roomPropertiesWeightLabel">
+            <property name="text">
+             <string extracomment="Label in front of the room weight box in the Configure room window">Weight</string>
             </property>
+            <property name="buddy">
+             <cstring>spinBox_weight</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout_weight">
+            <item>
+             <widget class="QSpinBox" name="spinBox_weight">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="accessibleName">
+               <string extracomment="Name a screen reader announces for the room weight field in the Room Properties dialog">Room weight</string>
+              </property>
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>2147483647</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_weight">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string extracomment="Tooltip of the room weight field in the Configure room window when the chosen rooms have different weights; it lists the weights in use, most used first">The weights these rooms have, most used first. Pick one or type a new weight for all of them.</string>
+              </property>
+              <property name="accessibleName">
+               <string extracomment="Name a screen reader announces for the room weight field in the Room Properties dialog">Room weight</string>
+              </property>
+              <property name="editable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="roomPropertiesWeightCaption">
+              <property name="text">
+               <string extracomment="Caption beside the room weight box in the Configure room window: the path finder takes the way whose rooms add up to the lowest weight">Paths prefer a lower weight. 1 is the default.</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_weight">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="13" column="1">
+           <widget class="QCheckBox" name="checkBox_locked">
             <property name="text">
              <string notr="true">Dummy text replaced when used</string>
             </property>
            </widget>
           </item>
+          <item row="14" column="0" colspan="2">
+           <spacer name="verticalSpacer_room">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
          </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_pathfinding">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tab_userData">
-      <attribute name="title">
-       <string>User data</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_userData">
-       <item>
-        <widget class="QLabel" name="label_userDataInstructions">
-         <property name="text">
-          <string>Data that scripts keep with this room.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QTableWidget" name="tableWidget_userData">
-         <property name="selectionBehavior">
-          <enum>QAbstractItemView::SelectRows</enum>
-         </property>
-         <property name="columnCount">
-          <number>2</number>
-         </property>
-         <attribute name="horizontalHeaderStretchLastSection">
-          <bool>true</bool>
+        <widget class="QWidget" name="tab_userData">
+         <attribute name="title">
+          <string extracomment="Tab of the Configure room window listing the keys and values scripts keep with the room (setRoomUserData)">Script data</string>
          </attribute>
-         <attribute name="verticalHeaderVisible">
-          <bool>false</bool>
-         </attribute>
-         <column>
-          <property name="text">
-           <string>Key</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Value</string>
-          </property>
-         </column>
+         <layout class="QVBoxLayout" name="verticalLayout_userData">
+          <item>
+           <widget class="QWidget" name="roomPropertiesScriptData" native="true">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_scriptData">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_userDataInstructions">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string extracomment="Caption at the top of the Script data tab of the Configure room window: the keys and values listed there are written and read by scripts (setRoomUserData), and Mudlet itself only keeps them">Kept for scripts. Mudlet only stores these values.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QTableWidget" name="tableWidget_userData">
+               <property name="tabKeyNavigation">
+                <bool>false</bool>
+               </property>
+               <property name="selectionBehavior">
+                <enum>QAbstractItemView::SelectRows</enum>
+               </property>
+               <property name="showGrid">
+                <bool>false</bool>
+               </property>
+               <property name="wordWrap">
+                <bool>false</bool>
+               </property>
+               <property name="columnCount">
+                <number>2</number>
+               </property>
+               <attribute name="horizontalHeaderHighlightSections">
+                <bool>false</bool>
+               </attribute>
+               <attribute name="horizontalHeaderStretchLastSection">
+                <bool>true</bool>
+               </attribute>
+               <attribute name="verticalHeaderVisible">
+                <bool>false</bool>
+               </attribute>
+               <column>
+                <property name="text">
+                 <string>Key</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Value</string>
+                </property>
+               </column>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="roomPropertiesValueLabel">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="textFormat">
+                <enum>Qt::RichText</enum>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPlainTextEdit" name="roomPropertiesValueBox">
+               <property name="tabChangesFocus">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="roomPropertiesJsonWarning">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string extracomment="Shown under the value box on the Script data tab of the Configure room window while a value that was a JSON list or table no longer reads as JSON after an edit">Not valid JSON. It will be saved as typed.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_userDataButtons">
+               <item>
+                <widget class="QPushButton" name="pushButton_addUserData">
+                 <property name="text">
+                  <string>Add</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_removeUserData">
+                 <property name="text">
+                  <string>Remove</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_userDataButtons">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_userDataWarning">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_scriptData">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
         </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_userDataWarning">
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_userDataButtons">
-         <item>
-          <widget class="QPushButton" name="pushButton_addUserData">
-           <property name="text">
-            <string>Add</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_removeUserData">
-           <property name="text">
-            <string>Remove</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_userDataButtons">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
-    </widget>
-   </item>
-   <item>
-    <widget class="QDialogButtonBox" name="dialogButtonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QDialogButtonBox" name="dialogButtonBox">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="standardButtons">
+         <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>lineEdit_name</tabstop>
-  <tabstop>lineEdit_hash</tabstop>
-  <tabstop>comboBox_area</tabstop>
-  <tabstop>plainTextEdit_description</tabstop>
-  <tabstop>pushButton_setRoomColor</tabstop>
-  <tabstop>lineEdit_roomSymbol</tabstop>
-  <tabstop>comboBox_roomSymbol</tabstop>
-  <tabstop>spinBox_weight</tabstop>
-  <tabstop>comboBox_weight</tabstop>
-  <tabstop>checkBox_locked</tabstop>
-  <tabstop>checkBox_hidden</tabstop>
-  <tabstop>tableWidget_userData</tabstop>
-  <tabstop>pushButton_addUserData</tabstop>
-  <tabstop>pushButton_removeUserData</tabstop>
-  <tabstop>tabWidget_room</tabstop>
- </tabstops>
  <resources/>
  <connections>
   <connection>

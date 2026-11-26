@@ -2257,8 +2257,12 @@ void T2DMap::slot_showPropertiesDialog()
         return;
     }
 
-    // No need to show if dialog is already shown
+    // The dialog is not modal and may be behind the main window, so asking for it again brings it back, still on the
+    // rooms it was opened on
     if (mpDlgRoomProperties) {
+        mpDlgRoomProperties->show();
+        mpDlgRoomProperties->raise();
+        mpDlgRoomProperties->activateWindow();
         return;
     }
 

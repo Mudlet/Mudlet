@@ -463,7 +463,9 @@ with - "Automatic" for a room's symbol, the code of the map's border colour for
 its border, so that field is no wider than any other - and its swatch shows
 that colour. The room
 properties dialog's symbol and border rows (`roomPropertiesSymbolColour`,
-`roomPropertiesBorderColour`, `roomPropertiesBorderOpacity`) and the settings'
+`roomPropertiesBorderColour`, `roomPropertiesBorderOpacity`), its room colour
+(`roomPropertiesRoomColour`, which shows the map's number for the colour and is
+only chosen, never typed) and the settings'
 Player room marker card (`settingsPlayerRoomOuterColour`,
 `settingsPlayerRoomInnerColour` and their `...Opacity` boxes) are built this
 way, and so are the settings' two colour cards; the trigger editor keeps its
@@ -483,9 +485,9 @@ scaled down with them, so a colour row looks the same in the room properties
 dialog, the Player room marker card and the colour cards, and the cards
 holding 30 and 32 colours are no taller than their wells made them. The
 marker's Diameter boxes are held to the same height, so a ring's row is one
-height across. The room properties dialog gives its rows the button recipe
-as well as the input recipe, scoped to the row, so Choose and Reset have the
-design's face there too. `holdHeight()` and `fitNumberBoxes()` polish a
+height across. The room properties dialog's one sheet gives its rows the
+input and button recipes with the rest of its fields and buttons, so Choose and
+Reset have the design's face there too. `holdHeight()` and `fitNumberBoxes()` polish a
 widget before holding it: the first Polish reaches their event filter before
 the style, which then sets the recipe's min-height back, and a dialog that
 sizes itself before it is shown (`adjustSize()`) never gives them a later
@@ -2006,6 +2008,31 @@ pressed.
 
 ...and one dynamic property of its own, `exporterCountEmpty`, which the count chip carries
 while nothing is ticked and which needs `uiDesign::repolish()` after every change.
+
+...and the room properties dialog's ("Configure room"), with a `roomProperties*` prefix on
+what the redesign added and the `.ui` file's own names kept on everything that survived it,
+since `RoomPropertiesDialogTest` reaches those. Its four tabs became two, Room and Script data,
+and the `.ui` file was rewritten for it, since the layout itself changed. The window is as tall
+as the Room tab needs and keeps that size whichever tab is on show.
+`applyRoomPropertiesShellStyle()` builds one sheet, set on `roomPropertiesShell` and never on
+the dialog, and runs again on `mudlet::signal_appearanceChanged` and on a style, palette or font
+change of the dialog. OK carries `uiDesign::scmProp_primaryButton`.
+
+| Name | What it is |
+| --- | --- |
+| `roomPropertiesShell` | The widget holding the tabs and the buttons, which the one sheet is set on: the tab recipe on `#tabWidget_room`, the input recipe scoped to `#tab_general` and to `#roomPropertiesScriptData >`, the choice recipe on `#tab_general`, the button recipe on the shell and the scroll bar recipe on the table and the value box. The child combinator keeps the input recipe off the key a table cell is typed into, which it would draw as a field taller than the row |
+| `tab_general`, `tab_userData` | The Room and Script data tabs. `keepTheTabsRoomForThePages()` holds the tab widget to the Room tab's size hint plus what the tab recipe's `scmTabPaneInset` on every side takes beyond the base style's frame, which is all `QTabWidget` adds when it asks for its own size; it runs again on the first show, once the window is polished as it will be drawn |
+| `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, each a row with a hairline in `separator` under it. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` with the preview tile `label_preview` at the trailing end of its row, and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, semibold, in `mutedText` |
+| `roomPropertiesHashCaption` | The caption under the game ID: what the hash is, or that it belongs to one room while several are configured. `label_hashWarning` takes its place, in the warning hue walked to `scmTextMinimumRatio`, while the ID typed belongs to another room |
+| `roomPropertiesRoomColour` | The room's colour as a compact `uiDesign::ColourValue`, read only and out of the tab order: the swatch and, as its default word, the number the map knows the colour by, or "Multiple" with no swatch for rooms that differ. `pushButton_setRoomColor` is its Choose |
+| `roomPropertiesRoomColorLabel`, `roomPropertiesSymbolLabel`, `roomPropertiesWeightLabel` | Labels of the rows the redesign added; with `label_name`, `label_area`, `label_hash`, `label_borderColor` ("Border") and `label_borderThickness` ("Border width") they are chrome in `mutedText` |
+| `roomPropertiesWeightCaption` | "Paths prefer a lower weight. 1 is the default." beside `spinBox_weight`, which is drawn four digits wide (measured as `QAbstractSpinBox` measures itself) with its 1 to 2147483647 range kept, as the dialog saves the weight it shows. The colour boxes, the symbol field and `spinBox_borderThickness` share one width in `alignValueBoxes()`, the widest any of them asks for, so they stand in a column |
+| `roomPropertiesScriptDataPane` | The pane between `tab_userData` and its column. Its words wrap, and a `QWidgetItem` asks a widget whose contents wrap for the height they want at a width whatever its size policy says, so the pane answers that it has no height-for-width and the tab stays out of the window's height |
+| `roomPropertiesScriptData` | The Script data column: the caption `label_userDataInstructions`, `tableWidget_userData`, the value label and box, the JSON warning, Add and Remove, and `label_userDataWarning`. `fitScriptData()` shares its height between the table and the box: each as tall as it needs while that fits, then the table gives way down to four rows, keeping the chosen one in view, and only then the box scrolls |
+| `tableWidget_userData` | Every key the rooms hold but the map's own `room.ui_` ones, `description` among them. It has no recipe of its own: the field's surface, hairline and corner, the header in `mutedText` at the caption step, and the chosen row in `accentSoft` behind `accentText`. A value cell shows the first line of its value, elided, and is never edited in place; only an added row's key is. The key column opens fitted to its keys up to 45% of the table and is dragged at the header; Return or a double-click on a row goes to the value box, and so does Tab after a new key |
+| `roomPropertiesScriptDataEmpty` | The line over the empty table saying no script has kept anything with the room, in `disabledText` walked to `scmTextMinimumRatio` against the field |
+| `roomPropertiesValueLabel`, `roomPropertiesValueBox` | "Value of `key`" over a `QPlainTextEdit` that shows the chosen row's whole value and is the one place it is edited, three lines at rest and taller as the value needs. A JSON list or table stored with nothing between its entries is shown indented, in a fixed-width face, the label counting its entries; the indenting only puts whitespace outside strings, so taking it out again gives back the stored text. A value nobody edited is never written, an edited one that still reads as JSON is saved with the layout taken out again, and one that no longer does is saved as typed |
+| `roomPropertiesJsonWarning` | "Not valid JSON. It will be saved as typed." under the box while that applies |
 
 Three of the `settings*` names are not the settings dialog's alone.
 `settingsRail` and `settingsFocused` are the contract `SidebarItemDelegate` and

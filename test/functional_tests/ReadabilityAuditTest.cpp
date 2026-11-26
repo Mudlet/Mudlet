@@ -49,6 +49,9 @@
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
 #include "ScriptUnit.h"
+#include "TMap.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
 #include "TScript.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
@@ -60,6 +63,7 @@
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
+#include "dlgRoomProperties.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggerEditor.h"
@@ -84,6 +88,7 @@ private:
     dlgNotepad* mpNotepad = nullptr;
     dlgPackageManager* mpPackages = nullptr;
     dlgPackageExporter* mpExporter = nullptr;
+    dlgRoomProperties* mpRoomProperties = nullptr;
     Host* mpHost = nullptr;
     QTreeWidgetItem* mpKeyItem = nullptr;
     QTreeWidgetItem* mpTimerItem = nullptr;
@@ -138,6 +143,11 @@ private:
     static constexpr int scmLeastAuditedOnTheExporterSelection = 3;
     static constexpr int scmLeastAuditedOnTheExporterDetails = 18;
     static constexpr int scmLeastAuditedOnTheExporterFoot = 3;
+    // Measured at 18, 7 and 2; the colour boxes and their buttons count as wells, which this walk skips
+    static constexpr int scmLeastAuditedOnTheRoomTab = 15;
+    static constexpr int scmLeastAuditedOnTheScriptDataTab = 6;
+    static constexpr int scmLeastAuditedUnderTheRoomTabs = 2;
+    static constexpr int scmAuditedRoom = 4711;
 
     // A colour well's fill is a value rather than a surface, and its words are
     // chosen against that fill by generateButtonStyleSheet(), so it is not audited
@@ -294,6 +304,31 @@ private:
         QVERIFY2(mpExporter->findChild<QWidget*>(qsl("exporterFoot")), "the package exporter built no foot, so there is nothing to walk");
     }
 
+    // A room with a name and script data, one row chosen, so both tabs have words on show to read
+    void openRoomProperties()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        const int area = pMap->mpRoomDB->addArea(qsl("Readability audit area"));
+        QVERIFY2(area > 0, "the room this walks has no area to be made in");
+        QVERIFY2(pMap->addRoom(scmAuditedRoom), "the room this walks could not be made");
+        QVERIFY(pMap->setRoomArea(scmAuditedRoom, area));
+        TRoom* pRoom = pMap->mpRoomDB->getRoom(scmAuditedRoom);
+        pRoom->name = qsl("An audited room");
+        pRoom->userData = {{qsl("description"), qsl("A room the audit reads.")}, {qsl("ferry rooms"), qsl("[1204,1377]")}};
+
+        QHash<QString, int> names{{pRoom->name, 1}};
+        QHash<int, int> colours{{pRoom->environment, 1}};
+        QHash<QString, int> symbols{{pRoom->mSymbol, 1}};
+        QHash<int, int> weights{{pRoom->getWeight(), 1}};
+        QHash<bool, int> locks{{pRoom->isLocked, 1}};
+        mpRoomProperties = new dlgRoomProperties(mpHost);
+        mpRoomProperties->init(names, colours, symbols, weights, locks, 0, {scmAuditedRoom});
+        mpRoomProperties->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpRoomProperties));
+        mpRoomProperties->tableWidget_userData->setCurrentCell(1, 1);
+        QVERIFY2(!mpRoomProperties->roomPropertiesValueBox->toPlainText().isEmpty(), "no row of the script data is chosen, so the value box has nothing to read");
+    }
+
     // Through the settings dialog's control, the path a player takes; each window
     // restyles off the mudlet::signal_appearanceChanged it sets off. Painting
     // settles a widget's palette, and offscreen nothing paints unless grabbed.
@@ -317,6 +352,9 @@ private:
         }
         if (mpExporter) {
             mpExporter->grab();
+        }
+        if (mpRoomProperties) {
+            mpRoomProperties->grab();
         }
     }
 
@@ -650,6 +688,15 @@ private:
             auditWithinFor(qsl("exporter"), mpExporter, pFoot, qsl("the package exporter's foot"), appearance, scmLeastAuditedOnTheExporterFoot);
         }
 
+        // A tab at a time, each with it on show, and the buttons under them
+        for (const auto& tab : QList<QPair<QWidget*, int>>{{mpRoomProperties->tab_general, scmLeastAuditedOnTheRoomTab}, {mpRoomProperties->tab_userData, scmLeastAuditedOnTheScriptDataTab}}) {
+            mpRoomProperties->tabWidget_room->setCurrentWidget(tab.first);
+            QCoreApplication::processEvents();
+            mpRoomProperties->grab();
+            auditWithinFor(qsl("roomProperties"), mpRoomProperties, tab.first, qsl("the room properties dialog's %1 tab").arg(tab.first->objectName()), appearance, tab.second);
+        }
+        auditWithinFor(qsl("roomProperties"), mpRoomProperties, mpRoomProperties->dialogButtonBox, qsl("the room properties dialog's buttons"), appearance, scmLeastAuditedUnderTheRoomTabs);
+
         if (showForm(
                     qsl("buttons"),
                     [this]() {
@@ -783,6 +830,7 @@ private slots:
         openNotepad();
         openPackageManager();
         openPackageExporter();
+        openRoomProperties();
 
         // A failed compile puts up the code pane's note: the editor's one word in
         // a state colour rather than the shell's ink
@@ -798,6 +846,8 @@ private slots:
     void cleanupTestCase()
     {
         mpNotepad = nullptr;
+        delete mpRoomProperties;
+        mpRoomProperties = nullptr;
         delete mpExporter;
         mpExporter = nullptr;
         delete mpPackages;
@@ -858,6 +908,8 @@ private slots:
     void test_thePackageExporterIsReadableInBothAppearances() { report(qsl("exporter")); }
 
     void test_theButtonsFormIsReadableInBothAppearances() { report(qsl("buttons")); }
+
+    void test_theRoomPropertiesDialogIsReadableInBothAppearances() { report(qsl("roomProperties")); }
 };
 
 #include "ReadabilityAuditTest.moc"
