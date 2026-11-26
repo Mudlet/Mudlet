@@ -537,16 +537,16 @@ end)
         QVERIFY(writeProfile(name));
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
-        QVERIFY(session.setScreenSize(100, 30));
+        QVERIFY(session.setScreenSize(60, 30));
         QVERIFY(session.runLua(qsl("setFontSize(8)")));
-        QVERIFY2(100 * cell(session).width() < 600, qPrintable(mainWindowSize(session)));
+        QVERIFY2(60 * cell(session).width() < 600, qPrintable(mainWindowSize(session)));
         QCOMPARE(luaString(session, qsl("getMainWindowInfo().widthClass")), qsl("compact"));
         QVERIFY(session.runLua(qsl("headlessClassChanges = 0 "
                                    "registerAnonymousEventHandler('sysMainWindowClassChangeEvent', function() headlessClassChanges = headlessClassChanges + 1 end)")));
 
         // The grid stays, so the main window is counted again in the new font
         QVERIFY(session.runLua(qsl("setFontSize(24)")));
-        QVERIFY2(100 * cell(session).width() >= 840, qPrintable(mainWindowSize(session)));
+        QVERIFY2(60 * cell(session).width() >= 840, qPrintable(mainWindowSize(session)));
         QCOMPARE(luaString(session, qsl("getMainWindowInfo().widthClass")), qsl("expanded"));
         QCOMPARE(luaString(session, qsl("headlessClassChanges")), qsl("1"));
         QVERIFY(session.runLua(qsl("setFontSize(25)")));
