@@ -110,9 +110,11 @@ QString VariableTreeDelegate::variablePreview(TVar* pVar)
     case LUA_TBOOLEAN:
         // Not translated: true and false are values, not descriptions of one
         return pVar->getValue();
-    case LUA_TTABLE:
+    case LUA_TTABLE: {
         // A bare count, in no language: "keys" against "items" read as two kinds of table
-        return qsl("(%1)").arg(pVar->getChildren(false).size());
+        const qsizetype members = pVar->getChildren(false).size();
+        return members ? qsl("(%1)").arg(members) : QString();
+    }
     case LUA_TFUNCTION:
         //: Shown at the trailing edge of a row in the editor's Variables view where the variable holds a Lua function rather than a value that can be shown.
         return tr("function");
