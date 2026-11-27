@@ -4501,6 +4501,35 @@ private slots:
              "the Markdown link was not drawn as a link");
   }
 
+  // A style in the link's configuration is used, as an OSC 8 link's is, and
+  // takes the place of the default underline
+  void test_MarkdownLinkUsesTheStyleInItsConfiguration() {
+    injectData(qsl("\x1b]67;1\x1b\\[north](send:north?config=%7B%22style%22%3A%7B"
+                   "%22color%22%3A%22%2300ff00%22%2C%22bold%22%3Atrue%7D%7D)"
+                   "\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("north"));
+    const TChar &styled = console->buffer.buffer.at(line).at(0);
+    QVERIFY2(console->buffer.getLinkIndexAt(line, 0) > 0, "the link was not made");
+    QCOMPARE(styled.foreground(), QColor(0x00, 0xff, 0x00));
+    QVERIFY2(styled.isBold(), "the style's bold was not used");
+    QVERIFY2(!styled.isUnderlined(), "a styled link took the default underline as well");
+  }
+
+  // An OSC 8 link's own style survives the Markdown read, with Markdown bold
+  // added to it
+  void test_Osc8LinkStyleSurvivesOnAMarkdownLine() {
+    injectData(qsl("\x1b]67;1\x1b\\**\x1b]8;;send:look?config={\"style\":{\"color\""
+                   ":\"#00ff00\"}}\x1b\\look\x1b]8;;\x1b\\**\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("look"));
+    const TChar &styled = console->buffer.buffer.at(line).at(0);
+    QCOMPARE(styled.foreground(), QColor(0x00, 0xff, 0x00));
+    QVERIFY2(styled.isBold(), "the Markdown bold around the link was lost");
+  }
+
   void test_MarkdownLinkTitleIsItsTooltip() {
     injectData(qsl("\x1b]67;1\x1b\\[a](send:a \"Walk north\")\x1b]67;0\x1b\\"));
     TMainConsole *console = mpHost->mainConsoleView();
