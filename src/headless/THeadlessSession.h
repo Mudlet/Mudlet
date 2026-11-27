@@ -976,8 +976,15 @@ signals:
     // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
     // of the console line it went into, which is when it was written for a line of its own. continuesLine is for
     // text the console draws on the end of the line sent before it, not as a line below: an echo() after
-    // deleteLine(). A handler that takes fewer arguments may be connected.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine);
+    // deleteLine(). A handler that takes fewer arguments may be connected. markdown is the line's Markdown block, as
+    // outputLine's is, but as the triggers left it: a line they wrote into or a script wrote has none.
+    void lineShown(const QString& profile,
+                   const QString& text,
+                   bool isPrompt,
+                   const QList<THeadlessSession::TextRun>& runs,
+                   qint64 arrivalMSecs,
+                   bool continuesLine,
+                   const THeadlessSession::MarkdownBlock& markdown);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -1346,6 +1353,7 @@ private:
         QList<TextRun> runs;
         qint64 arrivalMSecs = -1;
         bool continuesLine = false;
+        MarkdownBlock markdown;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;

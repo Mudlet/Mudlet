@@ -2546,7 +2546,9 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
     }
-    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
+    ShownLine line{text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
+    line.markdown = markdownBlock(buffer, first);
+    return line;
 }
 
 bool THeadlessSession::lineShownWanted() const
@@ -2585,7 +2587,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QString profile = mProfileName;
     for (const ShownLine& line : lines) {
         ++gSignalsBeingHandedOut;
-        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs, line.continuesLine);
+        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs, line.continuesLine, line.markdown);
         --gSignalsBeingHandedOut;
         if (!self) {
             return false;
