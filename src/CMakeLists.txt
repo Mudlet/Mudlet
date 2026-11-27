@@ -164,6 +164,7 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMapPainter.cpp
+    TMarkdown.cpp
     TMedia.cpp
     TMediaVoice.cpp
     TMediaPlaylist.cpp
@@ -499,6 +500,7 @@ set(mudlet_HDRS
     TMapPainter.h
     TMapViewFrontend.h
     TMapViewsFrontend.h
+    TMarkdown.h
     TMatchState.h
     TMedia.h
     TMediaVoice.h

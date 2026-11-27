@@ -45,6 +45,7 @@
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TLabelModel.h"
+#include "TMarkdown.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -2054,6 +2055,128 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_pushnumber(L, background.alpha());
     lua_settable(L, -3);
 
+    return 1;
+}
+
+// The Markdown tag of a line in the main console (https://wiki.mudlet.org/w/Standards:Markdown_Text_for_MUDs)
+int TLuaInterpreter::getMarkdownBlock(lua_State* L)
+{
+    int argument = 1;
+    QString windowName;
+    if (lua_gettop(L) > 1) {
+        windowName = getVerifiedString(L, __func__, argument++, "window name", true);
+    }
+    const int lineNumber = getVerifiedInt(L, __func__, argument, "line number");
+    Host& host = getHostFromLua(L);
+    TConsoleModel* pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
+        return warnArgumentValue(L, __func__, qsl("window '%1' not found").arg(windowName));
+    }
+    if (!isMain(windowName)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    const TBuffer& buffer = pModel->buffer;
+    if (lineNumber < 0 || lineNumber >= buffer.lineBuffer.size()) {
+        return warnArgumentValue(L, __func__, qsl("line %1 is out of range, the main console has lines 0 to %2").arg(lineNumber).arg(buffer.lineBuffer.size() - 1));
+    }
+    const TMarkdownBlock* pBlock = buffer.markdownBlock(lineNumber);
+    if (!pBlock) {
+        lua_pushnil(L);
+        return 1;
+    }
+    const TMarkdownBlock& block = *pBlock;
+    // Offsets count in the line as committed, so the text is too, whatever rows wrapping split it into
+    const QString lineText = buffer.markdownParagraphText(lineNumber);
+
+    const auto setString = [L](const char* key, const QString& value) {
+        lua_pushstring(L, key);
+        lua_pushstring(L, value.toUtf8().constData());
+        lua_settable(L, -3);
+    };
+    const auto setNumber = [L](const char* key, const lua_Number value) {
+        lua_pushstring(L, key);
+        lua_pushnumber(L, value);
+        lua_settable(L, -3);
+    };
+
+    lua_newtable(L);
+    setString("kind", TMarkdownBlock::kindName(block.kind));
+    setString("text", lineText.mid(block.contentStart));
+    setNumber("contentStart", block.contentStart);
+    setNumber("message", block.message);
+    setNumber("level", block.level);
+    setNumber("quote", block.quote);
+    setNumber("list", block.list);
+    setNumber("number", block.number);
+    setNumber("section", block.section);
+    if (block.marker != TMarkdownBlock::Marker::None) {
+        setString("marker", block.marker == TMarkdownBlock::Marker::Bullet ? qsl("bullet") : qsl("ordered"));
+    }
+    if (block.task != TMarkdownBlock::Task::None) {
+        setString("task", block.task == TMarkdownBlock::Task::Done ? qsl("done") : qsl("open"));
+    }
+    if (!block.language.isEmpty()) {
+        setString("language", block.language);
+    }
+    if (block.kind == TMarkdownBlock::Kind::Summary) {
+        lua_pushstring(L, "open");
+        lua_pushboolean(L, block.open);
+        lua_settable(L, -3);
+    }
+    if (block.table) {
+        setNumber("table", block.table);
+    }
+    if (const TMarkdown* pMarkdown = buffer.markdown()) {
+        if (const QString mark = pMarkdown->mMessages.mark(block.message).name(); !mark.isEmpty()) {
+            setString("mark", mark);
+        }
+        if (const QString id = pMarkdown->mMessages.id(block.message); !id.isEmpty()) {
+            setString("id", id);
+        }
+    }
+    if (!block.align.isEmpty()) {
+        lua_pushstring(L, "align");
+        lua_newtable(L);
+        int index = 0;
+        for (const TMarkdownBlock::Align align : block.align) {
+            lua_pushnumber(L, ++index);
+            lua_pushstring(L, align == TMarkdownBlock::Align::Left ? "left" : align == TMarkdownBlock::Align::Center ? "center" : align == TMarkdownBlock::Align::Right ? "right" : "none");
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+    }
+    if (!block.cells.isEmpty()) {
+        lua_pushstring(L, "cells");
+        lua_newtable(L);
+        int index = 0;
+        for (const TMarkdownCell& cell : block.cells) {
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            setNumber("start", cell.start);
+            setNumber("length", cell.length);
+            setString("text", lineText.mid(cell.start, cell.length));
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+    }
+    if (!block.links.isEmpty()) {
+        lua_pushstring(L, "links");
+        lua_newtable(L);
+        int index = 0;
+        for (const TMarkdownLink& link : block.links) {
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            setNumber("start", link.start);
+            setNumber("length", link.length);
+            setString("destination", link.destination);
+            if (!link.title.isEmpty()) {
+                setString("title", link.title);
+            }
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+    }
     return 1;
 }
 

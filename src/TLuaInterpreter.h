@@ -856,6 +856,7 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
+    static int getMarkdownBlock(lua_State*);
     static int getCharacterName(lua_State*);
     static int getProfileInformation(lua_State*);
     static int setProfileInformation(lua_State*);

@@ -32,12 +32,17 @@
 // fixed sleep that would pass on a slow runner by accident.
 
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <chrono>
+#include <optional>
 
 #include "Host.h"
+#include "TConsoleModel.h"
+#include "TMarkdown.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
@@ -899,32 +904,40 @@ private slots:
         QCOMPARE(updates.first().value, QByteArray("0"));
     }
 
+    // The packages a GMCP message such as Core.Supports.Set names, read as JSON, or nothing when none was sent
+    static std::optional<QStringList> gmcpPackages(const QList<Subnegotiation>& sent, const QByteArray& message)
+    {
+        for (const Subnegotiation& subnegotiation : sent) {
+            if (!subnegotiation.payload.startsWith(message + ' ')) {
+                continue;
+            }
+            const QJsonDocument document = QJsonDocument::fromJson(subnegotiation.payload.mid(message.size() + 1));
+            QStringList packages;
+            for (const QJsonValue& package : document.array()) {
+                packages.append(package.toString());
+            }
+            return packages;
+        }
+        return std::nullopt;
+    }
+
+    QList<Subnegotiation> sentGmcp() { return subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP)); }
+
     // The GMCP half of the same capability, for a game that reads Core.Supports instead
     void test_gmcpSupportsListMarkdownWhileItIsOn()
     {
         announce(TN_WILL, OPT_GMCP);
-        QByteArray gmcp;
-        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
-            gmcp += sent.payload;
-        }
-        QVERIFY2(gmcp.contains(R"(Core.Supports.Set [ )"), qPrintable(qsl("no Core.Supports.Set was sent: %1").arg(QString::fromUtf8(gmcp))));
-        QVERIFY2(gmcp.contains(R"("Client.Markdown 1")"), qPrintable(qsl("Core.Supports.Set left Markdown out: %1").arg(QString::fromUtf8(gmcp))));
+        const std::optional<QStringList> supported = gmcpPackages(sentGmcp(), "Core.Supports.Set");
+        QVERIFY2(supported, "no Core.Supports.Set was sent");
+        QVERIFY2(supported->contains(qsl("Client.Markdown 1")), qPrintable(qsl("Core.Supports.Set left Markdown out: %1").arg(supported->join(qsl(", ")))));
 
         mpHost->mEnableMarkdown = false;
         mpHost->mTelnet.sendMarkdownCapability();
-        gmcp.clear();
-        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
-            gmcp += sent.payload;
-        }
-        QCOMPARE(gmcp, QByteArray(R"(Core.Supports.Remove [ "Client.Markdown" ])"));
+        QCOMPARE(gmcpPackages(sentGmcp(), "Core.Supports.Remove"), std::optional<QStringList>(QStringList{qsl("Client.Markdown")}));
 
         mpHost->mEnableMarkdown = true;
         mpHost->mTelnet.sendMarkdownCapability();
-        gmcp.clear();
-        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
-            gmcp += sent.payload;
-        }
-        QCOMPARE(gmcp, QByteArray(R"(Core.Supports.Add [ "Client.Markdown 1" ])"));
+        QCOMPARE(gmcpPackages(sentGmcp(), "Core.Supports.Add"), std::optional<QStringList>(QStringList{qsl("Client.Markdown 1")}));
     }
 
     void test_gmcpSupportsLeaveMarkdownOutWhileItIsOff()
@@ -932,12 +945,50 @@ private slots:
         reconnect();
         mpHost->mEnableMarkdown = false;
         announce(TN_WILL, OPT_GMCP);
-        QByteArray gmcp;
-        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
-            gmcp += sent.payload;
-        }
-        QVERIFY2(gmcp.contains(R"(Core.Supports.Set [ )"), qPrintable(qsl("no Core.Supports.Set was sent: %1").arg(QString::fromUtf8(gmcp))));
-        QVERIFY2(!gmcp.contains("Client.Markdown"), qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(QString::fromUtf8(gmcp))));
+        const std::optional<QStringList> supported = gmcpPackages(sentGmcp(), "Core.Supports.Set");
+        QVERIFY2(supported, "no Core.Supports.Set was sent");
+        QVERIFY2(!supported->contains(qsl("Client.Markdown 1")), qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(supported->join(qsl(", ")))));
+    }
+
+    TBuffer& mainBuffer() { return mpHost->mainConsoleModelOrNull()->buffer; }
+    // The last line committed, as the one after it is the line still to come
+    int lastCommittedLine() { return static_cast<int>(mainBuffer().lineBuffer.size()) - 2; }
+
+    void test_markdownSequencesAreIgnoredWhileThePreferenceIsOff()
+    {
+        mpHost->mEnableMarkdown = false;
+        feed("\x1b]67;1\x1b\\# SpecIgnoredHeading\n\x1b]67;0\x1b\\");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("# SpecIgnoredHeading"));
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "a line was read as Markdown with the preference off");
+    }
+
+    // Turned back on, it waits for the game to turn Markdown on again rather than resuming the old message
+    void test_turningThePreferenceOffEndsMarkdownUntilTheGameTurnsItOnAgain()
+    {
+        feed("\x1b]67;1\x1b\\SpecMarkdownOn\n");
+        QVERIFY2(mainBuffer().markdownBlock(lastCommittedLine()), "the line after an on sequence was not Markdown");
+        mpHost->mEnableMarkdown = false;
+        feed("# SpecWhileOff\n");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("# SpecWhileOff"));
+        QVERIFY(!mainBuffer().markdownBlock(lastCommittedLine()));
+        mpHost->mEnableMarkdown = true;
+        feed("# SpecBackOn\n");
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "Markdown came back on with no on sequence");
+        feed("\x1b]67;1\x1b\\SpecOnAgain\n\x1b]67;0\x1b\\");
+        QVERIFY(mainBuffer().markdownBlock(lastCommittedLine()));
+    }
+
+    void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()
+    {
+        feed("\x1b]67;1;id=specReconnect:mark=busy\x1b\\SpecBeforeReconnect\n");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(lastCommittedLine());
+        QVERIFY2(pBlock, "the line after an on sequence was not Markdown");
+        const quint32 message = pBlock->message;
+        reconnect();
+        feed("SpecAfterReconnect\n");
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "Markdown stayed on across a new connection");
+        feed("\x1b]67;2;id=specReconnect:mark=ok\x1b\\");
+        QCOMPARE(mainBuffer().markdown()->mMessages.mark(message).name(), qsl("busy"));
     }
 };
 

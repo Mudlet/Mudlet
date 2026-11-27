@@ -35,6 +35,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "THyperlinkSelectionManager.h"
 #include "TIngestPipeline.h"
+#include "TMarkdown.h"
 #include "TPrintSink.h"
 #include "TStringUtils.h"
 #include "UntrustedText.h"
@@ -930,6 +931,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , timeBuffer(other.timeBuffer)
 , promptBuffer(other.promptBuffer)
 , wrapGapBuffer(other.wrapGapBuffer)
+, markdownBuffer(other.markdownBuffer.size(), 0)
 , mLinkStore(other.mLinkStore)
 , mLinesLimit(other.mLinesLimit)
 , mBatchDeleteSize(other.mBatchDeleteSize)
@@ -1041,6 +1043,9 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         timeBuffer = other.timeBuffer;
         promptBuffer = other.promptBuffer;
         wrapGapBuffer = other.wrapGapBuffer;
+        // A copy holds text only: its tags would name blocks in the source's store
+        markdownBuffer = QList<quint32>(other.markdownBuffer.size(), 0);
+        mpMarkdown.reset();
         mLinkStore = other.mLinkStore;
         mLinesLimit = other.mLinesLimit;
         mBatchDeleteSize = other.mBatchDeleteSize;
@@ -1460,6 +1465,16 @@ void TBuffer::resetSequenceParserState()
     mLocalIncompleteSequenceBytes.clear();
     mLocalPendingLead = 0;
     mWarnedAboutStringSequence = false;
+    // Markdown is off when a connection opens, and the last one's ids name nothing on this one
+    if (mpMarkdown) {
+        mpMarkdown->mOn = false;
+        mpMarkdown->mLineInMarkdown = false;
+        mpMarkdown->mMessages.forgetIds();
+        if (mpMarkdown->mOpenMessage) {
+            mpMarkdown->mOpenMessage = 0;
+            commitMarkdownLines(mpMarkdown->mParser.endMessage());
+        }
+    }
 }
 
 void TBuffer::warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd)
@@ -1738,7 +1753,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 // Forced inline: parseChunk() is past the size where the compiler inlines into it on its own
 Q_ALWAYS_INLINE bool TBuffer::mxpProcessorEnabled() const
 {
-    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled();
+    // MXP follows the Markdown state at the line's first character, so <details> is never a tag
+    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled() && !markdownLineUnderWay();
 }
 
 Q_ALWAYS_INLINE bool TBuffer::mxpClientBold() const
@@ -2659,6 +2675,9 @@ bool TBuffer::speculationEligible() const
         return false;
     }
     const TMxpMudlet& mxpClient = mpHost->mMxpClient;
+    if (mpMarkdown && mpHost->mEnableMarkdown && (mpMarkdown->mOn || mpMarkdown->mLineInMarkdown || mpMarkdown->mOpenMessage)) {
+        return false;
+    }
     return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
@@ -2880,7 +2899,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         }
     }
 
-    if (mpHost->mUndoServerWrap && isFromServer && ch == '\n' && !forcedLineBreak && !mMudLine.isEmpty()) {
+    // A Markdown line is a whole line as the game sent it, so it is never held to be joined
+    const bool markdownLine = markdownLineUnderWay();
+    if (mpHost->mUndoServerWrap && isFromServer && ch == '\n' && !forcedLineBreak && !mMudLine.isEmpty() && !markdownLine) {
         // The game wraps its own output and this is a genuine newline from
         // it: a segment that runs right up to the game's wrap column is
         // probably not a whole line, so hold it back and join its
@@ -2938,7 +2959,8 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // Nor before the link has any text: one opened just before a line break is
     // for the line after it.
     if (mHyperlinkActive) {
-        if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty()) {
+        // The Markdown standard carries an open OSC 8 link across lines, as color is
+        if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty() && !markdownLine) {
             finaliseActiveHyperlink();
         } else {
             carryActiveHyperlinkPastFlush(mMudLine, mMudBuffer);
@@ -2962,12 +2984,16 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
         TLineFormat().swap(mMudBuffer);
     }
+    if (Q_UNLIKELY(mpMarkdown) && commitMarkdownLine(line, chars, ch)) {
+        ++localBufferPosition;
+        return true;
+    }
     commitLineData(std::move(line), std::move(chars), ch);
     ++localBufferPosition;
     return true;
 }
 
-void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
+void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch, const quint32 markdownBlockId)
 {
     // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
     // blank-line setting below can turn it into a line of one space
@@ -3009,6 +3035,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
             promptBuffer.append(false);
         }
         wrapGapBuffer.append(0);
+        markdownBuffer.append(markdownBlockId);
     } else {
         if (!line.isEmpty()) {
             // The last line is empty, so this is the whole of it
@@ -3030,6 +3057,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         } else {
             promptBuffer.back() = false;
         }
+        markdownBuffer.back() = markdownBlockId;
     }
     // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
@@ -3191,6 +3219,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         timeBuffer.push_back(csmNoTimeStamp);
         promptBuffer << false;
         wrapGapBuffer.append(0);
+        markdownBuffer.append(0);
     }
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -5043,6 +5072,12 @@ void TBuffer::decodeOSC(const QString& sequence)
         return;
     }
 
+    // The whole number decides, as 66 and 68 are other standards' and 6 is xterm's
+    if (sequence.startsWith(qsl("67;")) || sequence == qsl("67")) {
+        decodeMarkdownOSC(QStringView(sequence).mid(2));
+        return;
+    }
+
     const bool serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
 #if defined(DEBUG_OSC_PROCESSING)
     // Only log sequences that aren't just OSC 8 terminators to reduce noise
@@ -6775,6 +6810,7 @@ void TBuffer::appendEmptyLine()
     timeBuffer << lineArrivalTime();
     promptBuffer << false;
     wrapGapBuffer.append(0);
+    markdownBuffer.append(0);
 }
 
 // This was called "insert" but that is commonly used for built in methods and
@@ -7359,6 +7395,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         qint64 time;
         quint16 wrapGap;
         bool prompt;
+        quint32 markdown;
     };
     // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
     QVarLengthArray<RewrappedLine, 8> rewrapped;
@@ -7384,7 +7421,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // trivial case
         if (buffer[i].empty()) {
             keepWholeForHeld(i);
-            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false, markdownBuffer.at(i)});
             continue;
         }
 
@@ -7405,7 +7442,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
         if (lineBreaks.isEmpty()) {
             keepWholeForHeld(i);
-            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt, markdownBuffer.at(i)});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -7465,7 +7502,12 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (movesHeld) {
                 heldSpans.append({i, w.firstChar, w.lastChar, firstRewrappedLine + static_cast<int>(rewrapped.size()), addsIndent ? (w.isNewline ? indent : hangingIndent) : 0});
             }
-            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
+            rewrapped.append({std::move(newBufferLine),
+                              std::move(newLineText),
+                              segmentTime,
+                              static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())),
+                              isPrompt,
+                              previousSegmentEnd < 0 ? markdownBuffer.at(i) : 0});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -7478,6 +7520,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         timeBuffer.pop_back();
         promptBuffer.pop_back();
         wrapGapBuffer.pop_back();
+        markdownBuffer.pop_back();
     }
 
     const int rewrappedLines = static_cast<int>(rewrapped.size());
@@ -7490,12 +7533,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
                 wrapGapBuffer.back() = line.wrapGap;
             }
+            markdownBuffer.back() = line.markdown;
         } else {
             buffer.push_back(std::move(line.chars));
             lineBuffer.append(std::move(line.text));
             timeBuffer.append(line.time);
             promptBuffer.push_back(line.prompt);
             wrapGapBuffer.append(line.wrapGap);
+            markdownBuffer.append(line.markdown);
         }
     }
 
@@ -7939,12 +7984,16 @@ void TBuffer::clear()
 
     // The game's unended or held line, and an open MXP link, carry their ids on past the clear
     clearLinkState(liveLinkIdsOutsideTheLines());
+    if (mpMarkdown) {
+        forgetMarkdownMessagesWithoutLines();
+    }
 
     buffer.emplace_back();
     lineBuffer << QString();
     timeBuffer << csmNoTimeStamp;
     promptBuffer.push_back(false);
     wrapGapBuffer.append(0);
+    markdownBuffer.append(0);
 }
 
 void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
@@ -8140,12 +8189,23 @@ void TBuffer::shrinkBuffer()
                 prefetchAllocatorHeader(chars, 0);
             }
         }
+        if (const quint32 id = markdownBuffer.at(0); id && mpMarkdown) {
+            if (markdownBuffer.size() > 1 && markdownBuffer.at(1) == 0 && wrapsFromPreviousLine(1)) {
+                markdownBuffer[1] = id;
+            } else {
+                mpMarkdown->forget(id);
+            }
+        }
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
         wrapGapBuffer.pop_front();
+        markdownBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
+    }
+    if (mpMarkdown) {
+        forgetMarkdownMessagesWithoutLines();
     }
     // We need to adjust the search result line as some lines have now gone
     // away:
@@ -8260,11 +8320,15 @@ bool TBuffer::deleteLines(int from, int to)
             }
         }
 
+        if (mpMarkdown) {
+            retireMarkdownRows(from, to);
+        }
         triggerPassLinesRemoved(from, to);
         lineBuffer.remove(from, delta);
         timeBuffer.remove(from, delta);
         promptBuffer.remove(from, delta);
         wrapGapBuffer.remove(from, delta);
+        markdownBuffer.remove(from, delta);
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         if (mpModel) {
@@ -11265,4 +11329,228 @@ TChar TBuffer::restingCharacter(const TChar& character, const int line, const in
     TChar result = undrawn(character, lookIt->printed.at(printedIndex), lookIt->drawing);
     applyDrawing(result, copy->resting);
     return result;
+}
+
+bool TBuffer::markdownApplies() const
+{
+    if (mpHost.isNull() || !mpHost->mEnableMarkdown || mpParseConfig) {
+        return false;
+    }
+    TConsoleModel* pMainModel = mpHost->mainConsoleModelOrNull();
+    return pMainModel && &pMainModel->buffer == this;
+}
+
+// What follows the 67: empty, or ";1", ";0", ";2" and then ";" and the parameters
+void TBuffer::decodeMarkdownOSC(QStringView sequence)
+{
+    if (!markdownApplies() || !sequence.startsWith(u';')) {
+        return;
+    }
+    if (!mpMarkdown) {
+        mpMarkdown = std::make_unique<TMarkdown>();
+    }
+    TMarkdown& markdown = *mpMarkdown;
+    sequence = sequence.mid(1);
+    const qsizetype split = sequence.indexOf(u';');
+    const QStringView command = split < 0 ? sequence : sequence.left(split);
+    const QStringView parameters = split < 0 ? QStringView() : sequence.mid(split + 1);
+
+    const auto validToken = [](QStringView token) {
+        if (token.isEmpty()) {
+            return false;
+        }
+        for (const QChar c : token) {
+            if (!(c.isLetterOrNumber() && c.unicode() < 128) && c != u'_' && c != u'-') {
+                return false;
+            }
+        }
+        return true;
+    };
+    QString id;
+    TMarkdownMark mark;
+    bool haveMark = false;
+    for (const QStringView parameter : parameters.tokenize(u':')) {
+        const qsizetype equals = parameter.indexOf(u'=');
+        if (equals <= 0) {
+            continue;
+        }
+        const QStringView name = parameter.left(equals);
+        const QStringView value = parameter.mid(equals + 1);
+        if (!validToken(name) || !validToken(value)) {
+            continue;
+        }
+        if (name == u"id" && value.size() <= 32) {
+            id = value.toString();
+        } else if (name == u"mark") {
+            bool valid = false;
+            const TMarkdownMark parsed = TMarkdownMark::parse(value, &valid);
+            if (valid) {
+                mark = parsed;
+                haveMark = true;
+            }
+        }
+    }
+
+    // A sequence part way through a line takes effect on the next one
+    const bool lineUnderWay = !mMudLine.isEmpty();
+    if (command == u"1") {
+        markdown.mMessages.begin(id, mark);
+        markdown.mOn = true;
+        if (!lineUnderWay) {
+            if (markdown.mOpenMessage) {
+                markdown.mOpenMessage = 0;
+                commitMarkdownLines(markdown.mParser.endMessage());
+            }
+            markdown.mLineInMarkdown = true;
+            markdown.mLineMessage = markdown.mMessages.current();
+        }
+    } else if (command == u"0") {
+        markdown.mOn = false;
+        if (!lineUnderWay) {
+            markdown.mLineInMarkdown = false;
+            if (markdown.mOpenMessage) {
+                markdown.mOpenMessage = 0;
+                commitMarkdownLines(markdown.mParser.endMessage());
+            }
+        }
+    } else if (command == u"2") {
+        if (id.isEmpty() || !haveMark) {
+            return;
+        }
+        const quint32 message = markdown.mMessages.change(id, mark);
+        if (message && mpModel) {
+            emit mpModel->mNotifier.markdownMarkChanged(message);
+        }
+    }
+}
+
+// Commits the line as Markdown, or the lines a Markdown message left open before it; true when the line is done
+bool TBuffer::commitMarkdownLine(QString& line, TLineFormat& chars, const char ch)
+{
+    // The posting timer finding nothing to flush
+    if (line.isEmpty() && ch == '\r') {
+        return false;
+    }
+    TMarkdown& markdown = *mpMarkdown;
+    if (!mpHost->mEnableMarkdown) {
+        // Turned off: what is left open is committed, and only a new on sequence turns Markdown back on
+        markdown.mOn = false;
+        markdown.mLineInMarkdown = false;
+    }
+    const bool inMarkdown = markdown.mLineInMarkdown;
+    const quint32 lineMessage = markdown.mLineMessage;
+    markdown.mLineInMarkdown = markdown.mOn;
+    markdown.mLineMessage = markdown.mMessages.current();
+
+    if (!inMarkdown) {
+        if (markdown.mOpenMessage) {
+            markdown.mOpenMessage = 0;
+            commitMarkdownLines(markdown.mParser.endMessage());
+        }
+        return false;
+    }
+    if (markdown.mOpenMessage && markdown.mOpenMessage != lineMessage) {
+        commitMarkdownLines(markdown.mParser.endMessage());
+    }
+    markdown.mOpenMessage = lineMessage;
+    // A prompt, and a line shown before the rest of it arrived, are shown as sent
+    if (ch == '\xff' || ch == '\r') {
+        commitMarkdownLines(markdown.mParser.addPrompt());
+        return false;
+    }
+    markdown.mParser.setRuleWidth(std::clamp(mWrapAt, 3, 1000));
+    markdown.mParser.setPlainFormat(TChar(mForeGroundColor, mBackGroundColor));
+    commitMarkdownLines(markdown.mParser.addLine(line, chars, lineMessage));
+    if (markdown.mParser.holdsLines() && mpModel) {
+        emit mpModel->mNotifier.serverWrapLineHeld();
+    }
+    return true;
+}
+
+void TBuffer::commitMarkdownLines(QList<TMarkdownLine>&& lines)
+{
+    for (TMarkdownLine& line : lines) {
+        // commitLineData() drops it, so it takes no block with it
+        if (line.text.isEmpty() && mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+            continue;
+        }
+        const quint32 id = mpMarkdown->store(std::move(line.block));
+        commitLineData(std::move(line.text), TLineFormat(std::move(line.format)), '\n', id);
+    }
+}
+
+void TBuffer::flushMarkdownHeldLines()
+{
+    if (mpMarkdown && mpMarkdown->mParser.holdsLines()) {
+        commitMarkdownLines(mpMarkdown->mParser.flushHeld());
+    }
+}
+
+const TMarkdownBlock* TBuffer::markdownBlock(const int lineNumber) const
+{
+    if (!mpMarkdown || lineNumber < 0 || lineNumber >= markdownBuffer.size()) {
+        return nullptr;
+    }
+    int line = lineNumber;
+    while (line > 0 && markdownBuffer.at(line) == 0 && wrapsFromPreviousLine(line)) {
+        --line;
+    }
+    return mpMarkdown->block(markdownBuffer.at(line));
+}
+
+bool TBuffer::markdownLineUnderWay() const
+{
+    return mpMarkdown && mpMarkdown->mLineInMarkdown && !mpHost.isNull() && mpHost->mEnableMarkdown;
+}
+
+// Rows from to to are going: a paragraph that wraps past them keeps its tag on its first surviving row
+void TBuffer::retireMarkdownRows(const int from, const int to)
+{
+    const int next = to + 1;
+    if (next < markdownBuffer.size() && markdownBuffer.at(next) == 0 && wrapsFromPreviousLine(next)) {
+        int head = to;
+        while (head > from && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        if (markdownBuffer.at(head)) {
+            markdownBuffer[next] = std::exchange(markdownBuffer[head], 0);
+        }
+    }
+    for (int row = from; row <= to; ++row) {
+        if (const quint32 id = markdownBuffer.at(row)) {
+            mpMarkdown->forget(id);
+        }
+    }
+}
+
+// Messages older than the first one with a line still in the buffer, or still to come, have nothing left to mark
+void TBuffer::forgetMarkdownMessagesWithoutLines()
+{
+    quint32 oldestKept = mpMarkdown->mOpenMessage ? mpMarkdown->mOpenMessage : mpMarkdown->mMessages.current();
+    for (const quint32 id : std::as_const(markdownBuffer)) {
+        if (id) {
+            if (const TMarkdownBlock* pBlock = mpMarkdown->block(id)) {
+                oldestKept = std::min(oldestKept, pBlock->message);
+                break;
+            }
+        }
+    }
+    if (oldestKept > 1) {
+        mpMarkdown->mMessages.forgetThrough(oldestKept - 1);
+    }
+}
+
+// The paragraph's text as it was committed, before column wrapping split it into rows
+QString TBuffer::markdownParagraphText(const int lineNumber) const
+{
+    int first = lineNumber;
+    while (first > 0 && markdownBuffer.at(first) == 0 && wrapsFromPreviousLine(first)) {
+        --first;
+    }
+    QString text = lineBuffer.at(first);
+    for (int row = first + 1; row < lineBuffer.size() && markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row); ++row) {
+        text.append(QString(wrapGapBefore(row), QChar::Space));
+        text.append(QStringView(lineBuffer.at(row)).mid(wrapIndentWidth(row)));
+    }
+    return text;
 }

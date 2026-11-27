@@ -61,6 +61,9 @@ class QTextCodec;
 class QTimer;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
+class TMarkdown;
+struct TMarkdownBlock;
+struct TMarkdownLine;
 class TIngestPipeline;
 struct TIngestJob;
 struct TSpeculatedLine;
@@ -699,6 +702,12 @@ public:
     // - public so that the connection teardown and Host's flush timer can
     // flush it:
     void flushPendingServerWrapJoin(const bool endsHyperlink = true);
+    // A table's rows held for its column widths
+    void flushMarkdownHeldLines();
+    // The tag of the paragraph the line belongs to, or null
+    const TMarkdownBlock* markdownBlock(int lineNumber) const;
+    const TMarkdown* markdown() const { return mpMarkdown.get(); }
+    QString markdownParagraphText(int lineNumber) const;
     bool holdsServerWrapLine() const { return !mServerWrapPendingLine.isEmpty(); }
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
@@ -775,6 +784,8 @@ public:
     // many spaces the break dropped between the two - a copy puts them back;
     // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
+    // An id of the line's Markdown tag, 0 for a line that has none or that column wrapping split off
+    QList<quint32> markdownBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
     int mBatchDeleteSize = 1000;
@@ -876,7 +887,14 @@ private:
     void forgetSpoilerTextOnTheLines(const QSet<int>& linkIds);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
-    void commitLineData(QString line, TLineFormat chars, char ch);
+    void commitLineData(QString line, TLineFormat chars, char ch, quint32 markdownBlockId = 0);
+    bool markdownApplies() const;
+    bool markdownLineUnderWay() const;
+    void retireMarkdownRows(int from, int to);
+    void forgetMarkdownMessagesWithoutLines();
+    void decodeMarkdownOSC(QStringView sequence);
+    bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
+    void commitMarkdownLines(QList<TMarkdownLine>&& lines);
     qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
@@ -971,6 +989,8 @@ private:
     QColor mBackGroundColor;
 
     QPointer<Host> mpHost;
+    // Made on the first OSC 67 the main console's buffer reads
+    std::unique_ptr<TMarkdown> mpMarkdown;
 
     bool mBold = false;
     // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour
