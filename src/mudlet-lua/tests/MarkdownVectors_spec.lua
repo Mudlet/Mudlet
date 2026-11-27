@@ -5,7 +5,7 @@
 local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
 
 -- The parts of the standard implemented so far
-local GROUPS = {switching = true, lines = true, headings = true, code = true, lists = true, quotes = true, rules = true, emphasis = true, literal = true}
+local GROUPS = {switching = true, lines = true, headings = true, code = true, lists = true, quotes = true, rules = true, emphasis = true, literal = true, color = true}
 
 local ESC = "\27"
 local ON = ESC .. "]67;1" .. ESC .. "\\"
@@ -73,18 +73,6 @@ local function colorsFor(vector)
   return byColor
 end
 
-local function countMessages(vector)
-  local count = 0
-  for _, piece in ipairs(vector.input) do
-    if type(piece) == "string" then
-      for terminator in piece:gmatch(ESC .. "%]67;1([;" .. ESC .. "\7])") do
-        count = count + 1
-      end
-    end
-  end
-  return count
-end
-
 local function sameAttributes(a, b)
   for key, value in pairs(a) do
     if key ~= "start" and key ~= "length" and not (type(value) == "table" and type(b[key]) == "table" and value.destination == b[key].destination and value.title == b[key].title) and b[key] ~= value then
@@ -145,7 +133,7 @@ end
 local function vectorLine(lineNumber, text, base, plainFormat, colors)
   local block = getMarkdownBlock("main", lineNumber)
   if not block then
-    return {kind = "plain", text = text}
+    return {kind = "plain", text = text, spans = readSpans(lineNumber, 0, utf16Units(text), {kind = "plain"}, plainFormat, colors)}
   end
   local line = {kind = block.kind}
   if block.kind == "tableHeader" or block.kind == "tableRow" then
@@ -175,14 +163,19 @@ local function vectorLine(lineNumber, text, base, plainFormat, colors)
   return line, block
 end
 
-local function play(vector)
-  local colors = colorsFor(vector)
-  -- Off where no line has begun turns Markdown off and makes no line
-  feed(OFF)
+-- A message of its own, with one line, whose number counts the messages before it
+local function probe()
+  -- Off and a reset where no line has begun make no line
+  feed(OFF .. ESC .. "[0m")
   feed(ON .. "probe\n" .. OFF)
   local probeLine = getLastLineNumber("main") - 1
-  local probe = assert(getMarkdownBlock("main", probeLine), "the probe line was not tagged as Markdown")
-  local base = probe.message
+  local block = assert(getMarkdownBlock("main", probeLine), "the probe line was not tagged as Markdown")
+  return block.message, probeLine
+end
+
+local function play(vector)
+  local colors = colorsFor(vector)
+  local base, probeLine = probe()
   local plainFormat = formatAt(probeLine, 0)
   local first = getLastLineNumber("main")
 
@@ -198,11 +191,13 @@ local function play(vector)
   end
 
   local last = getLastLineNumber("main") - 1
+  local texts = getLines("main", first, last + 1)
   local lines, messages = {}, {}
-  for index = 1, countMessages(vector) do
+  -- Counted by Mudlet itself: a probe after the vector is numbered past every message the vector made
+  local after = probe()
+  for index = 1, after - base - 1 do
     messages[index] = {}
   end
-  local texts = getLines("main", first, last + 1)
   for offset, text in ipairs(texts) do
     local line, block = vectorLine(first + offset - 1, text, base, plainFormat, colors)
     if line.kind ~= "tableDelimiter" then

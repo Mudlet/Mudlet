@@ -2009,6 +2009,10 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     }
     lua_settable(L, -3);
 
+    lua_pushstring(L, "code");
+    lua_pushboolean(L, result.second.isCode());
+    lua_settable(L, -3);
+
     lua_pushstring(L, "concealed");
     lua_pushboolean(L, result.second.isConcealed());
     lua_settable(L, -3);

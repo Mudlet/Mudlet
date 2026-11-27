@@ -8309,6 +8309,10 @@ bool TBuffer::deleteLines(int from, int to)
             forgetLooksOfRemovedCharacters(i, 0, -1);
         }
 
+        // Before the stamps change below, which would hide that the row after the range continues a paragraph
+        if (mpMarkdown) {
+            retireMarkdownRows(from, to);
+        }
         // A line continuing a logical line that starts in the range takes the stamp of the last
         // line there to start one; below a range of continuations alone it still continues the line above
         if (wrapsFromPreviousLine(to + 1)) {
@@ -8320,9 +8324,6 @@ bool TBuffer::deleteLines(int from, int to)
             }
         }
 
-        if (mpMarkdown) {
-            retireMarkdownRows(from, to);
-        }
         triggerPassLinesRemoved(from, to);
         lineBuffer.remove(from, delta);
         timeBuffer.remove(from, delta);
@@ -11394,6 +11395,10 @@ void TBuffer::decodeMarkdownOSC(QStringView sequence)
     // A sequence part way through a line takes effect on the next one
     const bool lineUnderWay = !mMudLine.isEmpty();
     if (command == u"1") {
+        // The line under way stays in the message it began in, so that message keeps its record
+        if (lineUnderWay && markdown.mLineInMarkdown) {
+            markdown.mMessages.noteLine(markdown.mLineMessage);
+        }
         markdown.mMessages.begin(id, mark);
         markdown.mOn = true;
         if (!lineUnderWay) {

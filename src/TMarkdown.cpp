@@ -19,6 +19,8 @@
 
 #include "TMarkdown.h"
 
+#include "TMarkdownInline.h"
+
 #include "utils.h"
 
 TMarkdownMark TMarkdownMark::parse(QStringView value, bool* valid)
@@ -110,6 +112,10 @@ QString TMarkdownBlock::kindName(const Kind kind)
 
 quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark)
 {
+    // The message before, if it showed no line and has no id, has nothing left to mark
+    if (const auto previous = mRecords.find(mLastMessage); previous != mRecords.end() && previous->id.isEmpty() && !mWithLines.contains(mLastMessage)) {
+        mRecords.erase(previous);
+    }
     const quint32 message = ++mLastMessage;
     if (id.isEmpty() && mark.kind == TMarkdownMark::Kind::None) {
         return message;
@@ -125,7 +131,11 @@ quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark)
             const QString oldest = mIdsInOrder.dequeue();
             const quint32 oldMessage = mMessageById.take(oldest);
             if (auto it = mRecords.find(oldMessage); it != mRecords.end()) {
-                it->id.clear();
+                if (mWithLines.contains(oldMessage)) {
+                    it->id.clear();
+                } else {
+                    mRecords.erase(it);
+                }
             }
         }
     }
@@ -154,12 +164,20 @@ void TMarkdownMessages::forgetThrough(const quint32 message)
             ++it;
         }
     }
+    for (auto it = mWithLines.begin(); it != mWithLines.end();) {
+        it = *it <= message ? mWithLines.erase(it) : std::next(it);
+    }
 }
 
 void TMarkdownMessages::forgetIds()
 {
-    for (Record& record : mRecords) {
-        record.id.clear();
+    for (auto it = mRecords.begin(); it != mRecords.end();) {
+        if (mWithLines.contains(it.key())) {
+            it->id.clear();
+            ++it;
+        } else {
+            it = mRecords.erase(it);
+        }
     }
     mMessageById.clear();
     mIdsInOrder.clear();
@@ -249,6 +267,17 @@ TMarkdownParser::Output TMarkdownParser::make(const TMarkdownBlock::Kind kind, c
     line.block.quote = quote;
     line.block.contentStart = static_cast<int>(prefix.size());
     line.block.message = mMessage;
+    switch (kind) {
+    case TMarkdownBlock::Kind::Paragraph:
+    case TMarkdownBlock::Kind::Heading:
+    case TMarkdownBlock::Kind::Item:
+    case TMarkdownBlock::Kind::Continuation:
+    case TMarkdownBlock::Kind::Summary:
+        line.block.links = TMarkdownInline::render(line.text, line.format, line.block.contentStart);
+        break;
+    default:
+        break;
+    }
     return line;
 }
 
@@ -485,6 +514,7 @@ quint32 TMarkdown::store(TMarkdownBlock&& block)
     if (++mLastBlockId == 0) {
         ++mLastBlockId;
     }
+    mMessages.noteLine(block.message);
     mBlocks.insert(mLastBlockId, std::move(block));
     return mLastBlockId;
 }

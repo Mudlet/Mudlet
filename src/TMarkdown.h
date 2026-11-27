@@ -30,6 +30,7 @@
 #include <QList>
 #include <QQueue>
 #include <QRgb>
+#include <QSet>
 #include <QString>
 
 #include <vector>
@@ -103,6 +104,8 @@ public:
     void forgetThrough(quint32 message);
     // A new connection: no id it sends names an earlier message
     void forgetIds();
+    // A record is kept while its message has lines, or while its id can still name it
+    void noteLine(quint32 message) { mWithLines.insert(message); }
 
     static constexpr int csmKeptIds = 256;
 
@@ -117,6 +120,7 @@ private:
     QHash<quint32, Record> mRecords;
     QHash<QString, quint32> mMessageById;
     QQueue<QString> mIdsInOrder;
+    QSet<quint32> mWithLines;
 };
 
 // A finished line: its text with the grid's prefix, formats to match, and its tag

@@ -95,4 +95,29 @@ describe("Markdown from the game", function()
       assert.are.equal(text, getMarkdownBlock("main", row).text)
     end
   end)
+
+  local function formatOf(lineNumber, column)
+    moveCursor("main", 0, lineNumber)
+    selectSection("main", column, 1)
+    local format = getTextFormat("main")
+    deselect("main")
+    return format
+  end
+
+  it("marks a code span's characters as code, and only those", function()
+    feed(ON .. "SpecCode `look` now\n" .. OFF)
+    local line = lastLine()
+    assert.are.equal("SpecCode look now", lineText(line))
+    assert.is_true(formatOf(line, 9).code, "a character of the code span was not marked as code")
+    assert.is_false(formatOf(line, 14).code, "a character after the code span was marked as code")
+  end)
+
+  it("makes bold text bold without brightening its color", function()
+    feed(ESC .. "[31mSpecRedPlain" .. ESC .. "[0m\n")
+    local red = formatOf(lastLine(), 0).foreground
+    feed(ON .. ESC .. "[31m**SpecRedBold**" .. ESC .. "[0m\n" .. OFF)
+    local format = formatOf(lastLine(), 0)
+    assert.is_true(format.bold)
+    assert.are.same(red, format.foreground)
+  end)
 end)

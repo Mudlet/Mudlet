@@ -135,6 +135,8 @@ public:
         // From SGR 8 m; however there is no MUD standard protocol to control
         // when we should show concealed text.
         Concealed = 0x20000,          // 0000 0000 0000 0010 0000 0000 0000 0000
+        // A Markdown code span
+        Code = 0x40000,               // 0000 0000 0000 0100 0000 0000 0000 0000
         // Mask for "is flashing" at any rate - will return a logical true
         // should either of the above be set - should both be set then FastBlink
         // should take preference over Blink:
@@ -142,7 +144,7 @@ public:
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x1c3ffff,         // 0000 0001 1100 0011 1111 1111 1111 1111 (includes extended underline styles)
+        TestMask = 0x1c7ffff,         // 0000 0001 1100 0111 1111 1111 1111 1111 (includes extended underline styles and Code)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -260,6 +262,7 @@ public:
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
+    bool isCode() const { return mFlags & Code; }
     bool isBoldAsked() const { return mFlags & BoldAsked; }
     bool isFound() const { return mFlags & Found; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
@@ -339,6 +342,8 @@ public:
             return qsl("AltFont9");
         case Concealed:
             return qsl("Concealed");
+        case Code:
+            return qsl("Code");
         case UnderlineWavy:
             return qsl("UnderlineWavy");
         case UnderlineDotted:
