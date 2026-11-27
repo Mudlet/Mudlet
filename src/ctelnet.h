@@ -198,6 +198,8 @@ public:
     void sendInfoNewEnvironValue(const QString&);
     void sendInfoNewEnvironValues(const QStringList&);
     void sendInfoNewEnvironOSCHyperlinks();
+    // Tells the game, by NEW-ENVIRON and GMCP, whether Markdown is now shown
+    void sendMarkdownCapability();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(QByteArrayView);
     void setMSSPVariables(const QByteArray&);
@@ -475,6 +477,7 @@ private:
     QString getNewEnvironOSCHyperlinksDisabled();
     QString getNewEnvironOSCHyperlinksGmcp();
     QString getNewEnvironOSCHyperlinksLocal();
+    QString getNewEnvironMarkdown();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();

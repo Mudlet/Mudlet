@@ -334,6 +334,7 @@ private slots:
         mpHost->mEnableMNES = false;
         mpHost->mAdvertiseScreenReader = false;
         mpHost->mEnableOSC8Hyperlinks = true;
+        mpHost->mEnableMarkdown = true;
         mpServer->forgetReceived();
     }
 
@@ -867,6 +868,76 @@ private slots:
         // MNES rides on NEW_ENVIRON, so it cannot be advertised without it.
         mpHost->mEnableNEWENVIRON = false;
         QVERIFY2(!(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("MTTS")).second.toInt() & MTTS_STD_MNES), "MNES was advertised in MTTS with NEW_ENVIRON turned off");
+    }
+
+    // A game sends Markdown only to a client that says it renders it
+    void test_markdownIsAdvertisedByThePreference()
+    {
+        QCOMPARE(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("MARKDOWN")).second, qsl("1"));
+        mpHost->mEnableMarkdown = false;
+        QCOMPARE(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("MARKDOWN")).second, qsl("0"));
+        mpHost->mEnableMNES = true;
+        QVERIFY2(!mpHost->mTelnet.getNewEnvironDataMap().contains(qsl("MARKDOWN")), "MARKDOWN was offered under MNES, which allows only its own variables");
+    }
+
+    void test_aMarkdownChangeIsAnnouncedOnItsOwn()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        mpServer->forgetReceived();
+        mpHost->mEnableMarkdown = false;
+        mpHost->mTelnet.sendMarkdownCapability();
+
+        QString problem;
+        const QList<EnvironVariable> updates = soleReplyVariables(NEW_ENVIRON_INFO, problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(updates.size(), 1);
+        QCOMPARE(updates.first().type, NEW_ENVIRON_USERVAR);
+        QCOMPARE(updates.first().name, QByteArray("MARKDOWN"));
+        QCOMPARE(updates.first().value, QByteArray("0"));
+    }
+
+    // The GMCP half of the same capability, for a game that reads Core.Supports instead
+    void test_gmcpSupportsListMarkdownWhileItIsOn()
+    {
+        announce(TN_WILL, OPT_GMCP);
+        QByteArray gmcp;
+        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
+            gmcp += sent.payload;
+        }
+        QVERIFY2(gmcp.contains(R"(Core.Supports.Set [ )"), qPrintable(qsl("no Core.Supports.Set was sent: %1").arg(QString::fromUtf8(gmcp))));
+        QVERIFY2(gmcp.contains(R"("Client.Markdown 1")"), qPrintable(qsl("Core.Supports.Set left Markdown out: %1").arg(QString::fromUtf8(gmcp))));
+
+        mpHost->mEnableMarkdown = false;
+        mpHost->mTelnet.sendMarkdownCapability();
+        gmcp.clear();
+        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
+            gmcp += sent.payload;
+        }
+        QCOMPARE(gmcp, QByteArray(R"(Core.Supports.Remove [ "Client.Markdown" ])"));
+
+        mpHost->mEnableMarkdown = true;
+        mpHost->mTelnet.sendMarkdownCapability();
+        gmcp.clear();
+        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
+            gmcp += sent.payload;
+        }
+        QCOMPARE(gmcp, QByteArray(R"(Core.Supports.Add [ "Client.Markdown 1" ])"));
+    }
+
+    void test_gmcpSupportsLeaveMarkdownOutWhileItIsOff()
+    {
+        reconnect();
+        mpHost->mEnableMarkdown = false;
+        announce(TN_WILL, OPT_GMCP);
+        QByteArray gmcp;
+        for (const Subnegotiation& sent : subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP))) {
+            gmcp += sent.payload;
+        }
+        QVERIFY2(gmcp.contains(R"(Core.Supports.Set [ )"), qPrintable(qsl("no Core.Supports.Set was sent: %1").arg(QString::fromUtf8(gmcp))));
+        QVERIFY2(!gmcp.contains("Client.Markdown"), qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(QString::fromUtf8(gmcp))));
     }
 };
 

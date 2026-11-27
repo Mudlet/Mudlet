@@ -1420,6 +1420,7 @@ public:
     // sending links Mudlet will not render. It is checked as sequences are
     // decoded, so links already drawn in the buffer stay clickable.
     bool mEnableOSC8Hyperlinks = true;
+    bool mEnableMarkdown = true;
 
     enum class BlankLineBehaviour { Show, Hide, ReplaceWithSpace };
     Q_ENUM(BlankLineBehaviour)

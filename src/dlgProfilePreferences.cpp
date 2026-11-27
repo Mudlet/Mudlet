@@ -940,7 +940,7 @@ void dlgProfilePreferences::buildShell()
     buildCategoryPage(scmCategory_appearance, {pCard_theme, groupBox_iconsAndToolbars, pCard_profileTabs});
 
     // groupBox_doubleClick's two controls read better as one more display option than as a card
-    moveIntoCard(groupBox_displayOptions, {doubleclick_ignore_label, doubleclick_ignore_lineedit, checkBox_enableOSC8Hyperlinks});
+    moveIntoCard(groupBox_displayOptions, {doubleclick_ignore_label, doubleclick_ignore_lineedit, checkBox_enableOSC8Hyperlinks, checkBox_enableMarkdown});
     groupBox_doubleClick->hide();
     reflowDisplayOptionsCard();
     buildCategoryPage(scmCategory_mainDisplay, {groupBox_font, groupBox_displayColors, groupBox_borders, groupBox_wrapping, groupBox_consoleBuffer, groupBox_displayOptions});
@@ -1575,6 +1575,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_downloadMapOptions, tr("download map, fetch map, map from the game")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for links in the game's text being clickable.
     synonyms.append({checkBox_enableOSC8Hyperlinks, tr("hyperlink, link, clickable URL, OSC8")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the game's Markdown as formatted text.
+    synonyms.append({checkBox_enableMarkdown, tr("Markdown, formatted text, headings, tables, rich text")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the time each line arrived in the main window.
     synonyms.append({checkBox_showTimeStamps, tr("timestamps, time stamps, clock, when lines arrived")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing script errors in the game window.
@@ -2678,6 +2680,7 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
                                          checkBox_enableTextAnalyzer,
                                          checkBox_useWideAmbiguousEastAsianGlyphs,
                                          checkBox_enableOSC8Hyperlinks,
+                                         checkBox_enableMarkdown,
                                          label_controlCharacterHandling,
                                          comboBox_controlCharacterHandling,
                                          doubleclick_ignore_label,
@@ -2687,11 +2690,12 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
     gridLayout_groupBox_displayOptions->addWidget(checkBox_enableTextAnalyzer, 0, 1);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_useWideAmbiguousEastAsianGlyphs, 1, 0, 1, 2);
     gridLayout_groupBox_displayOptions->addWidget(checkBox_enableOSC8Hyperlinks, 2, 0, 1, 2);
-    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 3, 0);
-    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 3, 1);
+    gridLayout_groupBox_displayOptions->addWidget(checkBox_enableMarkdown, 3, 0, 1, 2);
+    gridLayout_groupBox_displayOptions->addWidget(label_controlCharacterHandling, 4, 0);
+    gridLayout_groupBox_displayOptions->addWidget(comboBox_controlCharacterHandling, 4, 1);
     // Label beside its field rather than above, saving a row and lining up with the combo box above
-    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 4, 0);
-    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 4, 1);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_label, 5, 0);
+    gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 5, 1);
 }
 
 // The .ui ends this card with the reconnect notice, but the workarounds moved here land after it,
@@ -4066,6 +4070,7 @@ void dlgProfilePreferences::disableHostDetails()
     doubleclick_ignore_label->setEnabled(false);
     doubleclick_ignore_lineedit->setEnabled(false);
     checkBox_enableOSC8Hyperlinks->setEnabled(false);
+    checkBox_enableMarkdown->setEnabled(false);
 
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -4205,6 +4210,7 @@ void dlgProfilePreferences::enableHostDetails()
     doubleclick_ignore_label->setEnabled(true);
     doubleclick_ignore_lineedit->setEnabled(true);
     checkBox_enableOSC8Hyperlinks->setEnabled(true);
+    checkBox_enableMarkdown->setEnabled(true);
 
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -4556,6 +4562,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_accessibleLabels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAccessibleLabels, Qt::UniqueConnection);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
     connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks, Qt::UniqueConnection);
+    checkBox_enableMarkdown->setChecked(pHost->mEnableMarkdown);
+    connect(checkBox_enableMarkdown, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableMarkdown, Qt::UniqueConnection);
 
     checkBox_enableClosedCaption->setChecked(pHost->mEnableClosedCaption);
     connect(checkBox_enableClosedCaption, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableClosedCaption, Qt::UniqueConnection);
@@ -7643,6 +7651,10 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
         }
+        if (mSnapshot.dirty(checkBox_enableMarkdown) && pHost->mEnableMarkdown != checkBox_enableMarkdown->isChecked()) {
+            pHost->mEnableMarkdown = checkBox_enableMarkdown->isChecked();
+            pHost->mTelnet.sendMarkdownCapability();
+        }
 
         if (mSnapshot.dirty(checkBox_expectCSpaceIdInColonLessMColorCode)) {
             pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
@@ -9739,6 +9751,14 @@ void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
     if (pHost->mEnableOSC8Hyperlinks != state) {
         pHost->mEnableOSC8Hyperlinks = state;
         pHost->mTelnet.sendInfoNewEnvironOSCHyperlinks();
+    }
+}
+
+void dlgProfilePreferences::slot_toggleEnableMarkdown(const bool state)
+{
+    if (mpHost && mpHost->mEnableMarkdown != state) {
+        mpHost->mEnableMarkdown = state;
+        mpHost->mTelnet.sendMarkdownCapability();
     }
 }
 

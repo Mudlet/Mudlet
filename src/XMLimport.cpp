@@ -812,6 +812,7 @@ void XMLimport::readHost(Host* pHost)
         pHost->setAccessibleLabels(attributes().value(qsl("accessibleLabels")) == YES);
     }
     setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
+    setBoolAttributeWithDefault(qsl("enableMarkdown"), pHost->mEnableMarkdown, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);

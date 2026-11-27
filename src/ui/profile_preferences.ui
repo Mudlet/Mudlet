@@ -382,6 +382,19 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_enableMarkdown">
+            <property name="toolTip">
+             <string>&lt;p&gt;A game that asks for it can send formatted text written in Markdown: headings, lists, tables, code and links. Uncheck to see that text as the game sent it and to stop telling games that Mudlet shows Markdown.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, Markdown from the game is shown as formatted text and Mudlet tells games it can show it. When unchecked, the text is shown as sent and the capability is not advertised.</string>
+            </property>
+            <property name="text">
+             <string>Show formatted text (Markdown) from the game</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5781,6 +5794,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>acceptServerGUI</tabstop>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>checkBox_enableOSC8Hyperlinks</tabstop>
+  <tabstop>checkBox_enableMarkdown</tabstop>
   <tabstop>mIsToLogInHtml</tabstop>
   <tabstop>lineEdit_logFileFolder</tabstop>
   <tabstop>comboBox_logFileNameFormat</tabstop>
