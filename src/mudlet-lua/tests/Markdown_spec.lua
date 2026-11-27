@@ -321,12 +321,20 @@ describe("Markdown from the game", function()
     end
   end)
 
-  it("keeps a line whose rest comes after Mudlet has shown its start as one Markdown line", function()
+  -- Once the game has sent a GA, Mudlet joins a line's pieces however slowly they come; before, it shows a piece it
+  -- has waited on as a line of its own, which the standard lets a client treat as a prompt, so it is never Markdown
+  it("reads a line whose rest comes after Mudlet has shown its start as Markdown only where it is whole", function()
     feed(ON .. "SpecHalf **hel")
     feed("lo** there\n" .. OFF)
     local block = getMarkdownBlock("main", lastLine())
     assert.are.equal("paragraph", block.kind)
-    assert.are.equal("SpecHalf hello there", block.text)
+    if lineText(lastLine()) == "SpecHalf hello there" then
+      assert.are.equal("SpecHalf hello there", block.text)
+    else
+      assert.are.equal("SpecHalf **hel", lineText(lastLine(2)))
+      assert.is_nil(getMarkdownBlock("main", lastLine(2)), "a piece shown on its own was read as Markdown")
+      assert.are.equal("lo** there", block.text)
+    end
   end)
 
   local function osc8(uri, text)
@@ -415,6 +423,13 @@ describe("Markdown from the game", function()
     local before = getLastLineNumber("main")
     feed(ON .. "| SpecMidOffHead |\n|---|\n| r |" .. OFF .. "\n")
     assert.are.equal(before + 3, getLastLineNumber("main"), "the table waited for a later line")
+  end)
+
+  -- The grid never folds a section, so its summary line carries a mark that does not look like something to click
+  it("marks a section's summary in the grid with a section sign", function()
+    feed(ON .. "<details>\n<summary>SpecSummaryMark</summary>\ninside\n</details>\n" .. OFF)
+    assert.are.equal("§ SpecSummaryMark", lineText(lastLine(2)))
+    assert.are.equal("summary", getMarkdownBlock("main", lastLine(2)).kind)
   end)
 end)
 

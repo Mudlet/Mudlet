@@ -607,7 +607,8 @@ QList<TMarkdownParser::Output> TMarkdownParser::endMessage()
 
 TMarkdownParser::Output TMarkdownParser::summary(const Text& content, const bool given) const
 {
-    const QString marker = qsl("▾ ");
+    // Not a disclosure triangle: the grid never folds, so the mark must not look like something to click
+    const QString marker = qsl("§ ");
     //: Shown in the main window for a collapsible section of the game's text that came with no summary of its own
     const QString prefix = given ? marker : marker + QCoreApplication::translate("TMarkdown", "Details");
     Output line = make(TMarkdownBlock::Kind::Summary, 0, prefix, content);
