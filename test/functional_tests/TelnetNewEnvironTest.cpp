@@ -1024,6 +1024,47 @@ private slots:
         QCOMPARE(text.mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
     }
 
+    // A screen reader hears a row with its column names, and the lines that only draw the table not at all
+    void test_aTableRowIsSpokenWithItsColumnNames()
+    {
+        feed("\x1b]67;1\x1b\\| Item | Qty |\n|---|---|\n| sword | 1 |\n\x1b]67;0\x1b\\");
+        feed("SpecAfterSpokenTable\n");
+        const int row = lastCommittedLine() - 1;
+        QCOMPARE(mainBuffer().spokenLine(row), qsl("Item: sword, Qty: 1"));
+        QCOMPARE(mainBuffer().spokenLine(row - 1), QString());
+        QCOMPARE(mainBuffer().spokenLine(row - 2), QString());
+        QCOMPARE(mainBuffer().spokenLine(row + 1), qsl("SpecAfterSpokenTable"));
+    }
+
+    // Trimming the first row of a wrapped paragraph off the top hands its tag to the rows left
+    void test_trimmingTheTopOffAWrappedParagraphKeepsItsTag()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        const int savedLimit = mainBuffer().mLinesLimit;
+        const int savedBatch = mainBuffer().mBatchDeleteSize;
+        pModel->setWrapAt(30);
+        const auto restore = qScopeGuard([this, pModel, savedLimit, savedBatch] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+            mainBuffer().mLinesLimit = savedLimit;
+            mainBuffer().mBatchDeleteSize = savedBatch;
+        });
+        feed("\x1b]67;1\x1b\\SpecTrim one two three four five six seven eight nine ten [the link](send:x) end\n\x1b]67;0\x1b\\");
+        int head = lastCommittedLine();
+        while (head > 0 && mainBuffer().markdownBuffer.at(head) == 0 && mainBuffer().wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        QVERIFY2(head < lastCommittedLine(), "the paragraph was not wrapped, so this proves nothing");
+        // Trims every row above the paragraph's second at the next line committed
+        mainBuffer().mBatchDeleteSize = head + 1;
+        mainBuffer().mLinesLimit = static_cast<int>(mainBuffer().lineBuffer.size());
+        feed("SpecTrimmer\n");
+        QVERIFY2(!mainBuffer().lineBuffer.at(0).startsWith(qsl("SpecTrim one")), "the trim did not take the paragraph's first row");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(0);
+        QVERIFY2(pBlock, "the rows left of the paragraph lost its tag");
+        QCOMPARE(pBlock->links.size(), 1);
+        QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
     void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()
     {
         feed("\x1b]67;1;id=specReconnect:mark=busy\x1b\\SpecBeforeReconnect\n");

@@ -715,6 +715,7 @@ public:
     const TMarkdown* markdown() const { return mpMarkdown.get(); }
     QString markdownParagraphText(int lineNumber) const;
     void endMarkdown();
+    QString spokenLine(int lineNumber) const;
     bool holdsServerWrapLine() const { return !mServerWrapPendingLine.isEmpty(); }
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
@@ -906,6 +907,7 @@ private:
     int addMarkdownLink(const TMarkdownLink& link, bool* spoiler);
     int markdownRowOffset(int head, int row) const;
     void rebaseMarkdownBlock(quint32 id, int delta);
+    void markdownLineEdited(int y, int x, int removed, int inserted);
     void linkMarkdownLine(TMarkdownLine& line);
     qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);

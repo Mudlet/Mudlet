@@ -6629,6 +6629,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         buffer[y].insert(x, static_cast<std::size_t>(insertedText.size()), format);
         spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
         noteTriggerPassLineEdit(y, x, 0, static_cast<int>(insertedText.size()));
+        markdownLineEdited(y, x, 0, static_cast<int>(insertedText.size()));
     } else {
         appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
@@ -7499,6 +7500,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         buffer[y].erase(x, x_end);
         spliceEraseFromPreTriggerPassLine(y, x, x_end);
         noteTriggerPassLineEdit(y, x, x_end - x, 0);
+        markdownLineEdited(y, x, x_end - x, 0);
     }
 
     // insert replacement
@@ -11701,4 +11703,78 @@ void TBuffer::endMarkdown()
         mpMarkdown->mOpenMessage = 0;
         commitMarkdownLines(mpMarkdown->mParser.endMessage());
     }
+}
+
+// Text was taken out of or put into row y at column x. An edit to a table line, or to the prefix the grid shows, leaves
+// the paragraph untagged; any other moves its links with the text, and drops a link it cuts into.
+void TBuffer::markdownLineEdited(const int y, const int x, const int removed, const int inserted)
+{
+    if (!mpMarkdown || y < 0 || y >= markdownBuffer.size()) {
+        return;
+    }
+    int head = y;
+    while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+        --head;
+    }
+    const quint32 id = markdownBuffer.at(head);
+    TMarkdownBlock* pBlock = id ? mpMarkdown->editableBlock(id) : nullptr;
+    if (!pBlock) {
+        return;
+    }
+    const int at = head == y ? x : markdownRowOffset(head, y) + std::max(0, x - wrapIndentWidth(y));
+    const TMarkdownBlock::Kind kind = pBlock->kind;
+    if (kind == TMarkdownBlock::Kind::TableHeader || kind == TMarkdownBlock::Kind::TableRow || kind == TMarkdownBlock::Kind::TableDelimiter || at < pBlock->contentStart) {
+        mpMarkdown->forget(id);
+        markdownBuffer[head] = 0;
+        return;
+    }
+    QList<TMarkdownLink> links;
+    for (TMarkdownLink link : std::as_const(pBlock->links)) {
+        if (link.start + link.length <= at) {
+            links.append(link);
+        } else if (link.start >= at + removed) {
+            link.start += inserted - removed;
+            links.append(link);
+        }
+    }
+    pBlock->links = links;
+}
+
+// A line as a screen reader announces it: a table row with its columns named, as "Item: sword, Qty: 1", and a table's
+// header and delimiter rows not at all
+QString TBuffer::spokenLine(const int lineNumber) const
+{
+    const TMarkdownBlock* pBlock = markdownBlock(lineNumber);
+    if (!pBlock || (pBlock->kind != TMarkdownBlock::Kind::TableRow && pBlock->kind != TMarkdownBlock::Kind::TableHeader && pBlock->kind != TMarkdownBlock::Kind::TableDelimiter)) {
+        return lineBuffer.value(lineNumber);
+    }
+    if (pBlock->kind != TMarkdownBlock::Kind::TableRow) {
+        return {};
+    }
+    const TMarkdownBlock* pHeader = nullptr;
+    QString headerText;
+    for (int line = lineNumber - 1; line >= 0 && line >= lineNumber - TMarkdownParser::csmMaxHeldRows * 4; --line) {
+        const TMarkdownBlock* pAbove = markdownBlock(line);
+        if (!pAbove || pAbove->table != pBlock->table) {
+            break;
+        }
+        if (pAbove->kind == TMarkdownBlock::Kind::TableHeader) {
+            pHeader = pAbove;
+            headerText = markdownParagraphText(line);
+            break;
+        }
+    }
+    const QString rowText = markdownParagraphText(lineNumber);
+    QStringList cells;
+    for (int column = 0; column < pBlock->cells.size(); ++column) {
+        const QString value = rowText.mid(pBlock->cells.at(column).start, pBlock->cells.at(column).length);
+        if (pHeader && column < pHeader->cells.size()) {
+            const TMarkdownCell& name = pHeader->cells.at(column);
+            //: How a screen reader hears one cell of a table row from the game: the column's name, then the cell's text
+            cells.append(QObject::tr("%1: %2").arg(headerText.mid(name.start, name.length), value));
+        } else {
+            cells.append(value);
+        }
+    }
+    return cells.join(qsl(", "));
 }
