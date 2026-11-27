@@ -1471,10 +1471,11 @@ void TBuffer::resetSequenceParserState()
         mpMarkdown->mLineInMarkdown = false;
         mpMarkdown->mMessages.forgetIds();
         endOpenMarkdownMessage();
-        // Before Markdown a link left open ended with its line, so one carried on by Markdown ends with its connection
+        // A link Markdown carried past its line ends with its connection, as one on any other line ends with its line
         if (mHyperlinkActive && mHyperlinkEnteredMarkdown) {
             finaliseActiveHyperlink();
         }
+        mMarkdownLinkLooks.clear();
     }
 }
 
@@ -2995,7 +2996,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         ++localBufferPosition;
         return true;
     }
+    // A prompt, or a line Markdown was turned off under, is committed as sent: links whose looks waited for the line to
+    // be read as Markdown take them here
+    if (Q_UNLIKELY(!mMarkdownLinkLooks.isEmpty())) {
+        applyWaitingLinkLooks(line, chars);
+    }
     commitLineData(std::move(line), std::move(chars), ch);
+    if (Q_UNLIKELY(!mMarkdownLinksToPlace.isEmpty())) {
+        placeMarkdownLinks();
+    }
     ++localBufferPosition;
     return true;
 }
@@ -7913,6 +7922,22 @@ void TBuffer::forgetSpoilerTextOnTheLines(const QSet<int>& linkIds)
 // several lines is set aside a piece at a time, in the order
 // revealSpoilerLink() restores it. Text not stamped with the spoiler's id, such
 // as an MXP <SEND> inside it, is left alone: the reveal finds its text by that id.
+void TBuffer::maskSpoilerText(const int linkId, QString& line, const std::vector<TChar>& format, const int column, const int length)
+{
+    if (length <= 0) {
+        return;
+    }
+    QString& originalText = mLinkOriginalText[linkId];
+    const int end = std::min(column + length, static_cast<int>(line.size()));
+    for (int i = std::max(column, 0); i < end; ++i) {
+        if (static_cast<size_t>(i) < format.size() && format[static_cast<size_t>(i)].linkIndex() != linkId) {
+            continue;
+        }
+        originalText += line.at(i);
+        line[i] = QChar::Space;
+    }
+}
+
 void TBuffer::maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length)
 {
     if (length <= 0) {
@@ -8222,7 +8247,7 @@ void TBuffer::shrinkBuffer()
         }
         if (const quint32 id = markdownBuffer.at(0); id && mpMarkdown) {
             if (markdownBuffer.size() > 1 && markdownBuffer.at(1) == 0 && wrapsFromPreviousLine(1)) {
-                rebaseMarkdownBlock(id, wrapIndentWidth(1) - markdownRowOffset(0, 1));
+                rebaseMarkdownBlock(id, markdownHandOnDelta(0, 1));
                 markdownBuffer[1] = id;
             } else {
                 mpMarkdown->forget(id);
@@ -11425,7 +11450,7 @@ void TBuffer::decodeMarkdownOSC(QStringView sequence)
     const bool lineUnderWay = !mMudLine.isEmpty();
     if (command == u"1") {
         // The line under way stays in the message it began in, and held lines are still to be committed in theirs
-        markdown.mMessages.begin(id, mark, (lineUnderWay && markdown.mLineInMarkdown) || markdown.mOpenMessage);
+        markdown.mMessages.begin(id, mark, (lineUnderWay && markdown.mLineInMarkdown) ? markdown.mLineMessage : 0, markdown.mOpenMessage);
         markdown.mOn = true;
         if (!lineUnderWay) {
             endOpenMarkdownMessage();
@@ -11537,34 +11562,43 @@ void TBuffer::retireMarkdownRows(const int from, const int to)
 {
     const int next = to + 1;
     const bool nextContinues = next < markdownBuffer.size() && markdownBuffer.at(next) == 0 && wrapsFromPreviousLine(next);
+    // The head of the paragraph the row after the range belongs to, and of the one the range starts in
+    int nextHead = to;
+    while (nextHead > 0 && markdownBuffer.at(nextHead) == 0 && wrapsFromPreviousLine(nextHead)) {
+        --nextHead;
+    }
     int head = from;
     while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
         --head;
     }
     if (head < from && markdownBuffer.at(head)) {
-        // Middle rows of a paragraph whose head stays: the text they held goes, and what follows moves up into its place
+        // A paragraph whose head stays loses the rows in the range, and, if it goes on past them, its later text moves
+        // up; if it ends in the range, everything from the range on goes
         if (TMarkdownBlock* pBlock = mpMarkdown->editableBlock(markdownBuffer.at(head))) {
+            const bool goesOnPastTheRange = nextContinues && nextHead == head;
             const int cutFrom = markdownRowOffset(head, from) - wrapGapBefore(from);
-            const int cutTo = nextContinues ? markdownRowOffset(head, next) : std::numeric_limits<int>::max();
-            editMarkdownRanges(*pBlock, cutFrom, cutTo, nextContinues ? cutFrom + wrapGapBefore(next) - cutTo : 0);
+            const int cutTo = goesOnPastTheRange ? markdownRowOffset(head, next) : std::numeric_limits<int>::max();
+            editMarkdownRanges(*pBlock, cutFrom, cutTo, goesOnPastTheRange ? cutFrom + wrapGapBefore(next) - cutTo : 0);
         }
-    } else if (nextContinues) {
-        int first = to;
-        while (first > from && markdownBuffer.at(first) == 0 && wrapsFromPreviousLine(first)) {
-            --first;
-        }
-        if (markdownBuffer.at(first)) {
-            // The first row left becomes the paragraph's head, and its text from its indent on is what is left
-            const int keptIndent = std::min(wrapGapBefore(next), wrapIndentWidth(next));
-            rebaseMarkdownBlock(markdownBuffer.at(first), wrapIndentWidth(next) - keptIndent - markdownRowOffset(first, next));
-            markdownBuffer[next] = std::exchange(markdownBuffer[first], 0);
-        }
+    }
+    if (nextContinues && nextHead >= from && markdownBuffer.at(nextHead)) {
+        // A paragraph whose head goes and whose rows go on past the range: the first row left becomes its head
+        rebaseMarkdownBlock(markdownBuffer.at(nextHead), markdownHandOnDelta(nextHead, next));
+        markdownBuffer[next] = std::exchange(markdownBuffer[nextHead], 0);
     }
     for (int row = from; row <= to; ++row) {
         if (const quint32 id = markdownBuffer.at(row)) {
             mpMarkdown->forget(id);
         }
     }
+}
+
+// How far a paragraph's offsets move when its head goes and row next becomes its head: that row's text from its indent
+// on is what is left, less the indent markdownHeadIndent() then counts as wrapping's
+int TBuffer::markdownHandOnDelta(const int head, const int next) const
+{
+    const int keptIndent = std::min(wrapGapBefore(next), wrapIndentWidth(next));
+    return wrapIndentWidth(next) - keptIndent - markdownRowOffset(head, next);
 }
 
 // The paragraph's text as it was committed, before column wrapping split it into rows
@@ -11606,8 +11640,13 @@ int TBuffer::addMarkdownLink(const TMarkdownLink& link, Mudlet::HyperlinkStyling
     if (!accepted) {
         return 0;
     }
-    if (!link.title.isEmpty() && !customTooltip && hint.size() <= 1) {
-        hint = {UntrustedText::forAuthoredText(link.title)};
+    // The title is the link's tooltip, ahead of the labels of any menu, unless its configuration gives one
+    if (!link.title.isEmpty() && !customTooltip) {
+        if (hint.isEmpty()) {
+            hint = {UntrustedText::forAuthoredText(link.title)};
+        } else {
+            hint[0] = UntrustedText::forAuthoredText(link.title);
+        }
     }
     const int id = addLinkToStore(command, hint);
     mLinkStore.setStyling(id, styling);
@@ -11653,7 +11692,7 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
             }
         }
         if (id) {
-            applyMarkdownLinkLooks(line, id, link.start, link.length, styling, true);
+            applyMarkdownLinkLooks(line.text, line.format, id, link.start, link.length, styling, true);
         }
     }
     for (size_t column = 0; column < line.format.size();) {
@@ -11670,7 +11709,7 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
         if (const auto looks = mMarkdownLinkLooks.constFind(id); looks != mMarkdownLinkLooks.cend()) {
             const auto [styling, onOneLine] = looks.value();
             mMarkdownLinkLooks.erase(looks);
-            applyMarkdownLinkLooks(line, id, static_cast<int>(column), static_cast<int>(end - column), styling, onOneLine);
+            applyMarkdownLinkLooks(line.text, line.format, id, static_cast<int>(column), static_cast<int>(end - column), styling, onOneLine);
         }
         column = end;
     }
@@ -11678,18 +11717,18 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
 
 // A link's spoiler and visibility, applied as finaliseActiveHyperlink() applies an OSC 8 link's, but to the line as it is
 // committed: its columns, and the row it lands on
-void TBuffer::applyMarkdownLinkLooks(TMarkdownLine& line, const int id, const int column, const int length, const Mudlet::HyperlinkStyling& styling, const bool onOneLine)
+void TBuffer::applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& format, const int id, const int column, const int length, const Mudlet::HyperlinkStyling& styling, const bool onOneLine)
 {
     if (styling.isSpoiler) {
-        maskSpoilerText(id, line.text, TLineFormat(line.format), column, length);
+        maskSpoilerText(id, text, format, column, length);
     }
     if (!styling.visibility.hasVisibilitySettings || !onOneLine || !mpModel || length <= 0) {
         return;
     }
     THyperlinkVisibilityManager& manager = mpModel->mHyperlinkVisibilityManager;
-    const bool concealed = manager.registerHyperlink(id, 0, column, length, line.text.mid(column, length), styling);
+    const bool concealed = manager.registerHyperlink(id, 0, column, length, text.mid(column, length), styling);
     if (concealed && !styling.isSpoiler) {
-        line.text.replace(column, length, QString(length, QChar::Space));
+        text.replace(column, length, QString(length, QChar::Space));
     }
     // Its row is known once the line is committed, and its row and column once wrapping has split it: until then it
     // waits as a link on a line still to come, which a trigger deleting lines above it moves too
@@ -11803,6 +11842,25 @@ void TBuffer::endMarkdown()
     endOpenMarkdownMessage();
     // A link that reached Markdown goes back to ending with its line
     mHyperlinkEnteredMarkdown = false;
+}
+
+// The looks of the links a line committed as sent carries, which waited for it to be read as Markdown
+void TBuffer::applyWaitingLinkLooks(QString& text, const TLineFormat& chars)
+{
+    const std::vector<TChar> format = chars.toVector();
+    for (size_t column = 0; column < format.size();) {
+        const int id = format[column].linkIndex();
+        size_t end = column + 1;
+        while (end < format.size() && format[end].linkIndex() == id) {
+            ++end;
+        }
+        if (const auto looks = mMarkdownLinkLooks.constFind(id); id && looks != mMarkdownLinkLooks.cend()) {
+            const auto [styling, onOneLine] = looks.value();
+            mMarkdownLinkLooks.erase(looks);
+            applyMarkdownLinkLooks(text, format, id, static_cast<int>(column), static_cast<int>(end - column), styling, onOneLine);
+        }
+        column = end;
+    }
 }
 
 // Commits what the open message still holds, keeping its record while that happens, as a trigger on those lines can

@@ -4530,6 +4530,21 @@ private slots:
     QVERIFY2(styled.isBold(), "the Markdown bold around the link was lost");
   }
 
+  // With a menu, the title takes the place of the link's own tooltip, and
+  // the menu's labels stay
+  void test_MarkdownLinkTitleIsTheTooltipOfALinkWithAMenu() {
+    injectData(qsl("\x1b]67;1\x1b\\[look](send:look?config=%7B%22menu%22%3A%5B%7B"
+                   "%22Look%22%3A%22send%3Alook%22%7D%2C%7B%22Read%22%3A%22send%3A"
+                   "read%22%7D%5D%7D \"Walk north\")\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the Markdown link was not made");
+    const QStringList hints = console->getLinkStore().getHintsConst(linkId);
+    QVERIFY2(hints.size() > 1, "the link's menu was lost");
+    QCOMPARE(hints.first(), qsl("Walk north"));
+  }
+
   void test_MarkdownLinkTitleIsItsTooltip() {
     injectData(qsl("\x1b]67;1\x1b\\[a](send:a \"Walk north\")\x1b]67;0\x1b\\"));
     TMainConsole *console = mpHost->mainConsoleView();

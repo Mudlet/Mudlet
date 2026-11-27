@@ -112,13 +112,16 @@ QString TMarkdownBlock::kindName(const Kind kind)
     return {};
 }
 
-quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark, const bool previousStillInUse)
+quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark, const quint32 stillInUse, const quint32 alsoStillInUse)
 {
+    const auto retireUnlessInUse = [this, stillInUse, alsoStillInUse](const quint32 message) {
+        if (message != stillInUse && message != alsoStillInUse) {
+            retireIfUnused(message);
+        }
+    };
     const quint32 previous = mLastMessage;
     const quint32 message = ++mLastMessage;
-    if (!previousStillInUse) {
-        retireIfUnused(previous);
-    }
+    retireUnlessInUse(previous);
     if (id.isEmpty() && mark.kind == TMarkdownMark::Kind::None) {
         return message;
     }
@@ -133,10 +136,10 @@ quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark, co
         mMessageById.insert(id, message);
         mIdsInOrder.enqueue(id);
         if (superseded) {
-            retireIfUnused(superseded);
+            retireUnlessInUse(superseded);
         }
         while (mIdsInOrder.size() > csmKeptIds) {
-            retireIfUnused(mMessageById.take(mIdsInOrder.dequeue()));
+            retireUnlessInUse(mMessageById.take(mIdsInOrder.dequeue()));
         }
     }
     return message;
@@ -450,7 +453,9 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
     if (quote == 0) {
         const QStringView trimmed = QStringView(text).mid(pos, end - pos);
         const bool opens = trimmed == u"<details>" || trimmed == u"<details open>";
-        if (opens || trimmed == u"</details>") {
+        // A </details> with no section to close is text like any other, and may continue a list item
+        const bool closes = trimmed == u"</details>" && (mSectionsBeyond > 0 || !mSections.isEmpty());
+        if (opens || closes) {
             mItems.clear();
             if (opens && mSections.size() < csmMaxSectionLevels && mSectionsBeyond == 0) {
                 mSections.append(++mLastSection);
@@ -460,13 +465,13 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
             }
             if (opens) {
                 ++mSectionsBeyond;
-            } else if (mSectionsBeyond == 0 && !mSections.isEmpty()) {
+            } else if (mSectionsBeyond == 0) {
                 mSections.removeLast();
                 return out;
-            } else if (mSectionsBeyond > 0) {
+            } else {
                 --mSectionsBeyond;
             }
-            // Past the levels a line can be placed in, or with no section to close, the line is shown as typed
+            // Past the levels a line can be placed in, the line is shown as typed
             out << make(TMarkdownBlock::Kind::Paragraph, 0, prefix, line.mid(pos, end));
             return out;
         }

@@ -62,6 +62,7 @@ describe("Markdown from the game", function()
       local block = getMarkdownBlock("main", first + index)
       assert.is_not_nil(block, "flood line " .. (index + 1) .. " was not Markdown")
       assert.are.equal("SpecFlood line " .. (index + 1), block.text)
+      assert.is_number(block.message)
       message = message or block.message
       assert.are.equal(message, block.message)
     end
@@ -430,6 +431,45 @@ describe("Markdown from the game", function()
     feed(ON .. "<details>\n<summary>SpecSummaryMark</summary>\ninside\n</details>\n" .. OFF)
     assert.are.equal("§ SpecSummaryMark", lineText(lastLine(2)))
     assert.are.equal("summary", getMarkdownBlock("main", lastLine(2)).kind)
+  end)
+
+  it("keeps an unmatched </details> under a list item in the item", function()
+    feed(ON .. "- SpecDetailsItem\n  </details>\n  SpecDetailsMore\n" .. OFF)
+    assert.are.equal("continuation", getMarkdownBlock("main", lastLine(2)).kind)
+    assert.are.equal("</details>", getMarkdownBlock("main", lastLine(2)).text)
+    assert.are.equal("continuation", getMarkdownBlock("main", lastLine()).kind)
+  end)
+
+  -- An emoji is a symbol, and CommonMark counts symbols as punctuation when it decides where emphasis may open
+  it("reads a symbol outside the basic plane as punctuation beside an emphasis marker", function()
+    feed(ON .. "a**🚀**b SpecEmoji\n" .. OFF)
+    assert.are.equal("a**🚀**b SpecEmoji", getMarkdownBlock("main", lastLine()).text)
+  end)
+
+  -- A game controls these lines, so a line of links that never close must not cost more than its length
+  it("reads a table row full of links that never close in reasonable time", function()
+    local cells, header, delimiter = {}, {}, {}
+    for index = 1, 20 do
+      cells[index] = string.rep("[a](b", 1999)
+      header[index] = "h"
+      delimiter[index] = "---"
+    end
+    local started = os.clock()
+    feed(ON .. "| " .. table.concat(header, " | ") .. " |\n| " .. table.concat(delimiter, " | ") .. " |\n| " .. table.concat(cells, " | ") .. " |\n" .. OFF)
+    local spent = os.clock() - started
+    assert.are.equal("tableRow", getMarkdownBlock("main", lastLine()).kind)
+    assert.is_true(spent < 1.5, string.format("the row took %.2fs", spent))
+  end)
+
+  -- Last: the GA it sends changes how Mudlet waits for the rest of a line for every test after it
+  it("hides an OSC 8 spoiler on a prompt that begins while Markdown is on", function()
+    feed(ON .. "SpecBefore\nSpecPrompt " .. osc8('local:?config={"spoiler":true}', "SECRET") .. "<T_IAC><T_GA>")
+    feed("\n" .. OFF)
+    local prompt = lastLine(2)
+    while prompt > 0 and lineText(prompt) ~= "SpecPrompt       " and not lineText(prompt):find("SpecPrompt", 1, true) do
+      prompt = prompt - 1
+    end
+    assert.are.equal("SpecPrompt       ", lineText(prompt))
   end)
 end)
 

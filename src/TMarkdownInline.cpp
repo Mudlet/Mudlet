@@ -35,9 +35,9 @@ bool asciiPunctuation(const QChar c)
     return punctuation.contains(c);
 }
 
-bool unicodePunctuation(const QChar c)
+bool unicodePunctuation(const char32_t c)
 {
-    return c.isPunct() || c.isSymbol();
+    return QChar::isPunct(c) || QChar::isSymbol(c);
 }
 
 bool startsWithAddress(const QString& text, const int at)
@@ -89,6 +89,7 @@ public:
     , mLiteral(static_cast<size_t>(mSize), false)
     , mFlags(static_cast<size_t>(mSize), TChar::None)
     , mLink(static_cast<size_t>(mSize), -1)
+    , mScanBudget(4 * mSize + 64)
     {
     }
 
@@ -117,7 +118,13 @@ private:
     void literalRange(int from, int to);
     int addLink(int from, int to, const QString& destination, const QString& title);
     // Where the link's closing parenthesis is, or -1 when what follows ] is not a destination
-    int parseDestination(int at, QString& destination, QString& title) const;
+    int parseDestination(int at, QString& destination, QString& title);
+    // The whole code points either side of a run, so a symbol outside the basic plane is read as one
+    char32_t codePointBefore(int at) const;
+    char32_t codePointAt(int at) const;
+    // Each failed search for a destination or a code span's closing run scans ahead, and a game can send a line that
+    // makes every one fail at its end; one budget for the line, a few times its length, keeps the whole read linear
+    bool spend() { return --mScanBudget > 0; }
 
     const QString& mText;
     const std::vector<TChar>& mFormat;
@@ -129,6 +136,7 @@ private:
     std::vector<TChar::AttributeFlags> mFlags;
     std::vector<int> mLink;
     QList<Link> mLinks;
+    int mScanBudget;
     struct Opener
     {
         int pos = 0;
@@ -137,6 +145,30 @@ private:
     };
     QList<Opener> mOpeners;
 };
+
+char32_t Line::codePointBefore(const int at) const
+{
+    if (at <= mFrom) {
+        return U' ';
+    }
+    const QChar low = mText.at(at - 1);
+    if (low.isLowSurrogate() && at - 2 >= mFrom && mText.at(at - 2).isHighSurrogate()) {
+        return QChar::surrogateToUcs4(mText.at(at - 2), low);
+    }
+    return low.unicode();
+}
+
+char32_t Line::codePointAt(const int at) const
+{
+    if (at >= mSize) {
+        return U' ';
+    }
+    const QChar high = mText.at(at);
+    if (high.isHighSurrogate() && at + 1 < mSize && mText.at(at + 1).isLowSurrogate()) {
+        return QChar::surrogateToUcs4(high, mText.at(at + 1));
+    }
+    return high.unicode();
+}
 
 void Line::removeRange(const int from, const int to)
 {
@@ -196,7 +228,7 @@ void Line::scanInlines()
                 ++run;
             }
             int close = -1;
-            for (int j = i + run; j < mSize;) {
+            for (int j = i + run; j < mSize && spend();) {
                 if (mText.at(j) != u'`') {
                     ++j;
                     continue;
@@ -256,7 +288,7 @@ void Line::scanInlines()
     }
 }
 
-int Line::parseDestination(int at, QString& destination, QString& title) const
+int Line::parseDestination(int at, QString& destination, QString& title)
 {
     if (at >= mSize || mText.at(at) != u'(') {
         return -1;
@@ -270,7 +302,7 @@ int Line::parseDestination(int at, QString& destination, QString& title) const
     skipSpaces(at);
     if (at < mSize && mText.at(at) == u'<') {
         int close = at + 1;
-        while (close < mSize && mText.at(close) != u'>' && mText.at(close) != u'<') {
+        while (close < mSize && mText.at(close) != u'>' && mText.at(close) != u'<' && spend()) {
             close += (mText.at(close) == u'\\' && close + 1 < mSize) ? 2 : 1;
         }
         if (close >= mSize || mText.at(close) != u'>') {
@@ -282,6 +314,9 @@ int Line::parseDestination(int at, QString& destination, QString& title) const
         const int start = at;
         int depth = 0;
         while (at < mSize && !mText.at(at).isSpace()) {
+            if (!spend()) {
+                return -1;
+            }
             const QChar c = mText.at(at);
             if (c == u'\\' && at + 1 < mSize && asciiPunctuation(mText.at(at + 1))) {
                 at += 2;
@@ -307,7 +342,7 @@ int Line::parseDestination(int at, QString& destination, QString& title) const
     if (at < mSize && (mText.at(at) == u'"' || mText.at(at) == u'\'') && at > afterDestination) {
         const QChar quote = mText.at(at);
         int close = at + 1;
-        while (close < mSize && mText.at(close) != quote) {
+        while (close < mSize && mText.at(close) != quote && spend()) {
             close += (mText.at(close) == u'\\' && close + 1 < mSize) ? 2 : 1;
         }
         if (close >= mSize) {
@@ -421,10 +456,10 @@ void Line::emphasis(const int from, const int to)
             i += run;
             continue;
         }
-        const QChar before = i > mFrom ? mText.at(i - 1) : QChar(u' ');
-        const QChar after = i + run < mSize ? mText.at(i + run) : QChar(u' ');
-        const bool leftFlanking = !after.isSpace() && (!unicodePunctuation(after) || before.isSpace() || unicodePunctuation(before));
-        const bool rightFlanking = !before.isSpace() && (!unicodePunctuation(before) || after.isSpace() || unicodePunctuation(after));
+        const char32_t before = codePointBefore(i);
+        const char32_t after = codePointAt(i + run);
+        const bool leftFlanking = !QChar::isSpace(after) && (!unicodePunctuation(after) || QChar::isSpace(before) || unicodePunctuation(before));
+        const bool rightFlanking = !QChar::isSpace(before) && (!unicodePunctuation(before) || QChar::isSpace(after) || unicodePunctuation(after));
         Delimiter delimiter{i, run, run, c, leftFlanking, rightFlanking};
         if (c == u'_') {
             delimiter.canOpen = leftFlanking && (!rightFlanking || unicodePunctuation(before));

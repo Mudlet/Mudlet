@@ -893,6 +893,7 @@ private:
     void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
     void carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format);
     void maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length);
+    void maskSpoilerText(const int linkId, QString& line, const std::vector<TChar>& format, const int column, const int length);
     void forgetSpoilerTextOnTheLines(const QSet<int>& linkIds);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
@@ -904,7 +905,9 @@ private:
     int markdownHeadIndent(int head) const;
     void editMarkdownRanges(TMarkdownBlock& block, int cutFrom, int cutTo, int delta);
     void placeMarkdownLinks();
-    void applyMarkdownLinkLooks(TMarkdownLine& line, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
+    void applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& format, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
+    void applyWaitingLinkLooks(QString& text, const TLineFormat& chars);
+    int markdownHandOnDelta(int head, int next) const;
     void decodeMarkdownOSC(QStringView sequence);
     bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
     void commitMarkdownLines(QList<TMarkdownLine>&& lines);

@@ -986,14 +986,13 @@ private slots:
     void test_turningThePreferenceOffMidTableCommitsTheHeldRows()
     {
         feed("\x1b]67;1\x1b\\| SpecHeldHead |\n|---|\n| SpecHeldRow |\n");
-        mpHost->mEnableMarkdown = false;
+        mpHost->setEnableMarkdown(false);
+        const TMarkdownBlock* pRow = mainBuffer().markdownBlock(lastCommittedLine());
+        QVERIFY2(pRow && pRow->kind == TMarkdownBlock::Kind::TableRow, "turning the preference off did not commit the held row");
+        QVERIFY(mainBuffer().lineBuffer.at(lastCommittedLine()).startsWith(qsl("SpecHeldRow")));
         feed("SpecAfterTable\n");
-        const int last = lastCommittedLine();
-        QCOMPARE(mainBuffer().lineBuffer.at(last), qsl("SpecAfterTable"));
-        QVERIFY(!mainBuffer().markdownBlock(last));
-        const TMarkdownBlock* pRow = mainBuffer().markdownBlock(last - 1);
-        QVERIFY2(pRow && pRow->kind == TMarkdownBlock::Kind::TableRow, "the held row was not committed before the line after it");
-        QVERIFY(mainBuffer().lineBuffer.at(last - 1).startsWith(qsl("SpecHeldRow")));
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("SpecAfterTable"));
+        QVERIFY(!mainBuffer().markdownBlock(lastCommittedLine()));
     }
 
     void test_turningThePreferenceBackOnDoesNotResumeTheOldMessage()
@@ -1069,7 +1068,7 @@ private slots:
         QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
     }
 
-    // Before Markdown, a link left open ended at its line; one that reached Markdown must still end with its connection
+    // A link left open on a Markdown line carries on, but not into the next connection
     void test_aLinkLeftOpenInMarkdownEndsWithItsConnection()
     {
         feed("\x1b]67;1\x1b\\\x1b]8;;send:look\x1b\\SpecOpenLink\n");
@@ -1108,6 +1107,71 @@ private slots:
         QVERIFY(mainBuffer().replaceInLine(from, to, qsl("S"), format));
         QVERIFY2(!mainBuffer().markdownBlock(bow - 1), "the edited row kept its tag");
         QCOMPARE(mainBuffer().spokenLine(bow), qsl("Item: bow, Qty: 2"));
+    }
+
+    // A deletion from one wrapped paragraph's middle into another's keeps the second's tag on the rows it leaves
+    void test_aDeletionAcrossTwoParagraphsKeepsTheSecondsTag()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        pModel->setWrapAt(20);
+        const auto restoreWrap = qScopeGuard([this, pModel] { pModel->setWrapAt(mpHost->mWrapAt); });
+        feed("\x1b]67;1\x1b\\SpecParaA one two three four five six\nSpecParaB one two three four [the link](send:x) five\n\x1b]67;0\x1b\\");
+        int headB = lastCommittedLine();
+        while (mainBuffer().markdownBuffer.at(headB) == 0 && mainBuffer().wrapsFromPreviousLine(headB)) {
+            --headB;
+        }
+        int headA = headB - 1;
+        while (mainBuffer().markdownBuffer.at(headA) == 0 && mainBuffer().wrapsFromPreviousLine(headA)) {
+            --headA;
+        }
+        QVERIFY2(headB - headA > 1 && lastCommittedLine() > headB, "the paragraphs did not wrap, so this proves nothing");
+        QVERIFY(mainBuffer().deleteLines(headA + 1, headB));
+        QVERIFY2(mainBuffer().markdownBlock(headA), "the first paragraph lost its tag");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(headA + 1);
+        QVERIFY2(pBlock && pBlock->links.size() == 1, "the second paragraph's rows lost its tag");
+        QCOMPARE(mainBuffer().markdownParagraphText(headA + 1).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // A game sending on sequences part way through one line makes messages no line belongs to, which keep nothing
+    void test_onSequencesPartWayThroughALineLeaveNoRecords()
+    {
+        QByteArray burst("\x1b]67;1\x1b\\SpecBurst");
+        for (int index = 0; index < 50; ++index) {
+            burst.append("\x1b]67;1;mark=ok\x07");
+        }
+        burst.append("\n\x1b]67;0\x1b\\");
+        feed(burst);
+        QVERIFY2(mainBuffer().markdown()->mMessages.recordCount() <= 2,
+                 qPrintable(qsl("%1 records were kept").arg(mainBuffer().markdown()->mMessages.recordCount())));
+    }
+
+    // Trimming hands a wrapped paragraph's tag to its next row with offsets that count from that row's own text, past
+    // the hanging indent wrapping put in front of it
+    void test_trimmingAParagraphWithAHangingIndentKeepsItsOffsets()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        const int savedLimit = mainBuffer().mLinesLimit;
+        const int savedBatch = mainBuffer().mBatchDeleteSize;
+        pModel->setWrapAt(30);
+        pModel->setHangingIndentCount(2);
+        const auto restore = qScopeGuard([this, pModel, savedLimit, savedBatch] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+            pModel->setHangingIndentCount(mpHost->mWrapHangingIndentCount);
+            mainBuffer().mLinesLimit = savedLimit;
+            mainBuffer().mBatchDeleteSize = savedBatch;
+        });
+        feed("\x1b]67;1\x1b\\SpecHang one two three four five six seven eight nine ten [the link](send:x) end\n\x1b]67;0\x1b\\");
+        int head = lastCommittedLine();
+        while (head > 0 && mainBuffer().markdownBuffer.at(head) == 0 && mainBuffer().wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        QVERIFY2(head < lastCommittedLine() && mainBuffer().wrapIndentWidth(head + 1) > 0, "the paragraph did not wrap with an indent, so this proves nothing");
+        mainBuffer().mBatchDeleteSize = head + 1;
+        mainBuffer().mLinesLimit = static_cast<int>(mainBuffer().lineBuffer.size());
+        feed("SpecTrimmer\n");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(0);
+        QVERIFY2(pBlock && pBlock->links.size() == 1, "the rows left of the paragraph lost its tag");
+        QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
     }
 
     void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()

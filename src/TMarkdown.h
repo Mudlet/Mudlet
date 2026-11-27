@@ -93,8 +93,9 @@ struct TMarkdownBlock
 class TMarkdownMessages
 {
 public:
-    // A new message, numbered from 1. The one before keeps its record if it may still have lines to come.
-    quint32 begin(const QString& id, TMarkdownMark mark, bool previousStillInUse);
+    // A new message, numbered from 1. The two named, which a line under way or held lines may still be committed in,
+    // keep their records; any other message nothing can reach any more does not.
+    quint32 begin(const QString& id, TMarkdownMark mark, quint32 stillInUse, quint32 alsoStillInUse);
     // The message whose mark changed, or 0 when no message has that id
     quint32 change(const QString& id, TMarkdownMark mark);
     quint32 current() const { return mLastMessage; }
@@ -107,6 +108,9 @@ public:
     // While held, the message keeps its record whatever happens to its lines, as more are still being committed
     void hold(quint32 message) { mHeld.insert(message); }
     void release(quint32 message);
+
+    // For the Markdown tests
+    int recordCount() const { return static_cast<int>(mRecords.size()); }
 
     static constexpr int csmKeptIds = 256;
 
