@@ -1025,7 +1025,11 @@ private:
         int id = 0;
         int length = 0;
         bool concealed = false;
+        int column = 0;
+        QString text;
+        bool hiddenEarly = false;
     };
+    void showMarkdownLinkText(int head, const PlacedLink& link);
     QList<PlacedLink> mMarkdownLinksToPlace;
     // What translateToPlainText() is reading came from the game
     bool mParsingServerText = false;

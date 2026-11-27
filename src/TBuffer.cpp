@@ -5327,9 +5327,8 @@ void TBuffer::decodeOSC(const QString& sequence)
             mCurrentHyperlinkLinkId = addLinkToStore(command, hint);
             // An id handed out again must not take the looks a link that had it left waiting
             mMarkdownLinkLooks.remove(mCurrentHyperlinkLinkId);
-            if (mpMarkdown) {
-                mHyperlinkUris.insert(mCurrentHyperlinkLinkId, rawUrl);
-            }
+            // Kept before Markdown's first on sequence too, which can come while this link is open
+            mHyperlinkUris.insert(mCurrentHyperlinkLinkId, rawUrl);
 
             // Store the styling for this link so it can be retrieved later
             mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
@@ -6647,11 +6646,12 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // Insert the whole run in one operation. Inserting one character at a
         // time into the middle of the QString/std::vector is O(n) per character,
         // which is quadratic for large inserts.
+        // Before the text changes, as the indent wrapping put in front of the row is counted from it
+        markdownLineEdited(y, x, 0, static_cast<int>(insertedText.size()));
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(x, static_cast<std::size_t>(insertedText.size()), format);
         spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
         noteTriggerPassLineEdit(y, x, 0, static_cast<int>(insertedText.size()));
-        markdownLineEdited(y, x, 0, static_cast<int>(insertedText.size()));
     } else {
         appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
@@ -7209,6 +7209,24 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     };
     // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
     QVarLengthArray<RewrappedLine, 8> rewrapped;
+    // A line feed a script put into a Markdown line makes lines of it that the paragraph's offsets no longer fit
+    const auto dropSplitMarkdownTag = [this, &rewrapped](const int sourceLine) {
+        int head = sourceLine;
+        while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        const quint32 id = markdownBuffer.at(head);
+        if (!id) {
+            return;
+        }
+        mpMarkdown->forget(id);
+        markdownBuffer[head] = 0;
+        for (RewrappedLine& line : rewrapped) {
+            if (line.markdown == id) {
+                line.markdown = 0;
+            }
+        }
+    };
     const bool movesHeld = mpModel && mpModel->holdsForLineShown();
     QList<TConsoleModel::RewrappedSpan> heldSpans;
     const auto keepWholeForHeld = [movesHeld, &heldSpans, &rewrapped, firstRewrappedLine](const int sourceLine) {
@@ -7311,6 +7329,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             }
             if (movesHeld) {
                 heldSpans.append({i, w.firstChar, w.lastChar, firstRewrappedLine + static_cast<int>(rewrapped.size()), addsIndent ? (w.isNewline ? indent : hangingIndent) : 0});
+            }
+            if (w.isNewline && previousSegmentEnd >= 0) {
+                dropSplitMarkdownTag(i);
             }
             rewrapped.append({std::move(newBufferLine),
                               std::move(newLineText),
@@ -7518,11 +7539,12 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         noteRemovedLinks(buffer[y], mLinesRemovedTotal + y, x, x_end);
         forgetLooksOfRemovedCharacters(y, x, x_end);
         materialisePreTriggerPassLine(y);
+        // Before the text changes, as the indent wrapping put in front of the row is counted from it
+        markdownLineEdited(y, x, x_end - x, 0);
         lineBuffer[y].remove(x, x_end - x);
         buffer[y].erase(x, x_end);
         spliceEraseFromPreTriggerPassLine(y, x, x_end);
         noteTriggerPassLineEdit(y, x, x_end - x, 0);
-        markdownLineEdited(y, x, x_end - x, 0);
     }
 
     // insert replacement
@@ -11525,8 +11547,9 @@ bool TBuffer::commitMarkdownLine(QString& line, TLineFormat& chars, const char c
     markdown.mParser.setPlainFormat(TChar(mForeGroundColor, mBackGroundColor));
     markdown.mParser.setWideAmbiguous(mpHost->wideAmbiguousEAsianGlyphs());
     commitMarkdownLines(markdown.mParser.addLine(line, chars, lineMessage));
-    // An off or on sequence part way through this line ended its message, now that the line is in it
-    if (!markdown.mLineInMarkdown || markdown.mLineMessage != lineMessage) {
+    // An off or on sequence part way through this line ended its message, now that the line is in it; unless game text
+    // a trigger fed meanwhile opened another, which ended this one as it began
+    if ((!markdown.mLineInMarkdown || markdown.mLineMessage != lineMessage) && markdown.mOpenMessage == lineMessage) {
         endOpenMarkdownMessage();
     } else if (markdown.mParser.holdsLines() && mpModel) {
         emit mpModel->mNotifier.serverWrapLineHeld();
@@ -11542,6 +11565,16 @@ void TBuffer::commitMarkdownLines(QList<TMarkdownLine>&& lines)
             continue;
         }
         linkMarkdownLine(line);
+        // A link that starts hidden is hidden before triggers and apps see its line, where nothing will wrap the line;
+        // one that may wrap waits for placeMarkdownLinks(), as a wrap could drop the hidden label's spaces at a break
+        if (!mMarkdownLinksToPlace.isEmpty() && fitsUnwrapped(line.text, mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt), mpHost)) {
+            for (PlacedLink& link : mMarkdownLinksToPlace) {
+                if (link.concealed) {
+                    line.text.replace(link.column, link.length, QString(link.length, QChar::Space));
+                    link.hiddenEarly = true;
+                }
+            }
+        }
         const quint32 id = mpMarkdown->store(std::move(line.block));
         commitLineData(std::move(line.text), TLineFormat(std::move(line.format)), '\n', id);
         if (!mMarkdownLinksToPlace.isEmpty()) {
@@ -11765,7 +11798,27 @@ void TBuffer::applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& fo
     // hidden: a hidden link's spaces at a wrap would be dropped, and its text could never be shown again. Until then it
     // waits as a link on a line still to come, which a trigger deleting lines above it moves too.
     manager.trackAwaitingTheirLine(manager.takeLinks({id}));
-    mMarkdownLinksToPlace.append({id, length, concealed && !styling.isSpoiler});
+    mMarkdownLinksToPlace.append({id, length, concealed && !styling.isSpoiler, column, text.mid(column, length)});
+}
+
+// The text of a link hidden as its line was committed, put back in the order its characters stand
+void TBuffer::showMarkdownLinkText(const int head, const PlacedLink& link)
+{
+    qsizetype next = 0;
+    for (int row = head; row < lineBuffer.size() && next < link.text.size() && (row == head || (markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row))); ++row) {
+        const TLineFormat& format = buffer.at(static_cast<size_t>(row));
+        const int indent = row == head ? markdownHeadIndent(row) : wrapIndentWidth(row);
+        bool shown = false;
+        for (int column = indent; column < static_cast<int>(format.size()) && next < link.text.size(); ++column) {
+            if (format[static_cast<size_t>(column)].linkIndex() == link.id) {
+                lineBuffer[row][column] = link.text.at(next++);
+                shown = true;
+            }
+        }
+        if (shown && mpModel) {
+            emit mpModel->mNotifier.linesChanged(row, row);
+        }
+    }
 }
 
 // After commitLineData(): a link that wrapping left whole on one row is moved onto it, and hidden there if it starts
@@ -11807,6 +11860,10 @@ void TBuffer::placeMarkdownLinks()
         }
         if (runs != 1 || runLength != link.length) {
             pManager->takeLinks({link.id});
+            // Shown after all, as a link wrapping split is not hidden
+            if (link.hiddenEarly) {
+                showMarkdownLinkText(head, link);
+            }
             continue;
         }
         pManager->moveLink(link.id, runRow, runColumn);
@@ -11923,9 +11980,11 @@ void TBuffer::markdownLineEdited(const int y, const int x, const int removed, co
     if (!pBlock) {
         return;
     }
-    const int at = head == y ? x - markdownHeadIndent(head) : markdownRowOffset(head, y) + std::max(0, x - wrapIndentWidth(y));
+    // An edit in the indent wrapping put in front of a row changes what the offsets count past, as one in the prefix does
+    const int indent = head == y ? markdownHeadIndent(head) : wrapIndentWidth(y);
+    const int at = (head == y ? 0 : markdownRowOffset(head, y)) + x - indent;
     const TMarkdownBlock::Kind kind = pBlock->kind;
-    if (kind == TMarkdownBlock::Kind::TableHeader || kind == TMarkdownBlock::Kind::TableRow || kind == TMarkdownBlock::Kind::TableDelimiter || at < pBlock->contentStart) {
+    if (kind == TMarkdownBlock::Kind::TableHeader || kind == TMarkdownBlock::Kind::TableRow || kind == TMarkdownBlock::Kind::TableDelimiter || x < indent || at < pBlock->contentStart) {
         mpMarkdown->forget(id);
         markdownBuffer[head] = 0;
         return;

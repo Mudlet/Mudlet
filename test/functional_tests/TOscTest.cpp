@@ -45,7 +45,9 @@
 #include "THyperlinkStyling.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
+#include "TConsoleModel.h"
 #include "TMainConsole.h"
+#include "TMarkdown.h"
 #include "TTextEdit.h"
 #include "TUiTour.h"
 #include "TelnetServerStub.h"
@@ -4478,6 +4480,22 @@ private slots:
                        : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
 
+  // Before any test that sends OSC 67: the link opens while the buffer has no
+  // Markdown state, which the first on sequence then makes
+  void test_Osc8LinkOpenedBeforeMarkdownStartsKeepsItsDestination() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    QVERIFY2(!console->buffer.markdown(),
+             "an earlier test sent OSC 67, so this proves nothing");
+    injectData(qsl("\x1b]8;;send:early\x1b\\\x1b]67;1\x1b\\early\x1b]8;;"
+                   "\x1b\\\x1b]67;0\x1b\\"));
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("early"));
+    const TMarkdownBlock *pBlock = console->buffer.markdownBlock(line);
+    QVERIFY2(pBlock, "the line was not read as Markdown");
+    QCOMPARE(pBlock->links.size(), 1);
+    QCOMPARE(pBlock->links.first().destination, qsl("send:early"));
+  }
+
   // A Markdown link is an OSC 8 link written another way: the same action, the same rules
   void test_MarkdownLinkRunsWhatTheSameOsc8LinkRuns() {
     injectData(qsl("\x1b]8;;send:look\x1b\\look\x1b]8;;\x1b\\"));
@@ -4621,6 +4639,21 @@ private slots:
     QVERIFY2(linkId > 0, "the link was not made on its Markdown line");
     QCOMPARE(console->buffer.getLinkIndexAt(last - 1, 0), linkId);
     QCOMPARE(console->buffer.getLinkIndexAt(last, 0), linkId);
+  }
+
+  // Hidden before triggers and apps see the line, where nothing will wrap it
+  void test_ALinkThatStartsHiddenIsHiddenAsItsLineIsCommitted() {
+    QString committed;
+    TConsoleModel &model = mpHost->mainConsoleModel();
+    const auto watch = connect(&model.mNotifier, &TConsoleModelNotifier::lineCommitted, this,
+                               [&committed, &model](const int line) {
+                                 committed = model.buffer.line(line);
+                               });
+    const auto forget = qScopeGuard([watch] { disconnect(watch); });
+    injectData(qsl("\x1b]67;1\x1b\\# Seen ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    QCOMPARE(committed, qsl("Seen     "));
   }
 
   // Shown again where it was hidden: the columns are counted after the

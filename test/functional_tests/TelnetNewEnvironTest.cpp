@@ -1145,8 +1145,11 @@ private slots:
             burst.append("\x1b]67;1;mark=ok\x07");
         }
         burst.append("\n\x1b]67;0\x1b\\");
+        // Earlier tests' messages with ids are kept, so only what this burst adds is counted
+        const int before = mainBuffer().markdown() ? mainBuffer().markdown()->mMessages.recordCount() : 0;
         feed(burst);
-        QVERIFY2(mainBuffer().markdown()->mMessages.recordCount() <= 2, qPrintable(qsl("%1 records were kept").arg(mainBuffer().markdown()->mMessages.recordCount())));
+        const int added = mainBuffer().markdown()->mMessages.recordCount() - before;
+        QVERIFY2(added <= 2, qPrintable(qsl("%1 records were kept").arg(added)));
     }
 
     // Trimming hands a wrapped paragraph's tag to its next row with offsets that count from that row's own text, past
@@ -1186,6 +1189,10 @@ private slots:
         bool shown = false;
         const auto watch = connect(&mpHost->mTelnet, &cTelnet::signal_disconnected, this, [this, &shown]() {
             shown = mainBuffer().lineBuffer.contains(qsl("| SpecFarewell |"));
+        });
+        // A failed check returns early, and the connection must not outlive the flag it writes to
+        const auto forget = qScopeGuard([watch] {
+            disconnect(watch);
         });
         QSignalSpy disconnected(&mpHost->mTelnet, &cTelnet::signal_disconnected);
         mpHost->mTelnet.disconnectIt();

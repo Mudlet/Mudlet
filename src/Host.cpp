@@ -6864,10 +6864,11 @@ void Host::setEnableMarkdown(const bool state)
     }
     mEnableMarkdown = state;
     if (!state && mpMainConsoleModel) {
-        // As the server-wrap flush timer does, so what it commits runs its triggers in the same context
-        mpMainConsoleModel->mTriggerEngineMode = true;
+        // As the server-wrap flush timer does, so what it commits runs its triggers in the same context; restored, as a
+        // script spinning the event loop in a trigger can have the dialog change this mid-trigger
+        const bool wasInTriggerEngineMode = std::exchange(mpMainConsoleModel->mTriggerEngineMode, true);
         mpMainConsoleModel->buffer.endMarkdown();
-        mpMainConsoleModel->mTriggerEngineMode = false;
+        mpMainConsoleModel->mTriggerEngineMode = wasInTriggerEngineMode;
         finalizeMainConsole();
     }
     mTelnet.sendMarkdownCapability();
