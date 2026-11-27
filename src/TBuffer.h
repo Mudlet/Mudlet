@@ -708,7 +708,7 @@ public:
     // - public so that the connection teardown and Host's flush timer can
     // flush it:
     void flushPendingServerWrapJoin(const bool endsHyperlink = true);
-    // A table's rows held for its column widths
+    // Commits a table's rows held for its column widths
     void flushMarkdownHeldLines();
     // The tag of the paragraph the line belongs to, or null
     const TMarkdownBlock* markdownBlock(int lineNumber) const;
@@ -1019,8 +1019,14 @@ private:
     // An OSC 8 link's spoiler or visibility on a Markdown line, applied once the line is rendered, and whether the link
     // began on that line
     QHash<int, std::pair<Mudlet::HyperlinkStyling, bool>> mMarkdownLinkLooks;
-    // Links whose visibility was registered for the line being committed, and whether their text was hidden at the start
-    QList<std::pair<int, bool>> mMarkdownLinksToPlace;
+    // Links whose visibility was registered for the line being committed, their length, and whether they start hidden
+    struct PlacedLink
+    {
+        int id = 0;
+        int length = 0;
+        bool concealed = false;
+    };
+    QList<PlacedLink> mMarkdownLinksToPlace;
     // What translateToPlainText() is reading came from the game
     bool mParsingServerText = false;
 

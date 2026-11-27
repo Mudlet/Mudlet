@@ -52,6 +52,7 @@
 #include "TMap.h"
 #include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
+#include "TMarkdown.h"
 #include "TMedia.h"
 #include "TNullConsoleFrontend.h"
 #include "TRoomDB.h"
@@ -640,7 +641,8 @@ void Host::pauseServerWrapFlush()
 void Host::resumeServerWrapFlush()
 {
     mServerWrapFlushPaused = false;
-    if (mpMainConsoleModel->buffer.holdsServerWrapLine()) {
+    const TMarkdown* pMarkdown = mpMainConsoleModel->buffer.markdown();
+    if (mpMainConsoleModel->buffer.holdsServerWrapLine() || (pMarkdown && pMarkdown->mParser.holdsLines())) {
         mServerWrapFlushTimer.start();
     }
 }

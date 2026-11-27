@@ -313,8 +313,12 @@ describe("Markdown from the game", function()
     for index = 1, 20 do
       more[index] = "- SpecAheadMore " .. index
     end
+    local parsedAhead = getProfileStats().linesParsedAhead
     feed(table.concat(plain, "\n") .. "\n" .. ON .. table.concat(items, "\n") .. "\n")
     feed(table.concat(more, "\n") .. "\n" .. OFF)
+    if not parsedAhead or getProfileStats().linesParsedAhead == parsedAhead then
+      pending("the ingest worker did not read ahead, so this compared the main thread with itself")
+    end
     local last = lastLine()
     for back = 0, 59 do
       local block = getMarkdownBlock("main", last - back)
@@ -392,9 +396,17 @@ describe("Markdown from the game", function()
 
   it("still makes a table of a header whose delimiter row comes after the game went quiet", function()
     feed(ON .. "| SpecIdleHead |\n")
-    settle(function() return false end)
+    assert.is_true(pumpEvents(500), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
     feed("|---|\n| r |\n" .. OFF)
     assert.are.equal("tableHeader", getMarkdownBlock("main", lastLine(3)).kind)
+  end)
+
+  it("shows a row that never gets a delimiter row once the game has been quiet a while", function()
+    local before = getLastLineNumber("main")
+    feed(ON .. "| SpecLoneRow |\n")
+    settle(function() return getLastLineNumber("main") > before end)
+    assert.are.equal("| SpecLoneRow |", lineText(lastLine()))
+    assert.are.equal("paragraph", getMarkdownBlock("main", lastLine()).kind)
   end)
 
   it("keeps an escaped pipe at the end of a row in its cell", function()
@@ -461,6 +473,59 @@ describe("Markdown from the game", function()
     assert.is_true(spent < 1.5, string.format("the row took %.2fs", spent))
   end)
 
+
+  it("shows a link with no text as typed, rather than losing it", function()
+    feed(ON .. "[](send:north) SpecEmptyLink\n" .. OFF)
+    assert.are.equal("[](send:north) SpecEmptyLink", getMarkdownBlock("main", lastLine()).text)
+  end)
+
+  it("keeps a held table's mark when a trigger gags its first row and the next message has begun", function()
+    onLine("SpecGagHead", function() deleteLine() end)
+    feed(ESC .. "]67;1;mark=warn" .. ESC .. "\\| SpecGagHead |\n|---|\n| r |\nSpecGagEnd" .. ON .. "\n" .. OFF)
+    local line = lastLine()
+    while line > 0 and lineText(line) ~= "SpecGagEnd" do
+      line = line - 1
+    end
+    assert.are.equal("warn", getMarkdownBlock("main", line).mark)
+  end)
+
+  -- MXP is off on a Markdown line, so <details> and <https://…> are Markdown's, and back on for the game's next line
+  it("keeps MXP off its lines and on for the lines after", function()
+    setConfig("specialForceMXPProcessorOn", true)
+    finally(function() setConfig("specialForceMXPProcessorOn", false) end)
+    feed(ON .. "<details>\n<summary>SpecMxpSum</summary>\ninside\n</details>\nsee <https://example.com>\n" .. OFF)
+    local link = getMarkdownBlock("main", lastLine())
+    assert.are.equal(1, #(link.links or {}))
+    assert.are.equal("https://example.com", link.links[1].destination)
+    assert.are.equal("§ SpecMxpSum", lineText(lastLine(3)))
+    feed("<B>SpecMxpAfter</B>\n")
+    assert.are.equal("SpecMxpAfter", lineText(lastLine()))
+    assert.is_true(formatOf(lastLine(), 0).bold, "MXP stayed off after Markdown")
+  end)
+
+  it("never holds a Markdown line to join it to the next, as undoing the game's wrapping would", function()
+    local savedUndo, savedWidth = getConfig("undoServerWrap"), getConfig("undoServerWrapWidth")
+    setConfig("undoServerWrap", true)
+    setConfig("undoServerWrapWidth", 20)
+    finally(function()
+      setConfig("undoServerWrap", savedUndo)
+      setConfig("undoServerWrapWidth", savedWidth)
+    end)
+    feed(ON .. "- SpecServerWrapItem\n- SpecNextItem\n" .. OFF)
+    assert.are.equal("SpecServerWrapItem", getMarkdownBlock("main", lastLine(2)).text)
+    assert.are.equal("SpecNextItem", getMarkdownBlock("main", lastLine()).text)
+  end)
+
+  it("ignores an on or off sequence in text a script feeds", function()
+    feed(ON .. "- SpecFedItem\n")
+    feedTriggers(OFF)
+    feed("  SpecFedMore\n" .. OFF)
+    assert.are.equal("continuation", getMarkdownBlock("main", lastLine()).kind)
+    feedTriggers(ON .. "# SpecFedOn\n")
+    feed("# SpecGameAfter\n")
+    assert.is_nil(getMarkdownBlock("main", lastLine()), "an on sequence a script fed turned Markdown on")
+  end)
+
   -- Last: the GA it sends changes how Mudlet waits for the rest of a line for every test after it
   it("hides an OSC 8 spoiler on a prompt that begins while Markdown is on", function()
     feed(ON .. "SpecBefore\nSpecPrompt " .. osc8('local:?config={"spoiler":true}', "SECRET") .. "<T_IAC><T_GA>")
@@ -472,4 +537,3 @@ describe("Markdown from the game", function()
     assert.are.equal("SpecPrompt       ", lineText(prompt))
   end)
 end)
-

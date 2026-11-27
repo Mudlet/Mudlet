@@ -951,7 +951,8 @@ private slots:
         announce(TN_WILL, OPT_GMCP);
         const std::optional<QStringList> supported = gmcpPackages(sentGmcp(), "Core.Supports.Set");
         QVERIFY2(supported, "no Core.Supports.Set was sent");
-        QVERIFY2(supported->filter(QRegularExpression(qsl("^Client\\.Markdown( |$)"))).isEmpty(), qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(supported->join(qsl(", ")))));
+        QVERIFY2(supported->filter(QRegularExpression(qsl("^Client\\.Markdown( |$)"))).isEmpty(),
+                 qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(supported->join(qsl(", ")))));
     }
 
     TBuffer& mainBuffer() { return mpHost->mainConsoleModelOrNull()->buffer; }
@@ -1083,7 +1084,9 @@ private slots:
     {
         TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
         pModel->setWrapAt(20);
-        const auto restoreWrap = qScopeGuard([this, pModel] { pModel->setWrapAt(mpHost->mWrapAt); });
+        const auto restoreWrap = qScopeGuard([this, pModel] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+        });
         feed("\x1b]67;1\x1b\\| Item | Note |\n|---|---|\n| sword | a long note that wraps |\n\x1b]67;0\x1b\\");
         feed("SpecEnd\n");
         int row = lastCommittedLine() - 1;
@@ -1114,7 +1117,9 @@ private slots:
     {
         TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
         pModel->setWrapAt(20);
-        const auto restoreWrap = qScopeGuard([this, pModel] { pModel->setWrapAt(mpHost->mWrapAt); });
+        const auto restoreWrap = qScopeGuard([this, pModel] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+        });
         feed("\x1b]67;1\x1b\\SpecParaA one two three four five six\nSpecParaB one two three four [the link](send:x) five\n\x1b]67;0\x1b\\");
         int headB = lastCommittedLine();
         while (mainBuffer().markdownBuffer.at(headB) == 0 && mainBuffer().wrapsFromPreviousLine(headB)) {
@@ -1141,8 +1146,7 @@ private slots:
         }
         burst.append("\n\x1b]67;0\x1b\\");
         feed(burst);
-        QVERIFY2(mainBuffer().markdown()->mMessages.recordCount() <= 2,
-                 qPrintable(qsl("%1 records were kept").arg(mainBuffer().markdown()->mMessages.recordCount())));
+        QVERIFY2(mainBuffer().markdown()->mMessages.recordCount() <= 2, qPrintable(qsl("%1 records were kept").arg(mainBuffer().markdown()->mMessages.recordCount())));
     }
 
     // Trimming hands a wrapped paragraph's tag to its next row with offsets that count from that row's own text, past
@@ -1172,6 +1176,28 @@ private slots:
         const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(0);
         QVERIFY2(pBlock && pBlock->links.size() == 1, "the rows left of the paragraph lost its tag");
         QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // The game's last text ends its message when the connection closes, so it is shown before anything else happens
+    void test_aClosedConnectionShowsWhatMarkdownHeld()
+    {
+        feed("\x1b]67;1\x1b\\| SpecFarewell |\n");
+        // Looked at as the disconnection is announced, which is when scripts and the disconnection event act on it
+        bool shown = false;
+        const auto watch = connect(&mpHost->mTelnet, &cTelnet::signal_disconnected, this, [this, &shown]() {
+            shown = mainBuffer().lineBuffer.contains(qsl("| SpecFarewell |"));
+        });
+        QSignalSpy disconnected(&mpHost->mTelnet, &cTelnet::signal_disconnected);
+        mpHost->mTelnet.disconnectIt();
+        if (disconnected.isEmpty()) {
+            QVERIFY2(disconnected.wait(15s), "the connection did not close");
+        }
+        disconnect(watch);
+        QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
+        mpHost->mTelnet.reconnect();
+        QVERIFY2(connected.wait(15s), "the profile did not come back after a reconnect");
+        mpServer->forgetReceived();
+        QVERIFY2(shown, "the row the game sent last was not shown by the time the disconnection was announced");
     }
 
     void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()

@@ -442,11 +442,12 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
                 mPendingOutput.block.list = static_cast<quint8>(mItems.size());
             }
             mHavePendingRow = true;
+            mPendingSince.start();
             mPendingCells = cells;
             return out;
         }
     }
-    // Any line but a row ends a table, and a row still waiting for its delimiter row is a paragraph
+    // Any line but a row ends a table, and a row still waiting for its delimiter row is shown as it was held
     out << endTable();
 
     // Rule 5
@@ -621,10 +622,13 @@ TMarkdownParser::Output TMarkdownParser::summary(const Text& content, const bool
     return line;
 }
 
-// A row waiting to be a header keeps waiting: the game going quiet is no reason it cannot start a table
+// A row waiting to be a header waits out a short quiet spell for its delimiter row, and is then shown as it is
 QList<TMarkdownParser::Output> TMarkdownParser::flushHeld()
 {
     QList<Output> out;
+    if (mHavePendingRow && mPendingSince.elapsed() >= csmPendingRowWaitMs) {
+        out << takePendingRow();
+    }
     for (const Row& row : std::as_const(mHeldRows)) {
         out << rowLine(row);
     }
@@ -795,10 +799,10 @@ void TMarkdownParser::holdRow(Row&& row, QList<Output>& out)
 
 quint32 TMarkdown::store(TMarkdownBlock&& block)
 {
-    // 0 means untagged, so the count skips it when it wraps
-    if (++mLastBlockId == 0) {
+    // 0 means untagged, and an id still in use is skipped once the count wraps
+    do {
         ++mLastBlockId;
-    }
+    } while (mLastBlockId == 0 || mBlocks.contains(mLastBlockId));
     mMessages.lineStored(block.message);
     mBlocks.insert(mLastBlockId, std::move(block));
     return mLastBlockId;

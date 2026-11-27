@@ -1580,6 +1580,8 @@ void cTelnet::finishDisconnection()
     const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
     model.mTriggerEngineMode = true;
     model.buffer.flushPendingServerWrapJoin();
+    // A Markdown message ends when the connection closes, and what it held is the game's last text
+    model.buffer.endMarkdown();
     model.mTriggerEngineMode = wasInTriggerEngineMode;
 
     // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:

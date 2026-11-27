@@ -368,6 +368,10 @@ int Line::closeLink(const int at)
         return at + 1;
     }
     const int textFrom = opener.pos + (opener.image ? 2 : 1);
+    // A link with no text would vanish, destination and all, so it is shown as typed
+    if (textFrom == at) {
+        return at + 1;
+    }
     // A link cannot hold another, whether an autolink or an OSC 8 link
     bool covered = osc8Covers(textFrom, at);
     for (int j = textFrom; j < at; ++j) {
@@ -557,7 +561,7 @@ QList<TMarkdownLink> Line::build(QString& text, std::vector<TChar>& format) cons
 
 QList<TMarkdownLink> TMarkdownInline::render(QString& text, std::vector<TChar>& format, const int from)
 {
-    if (text.size() - from > csmMaxInlineLength || static_cast<size_t>(text.size()) != format.size()) {
+    if (from < 0 || text.size() - from > csmMaxInlineLength || static_cast<size_t>(text.size()) != format.size()) {
         return {};
     }
     Line line(text, format, from);

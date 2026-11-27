@@ -26,6 +26,7 @@
 
 #include "TBuffer.h"
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QList>
 #include <QQueue>
@@ -162,6 +163,8 @@ public:
     static constexpr int csmMaxSectionLevels = 4;
     // A table wider than this, in columns, is not padded, so a game cannot make every row thousands of spaces long
     static constexpr int csmMaxPaddedTableWidth = 1000;
+    // How long a row waits for a delimiter row once the game has gone quiet, before it is shown as it is
+    static constexpr int csmPendingRowWaitMs = 1000;
     static constexpr int csmMaxHeldRows = 500;
 
 private:
@@ -173,7 +176,8 @@ private:
     };
     struct OpenItem
     {
-        // Where the item's text starts, counted in spaces from the start of the line after its quote markers
+        // One column past the marker, counted in spaces from the start of the line after its quote markers: the column a
+        // line must be indented to to continue the item
         int textColumn = 0;
         // Of the grid's prefix, after the quote bars
         int prefixWidth = 0;
@@ -196,7 +200,7 @@ private:
     QList<Output> endTable();
     QList<Output> takePendingRow();
     void holdRow(Row&& row, QList<Output>& out);
-    // The summary of the section just opened, empty when the line after the opening gave none
+    // The summary line of the section just opened, with a label of the client's when the line after the opening gave none
     Output summary(const Text& content, bool given) const;
     Output blank(quint8 quote) const;
     void closeItemsBeyond(int column);
@@ -204,6 +208,7 @@ private:
     static QString quotePrefix(quint8 quote);
 
     bool mHavePendingRow = false;
+    QElapsedTimer mPendingSince;
     // What the row waiting to be a header is shown as if no delimiter row comes: a paragraph, or the continuation of an item
     Output mPendingOutput;
     QList<Text> mPendingCells;

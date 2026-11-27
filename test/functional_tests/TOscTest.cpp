@@ -4657,6 +4657,77 @@ private slots:
              "the link was not shown again on the row it wrapped onto");
   }
 
+  // A link that starts hidden and that wrapping splits across rows is shown,
+  // as an OSC 8 link over more than one line is: none of its text is lost
+  void test_HiddenLinkSplitByWrappingOnAMarkdownLineIsShown() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    injectData(qsl("\x1b]67;1\x1b\\Seen one two \x1b]8;;send:look?config={\"visibility\":"
+                   "{\"action\":\"reveal\",\"delay\":60000,\"expire\":{\"input\":true}}}"
+                   "\x1b\\Hint text here\x1b]8;;\x1b\\\x1b]67;0\x1b\\"));
+    const int last = console->buffer.getLastLineNumber() - 1;
+    QVERIFY2(console->buffer.wrapsFromPreviousLine(last),
+             "the line did not wrap, so this proves nothing");
+    const QString shown = console->buffer.line(last - 1) + qsl(" ") + console->buffer.line(last);
+    QVERIFY2(shown.contains(qsl("Hint")) && shown.contains(qsl("here")),
+             qPrintable(qsl("the split link's text was lost: %1").arg(shown)));
+  }
+
+  // The indent wrapping puts in front of a row carries the row's first
+  // format, link and all, but hiding the link hides only its own text
+  void test_HidingALinkAtTheStartOfAnIndentedMarkdownLineHidesItsText() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    const int savedIndent = console->buffer.mWrapIndent;
+    console->buffer.setWrapAt(20);
+    console->buffer.setWrapIndent(2);
+    const auto restore = qScopeGuard([console, savedWrap, savedIndent] {
+      console->buffer.setWrapAt(savedWrap);
+      console->buffer.setWrapIndent(savedIndent);
+    });
+    injectData(qsl("\x1b]67;1\x1b\\\x1b]8;;send:look?config={\"visibility\":"
+                   "{\"action\":\"conceal\"}}\x1b\\north\x1b]8;;\x1b\\ and then some "
+                   "more words\x1b]67;0\x1b\\"));
+    int head = console->buffer.getLastLineNumber() - 1;
+    while (head > 0 && console->buffer.wrapsFromPreviousLine(head)) {
+      --head;
+    }
+    QVERIFY2(console->buffer.line(head).startsWith(qsl("  north")),
+             qPrintable(qsl("the line was not indented as set: %1").arg(console->buffer.line(head))));
+    const int linkId = console->buffer.getLinkIndexAt(head, 2);
+    QVERIFY2(linkId > 0, "the link was not made");
+    console->getHyperlinkVisibilityManager().onLinkClicked(linkId);
+    QCOMPARE(console->buffer.line(head).left(7), qsl("       "));
+    QVERIFY2(console->buffer.line(head).mid(7).startsWith(qsl(" and")),
+             qPrintable(qsl("hiding the link took other text: %1").arg(console->buffer.line(head))));
+  }
+
+  // Markdown is a new way for a game to make links, so its destinations meet
+  // the same refusals and clean-up as OSC 8's
+  void test_MarkdownLinkDestinationsMeetTheOsc8Rules_data() {
+    QTest::addColumn<QString>("destination");
+    QTest::addColumn<QStringList>("commands");
+    QTest::newRow("file") << qsl("file:///etc/passwd") << QStringList();
+    QTest::newRow("javascript") << qsl("javascript:alert%281%29") << QStringList();
+    QTest::newRow("preset") << qsl("preset:danger") << QStringList();
+    QTest::newRow("mailto with an attachment")
+        << qsl("mailto:a@example.com?subject=Hi&attach=/etc/hostname")
+        << QStringList{qsl("openUrl(%1)").arg(LuaLiteral::quote(qsl("mailto:a@example.com?subject=Hi")))};
+  }
+
+  void test_MarkdownLinkDestinationsMeetTheOsc8Rules() {
+    QFETCH(QString, destination);
+    QFETCH(QStringList, commands);
+    injectData(qsl("\x1b]67;1\x1b\\[x](%1)\x1b]67;0\x1b\\").arg(destination));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("x"));
+    QCOMPARE(findFirstLinkCommands(), commands);
+  }
+
   // An OSC 8 spoiler is hidden after the line is read as Markdown, so
   // trimming the line cannot take it, and it can still be revealed
   void test_Osc8SpoilerAloneOnAMarkdownLineCanBeRevealed() {
@@ -4672,7 +4743,7 @@ private slots:
   }
 
   // A Markdown link in a selection group starts selected as the same OSC 8
-  // link would, and a disabled one stays disabled
+  // link would
   void test_MarkdownLinkInASelectionGroupStartsSelected() {
     injectData(qsl("\x1b]67;1\x1b\\[a](send:a?config=%7B%22selection%22%3A%7B%22"
                    "group%22%3A%22g%22%2C%22value%22%3A%22a%22%2C%22selected%22%3A"
