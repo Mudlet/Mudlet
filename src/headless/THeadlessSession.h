@@ -989,6 +989,10 @@ signals:
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
     void mainConsoleCleared(const QString& profile);
+    // The game changed the mark of a Markdown message shown earlier, whose lines' blocks name it by message; mark is
+    // as MarkdownBlock::mark has it. Sent for a message whose lines the console no longer holds too. Sent mid-write,
+    // as outputLine is.
+    void markdownMarkChanged(const QString& profile, quint32 message, const QString& mark);
     // The profile started or stopped logging the game's text to a file, where the GUI's logging button changes:
     // from a script's startLogging(), or as it loads with logging left on. fileName is the log being written,
     // empty once it stops. Also false, with logging still off, when a start fails (the reason is printed, as

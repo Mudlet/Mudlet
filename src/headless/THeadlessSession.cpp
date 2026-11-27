@@ -653,6 +653,15 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
+                // Direct, as the mark can change again before a queued call would run, and an app is owed every step
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::markdownMarkChanged, this, [this, pNewHost](const quint32 message) {
+                    const TMarkdown* pMarkdown = pNewHost->mainConsoleModel().buffer.markdown();
+                    const QString mark = pMarkdown ? pMarkdown->mMessages.mark(message).name() : QString();
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit markdownMarkChanged(profile, message, mark);
+                    --gSignalsBeingHandedOut;
+                });
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this, pNewHost](const QString& text, const TLineFormat& format, const bool continuesLine) {
                     const QString profile = mProfileName;
                     const QList<TextRun> runs = textRuns(text, format, pNewHost->mFgColor, pNewHost->mBgColor);

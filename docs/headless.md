@@ -1050,6 +1050,26 @@ does; over a `disabled` link, or one whose `menu` is not set, it opens nothing. 
 the GUI opens the console's own menu, to copy, select and search, which is the app's to offer over the text
 it drew; the entries a script adds to that menu with `addMouseEvent()` are not listed for the app.
 
+## Embedding it: Markdown from the game
+
+A game that follows the [Markdown Text for MUDs](https://wiki.mudlet.org/w/Standards:Markdown_Text_for_MUDs)
+standard can send headings, lists, quotes, code, tables and collapsible sections. The main console shows them in
+its grid, with markers taken out and bullets, bars and padding drawn in, and `outputLine` and `lineShown` each end
+with the line's `THeadlessSession::MarkdownBlock`, which holds what `getMarkdownBlock()` gives scripts. An app that
+lays Markdown out itself reads it there:
+
+- `kind` is `None` for every line that is not Markdown, a prompt included, and for any line a script or trigger
+  wrote. On `lineShown` a line a trigger wrote into has `None` too, as the console drops its tag.
+- `contentStart` and each cell's `start` count in the `text` sent with it, as a run's `start` does, so
+  `text.mid(contentStart)` is the line without what the console drew in front of it.
+- A table's rows come once the table is complete, or the game has been quiet a moment. Its lines share `table`,
+  and its header line holds `align`.
+- `message` names the message the line is part of, with the `id` and `mark` the game gave it.
+  `markdownMarkChanged(profile, message, mark)` tells of a later change to that mark, for a message whose lines
+  the console no longer holds too.
+- Code is a run with `TextStyle::Code`. Links are runs, as for any line, under "links in the main console and in
+  windows" above.
+
 ## Embedding it: the 2D map
 
 `renderMap()` draws the profile's 2D map onto a `QPainter` at the size given, as the GUI's mapper

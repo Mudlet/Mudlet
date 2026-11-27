@@ -1857,6 +1857,47 @@ end))lua");
         }
     }
 
+    void test_aMarkChangeReachesTheSession()
+    {
+        const QString name = qsl("Headless Markdown Mark Change");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy marks(&session, &THeadlessSession::markdownMarkChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1;id=craft:mark=busy\\27\\\\work\\n\\27]67;0\\27\\\\')")));
+        const qsizetype work = outputTexts(output).indexOf(qsl("work"));
+        QVERIFY2(work >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const quint32 message = markdownOf(output, work, 5).message;
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;2;id=craft:mark=ok\\27\\\\')")));
+        // Held a moment by cTelnet, as it follows the last line
+        QTRY_COMPARE_WITH_TIMEOUT(marks.count(), 1, 5000);
+        QCOMPARE(marks.at(0).at(0).toString(), name);
+        QCOMPARE(marks.at(0).at(1).value<quint32>(), message);
+        QCOMPARE(marks.at(0).at(2).toString(), qsl("ok"));
+    }
+
+    // An app may still show the message though the console no longer holds its lines
+    void test_aMarkChangeForAMessageWithNoLinesLeftStillArrives()
+    {
+        const QString name = qsl("Headless Markdown Mark Gone");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy marks(&session, &THeadlessSession::markdownMarkChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^SpecGone$", [[deleteLine()]]))lua")));
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1;id=gone:mark=busy\\27\\\\SpecGone\\n\\27]67;0\\27\\\\')")));
+        const qsizetype gone = outputTexts(output).indexOf(qsl("SpecGone"));
+        QVERIFY2(gone >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const quint32 message = markdownOf(output, gone, 5).message;
+        QVERIFY(message > 0);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;2;id=gone:mark=error\\27\\\\')")));
+        QTRY_COMPARE_WITH_TIMEOUT(marks.count(), 1, 5000);
+        QCOMPARE(marks.at(0).at(1).value<quint32>(), message);
+        QCOMPARE(marks.at(0).at(2).toString(), qsl("error"));
+    }
+
     void test_aSaveKeepsTheKeyboardShortcuts()
     {
         const QString name = qsl("Headless Shortcuts");
