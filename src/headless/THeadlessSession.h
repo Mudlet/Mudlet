@@ -109,7 +109,9 @@ public:
         Blink = 0x40,
         // Set in place of Blink when the game asks for both
         FastBlink = 0x80,
-        Concealed = 0x100
+        Concealed = 0x100,
+        // Code in a Markdown line
+        Code = 0x200
     };
     Q_DECLARE_FLAGS(TextStyles, TextStyle)
 
@@ -131,6 +133,49 @@ public:
         int link = 0;
 
         bool operator==(const TextRun&) const = default;
+    };
+
+    // The characters [start, start + length) of a table line that are one cell's text, as TextRun counts them
+    struct MarkdownCell
+    {
+        int start = 0;
+        int length = 0;
+
+        bool operator==(const MarkdownCell&) const = default;
+    };
+
+    // The Markdown block a line of the main console is part of, as getMarkdownBlock() gives it to scripts; kind is None
+    // for a line that is not Markdown. docs/headless.md tells what each field holds.
+    struct MarkdownBlock
+    {
+        enum class Kind { None, Blank, Paragraph, Heading, Item, Continuation, Code, TableHeader, TableDelimiter, TableRow, Rule, Summary };
+        enum class Marker { None, Bullet, Ordered };
+        enum class Task { None, Open, Done };
+        enum class Align { None, Left, Center, Right };
+
+        Kind kind = Kind::None;
+        // Where the line's own text starts in the text sent with it, after what the console draws in front of it
+        int contentStart = 0;
+        quint32 message = 0;
+        QString id;
+        // Empty for none, else the name the game sent, or six hex digits for a color
+        QString mark;
+        int level = 0;
+        int quote = 0;
+        int list = 0;
+        int number = 0;
+        int section = 0;
+        Marker marker = Marker::None;
+        Task task = Task::None;
+        // Whether a section's summary line opens its section
+        bool open = false;
+        QString language;
+        quint32 table = 0;
+        // A table's header line only
+        QList<Align> align;
+        QList<MarkdownCell> cells;
+
+        bool operator==(const MarkdownBlock&) const = default;
     };
 
     // invalidName, invalidConnectionDetails: a profile was to be made under a name, or given a host, port or
@@ -905,8 +950,9 @@ signals:
     // another line or close the profile there, in the middle of this line's commit. runs covers text from its
     // start to its end, in order, with no empty run, and is empty for an empty line; a handler that takes
     // only the first three or four arguments may be connected. arrivalMSecs is when the line arrived, in ms since
-    // the epoch as debugText's is, the time the GUI's timestamps show; -1 where it has none.
-    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
+    // the epoch as debugText's is, the time the GUI's timestamps show; -1 where it has none. markdown is the line's
+    // Markdown block, whose offsets count in text.
+    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, const THeadlessSession::MarkdownBlock& markdown);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
@@ -1218,6 +1264,7 @@ private:
     // Lua's own message, out of what the GUI's error console shows of it
     static QString luaErrorOf(const QString& consoleText);
     static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);
+    static MarkdownBlock markdownBlock(const TBuffer& buffer, int line);
     static qint64 arrivalTime(const TBuffer& buffer, int line);
     // The console windowLines() reads for the name, null for one it refuses
     TConsoleModel* windowTextModel(const QString& window) const;

@@ -318,6 +318,11 @@ end))lua")
     // IAC SB MSSP MSSP_VAR "TLS" MSSP_VAL <port> IAC SE
     static QByteArray msspTlsPort(const QByteArray& port) { return QByteArray("\xff\xfa\x46\x01TLS\x02") + port + QByteArray("\xff\xf0"); }
 
+    // Lua that has the game send the lines, written with Lua escapes, as one Markdown message
+    static QString feedMarkdown(const QString& lines) { return qsl("feedTelnet('\\27]67;1\\27\\\\%1\\27]67;0\\27\\\\')").arg(lines); }
+
+    static THeadlessSession::MarkdownBlock markdownOf(const QSignalSpy& spy, const qsizetype index, const int argument) { return spy.at(index).at(argument).value<THeadlessSession::MarkdownBlock>(); }
+
     static QStringList outputTexts(const QSignalSpy& spy)
     {
         QStringList texts;
@@ -1741,6 +1746,117 @@ end))lua");
     }
 
     // Only the main window makes a ShortcutsManager, and the GUI would open a save that had none with the defaults
+    void test_outputLineCarriesTheMarkdownBlock()
+    {
+        const QString name = qsl("Headless Markdown");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(feedMarkdown(qsl("## Head\\n- [ ] task\\n1. one\\n"))));
+        QVERIFY(session.runLua(qsl("feedTelnet('plain\\n')")));
+        const QStringList texts = outputTexts(output);
+        const qsizetype head = texts.indexOf(qsl("Head"));
+        QVERIFY2(head >= 0 && head + 3 < texts.size(), qPrintable(texts.join(QChar::LineFeed)));
+        using Block = THeadlessSession::MarkdownBlock;
+
+        const Block heading = markdownOf(output, head, 5);
+        QCOMPARE(heading.kind, Block::Kind::Heading);
+        QCOMPARE(heading.level, 2);
+        QCOMPARE(heading.contentStart, 0);
+
+        const Block task = markdownOf(output, head + 1, 5);
+        QCOMPARE(task.kind, Block::Kind::Item);
+        QCOMPARE(task.marker, Block::Marker::Bullet);
+        QCOMPARE(task.task, Block::Task::Open);
+        QCOMPARE(task.contentStart, texts.at(head + 1).indexOf(qsl("task")));
+
+        const Block ordered = markdownOf(output, head + 2, 5);
+        QCOMPARE(ordered.kind, Block::Kind::Item);
+        QCOMPARE(ordered.marker, Block::Marker::Ordered);
+        QCOMPARE(ordered.number, 1);
+
+        QCOMPARE(texts.at(head + 3), qsl("plain"));
+        QCOMPARE(markdownOf(output, head + 3, 5).kind, Block::Kind::None);
+    }
+
+    void test_outputLineCarriesATablesCells()
+    {
+        const QString name = qsl("Headless Markdown Table");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const qsizetype before = output.size();
+        QVERIFY(session.runLua(feedMarkdown(qsl("| A | B |\\n|:--|--:|\\n| x | y |\\n"))));
+        QTRY_VERIFY_WITH_TIMEOUT(output.size() >= before + 3, 5000);
+        using Block = THeadlessSession::MarkdownBlock;
+        const Block header = markdownOf(output, before, 5);
+        QCOMPARE(header.kind, Block::Kind::TableHeader);
+        QCOMPARE(header.align, (QList<Block::Align>{Block::Align::Left, Block::Align::Right}));
+        QVERIFY(header.table != 0);
+        QCOMPARE(markdownOf(output, before + 1, 5).kind, Block::Kind::TableDelimiter);
+        const Block row = markdownOf(output, before + 2, 5);
+        QCOMPARE(row.kind, Block::Kind::TableRow);
+        QCOMPARE(row.table, header.table);
+        const QString text = output.at(before + 2).at(1).toString();
+        QCOMPARE(row.cells.size(), 2);
+        QCOMPARE(text.mid(row.cells.at(0).start, row.cells.at(0).length), qsl("x"));
+        QCOMPARE(text.mid(row.cells.at(1).start, row.cells.at(1).length), qsl("y"));
+    }
+
+    void test_outputLineCarriesTheMessagesIdAndMark()
+    {
+        const QString name = qsl("Headless Markdown Mark");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1;id=craft:mark=busy\\27\\\\work\\n\\27]67;0\\27\\\\')")));
+        const qsizetype work = outputTexts(output).indexOf(qsl("work"));
+        QVERIFY2(work >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const THeadlessSession::MarkdownBlock block = markdownOf(output, work, 5);
+        QCOMPARE(block.id, qsl("craft"));
+        QCOMPARE(block.mark, qsl("busy"));
+        QVERIFY(block.message > 0);
+    }
+
+    void test_aPromptWhileMarkdownIsOnIsNotABlock()
+    {
+        const QString name = qsl("Headless Markdown Prompt");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1\\27\\\\HP> <T_IAC><T_GA>')")));
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;0\\27\\\\')")));
+        const qsizetype prompt = outputTexts(output).indexOf(qsl("HP> "));
+        QVERIFY2(prompt >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        QVERIFY(output.at(prompt).at(2).toBool());
+        QCOMPARE(markdownOf(output, prompt, 5).kind, THeadlessSession::MarkdownBlock::Kind::None);
+    }
+
+    void test_codeIsAStyle()
+    {
+        const QString name = qsl("Headless Markdown Code");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(feedMarkdown(qsl("a `ale` b\\n"))));
+        const qsizetype line = outputTexts(output).indexOf(qsl("a ale b"));
+        QVERIFY2(line >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const auto runs = output.at(line).at(3).value<QList<THeadlessSession::TextRun>>();
+        const auto code = std::find_if(runs.cbegin(), runs.cend(), [](const THeadlessSession::TextRun& run) {
+            return run.start == 2;
+        });
+        QVERIFY2(code != runs.cend(), "the code span is not a run of its own");
+        QCOMPARE(code->length, 3);
+        for (const THeadlessSession::TextRun& run : runs) {
+            QCOMPARE(run.styles.testFlag(THeadlessSession::TextStyle::Code), run.start == 2);
+        }
+    }
+
     void test_aSaveKeepsTheKeyboardShortcuts()
     {
         const QString name = qsl("Headless Shortcuts");

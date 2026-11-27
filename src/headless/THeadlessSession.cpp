@@ -34,6 +34,7 @@
 #include "TGameTransport.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TMarkdown.h"
 #include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 
@@ -2382,6 +2383,7 @@ THeadlessSession::TextStyles textStyles(const TChar& format)
     styles.setFlag(THeadlessSession::TextStyle::Blink, format.isBlinking());
     styles.setFlag(THeadlessSession::TextStyle::FastBlink, format.isFastBlinking());
     styles.setFlag(THeadlessSession::TextStyle::Concealed, format.isConcealed());
+    styles.setFlag(THeadlessSession::TextStyle::Code, format.isCode());
     return styles;
 }
 
@@ -2415,6 +2417,45 @@ QList<THeadlessSession::TextRun> THeadlessSession::textRuns(const QString& text,
         start = end;
     }
     return runs;
+}
+
+// The headless enums are copies of the buffer's, cast across, so each must end where the buffer's does
+static_assert(static_cast<int>(TMarkdownBlock::Kind::Summary) == static_cast<int>(THeadlessSession::MarkdownBlock::Kind::Summary));
+static_assert(static_cast<int>(TMarkdownBlock::Marker::Ordered) == static_cast<int>(THeadlessSession::MarkdownBlock::Marker::Ordered));
+static_assert(static_cast<int>(TMarkdownBlock::Task::Done) == static_cast<int>(THeadlessSession::MarkdownBlock::Task::Done));
+static_assert(static_cast<int>(TMarkdownBlock::Align::Right) == static_cast<int>(THeadlessSession::MarkdownBlock::Align::Right));
+
+THeadlessSession::MarkdownBlock THeadlessSession::markdownBlock(const TBuffer& buffer, const int line)
+{
+    MarkdownBlock block;
+    const TMarkdownBlock* pTag = buffer.markdownBlock(line);
+    if (!pTag) {
+        return block;
+    }
+    block.kind = static_cast<MarkdownBlock::Kind>(pTag->kind);
+    block.contentStart = pTag->contentStart;
+    block.message = pTag->message;
+    if (const TMarkdown* pMarkdown = buffer.markdown()) {
+        block.id = pMarkdown->mMessages.id(pTag->message);
+        block.mark = pMarkdown->mMessages.mark(pTag->message).name();
+    }
+    block.level = pTag->level;
+    block.quote = pTag->quote;
+    block.list = pTag->list;
+    block.number = pTag->number;
+    block.section = pTag->section;
+    block.marker = static_cast<MarkdownBlock::Marker>(pTag->marker);
+    block.task = static_cast<MarkdownBlock::Task>(pTag->task);
+    block.open = pTag->open;
+    block.language = pTag->language;
+    block.table = pTag->table;
+    for (const TMarkdownBlock::Align align : pTag->align) {
+        block.align.append(static_cast<MarkdownBlock::Align>(align));
+    }
+    for (const TMarkdownCell& cell : pTag->cells) {
+        block.cells.append({cell.start, cell.length});
+    }
+    return block;
 }
 
 // A segment a wrap split off has no time of its own, so takes that of the line it came from
@@ -2453,7 +2494,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
     ++gSignalsBeingHandedOut;
-    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex));
+    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex), markdownBlock(buffer, lineIndex));
     --gSignalsBeingHandedOut;
 }
 
