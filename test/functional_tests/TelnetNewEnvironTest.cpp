@@ -978,6 +978,20 @@ private slots:
         QVERIFY(mainBuffer().markdownBlock(lastCommittedLine()));
     }
 
+    // What was held is committed as it stands, and what follows is ordinary text
+    void test_turningThePreferenceOffMidTableCommitsTheHeldRows()
+    {
+        feed("\x1b]67;1\x1b\\| SpecHeldHead |\n|---|\n| SpecHeldRow |\n");
+        mpHost->mEnableMarkdown = false;
+        feed("SpecAfterTable\n");
+        const int last = lastCommittedLine();
+        QCOMPARE(mainBuffer().lineBuffer.at(last), qsl("SpecAfterTable"));
+        QVERIFY(!mainBuffer().markdownBlock(last));
+        const TMarkdownBlock* pRow = mainBuffer().markdownBlock(last - 1);
+        QVERIFY2(pRow && pRow->kind == TMarkdownBlock::Kind::TableRow, "the held row was not committed before the line after it");
+        QVERIFY(mainBuffer().lineBuffer.at(last - 1).startsWith(qsl("SpecHeldRow")));
+    }
+
     void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()
     {
         feed("\x1b]67;1;id=specReconnect:mark=busy\x1b\\SpecBeforeReconnect\n");

@@ -142,13 +142,15 @@ public:
     QList<Output> endMessage();
     // The held rows of a table, which stays open for rows still to come
     QList<Output> flushHeld();
-    bool holdsLines() const { return !mHeld.isEmpty(); }
+    bool holdsLines() const { return mHavePendingRow || !mHeldRows.isEmpty(); }
     void setRuleWidth(int columns) { mRuleWidth = columns; }
     // The colors of the characters the grid adds, such as a bullet
     void setPlainFormat(const TChar& format) { mPlain = format; }
 
     static constexpr int csmMaxQuoteLevels = 8;
     static constexpr int csmMaxListLevels = 8;
+    static constexpr int csmMaxTableColumns = 64;
+    static constexpr int csmMaxHeldRows = 500;
 
 private:
     struct Text
@@ -165,13 +167,37 @@ private:
         int prefixWidth = 0;
     };
 
+    struct Row
+    {
+        TMarkdownBlock::Kind kind = TMarkdownBlock::Kind::TableRow;
+        QList<Text> cells;
+        // Of each cell, in the cell's own columns
+        QList<QList<TMarkdownLink>> links;
+    };
+
     Output make(TMarkdownBlock::Kind kind, quint8 quote, const QString& prefix, Text content) const;
+    static QList<Text> splitRow(const Text& row);
+    static bool delimiterRow(const QList<Text>& cells);
+    Row renderedRow(TMarkdownBlock::Kind kind, QList<Text> cells) const;
+    Output rowLine(const Row& row) const;
+    // The table and a row waiting to be its header end, and what was held is returned to be committed
+    QList<Output> endTable();
+    void holdRow(Row&& row, QList<Output>& out);
     Output blank(quint8 quote) const;
     void closeItemsBeyond(int column);
     bool closesFence(const QString& line) const;
     static QString quotePrefix(quint8 quote);
 
-    QList<Output> mHeld;
+    bool mHavePendingRow = false;
+    Text mPendingRow;
+    QList<Text> mPendingCells;
+    bool mInTable = false;
+    // Set once rows have been shown, after which later rows are padded to them
+    bool mWidthsFixed = false;
+    quint32 mTable = 0;
+    QList<TMarkdownBlock::Align> mAlign;
+    QList<int> mWidths;
+    QList<Row> mHeldRows;
     QList<OpenItem> mItems;
     quint8 mItemsQuote = 0;
     bool mInFence = false;

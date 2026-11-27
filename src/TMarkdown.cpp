@@ -346,6 +346,7 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
         indent = skipIndent(line.text, pos);
     }
     if (pos >= end) {
+        out << endTable();
         out << blank(quote);
         return out;
     }
@@ -372,10 +373,46 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
                 mFenceIndent = indent;
                 mFenceLanguage = info;
                 mItems.clear();
+                out << endTable();
                 return out;
             }
         }
+
+        // Rule 7
+        if (text.at(pos) == u'|') {
+            mItems.clear();
+            const Text row = line.mid(pos, end);
+            QList<Text> cells = splitRow(row);
+            if (mInTable) {
+                holdRow(renderedRow(TMarkdownBlock::Kind::TableRow, std::move(cells)), out);
+                return out;
+            }
+            if (mHavePendingRow && delimiterRow(cells) && cells.size() == mPendingCells.size() && cells.size() <= csmMaxTableColumns) {
+                mHavePendingRow = false;
+                mInTable = true;
+                mWidthsFixed = false;
+                ++mTable;
+                mAlign.clear();
+                for (const Text& cell : std::as_const(cells)) {
+                    const bool left = cell.text.startsWith(u':');
+                    const bool right = cell.text.endsWith(u':');
+                    mAlign.append(left && right ? TMarkdownBlock::Align::Center : left ? TMarkdownBlock::Align::Left : right ? TMarkdownBlock::Align::Right : TMarkdownBlock::Align::None);
+                }
+                mWidths = QList<int>(mAlign.size(), 3);
+                holdRow(renderedRow(TMarkdownBlock::Kind::TableHeader, mPendingCells), out);
+                holdRow(renderedRow(TMarkdownBlock::Kind::TableDelimiter, {}), out);
+                return out;
+            }
+            // A row not followed by a delimiter row is a paragraph, and the next row is tried as a header
+            out << flushHeld();
+            mHavePendingRow = true;
+            mPendingRow = row;
+            mPendingCells = cells;
+            return out;
+        }
     }
+    // Any line but a row ends a table, and a row still waiting for its delimiter row is a paragraph
+    out << endTable();
 
     // Rule 8
     if (const int level = headingLevel(text, pos, end)) {
@@ -492,7 +529,7 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
 
 QList<TMarkdownParser::Output> TMarkdownParser::addPrompt()
 {
-    return std::exchange(mHeld, {});
+    return endTable();
 }
 
 QList<TMarkdownParser::Output> TMarkdownParser::endMessage()
@@ -500,12 +537,166 @@ QList<TMarkdownParser::Output> TMarkdownParser::endMessage()
     mInFence = false;
     mItems.clear();
     mItemsQuote = 0;
-    return std::exchange(mHeld, {});
+    return endTable();
 }
 
 QList<TMarkdownParser::Output> TMarkdownParser::flushHeld()
 {
-    return std::exchange(mHeld, {});
+    QList<Output> out;
+    if (mHavePendingRow) {
+        mHavePendingRow = false;
+        out << make(TMarkdownBlock::Kind::Paragraph, 0, {}, mPendingRow);
+    }
+    for (const Row& row : std::as_const(mHeldRows)) {
+        out << rowLine(row);
+    }
+    mHeldRows.clear();
+    mWidthsFixed = mInTable;
+    return out;
+}
+
+QList<TMarkdownParser::Output> TMarkdownParser::endTable()
+{
+    QList<Output> out = flushHeld();
+    mInTable = false;
+    mWidthsFixed = false;
+    mAlign.clear();
+    mWidths.clear();
+    return out;
+}
+
+// The cells of a row that starts with |, with \| read as a | inside its cell
+QList<TMarkdownParser::Text> TMarkdownParser::splitRow(const Text& row)
+{
+    QList<Text> cells;
+    Text cell;
+    bool afterPipe = false;
+    for (qsizetype i = 1; i < row.text.size(); ++i) {
+        const QChar c = row.text.at(i);
+        if (c == u'\\' && i + 1 < row.text.size() && row.text.at(i + 1) == u'|') {
+            ++i;
+            cell.text.append(u'|');
+            cell.format.push_back(row.format[static_cast<size_t>(i)]);
+            continue;
+        }
+        if (c == u'|') {
+            cells.append(cell);
+            cell = {};
+            afterPipe = true;
+            continue;
+        }
+        afterPipe = false;
+        cell.text.append(c);
+        cell.format.push_back(row.format[static_cast<size_t>(i)]);
+    }
+    if (!afterPipe && !cell.text.trimmed().isEmpty()) {
+        cells.append(cell);
+    }
+    for (Text& each : cells) {
+        int from = 0;
+        int to = static_cast<int>(each.text.size());
+        while (from < to && each.text.at(from).isSpace()) {
+            ++from;
+        }
+        while (to > from && each.text.at(to - 1).isSpace()) {
+            --to;
+        }
+        each = each.mid(from, to);
+    }
+    return cells;
+}
+
+bool TMarkdownParser::delimiterRow(const QList<Text>& cells)
+{
+    for (const Text& cell : cells) {
+        QStringView dashes = cell.text;
+        if (dashes.startsWith(u':')) {
+            dashes = dashes.mid(1);
+        }
+        if (dashes.endsWith(u':')) {
+            dashes.chop(1);
+        }
+        if (dashes.isEmpty()) {
+            return false;
+        }
+        for (const QChar c : dashes) {
+            if (c != u'-') {
+                return false;
+            }
+        }
+    }
+    return !cells.isEmpty();
+}
+
+TMarkdownParser::Row TMarkdownParser::renderedRow(const TMarkdownBlock::Kind kind, QList<Text> cells) const
+{
+    Row row;
+    row.kind = kind;
+    while (cells.size() < mAlign.size()) {
+        cells.push_back(Text());
+    }
+    cells.resize(mAlign.size());
+    for (Text& cell : cells) {
+        row.links.push_back(TMarkdownInline::render(cell.text, cell.format, 0));
+        row.cells.append(std::move(cell));
+    }
+    return row;
+}
+
+// Cells padded to their columns' widths and joined by a bar; the delimiter row is a line across them
+TMarkdownParser::Output TMarkdownParser::rowLine(const Row& row) const
+{
+    Output line = make(row.kind, 0, {}, {});
+    line.block.table = mTable;
+    const auto append = [&line](const QString& text, const TChar& format) {
+        line.text.append(text);
+        line.format.insert(line.format.end(), static_cast<size_t>(text.size()), format);
+    };
+    for (int column = 0; column < mAlign.size(); ++column) {
+        if (column) {
+            append(row.kind == TMarkdownBlock::Kind::TableDelimiter ? qsl("─┼─") : qsl(" │ "), mPlain);
+        }
+        const int width = mWidths.value(column);
+        if (row.kind == TMarkdownBlock::Kind::TableDelimiter) {
+            append(QString(width, QChar(0x2500)), mPlain);
+            continue;
+        }
+        const Text& cell = row.cells.at(column);
+        const int gap = std::max(0, width - static_cast<int>(cell.text.size()));
+        const TMarkdownBlock::Align align = mAlign.at(column);
+        const int before = align == TMarkdownBlock::Align::Right ? gap : align == TMarkdownBlock::Align::Center ? gap / 2 : 0;
+        append(QString(before, u' '), mPlain);
+        const int start = static_cast<int>(line.text.size());
+        line.text.append(cell.text);
+        line.format.insert(line.format.end(), cell.format.begin(), cell.format.end());
+        line.block.cells.append({start, static_cast<int>(cell.text.size())});
+        for (const TMarkdownLink& link : row.links.at(column)) {
+            line.block.links.append({start + link.start, link.length, link.destination, link.title});
+        }
+        append(QString(gap - before, u' '), mPlain);
+    }
+    if (row.kind == TMarkdownBlock::Kind::TableHeader) {
+        line.block.align = mAlign;
+    }
+    if (row.kind == TMarkdownBlock::Kind::TableDelimiter) {
+        line.block.contentStart = static_cast<int>(line.text.size());
+    }
+    return line;
+}
+
+void TMarkdownParser::holdRow(Row&& row, QList<Output>& out)
+{
+    if (mWidthsFixed) {
+        out << rowLine(row);
+        return;
+    }
+    for (int column = 0; column < row.cells.size(); ++column) {
+        mWidths[column] = std::max(mWidths.at(column), static_cast<int>(row.cells.at(column).text.size()));
+    }
+    mHeldRows.append(std::move(row));
+    if (mHeldRows.size() >= csmMaxHeldRows) {
+        out << flushHeld();
+    }
 }
 
 quint32 TMarkdown::store(TMarkdownBlock&& block)

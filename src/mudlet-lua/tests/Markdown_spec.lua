@@ -120,4 +120,49 @@ describe("Markdown from the game", function()
     assert.is_true(format.bold)
     assert.are.same(red, format.foreground)
   end)
+
+  -- Held rows are committed by a timer once the game goes quiet, so pump until done says they are in
+  local function settle(done)
+    local waited = 0
+    while waited < 3000 and not done() do
+      assert.is_true(pumpEvents(100), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+      waited = waited + 100
+    end
+  end
+
+  it("shows each row of a table to triggers once, in the form it is shown in", function()
+    local seen = {}
+    local id = tempTrigger("SpecTriggerRow", function() seen[#seen + 1] = line end)
+    finally(function() killTrigger(id) end)
+    feed(ON .. "| SpecTriggerRowHead | x |\n|---|---|\n| SpecTriggerRowA | 1 |\n| SpecTriggerRowB | 22 |\n" .. OFF)
+    assert.are.equal(3, #seen)
+    assert.are.same({lineText(lastLine(4)), lineText(lastLine(2)), lineText(lastLine())}, seen)
+  end)
+
+  it("shows a table's rows once the game goes quiet, and pads later rows to them", function()
+    local header = getLastLineNumber("main")
+    feed(ON .. "| SpecQuiet | b |\n|---|---|\n| a1 | b1 |\n")
+    assert.are.equal(header, getLastLineNumber("main"), "the rows were shown before the table could have ended")
+    settle(function() return getLastLineNumber("main") >= header + 3 end)
+    assert.are.equal(header + 3, getLastLineNumber("main"))
+    feed("| a2 | b2 |\n")
+    local row = getMarkdownBlock("main", lastLine())
+    assert.are.equal("tableRow", row.kind)
+    assert.are.equal("b2", row.cells[2].text)
+    local head = getMarkdownBlock("main", header)
+    assert.are.equal(head.table, row.table)
+    assert.are.equal(head.cells[2].start, row.cells[2].start)
+  end)
+
+  it("holds no more than 500 lines of a table", function()
+    local rows = {}
+    for index = 1, 501 do
+      rows[index] = "| SpecHeldRow" .. index .. " |"
+    end
+    local header = getLastLineNumber("main")
+    feed(ON .. "| SpecHeld |\n|---|\n" .. table.concat(rows, "\n") .. "\n")
+    assert.are.equal(header + 503, getLastLineNumber("main"))
+    assert.are.equal("SpecHeldRow501", getMarkdownBlock("main", lastLine()).cells[1].text)
+  end)
 end)
+

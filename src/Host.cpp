@@ -537,6 +537,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         // functions behave the same as for any other committed line:
         mpMainConsoleModel->mTriggerEngineMode = true;
         mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
+        mpMainConsoleModel->buffer.flushMarkdownHeldLines();
         mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });

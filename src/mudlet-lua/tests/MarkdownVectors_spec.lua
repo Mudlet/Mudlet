@@ -5,7 +5,7 @@
 local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
 
 -- The parts of the standard implemented so far
-local GROUPS = {switching = true, lines = true, headings = true, code = true, lists = true, quotes = true, rules = true, emphasis = true, literal = true, color = true, links = true}
+local GROUPS = {switching = true, lines = true, headings = true, code = true, lists = true, quotes = true, rules = true, emphasis = true, literal = true, color = true, links = true, tables = true}
 
 local ESC = "\27"
 local ON = ESC .. "]67;1" .. ESC .. "\\"
