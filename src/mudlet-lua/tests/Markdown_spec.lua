@@ -89,12 +89,9 @@ describe("Markdown from the game", function()
     setWindowWrap("main", 20)
     finally(function() setWindowWrap("main", savedWrap) end)
     local text = "SpecWrapped one two three four five six seven eight"
+    local first = getLastLineNumber("main")
     feed(ON .. text .. "\n" .. OFF)
     local last = lastLine()
-    local first = last
-    while getMarkdownBlock("main", first - 1) and getMarkdownBlock("main", first - 1).text == text do
-      first = first - 1
-    end
     assert.is_true(last > first, "the paragraph was not wrapped, so this proves nothing")
     for row = first, last do
       assert.are.equal(text, getMarkdownBlock("main", row).text)
@@ -274,6 +271,7 @@ describe("Markdown from the game", function()
       replace("*")
     end)
     feed(ON .. "- SpecEditBullet\n" .. OFF)
+    assert.are.equal("* SpecEditBullet", lineText(lastLine()))
     assert.is_nil(getMarkdownBlock("main", lastLine()))
   end)
 
@@ -299,6 +297,124 @@ describe("Markdown from the game", function()
     local block = getMarkdownBlock("main", lastLine())
     assert.are.equal("heading", block.kind)
     assert.are.equal(2, block.level)
+  end)
+
+  -- The background parser reads a flood ahead of the main thread only once the flood is under way, and only
+  -- while nothing in it needs the main thread: Markdown lines in such a flood must still all be read as Markdown
+  it("reads every Markdown line of a flood the background parser reads ahead of", function()
+    local plain, items, more = {}, {}, {}
+    for index = 1, 20 do
+      plain[index] = "SpecAheadPlain " .. index
+    end
+    for index = 1, 40 do
+      items[index] = "- SpecAheadItem " .. index .. " with enough words to make the burst long"
+    end
+    for index = 1, 20 do
+      more[index] = "- SpecAheadMore " .. index
+    end
+    feed(table.concat(plain, "\n") .. "\n" .. ON .. table.concat(items, "\n") .. "\n")
+    feed(table.concat(more, "\n") .. "\n" .. OFF)
+    local last = lastLine()
+    for back = 0, 59 do
+      local block = getMarkdownBlock("main", last - back)
+      assert.are.equal("item", block and block.kind, "line " .. (last - back) .. " of the flood was not read as Markdown")
+    end
+  end)
+
+  it("keeps a line whose rest comes after Mudlet has shown its start as one Markdown line", function()
+    feed(ON .. "SpecHalf **hel")
+    feed("lo** there\n" .. OFF)
+    local block = getMarkdownBlock("main", lastLine())
+    assert.are.equal("paragraph", block.kind)
+    assert.are.equal("SpecHalf hello there", block.text)
+  end)
+
+  local function osc8(uri, text)
+    return ESC .. "]8;;" .. uri .. ESC .. "\\" .. text .. ESC .. "]8;;" .. ESC .. "\\"
+  end
+
+  it("hides an OSC 8 spoiler at the end of a Markdown line without losing its place", function()
+    feed(ON .. "SpecKiller is " .. osc8('local:?config={"spoiler":true}', "Bob") .. "\n" .. OFF)
+    assert.are.equal("SpecKiller is    ", lineText(lastLine()))
+  end)
+
+  it("hides an OSC 8 spoiler that fills a table cell without losing the cell", function()
+    feed(ON .. "| SpecSpoilerHead |\n|---|\n| " .. osc8('local:?config={"spoiler":true}', "Bob") .. " |\n" .. OFF)
+    local row = getMarkdownBlock("main", lastLine())
+    assert.are.equal("tableRow", row.kind)
+    assert.are.equal("   ", row.cells[1].text)
+  end)
+
+  it("keeps a held table's mark when the next message starts before the table is shown", function()
+    feed(ESC .. "]67;1;mark=warn" .. ESC .. "\\| SpecHeldMark |\n|---|\n| r |\n" .. ON .. "SpecNextMessage\n" .. OFF)
+    assert.are.equal("warn", getMarkdownBlock("main", lastLine(2)).mark)
+    assert.is_nil(getMarkdownBlock("main", lastLine()).mark)
+  end)
+
+  it("counts a paragraph's offsets from its text, not from the indent wrapping adds", function()
+    local savedWrap = getWindowWrap("main")
+    setWindowWrap("main", 20)
+    setWindowWrapIndent("main", 2)
+    finally(function()
+      setWindowWrapIndent("main", 0)
+      setWindowWrap("main", savedWrap)
+    end)
+    feed(ON .. "- SpecIndent one two three [a link](send:x) four five\n" .. OFF)
+    local block = getMarkdownBlock("main", lastLine())
+    assert.are.equal("SpecIndent one two three a link four five", block.text)
+    local link = block.links[1]
+    local offset = link.start - block.contentStart
+    assert.are.equal("a link", block.text:sub(offset + 1, offset + link.length))
+  end)
+
+  it("drops a table row's tag when a trigger echoes onto it", function()
+    onLine("SpecEchoRow", function() echo(" extra") end)
+    feed(ON .. "| SpecEchoHead |\n|---|\n| SpecEchoRow |\n" .. OFF)
+    assert.is_truthy(lineText(lastLine()):find(" extra", 1, true))
+    assert.is_nil(getMarkdownBlock("main", lastLine()))
+  end)
+
+  it("keeps a row under a list item that is not a table in the item", function()
+    feed(ON .. "- SpecPipeItem\n  | not a table\nSpecPipeAfter\n" .. OFF)
+    local row = getMarkdownBlock("main", lastLine(2))
+    assert.are.equal("continuation", row.kind)
+    assert.are.equal("| not a table", row.text)
+  end)
+
+  it("still makes a table of a header whose delimiter row comes after the game went quiet", function()
+    feed(ON .. "| SpecIdleHead |\n")
+    settle(function() return false end)
+    feed("|---|\n| r |\n" .. OFF)
+    assert.are.equal("tableHeader", getMarkdownBlock("main", lastLine(3)).kind)
+  end)
+
+  it("keeps an escaped pipe at the end of a row in its cell", function()
+    feed(ON .. "| SpecPipe \\|\n|---|\n" .. OFF)
+    assert.are.equal("SpecPipe |", getMarkdownBlock("main", lastLine(2)).cells[1].text)
+  end)
+
+  it("reads a backtick in a link's title as part of the title", function()
+    feed(ON .. "[a](send:x \"`t\") `b`\n" .. OFF)
+    local block = getMarkdownBlock("main", lastLine())
+    assert.are.equal("a b", block.text)
+    assert.are.equal("`t", block.links[1].title)
+  end)
+
+  it("does not pad a table too wide to show, so its rows stay as long as their text", function()
+    local wide = {}
+    for index = 1, 10 do
+      wide[index] = string.rep("x", 300)
+    end
+    feed(ON .. "| " .. table.concat(wide, " | ") .. " |\n|" .. string.rep("---|", 10) .. "\n| y | y | y | y | y | y | y | y | y | y |\n" .. OFF)
+    local row = getMarkdownBlock("main", lastLine())
+    assert.are.equal("tableRow", row.kind)
+    assert.is_true(utf8.len(lineText(lastLine())) < 100, "the row was padded to the header's 3000 columns")
+  end)
+
+  it("ends the message after the line an off sequence part way through it belongs to", function()
+    local before = getLastLineNumber("main")
+    feed(ON .. "| SpecMidOffHead |\n|---|\n| r |" .. OFF .. "\n")
+    assert.are.equal(before + 3, getLastLineNumber("main"), "the table waited for a later line")
   end)
 end)
 

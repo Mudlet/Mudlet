@@ -1150,7 +1150,9 @@ int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCach
      * those we draw decorations manually to support custom colors and advanced
      * underlines.*/
     const bool hasLink = charStyle.linkIndex() > 0;
-    const bool useQtUnderline = (attributes & TChar::Underline) && !(attributes & (TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed)) && !hasLink;
+    const bool useQtUnderline = (attributes & TChar::Underline)
+            && !(attributes & (TChar::UnderlineWavy | TChar::UnderlineDotted|  TChar::UnderlineDashed))
+            && !hasLink;
     const bool useQtOverline = (attributes & TChar::Overline) && !hasLink;
     const bool useQtStrikeOut = (attributes & TChar::StrikeOut) && !hasLink;
 

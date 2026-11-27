@@ -1470,9 +1470,10 @@ void TBuffer::resetSequenceParserState()
         mpMarkdown->mOn = false;
         mpMarkdown->mLineInMarkdown = false;
         mpMarkdown->mMessages.forgetIds();
-        if (mpMarkdown->mOpenMessage) {
-            mpMarkdown->mOpenMessage = 0;
-            commitMarkdownLines(mpMarkdown->mParser.endMessage());
+        endOpenMarkdownMessage();
+        // Before Markdown a link left open ended with its line, so one carried on by Markdown ends with its connection
+        if (mHyperlinkActive && mHyperlinkEnteredMarkdown) {
+            finaliseActiveHyperlink();
         }
     }
 }
@@ -6432,6 +6433,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             ++runStart;
         }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            markdownLineEdited(static_cast<int>(lineBuffer.size()) - 1, static_cast<int>(lineBuffer.back().size()), 0, static_cast<int>(runLength));
             lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
             std::vector<TChar>& chars = buffer.back().expand();
             const size_t first = chars.size();
@@ -6570,6 +6572,7 @@ void TBuffer::appendLine(
             ++runStart;
         }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            markdownLineEdited(static_cast<int>(lineBuffer.size()) - 1, static_cast<int>(lineBuffer.back().size()), 0, static_cast<int>(runLength));
             lineBuffer.back().append(chunk.sliced(runStart, runLength));
             buffer.back().append(static_cast<std::size_t>(runLength), styling);
             if (firstChar) {
@@ -7508,9 +7511,6 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
     return true;
 }
 
-// Ends the active hyperlink, from either the OSC 8 terminator or the end of the
-// line for one the game never closed. Characters already stamped with the id
-// stay clickable.
 // What an OSC 8 link to rawUrl does and the tooltip it shows, with its style in mCurrentHyperlinkStyling and its menu in
 // mCurrentHyperlinkMenu; false when Mudlet refuses the link
 bool TBuffer::hyperlinkActionsForUri(const QString& rawUrl, QStringList& command, QStringList& hint, bool* hasCustomTooltip)
@@ -7745,6 +7745,9 @@ bool TBuffer::hyperlinkActionsForUri(const QString& rawUrl, QStringList& command
     return true;
 }
 
+// Ends the active hyperlink, from either the OSC 8 terminator or the end of the
+// line for one the game never closed. Characters already stamped with the id
+// stay clickable.
 void TBuffer::finaliseActiveHyperlink()
 {
     // The rest of a link split by a flush can arrive with the pointer or caret already on it; the redraw as they
@@ -7774,9 +7777,16 @@ void TBuffer::finaliseActiveHyperlink()
         // draws the :link style over it once its line is committed
     }
 
+    // On a Markdown line the columns are not known until its markers are taken out, so the link's spoiler and visibility
+    // are applied to the rendered line, see linkMarkdownLine()
+    const bool looksWaitForMarkdown = mCurrentHyperlinkLinkId > 0 && markdownLineUnderWay() && (mCurrentHyperlinkStyling.isSpoiler || mCurrentHyperlinkStyling.visibility.hasVisibilitySettings);
+    if (looksWaitForMarkdown) {
+        mMarkdownLinkLooks.insert(mCurrentHyperlinkLinkId, {mCurrentHyperlinkStyling, mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1});
+    }
+
     // For spoilers, capture original text BEFORE any visibility concealment
     // This ensures spoiler reveal works even when combined with visibility actions
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+    if (!looksWaitForMarkdown && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
         if (!mServerWrapPendingLine.isEmpty() && !mCurrentHyperlinkStartsAfterHeldText) {
             mHeldSpoilerLinkId = mCurrentHyperlinkLinkId;
             mHeldSpoilerStartColumn = mCurrentHyperlinkStartColumn;
@@ -7789,7 +7799,7 @@ void TBuffer::finaliseActiveHyperlink()
     // Register with visibility manager if visibility settings exist
     // Visibility currently only supports single-line hyperlinks
     // Multi-line links will not have visibility management applied
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings) {
+    if (!looksWaitForMarkdown && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings) {
         if (!mServerWrapPendingLine.isEmpty()) {
             // Held text may yet be joined on in front, shifting the columns, or be committed on its
             // own, leaving them as they are - so registered once that is known.
@@ -8008,9 +8018,6 @@ void TBuffer::clear()
 
     // The game's unended or held line, and an open MXP link, carry their ids on past the clear
     clearLinkState(liveLinkIdsOutsideTheLines());
-    if (mpMarkdown) {
-        forgetMarkdownMessagesWithoutLines();
-    }
 
     buffer.emplace_back();
     lineBuffer << QString();
@@ -8228,9 +8235,6 @@ void TBuffer::shrinkBuffer()
         markdownBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
-    }
-    if (mpMarkdown) {
-        forgetMarkdownMessagesWithoutLines();
     }
     // We need to adjust the search result line as some lines have now gone
     // away:
@@ -11420,17 +11424,11 @@ void TBuffer::decodeMarkdownOSC(QStringView sequence)
     // A sequence part way through a line takes effect on the next one
     const bool lineUnderWay = !mMudLine.isEmpty();
     if (command == u"1") {
-        // The line under way stays in the message it began in, so that message keeps its record
-        if (lineUnderWay && markdown.mLineInMarkdown) {
-            markdown.mMessages.noteLine(markdown.mLineMessage);
-        }
-        markdown.mMessages.begin(id, mark);
+        // The line under way stays in the message it began in, and held lines are still to be committed in theirs
+        markdown.mMessages.begin(id, mark, (lineUnderWay && markdown.mLineInMarkdown) || markdown.mOpenMessage);
         markdown.mOn = true;
         if (!lineUnderWay) {
-            if (markdown.mOpenMessage) {
-                markdown.mOpenMessage = 0;
-                commitMarkdownLines(markdown.mParser.endMessage());
-            }
+            endOpenMarkdownMessage();
             markdown.mLineInMarkdown = true;
             markdown.mLineMessage = markdown.mMessages.current();
         }
@@ -11438,10 +11436,7 @@ void TBuffer::decodeMarkdownOSC(QStringView sequence)
         markdown.mOn = false;
         if (!lineUnderWay) {
             markdown.mLineInMarkdown = false;
-            if (markdown.mOpenMessage) {
-                markdown.mOpenMessage = 0;
-                commitMarkdownLines(markdown.mParser.endMessage());
-            }
+            endOpenMarkdownMessage();
         }
     } else if (command == u"2") {
         if (id.isEmpty() || !haveMark) {
@@ -11473,14 +11468,11 @@ bool TBuffer::commitMarkdownLine(QString& line, TLineFormat& chars, const char c
     markdown.mLineMessage = markdown.mMessages.current();
 
     if (!inMarkdown) {
-        if (markdown.mOpenMessage) {
-            markdown.mOpenMessage = 0;
-            commitMarkdownLines(markdown.mParser.endMessage());
-        }
+        endOpenMarkdownMessage();
         return false;
     }
-    if (markdown.mOpenMessage && markdown.mOpenMessage != lineMessage) {
-        commitMarkdownLines(markdown.mParser.endMessage());
+    if (markdown.mOpenMessage != lineMessage) {
+        endOpenMarkdownMessage();
     }
     markdown.mOpenMessage = lineMessage;
     // A prompt, and a line shown before the rest of it arrived, are shown as sent
@@ -11488,10 +11480,13 @@ bool TBuffer::commitMarkdownLine(QString& line, TLineFormat& chars, const char c
         commitMarkdownLines(markdown.mParser.addPrompt());
         return false;
     }
-    markdown.mParser.setRuleWidth(std::clamp(mWrapAt, 3, 1000));
+    markdown.mParser.setRuleWidth(std::clamp(mWrapAt - mWrapIndent, 3, 1000));
     markdown.mParser.setPlainFormat(TChar(mForeGroundColor, mBackGroundColor));
     commitMarkdownLines(markdown.mParser.addLine(line, chars, lineMessage));
-    if (markdown.mParser.holdsLines() && mpModel) {
+    // An off or on sequence part way through this line ended its message, now that the line is in it
+    if (!markdown.mLineInMarkdown || markdown.mLineMessage != lineMessage) {
+        endOpenMarkdownMessage();
+    } else if (markdown.mParser.holdsLines() && mpModel) {
         emit mpModel->mNotifier.serverWrapLineHeld();
     }
     return true;
@@ -11531,44 +11526,41 @@ const TMarkdownBlock* TBuffer::markdownBlock(const int lineNumber) const
 
 bool TBuffer::markdownLineUnderWay() const
 {
-    return mpMarkdown && mpMarkdown->mLineInMarkdown && !mpHost.isNull() && mpHost->mEnableMarkdown;
+    return mpMarkdown && mParsingServerText && mpMarkdown->mLineInMarkdown && !mpHost.isNull() && mpHost->mEnableMarkdown;
 }
 
 // Rows from to to are going: a paragraph that wraps past them keeps its tag on its first surviving row
 void TBuffer::retireMarkdownRows(const int from, const int to)
 {
     const int next = to + 1;
-    if (next < markdownBuffer.size() && markdownBuffer.at(next) == 0 && wrapsFromPreviousLine(next)) {
-        int head = to;
-        while (head > from && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
-            --head;
+    const bool nextContinues = next < markdownBuffer.size() && markdownBuffer.at(next) == 0 && wrapsFromPreviousLine(next);
+    int head = from;
+    while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+        --head;
+    }
+    if (head < from && markdownBuffer.at(head)) {
+        // Middle rows of a paragraph whose head stays: the text they held goes, and what follows moves up into its place
+        if (TMarkdownBlock* pBlock = mpMarkdown->editableBlock(markdownBuffer.at(head))) {
+            const int cutFrom = markdownRowOffset(head, from) - wrapGapBefore(from);
+            const int cutTo = nextContinues ? markdownRowOffset(head, next) : std::numeric_limits<int>::max();
+            editMarkdownRanges(*pBlock, cutFrom, cutTo, nextContinues ? cutFrom + wrapGapBefore(next) - cutTo : 0);
         }
-        if (markdownBuffer.at(head)) {
-            rebaseMarkdownBlock(markdownBuffer.at(head), wrapIndentWidth(next) - markdownRowOffset(head, next));
-            markdownBuffer[next] = std::exchange(markdownBuffer[head], 0);
+    } else if (nextContinues) {
+        int first = to;
+        while (first > from && markdownBuffer.at(first) == 0 && wrapsFromPreviousLine(first)) {
+            --first;
+        }
+        if (markdownBuffer.at(first)) {
+            // The first row left becomes the paragraph's head, and its text from its indent on is what is left
+            const int keptIndent = std::min(wrapGapBefore(next), wrapIndentWidth(next));
+            rebaseMarkdownBlock(markdownBuffer.at(first), wrapIndentWidth(next) - keptIndent - markdownRowOffset(first, next));
+            markdownBuffer[next] = std::exchange(markdownBuffer[first], 0);
         }
     }
     for (int row = from; row <= to; ++row) {
         if (const quint32 id = markdownBuffer.at(row)) {
             mpMarkdown->forget(id);
         }
-    }
-}
-
-// Messages older than the first one with a line still in the buffer, or still to come, have nothing left to mark
-void TBuffer::forgetMarkdownMessagesWithoutLines()
-{
-    quint32 oldestKept = mpMarkdown->mOpenMessage ? mpMarkdown->mOpenMessage : mpMarkdown->mMessages.current();
-    for (const quint32 id : std::as_const(markdownBuffer)) {
-        if (id) {
-            if (const TMarkdownBlock* pBlock = mpMarkdown->block(id)) {
-                oldestKept = std::min(oldestKept, pBlock->message);
-                break;
-            }
-        }
-    }
-    if (oldestKept > 1) {
-        mpMarkdown->mMessages.forgetThrough(oldestKept - 1);
     }
 }
 
@@ -11579,7 +11571,7 @@ QString TBuffer::markdownParagraphText(const int lineNumber) const
     while (first > 0 && markdownBuffer.at(first) == 0 && wrapsFromPreviousLine(first)) {
         --first;
     }
-    QString text = lineBuffer.at(first);
+    QString text = lineBuffer.at(first).mid(markdownHeadIndent(first));
     for (int row = first + 1; row < lineBuffer.size() && markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row); ++row) {
         text.append(QString(wrapGapBefore(row), QChar::Space));
         text.append(QStringView(lineBuffer.at(row)).mid(wrapIndentWidth(row)));
@@ -11587,8 +11579,14 @@ QString TBuffer::markdownParagraphText(const int lineNumber) const
     return text;
 }
 
+// The spaces column wrapping put in front of a paragraph's first row, which are not part of what was committed
+int TBuffer::markdownHeadIndent(const int head) const
+{
+    return wrapsFromPreviousLine(head) ? 0 : std::min(wrapGapBefore(head), wrapIndentWidth(head));
+}
+
 // The id of a link a Markdown link makes, or 0 where an OSC 8 link to the same destination would be refused
-int TBuffer::addMarkdownLink(const TMarkdownLink& link, bool* spoiler)
+int TBuffer::addMarkdownLink(const TMarkdownLink& link, Mudlet::HyperlinkStyling& styling)
 {
     if (!mpHost->mEnableOSC8Hyperlinks || QUrl(link.destination).scheme().isEmpty() || link.destination.startsWith(qsl("preset:"))) {
         return 0;
@@ -11600,7 +11598,7 @@ int TBuffer::addMarkdownLink(const TMarkdownLink& link, bool* spoiler)
     QStringList hint;
     bool customTooltip = false;
     const bool accepted = hyperlinkActionsForUri(link.destination, command, hint, &customTooltip);
-    const Mudlet::HyperlinkStyling styling = std::exchange(mCurrentHyperlinkStyling, openLinkStyling);
+    styling = std::exchange(mCurrentHyperlinkStyling, openLinkStyling);
     mCurrentHyperlinkMenu = openLinkMenu;
     if (!accepted) {
         return 0;
@@ -11612,9 +11610,20 @@ int TBuffer::addMarkdownLink(const TMarkdownLink& link, bool* spoiler)
     mLinkStore.setStyling(id, styling);
     mLinkOriginalBackgrounds[id] = mBackGroundColor;
     mHyperlinkUris.insert(id, link.destination);
-    // As an OSC 8 link's is: a disabled one shows so from the start and does nothing
-    setLinkState(id, styling.selection.disabled ? Mudlet::HyperlinkStyling::StateDisabled : Mudlet::HyperlinkStyling::StateDefault);
-    *spoiler = styling.isSpoiler;
+    // As an OSC 8 link starts: in its selection group, and disabled over selected
+    setLinkState(id, Mudlet::HyperlinkStyling::StateDefault);
+    if (styling.selection.hasSelectionSettings && mpModel) {
+        mpModel->mHyperlinkSelectionManager.setGroupExclusive(styling.selection.group, styling.selection.exclusive);
+        mpModel->mHyperlinkSelectionManager.setSelected(styling.selection.group, styling.selection.value, styling.selection.selected);
+        setLinkSelected(id, styling.selection.selected);
+        if (styling.selection.selected) {
+            setLinkState(id, Mudlet::HyperlinkStyling::StateSelected);
+            mPendingSelectionStyling.insert(id);
+        }
+    }
+    if (styling.selection.disabled) {
+        setLinkState(id, Mudlet::HyperlinkStyling::StateDisabled);
+    }
     return id;
 }
 
@@ -11625,16 +11634,16 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
     std::vector<bool> fromMarkdown(line.format.size(), false);
     for (int index = 0; index < markdownLinks; ++index) {
         const TMarkdownLink& link = line.block.links.at(index);
-        bool spoiler = false;
-        const int id = addMarkdownLink(link, &spoiler);
+        Mudlet::HyperlinkStyling styling;
+        const int id = addMarkdownLink(link, styling);
         for (int column = link.start; column < link.start + link.length && static_cast<size_t>(column) < line.format.size(); ++column) {
             fromMarkdown[static_cast<size_t>(column)] = true;
             if (id) {
                 line.format[static_cast<size_t>(column)].mLinkIndex = static_cast<quint16>(id);
             }
         }
-        if (id && spoiler) {
-            maskSpoilerText(id, line.text, TLineFormat(line.format), link.start, link.length);
+        if (id) {
+            applyMarkdownLinkLooks(line, id, link.start, link.length, styling, true);
         }
     }
     for (size_t column = 0; column < line.format.size();) {
@@ -11648,14 +11657,35 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
             ++end;
         }
         line.block.links.append({static_cast<int>(column), static_cast<int>(end - column), mHyperlinkUris.value(id), {}});
+        if (const auto looks = mMarkdownLinkLooks.constFind(id); looks != mMarkdownLinkLooks.cend()) {
+            const auto [styling, onOneLine] = looks.value();
+            mMarkdownLinkLooks.erase(looks);
+            applyMarkdownLinkLooks(line, id, static_cast<int>(column), static_cast<int>(end - column), styling, onOneLine);
+        }
         column = end;
+    }
+}
+
+// A link's spoiler and visibility, applied as finaliseActiveHyperlink() applies an OSC 8 link's, but to the line as it is
+// committed: its columns, and the row it lands on
+void TBuffer::applyMarkdownLinkLooks(TMarkdownLine& line, const int id, const int column, const int length, const Mudlet::HyperlinkStyling& styling, const bool onOneLine)
+{
+    if (styling.isSpoiler) {
+        maskSpoilerText(id, line.text, TLineFormat(line.format), column, length);
+    }
+    if (!styling.visibility.hasVisibilitySettings || !onOneLine || !mpModel || length <= 0) {
+        return;
+    }
+    const int row = (lineBuffer.isEmpty() || !lineBuffer.back().isEmpty()) ? static_cast<int>(lineBuffer.size()) : static_cast<int>(lineBuffer.size()) - 1;
+    if (mpModel->mHyperlinkVisibilityManager.registerHyperlink(id, row, column, length, line.text.mid(column, length), styling) && !styling.isSpoiler) {
+        line.text.replace(column, length, QString(length, QChar::Space));
     }
 }
 
 // Where the text of row, after its indent, starts in the paragraph whose first row is head
 int TBuffer::markdownRowOffset(const int head, const int row) const
 {
-    int offset = static_cast<int>(lineBuffer.at(head).size());
+    int offset = static_cast<int>(lineBuffer.at(head).size()) - markdownHeadIndent(head);
     for (int between = head + 1; between < row; ++between) {
         offset += wrapGapBefore(between) + static_cast<int>(lineBuffer.at(between).size()) - wrapIndentWidth(between);
     }
@@ -11699,10 +11729,22 @@ void TBuffer::endMarkdown()
     }
     mpMarkdown->mOn = false;
     mpMarkdown->mLineInMarkdown = false;
-    if (mpMarkdown->mOpenMessage) {
-        mpMarkdown->mOpenMessage = 0;
-        commitMarkdownLines(mpMarkdown->mParser.endMessage());
+    endOpenMarkdownMessage();
+    // A link that reached Markdown goes back to ending with its line
+    mHyperlinkEnteredMarkdown = false;
+}
+
+// Commits what the open message still holds, keeping its record while that happens, as a trigger on those lines can
+// delete or clear them
+void TBuffer::endOpenMarkdownMessage()
+{
+    const quint32 message = std::exchange(mpMarkdown->mOpenMessage, 0);
+    if (!message) {
+        return;
     }
+    mpMarkdown->mMessages.hold(message);
+    commitMarkdownLines(mpMarkdown->mParser.endMessage());
+    mpMarkdown->mMessages.release(message);
 }
 
 // Text was taken out of or put into row y at column x. An edit to a table line, or to the prefix the grid shows, leaves
@@ -11721,23 +11763,36 @@ void TBuffer::markdownLineEdited(const int y, const int x, const int removed, co
     if (!pBlock) {
         return;
     }
-    const int at = head == y ? x : markdownRowOffset(head, y) + std::max(0, x - wrapIndentWidth(y));
+    const int at = head == y ? x - markdownHeadIndent(head) : markdownRowOffset(head, y) + std::max(0, x - wrapIndentWidth(y));
     const TMarkdownBlock::Kind kind = pBlock->kind;
     if (kind == TMarkdownBlock::Kind::TableHeader || kind == TMarkdownBlock::Kind::TableRow || kind == TMarkdownBlock::Kind::TableDelimiter || at < pBlock->contentStart) {
         mpMarkdown->forget(id);
         markdownBuffer[head] = 0;
         return;
     }
+    editMarkdownRanges(*pBlock, at, at + removed, inserted - removed);
+}
+
+// Ranges that end by cutFrom stay, those that start at cutTo or later move by delta, and those cut into are dropped
+void TBuffer::editMarkdownRanges(TMarkdownBlock& block, const int cutFrom, const int cutTo, const int delta)
+{
     QList<TMarkdownLink> links;
-    for (TMarkdownLink link : std::as_const(pBlock->links)) {
-        if (link.start + link.length <= at) {
+    for (TMarkdownLink link : std::as_const(block.links)) {
+        if (link.start + link.length <= cutFrom) {
             links.append(link);
-        } else if (link.start >= at + removed) {
-            link.start += inserted - removed;
+        } else if (link.start >= cutTo) {
+            link.start += delta;
             links.append(link);
         }
     }
-    pBlock->links = links;
+    block.links = links;
+    for (TMarkdownCell& cell : block.cells) {
+        if (cell.start >= cutTo) {
+            cell.start += delta;
+        } else if (cell.start + cell.length > cutFrom) {
+            cell.length = std::max(0, cutFrom - cell.start);
+        }
+    }
 }
 
 // A line as a screen reader announces it: a table row with its columns named, as "Item: sword, Qty: 1", and a table's
@@ -11748,14 +11803,19 @@ QString TBuffer::spokenLine(const int lineNumber) const
     if (!pBlock || (pBlock->kind != TMarkdownBlock::Kind::TableRow && pBlock->kind != TMarkdownBlock::Kind::TableHeader && pBlock->kind != TMarkdownBlock::Kind::TableDelimiter)) {
         return lineBuffer.value(lineNumber);
     }
-    if (pBlock->kind != TMarkdownBlock::Kind::TableRow) {
+    // A wrapped row is heard once, at its first row
+    if (pBlock->kind != TMarkdownBlock::Kind::TableRow || (markdownBuffer.at(lineNumber) == 0 && wrapsFromPreviousLine(lineNumber))) {
         return {};
     }
     const TMarkdownBlock* pHeader = nullptr;
     QString headerText;
+    // Rows a script edited carry no tag, so they are passed over rather than taken for the table's end
     for (int line = lineNumber - 1; line >= 0 && line >= lineNumber - TMarkdownParser::csmMaxHeldRows * 4; --line) {
         const TMarkdownBlock* pAbove = markdownBlock(line);
-        if (!pAbove || pAbove->table != pBlock->table) {
+        if (!pAbove) {
+            continue;
+        }
+        if (pAbove->table != pBlock->table) {
             break;
         }
         if (pAbove->kind == TMarkdownBlock::Kind::TableHeader) {

@@ -93,23 +93,27 @@ struct TMarkdownBlock
 class TMarkdownMessages
 {
 public:
-    // A new message, numbered from 1
-    quint32 begin(const QString& id, TMarkdownMark mark);
+    // A new message, numbered from 1. The one before keeps its record if it may still have lines to come.
+    quint32 begin(const QString& id, TMarkdownMark mark, bool previousStillInUse);
     // The message whose mark changed, or 0 when no message has that id
     quint32 change(const QString& id, TMarkdownMark mark);
     quint32 current() const { return mLastMessage; }
     TMarkdownMark mark(quint32 message) const { return mRecords.value(message).mark; }
     QString id(quint32 message) const { return mRecords.value(message).id; }
-    // The lines of every message up to this one have gone
-    void forgetThrough(quint32 message);
     // A new connection: no id it sends names an earlier message
     void forgetIds();
-    // A record is kept while its message has lines, or while its id can still name it
-    void noteLine(quint32 message) { mWithLines.insert(message); }
+    void lineStored(quint32 message) { ++mLines[message]; }
+    void lineRemoved(quint32 message);
+    // While held, the message keeps its record whatever happens to its lines, as more are still being committed
+    void hold(quint32 message) { mHeld.insert(message); }
+    void release(quint32 message);
 
     static constexpr int csmKeptIds = 256;
 
 private:
+    // A record goes once nothing can show it or reach it: no line, no id that names it, not being committed
+    void retireIfUnused(quint32 message);
+
     struct Record
     {
         QString id;
@@ -120,7 +124,8 @@ private:
     QHash<quint32, Record> mRecords;
     QHash<QString, quint32> mMessageById;
     QQueue<QString> mIdsInOrder;
-    QSet<quint32> mWithLines;
+    QHash<quint32, int> mLines;
+    QSet<quint32> mHeld;
 };
 
 // A finished line: its text with the grid's prefix, formats to match, and its tag
@@ -151,6 +156,8 @@ public:
     static constexpr int csmMaxListLevels = 8;
     static constexpr int csmMaxTableColumns = 64;
     static constexpr int csmMaxSectionLevels = 4;
+    // A table wider than this, in columns, is not padded, so a game cannot make every row thousands of spaces long
+    static constexpr int csmMaxPaddedTableWidth = 1000;
     static constexpr int csmMaxHeldRows = 500;
 
 private:
@@ -183,6 +190,7 @@ private:
     Output rowLine(const Row& row) const;
     // The table and a row waiting to be its header end, and what was held is returned to be committed
     QList<Output> endTable();
+    QList<Output> takePendingRow();
     void holdRow(Row&& row, QList<Output>& out);
     // The summary of the section just opened, empty when the line after the opening gave none
     Output summary(const Text& content, bool given) const;
@@ -192,7 +200,8 @@ private:
     static QString quotePrefix(quint8 quote);
 
     bool mHavePendingRow = false;
-    Text mPendingRow;
+    // What the row waiting to be a header is shown as if no delimiter row comes: a paragraph, or the continuation of an item
+    Output mPendingOutput;
     QList<Text> mPendingCells;
     bool mInTable = false;
     // Set once rows have been shown, after which later rows are padded to them
@@ -236,7 +245,7 @@ public:
     quint32 store(TMarkdownBlock&& block);
     const TMarkdownBlock* block(quint32 id) const;
     TMarkdownBlock* editableBlock(quint32 id) { return mBlocks.contains(id) ? &mBlocks[id] : nullptr; }
-    void forget(quint32 id) { mBlocks.remove(id); }
+    void forget(quint32 id);
 
 private:
     QHash<quint32, TMarkdownBlock> mBlocks;

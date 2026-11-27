@@ -34,6 +34,18 @@ local function utf16Units(text)
   return units
 end
 
+-- The part of a UTF-8 string from UTF-16 unit start (from 0), length units long
+local function utf16Sub(text, start, length)
+  local result, unit = {}, 0
+  for _, code in utf8.codes(text) do
+    if unit >= start and unit < start + length then
+      result[#result + 1] = utf8.char(code)
+    end
+    unit = unit + (code > 0xFFFF and 2 or 1)
+  end
+  return table.concat(result)
+end
+
 local function rgb(color)
   return string.format("%d,%d,%d", color[1], color[2], color[3])
 end
@@ -137,6 +149,14 @@ local function vectorLine(lineNumber, text, base, plainFormat, colors)
     return {kind = "plain", text = text, spans = readSpans(lineNumber, 0, utf16Units(text), {kind = "plain"}, plainFormat, colors)}
   end
   local line = {kind = block.kind}
+  -- The tag's text has to be what the console shows, past the bullets, bars and padding the grid adds
+  if block.kind == "tableHeader" or block.kind == "tableRow" then
+    for _, cell in ipairs(block.cells or {}) do
+      assert.are.equal(cell.text, utf16Sub(text, cell.start, cell.length), "a cell's text is not what its row shows")
+    end
+  elseif block.kind ~= "tableDelimiter" then
+    assert.are.equal(block.text, utf16Sub(text, block.contentStart, utf16Units(block.text)), "the tag's text is not what its row shows")
+  end
   if block.kind == "tableHeader" or block.kind == "tableRow" then
     line.cells = {}
     for _, cell in ipairs(block.cells or {}) do
@@ -212,6 +232,9 @@ local function play(vector)
         message.seen = true
         message.mark = block.mark
         message.id = block.id
+      elseif message then
+        assert.are.equal(message.mark, block.mark, "lines of one message have different marks")
+        assert.are.equal(message.id, block.id, "lines of one message have different ids")
       end
     end
   end

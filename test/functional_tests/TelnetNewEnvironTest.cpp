@@ -34,6 +34,7 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -892,8 +893,7 @@ private slots:
         QCOMPARE(newEnvironReplies().size(), 1);
 
         mpServer->forgetReceived();
-        mpHost->mEnableMarkdown = false;
-        mpHost->mTelnet.sendMarkdownCapability();
+        mpHost->setEnableMarkdown(false);
 
         QString problem;
         const QList<EnvironVariable> updates = soleReplyVariables(NEW_ENVIRON_INFO, problem);
@@ -912,8 +912,14 @@ private slots:
                 continue;
             }
             const QJsonDocument document = QJsonDocument::fromJson(subnegotiation.payload.mid(message.size() + 1));
+            if (!document.isArray()) {
+                return std::nullopt;
+            }
             QStringList packages;
             for (const QJsonValue& package : document.array()) {
+                if (!package.isString()) {
+                    return std::nullopt;
+                }
                 packages.append(package.toString());
             }
             return packages;
@@ -931,12 +937,10 @@ private slots:
         QVERIFY2(supported, "no Core.Supports.Set was sent");
         QVERIFY2(supported->contains(qsl("Client.Markdown 1")), qPrintable(qsl("Core.Supports.Set left Markdown out: %1").arg(supported->join(qsl(", ")))));
 
-        mpHost->mEnableMarkdown = false;
-        mpHost->mTelnet.sendMarkdownCapability();
+        mpHost->setEnableMarkdown(false);
         QCOMPARE(gmcpPackages(sentGmcp(), "Core.Supports.Remove"), std::optional<QStringList>(QStringList{qsl("Client.Markdown")}));
 
-        mpHost->mEnableMarkdown = true;
-        mpHost->mTelnet.sendMarkdownCapability();
+        mpHost->setEnableMarkdown(true);
         QCOMPARE(gmcpPackages(sentGmcp(), "Core.Supports.Add"), std::optional<QStringList>(QStringList{qsl("Client.Markdown 1")}));
     }
 
@@ -947,7 +951,7 @@ private slots:
         announce(TN_WILL, OPT_GMCP);
         const std::optional<QStringList> supported = gmcpPackages(sentGmcp(), "Core.Supports.Set");
         QVERIFY2(supported, "no Core.Supports.Set was sent");
-        QVERIFY2(!supported->contains(qsl("Client.Markdown 1")), qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(supported->join(qsl(", ")))));
+        QVERIFY2(supported->filter(QRegularExpression(qsl("^Client\\.Markdown( |$)"))).isEmpty(), qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(supported->join(qsl(", ")))));
     }
 
     TBuffer& mainBuffer() { return mpHost->mainConsoleModelOrNull()->buffer; }
@@ -1063,6 +1067,47 @@ private slots:
         QVERIFY2(pBlock, "the rows left of the paragraph lost its tag");
         QCOMPARE(pBlock->links.size(), 1);
         QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // Before Markdown, a link left open ended at its line; one that reached Markdown must still end with its connection
+    void test_aLinkLeftOpenInMarkdownEndsWithItsConnection()
+    {
+        feed("\x1b]67;1\x1b\\\x1b]8;;send:look\x1b\\SpecOpenLink\n");
+        QVERIFY2(mainBuffer().getLinkIndexAt(lastCommittedLine(), 0) > 0, "the link was not made");
+        reconnect();
+        feed("SpecNextConnection\n");
+        QCOMPARE(mainBuffer().getLinkIndexAt(lastCommittedLine(), 0), 0);
+    }
+
+    // A screen reader hears a wrapped table row once, at its first row
+    void test_aWrappedTableRowIsSpokenOnce()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        pModel->setWrapAt(20);
+        const auto restoreWrap = qScopeGuard([this, pModel] { pModel->setWrapAt(mpHost->mWrapAt); });
+        feed("\x1b]67;1\x1b\\| Item | Note |\n|---|---|\n| sword | a long note that wraps |\n\x1b]67;0\x1b\\");
+        feed("SpecEnd\n");
+        int row = lastCommittedLine() - 1;
+        QVERIFY2(mainBuffer().wrapsFromPreviousLine(row), "the row did not wrap, so this proves nothing");
+        QCOMPARE(mainBuffer().spokenLine(row), QString());
+        while (mainBuffer().wrapsFromPreviousLine(row)) {
+            --row;
+        }
+        QCOMPARE(mainBuffer().spokenLine(row), qsl("Item: sword, Note: a long note that wraps"));
+    }
+
+    // A row a script edited keeps no tag, and the rows below it still find their table's header
+    void test_aRowBelowAnEditedOneIsStillSpokenWithItsColumnNames()
+    {
+        feed("\x1b]67;1\x1b\\| Item | Qty |\n|---|---|\n| sword | 1 |\n| bow | 2 |\n\x1b]67;0\x1b\\");
+        feed("SpecAfterEditedTable\n");
+        const int bow = lastCommittedLine() - 1;
+        QPoint from(0, bow - 1);
+        QPoint to(1, bow - 1);
+        TChar format = mainBuffer().buffer.at(bow - 1).at(0);
+        QVERIFY(mainBuffer().replaceInLine(from, to, qsl("S"), format));
+        QVERIFY2(!mainBuffer().markdownBlock(bow - 1), "the edited row kept its tag");
+        QCOMPARE(mainBuffer().spokenLine(bow), qsl("Item: bow, Qty: 2"));
     }
 
     void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()

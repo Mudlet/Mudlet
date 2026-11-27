@@ -900,11 +900,14 @@ private:
     bool markdownApplies() const;
     bool markdownLineUnderWay() const;
     void retireMarkdownRows(int from, int to);
-    void forgetMarkdownMessagesWithoutLines();
+    void endOpenMarkdownMessage();
+    int markdownHeadIndent(int head) const;
+    void editMarkdownRanges(TMarkdownBlock& block, int cutFrom, int cutTo, int delta);
+    void applyMarkdownLinkLooks(TMarkdownLine& line, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
     void decodeMarkdownOSC(QStringView sequence);
     bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
     void commitMarkdownLines(QList<TMarkdownLine>&& lines);
-    int addMarkdownLink(const TMarkdownLink& link, bool* spoiler);
+    int addMarkdownLink(const TMarkdownLink& link, Mudlet::HyperlinkStyling& styling);
     int markdownRowOffset(int head, int row) const;
     void rebaseMarkdownBlock(quint32 id, int delta);
     void markdownLineEdited(int y, int x, int removed, int inserted);
@@ -1009,6 +1012,9 @@ private:
     QHash<int, QString> mHyperlinkUris;
     // The open OSC 8 link reached a Markdown line, so it carries on until its own sequence ends it
     bool mHyperlinkEnteredMarkdown = false;
+    // An OSC 8 link's spoiler or visibility on a Markdown line, applied once the line is rendered, and whether the link
+    // began on that line
+    QHash<int, std::pair<Mudlet::HyperlinkStyling, bool>> mMarkdownLinkLooks;
     // What translateToPlainText() is reading came from the game
     bool mParsingServerText = false;
 

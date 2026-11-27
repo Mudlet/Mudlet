@@ -26,6 +26,8 @@
 #include "TMarkdown.h"
 #include "utils.h"
 
+#include <array>
+
 namespace {
 bool asciiPunctuation(const QChar c)
 {
@@ -40,7 +42,8 @@ bool unicodePunctuation(const QChar c)
 
 bool startsWithAddress(const QString& text, const int at)
 {
-    return text.mid(at, 7).compare(qsl("http://"), Qt::CaseInsensitive) == 0 || text.mid(at, 8).compare(qsl("https://"), Qt::CaseInsensitive) == 0;
+    const QStringView rest = QStringView(text).mid(at);
+    return rest.startsWith(u"http://", Qt::CaseInsensitive) || rest.startsWith(u"https://", Qt::CaseInsensitive);
 }
 
 QString unescaped(QStringView text)
@@ -89,8 +92,11 @@ public:
     {
     }
 
-    void scanCodeEscapesAndAutolinks();
-    void resolveLinks();
+    // Code spans, escapes, autolinks and links, in one pass from left to right as CommonMark reads them, so that a
+    // link's destination and title are never read as anything else
+    void scanInlines();
+    // At the ] at, closes the link the last [ opened, if what follows is a destination; returns where to go on from
+    int closeLink(int at);
     void findBareAddresses();
     void emphasis(int from, int to);
     QList<TMarkdownLink> build(QString& text, std::vector<TChar>& format) const;
@@ -123,6 +129,13 @@ private:
     std::vector<TChar::AttributeFlags> mFlags;
     std::vector<int> mLink;
     QList<Link> mLinks;
+    struct Opener
+    {
+        int pos = 0;
+        bool image = false;
+        bool active = true;
+    };
+    QList<Opener> mOpeners;
 };
 
 void Line::removeRange(const int from, const int to)
@@ -151,11 +164,21 @@ int Line::addLink(const int from, const int to, const QString& destination, cons
     return index;
 }
 
-void Line::scanCodeEscapesAndAutolinks()
+void Line::scanInlines()
 {
     int i = mFrom;
     while (i < mSize) {
         const QChar c = mText.at(i);
+        if (c == u'[') {
+            const bool image = i > mFrom && mText.at(i - 1) == u'!' && free(i - 1);
+            mOpeners.append({image ? i - 1 : i, image, true});
+            ++i;
+            continue;
+        }
+        if (c == u']' && !mOpeners.isEmpty()) {
+            i = closeLink(i);
+            continue;
+        }
         if (c == u'\\') {
             if (i + 1 < mSize && asciiPunctuation(mText.at(i + 1))) {
                 mRemoved[static_cast<size_t>(i)] = true;
@@ -297,58 +320,37 @@ int Line::parseDestination(int at, QString& destination, QString& title) const
     return (at < mSize && mText.at(at) == u')') ? at : -1;
 }
 
-void Line::resolveLinks()
+int Line::closeLink(const int at)
 {
-    struct Opener
-    {
-        int pos = 0;
-        bool image = false;
-        bool active = true;
-    };
-    QList<Opener> openers;
-    for (int i = mFrom; i < mSize; ++i) {
-        if (!free(i)) {
-            continue;
-        }
-        const QChar c = mText.at(i);
-        if (c == u'[') {
-            const bool image = i > mFrom && mText.at(i - 1) == u'!' && free(i - 1);
-            openers.append({image ? i - 1 : i, image, true});
-            continue;
-        }
-        if (c != u']' || openers.isEmpty()) {
-            continue;
-        }
-        const Opener opener = openers.takeLast();
-        if (!opener.active) {
-            continue;
-        }
-        QString destination;
-        QString title;
-        const int close = parseDestination(i + 1, destination, title);
-        if (close < 0) {
-            continue;
-        }
-        const int textFrom = opener.pos + (opener.image ? 2 : 1);
-        // A link cannot hold another, whether an autolink or an OSC 8 link
-        bool covered = osc8Covers(textFrom, i);
-        for (int j = textFrom; j < i; ++j) {
-            covered = covered || mLink[static_cast<size_t>(j)] >= 0;
-        }
-        if (covered) {
-            continue;
-        }
-        emphasis(textFrom, i);
-        removeRange(opener.pos, textFrom);
-        removeRange(i, close + 1);
-        addLink(textFrom, i, destination, title);
-        if (!opener.image) {
-            for (Opener& earlier : openers) {
-                earlier.active = false;
-            }
-        }
-        i = close;
+    const Opener opener = mOpeners.takeLast();
+    if (!opener.active) {
+        return at + 1;
     }
+    QString destination;
+    QString title;
+    const int close = parseDestination(at + 1, destination, title);
+    if (close < 0) {
+        return at + 1;
+    }
+    const int textFrom = opener.pos + (opener.image ? 2 : 1);
+    // A link cannot hold another, whether an autolink or an OSC 8 link
+    bool covered = osc8Covers(textFrom, at);
+    for (int j = textFrom; j < at; ++j) {
+        covered = covered || mLink[static_cast<size_t>(j)] >= 0;
+    }
+    if (covered) {
+        return at + 1;
+    }
+    emphasis(textFrom, at);
+    removeRange(opener.pos, textFrom);
+    removeRange(at, close + 1);
+    addLink(textFrom, at, destination, title);
+    if (!opener.image) {
+        for (Opener& earlier : mOpeners) {
+            earlier.active = false;
+        }
+    }
+    return close + 1;
 }
 
 void Line::findBareAddresses()
@@ -432,6 +434,14 @@ void Line::emphasis(const int from, const int to)
         i += run;
     }
 
+    // CommonMark's openers_bottom: where a search for an opener of this kind has already failed, a later closer of the
+    // same kind need not look again, which keeps a line of many unmatched markers from taking quadratic time
+    std::array<int, 18> bottom;
+    bottom.fill(-1);
+    const auto kind = [](const Delimiter& delimiter) {
+        const int marker = delimiter.marker == u'*' ? 0 : delimiter.marker == u'_' ? 1 : 2;
+        return marker * 6 + (delimiter.canOpen ? 3 : 0) + delimiter.originalLength % 3;
+    };
     for (int closer = 0; closer < delimiters.size();) {
         Delimiter& close = delimiters[closer];
         if (!close.canClose || close.length == 0) {
@@ -439,7 +449,7 @@ void Line::emphasis(const int from, const int to)
             continue;
         }
         int opener = closer - 1;
-        for (; opener >= 0; --opener) {
+        for (; opener > bottom[static_cast<size_t>(kind(close))]; --opener) {
             const Delimiter& open = delimiters.at(opener);
             if (open.marker != close.marker || !open.canOpen || open.length == 0) {
                 continue;
@@ -449,7 +459,8 @@ void Line::emphasis(const int from, const int to)
             }
             break;
         }
-        if (opener < 0) {
+        if (opener <= bottom[static_cast<size_t>(kind(close))]) {
+            bottom[static_cast<size_t>(kind(close))] = closer - 1;
             ++closer;
             continue;
         }
@@ -515,8 +526,7 @@ QList<TMarkdownLink> TMarkdownInline::render(QString& text, std::vector<TChar>& 
         return {};
     }
     Line line(text, format, from);
-    line.scanCodeEscapesAndAutolinks();
-    line.resolveLinks();
+    line.scanInlines();
     line.findBareAddresses();
     line.emphasis(from, static_cast<int>(text.size()));
     QString result;

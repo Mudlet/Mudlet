@@ -112,38 +112,31 @@ QString TMarkdownBlock::kindName(const Kind kind)
     return {};
 }
 
-quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark)
+quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark, const bool previousStillInUse)
 {
-    // The message before, if it showed no line and has no id, has nothing left to mark
-    if (const auto previous = mRecords.find(mLastMessage); previous != mRecords.end() && previous->id.isEmpty() && !mWithLines.contains(mLastMessage)) {
-        mRecords.erase(previous);
-    }
+    const quint32 previous = mLastMessage;
     const quint32 message = ++mLastMessage;
+    if (!previousStillInUse) {
+        retireIfUnused(previous);
+    }
     if (id.isEmpty() && mark.kind == TMarkdownMark::Kind::None) {
         return message;
     }
     mRecords.insert(message, {id, mark});
     if (!id.isEmpty()) {
-        if (const auto previous = mMessageById.constFind(id); previous != mMessageById.cend()) {
+        // The id names this message now, and a change reaches only it; the one it named before still shows the id
+        // it was sent with, while it has lines to show it on
+        const quint32 superseded = mMessageById.value(id);
+        if (superseded) {
             mIdsInOrder.removeOne(id);
-            // The id names this message now, and a change reaches only it; the one it named before still shows the id
-            // it was sent with, while it has lines to show it on
-            if (auto superseded = mRecords.find(previous.value()); superseded != mRecords.end() && !mWithLines.contains(previous.value())) {
-                mRecords.erase(superseded);
-            }
         }
         mMessageById.insert(id, message);
         mIdsInOrder.enqueue(id);
+        if (superseded) {
+            retireIfUnused(superseded);
+        }
         while (mIdsInOrder.size() > csmKeptIds) {
-            const QString oldest = mIdsInOrder.dequeue();
-            const quint32 oldMessage = mMessageById.take(oldest);
-            if (auto it = mRecords.find(oldMessage); it != mRecords.end()) {
-                if (mWithLines.contains(oldMessage)) {
-                    it->id.clear();
-                } else {
-                    mRecords.erase(it);
-                }
-            }
+            retireIfUnused(mMessageById.take(mIdsInOrder.dequeue()));
         }
     }
     return message;
@@ -158,36 +151,44 @@ quint32 TMarkdownMessages::change(const QString& id, const TMarkdownMark mark)
     return message;
 }
 
-void TMarkdownMessages::forgetThrough(const quint32 message)
+void TMarkdownMessages::lineRemoved(const quint32 message)
 {
-    for (auto it = mRecords.begin(); it != mRecords.end();) {
-        if (it.key() <= message) {
-            if (!it->id.isEmpty() && mMessageById.value(it->id) == it.key()) {
-                mMessageById.remove(it->id);
-                mIdsInOrder.removeOne(it->id);
-            }
-            it = mRecords.erase(it);
-        } else {
-            ++it;
-        }
+    const auto it = mLines.find(message);
+    if (it == mLines.end()) {
+        return;
     }
-    for (auto it = mWithLines.begin(); it != mWithLines.end();) {
-        it = *it <= message ? mWithLines.erase(it) : std::next(it);
+    if (--it.value() <= 0) {
+        mLines.erase(it);
+        retireIfUnused(message);
+    }
+}
+
+void TMarkdownMessages::release(const quint32 message)
+{
+    mHeld.remove(message);
+    retireIfUnused(message);
+}
+
+void TMarkdownMessages::retireIfUnused(const quint32 message)
+{
+    // The latest message is the one lines still come in for
+    if (message == mLastMessage || mLines.contains(message) || mHeld.contains(message)) {
+        return;
+    }
+    const auto it = mRecords.find(message);
+    if (it != mRecords.end() && (it->id.isEmpty() || mMessageById.value(it->id) != message)) {
+        mRecords.erase(it);
     }
 }
 
 void TMarkdownMessages::forgetIds()
 {
-    for (auto it = mRecords.begin(); it != mRecords.end();) {
-        if (mWithLines.contains(it.key())) {
-            it->id.clear();
-            ++it;
-        } else {
-            it = mRecords.erase(it);
-        }
-    }
     mMessageById.clear();
     mIdsInOrder.clear();
+    const QList<quint32> messages = mRecords.keys();
+    for (const quint32 message : messages) {
+        retireIfUnused(message);
+    }
 }
 
 namespace {
@@ -328,13 +329,12 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
     // A section's summary is the line straight after its opening, or the section has none
     if (mAwaitingSummary) {
         mAwaitingSummary = false;
-        const QString trimmed = line.text.trimmed();
-        if (trimmed.startsWith(qsl("<summary>")) && trimmed.endsWith(qsl("</summary>")) && trimmed.size() >= 19) {
-            int pos = 0;
-            skipIndent(line.text, pos);
-            const int from = pos + 9;
-            const int to = trimmedEnd(line.text, pos) - 10;
-            out << summary(line.mid(from, std::max(from, to)), true);
+        int pos = 0;
+        skipIndent(line.text, pos);
+        const int end = trimmedEnd(line.text, pos);
+        const QStringView trimmed = QStringView(line.text).mid(pos, end - pos);
+        if (trimmed.size() >= 19 && trimmed.startsWith(u"<summary>") && trimmed.endsWith(u"</summary>")) {
+            out << summary(line.mid(pos + 9, end - 10), true);
             return out;
         }
         out << summary({}, false);
@@ -404,14 +404,15 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
 
         // Rule 7
         if (text.at(pos) == u'|') {
-            mItems.clear();
             const Text row = line.mid(pos, end);
             QList<Text> cells = splitRow(row);
             if (mInTable) {
+                mItems.clear();
                 holdRow(renderedRow(TMarkdownBlock::Kind::TableRow, std::move(cells)), out);
                 return out;
             }
             if (mHavePendingRow && delimiterRow(cells) && cells.size() == mPendingCells.size() && cells.size() <= csmMaxTableColumns) {
+                mItems.clear();
                 mHavePendingRow = false;
                 mInTable = true;
                 mWidthsFixed = false;
@@ -427,10 +428,17 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
                 holdRow(renderedRow(TMarkdownBlock::Kind::TableDelimiter, {}), out);
                 return out;
             }
-            // A row not followed by a delimiter row is a paragraph, and the next row is tried as a header
-            out << flushHeld();
+            // A row not followed by a delimiter row is what any other text there would be, and the next row is tried
+            // as a header
+            out << takePendingRow();
+            closeItemsBeyond(indent);
+            if (mItems.isEmpty()) {
+                mPendingOutput = make(TMarkdownBlock::Kind::Paragraph, 0, prefix, row);
+            } else {
+                mPendingOutput = make(TMarkdownBlock::Kind::Continuation, 0, prefix + QString(mItems.constLast().prefixWidth, u' '), row);
+                mPendingOutput.block.list = static_cast<quint8>(mItems.size());
+            }
             mHavePendingRow = true;
-            mPendingRow = row;
             mPendingCells = cells;
             return out;
         }
@@ -607,13 +615,10 @@ TMarkdownParser::Output TMarkdownParser::summary(const Text& content, const bool
     return line;
 }
 
+// A row waiting to be a header keeps waiting: the game going quiet is no reason it cannot start a table
 QList<TMarkdownParser::Output> TMarkdownParser::flushHeld()
 {
     QList<Output> out;
-    if (mHavePendingRow) {
-        mHavePendingRow = false;
-        out << make(TMarkdownBlock::Kind::Paragraph, 0, {}, mPendingRow);
-    }
     for (const Row& row : std::as_const(mHeldRows)) {
         out << rowLine(row);
     }
@@ -622,9 +627,19 @@ QList<TMarkdownParser::Output> TMarkdownParser::flushHeld()
     return out;
 }
 
+QList<TMarkdownParser::Output> TMarkdownParser::takePendingRow()
+{
+    if (!mHavePendingRow) {
+        return {};
+    }
+    mHavePendingRow = false;
+    return {mPendingOutput};
+}
+
 QList<TMarkdownParser::Output> TMarkdownParser::endTable()
 {
-    QList<Output> out = flushHeld();
+    QList<Output> out = takePendingRow();
+    out << flushHeld();
     mInTable = false;
     mWidthsFixed = false;
     mAlign.clear();
@@ -642,6 +657,7 @@ QList<TMarkdownParser::Text> TMarkdownParser::splitRow(const Text& row)
         const QChar c = row.text.at(i);
         if (c == u'\\' && i + 1 < row.text.size() && row.text.at(i + 1) == u'|') {
             ++i;
+            afterPipe = false;
             cell.text.append(u'|');
             cell.format.push_back(row.format[static_cast<size_t>(i)]);
             continue;
@@ -719,11 +735,16 @@ TMarkdownParser::Output TMarkdownParser::rowLine(const Row& row) const
         line.text.append(text);
         line.format.insert(line.format.end(), static_cast<size_t>(text.size()), format);
     };
+    int tableWidth = 3 * (static_cast<int>(mAlign.size()) - 1);
+    for (const int width : mWidths) {
+        tableWidth += width;
+    }
+    const bool padded = tableWidth <= csmMaxPaddedTableWidth;
     for (int column = 0; column < mAlign.size(); ++column) {
         if (column) {
             append(row.kind == TMarkdownBlock::Kind::TableDelimiter ? qsl("─┼─") : qsl(" │ "), mPlain);
         }
-        const int width = mWidths.value(column);
+        const int width = padded ? mWidths.value(column) : 3;
         if (row.kind == TMarkdownBlock::Kind::TableDelimiter) {
             append(QString(width, QChar(0x2500)), mPlain);
             continue;
@@ -772,9 +793,17 @@ quint32 TMarkdown::store(TMarkdownBlock&& block)
     if (++mLastBlockId == 0) {
         ++mLastBlockId;
     }
-    mMessages.noteLine(block.message);
+    mMessages.lineStored(block.message);
     mBlocks.insert(mLastBlockId, std::move(block));
     return mLastBlockId;
+}
+
+void TMarkdown::forget(const quint32 id)
+{
+    if (const auto it = mBlocks.find(id); it != mBlocks.end()) {
+        mMessages.lineRemoved(it->message);
+        mBlocks.erase(it);
+    }
 }
 
 const TMarkdownBlock* TMarkdown::block(const quint32 id) const
