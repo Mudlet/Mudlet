@@ -11639,10 +11639,17 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
         const TMarkdownLink& link = line.block.links.at(index);
         Mudlet::HyperlinkStyling styling;
         const int id = addMarkdownLink(link, styling);
+        // Drawn as the link's own style says, or, with none, underlined as Mudlet's other links are
+        const LinkDrawing drawing = id ? printDrawing(id) : LinkDrawing();
         for (int column = link.start; column < link.start + link.length && static_cast<size_t>(column) < line.format.size(); ++column) {
             fromMarkdown[static_cast<size_t>(column)] = true;
             if (id) {
-                line.format[static_cast<size_t>(column)].mLinkIndex = static_cast<quint16>(id);
+                TChar& character = line.format[static_cast<size_t>(column)];
+                character.mLinkIndex = static_cast<quint16>(id);
+                applyDrawing(character, drawing);
+                if (!styling.hasCustomStyling) {
+                    character.setAttributes(TChar::Underline, true);
+                }
             }
         }
         if (id) {

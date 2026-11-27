@@ -4488,6 +4488,19 @@ private slots:
     QCOMPARE(findFirstLinkCommands(), osc8);
   }
 
+  // Shown as a link in Mudlet's own way, as Markdown renderers show theirs,
+  // where an OSC 8 link with no style looks like the text around it
+  void test_MarkdownLinkWithNoStyleIsUnderlined() {
+    injectData(qsl("\x1b]67;1\x1b\\go [north](send:north)\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("go north"));
+    QVERIFY2(!console->buffer.buffer.at(line).at(0).isUnderlined(),
+             "the text before the link was underlined");
+    QVERIFY2(console->buffer.buffer.at(line).at(3).isUnderlined(),
+             "the Markdown link was not drawn as a link");
+  }
+
   void test_MarkdownLinkTitleIsItsTooltip() {
     injectData(qsl("\x1b]67;1\x1b\\[a](send:a \"Walk north\")\x1b]67;0\x1b\\"));
     TMainConsole *console = mpHost->mainConsoleView();
