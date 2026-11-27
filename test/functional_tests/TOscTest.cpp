@@ -4579,6 +4579,27 @@ private slots:
     QCOMPARE(console->buffer.line(line), qsl("Seen Hint"));
   }
 
+  // Past the wrap column the link lands on a later row, and is hidden and
+  // shown there
+  void test_Osc8VisibilityPastTheWrapColumnOfAMarkdownLine() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    injectData(qsl("\x1b]67;1\x1b\\Seen one two three four ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    const int last = console->buffer.getLastLineNumber() - 1;
+    QVERIFY2(console->buffer.wrapsFromPreviousLine(last),
+             "the line did not wrap, so this proves nothing");
+    QVERIFY2(!console->buffer.line(last).contains(qsl("Hint")),
+             "the hidden link showed");
+    console->getHyperlinkVisibilityManager().onUserInput();
+    QVERIFY2(console->buffer.line(last).contains(qsl("Hint")),
+             "the link was not shown again on the row it wrapped onto");
+  }
+
   // An OSC 8 spoiler is hidden after the line is read as Markdown, so
   // trimming the line cannot take it, and it can still be revealed
   void test_Osc8SpoilerAloneOnAMarkdownLineCanBeRevealed() {

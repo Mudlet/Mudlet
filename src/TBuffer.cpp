@@ -11502,6 +11502,9 @@ void TBuffer::commitMarkdownLines(QList<TMarkdownLine>&& lines)
         linkMarkdownLine(line);
         const quint32 id = mpMarkdown->store(std::move(line.block));
         commitLineData(std::move(line.text), TLineFormat(std::move(line.format)), '\n', id);
+        if (!mMarkdownLinksToPlace.isEmpty()) {
+            placeMarkdownLinks();
+        }
     }
 }
 
@@ -11676,9 +11679,70 @@ void TBuffer::applyMarkdownLinkLooks(TMarkdownLine& line, const int id, const in
     if (!styling.visibility.hasVisibilitySettings || !onOneLine || !mpModel || length <= 0) {
         return;
     }
-    const int row = (lineBuffer.isEmpty() || !lineBuffer.back().isEmpty()) ? static_cast<int>(lineBuffer.size()) : static_cast<int>(lineBuffer.size()) - 1;
-    if (mpModel->mHyperlinkVisibilityManager.registerHyperlink(id, row, column, length, line.text.mid(column, length), styling) && !styling.isSpoiler) {
+    THyperlinkVisibilityManager& manager = mpModel->mHyperlinkVisibilityManager;
+    const bool concealed = manager.registerHyperlink(id, 0, column, length, line.text.mid(column, length), styling);
+    if (concealed && !styling.isSpoiler) {
         line.text.replace(column, length, QString(length, QChar::Space));
+    }
+    // Its row is known once the line is committed, and its row and column once wrapping has split it: until then it
+    // waits as a link on a line still to come, which a trigger deleting lines above it moves too
+    manager.trackAwaitingTheirLine(manager.takeLinks({id}));
+    mMarkdownLinksToPlace.append({id, concealed && !styling.isSpoiler});
+}
+
+// After commitLineData(): a link that wrapping left on one row is moved onto it, and one it split across rows is no
+// longer hidden or shown, as an OSC 8 link over more than one line is not, with any text hidden at the start put back
+void TBuffer::placeMarkdownLinks()
+{
+    const QList<std::pair<int, bool>> links = std::exchange(mMarkdownLinksToPlace, {});
+    THyperlinkVisibilityManager* pManager = hyperlinkVisibilityManagerOrNull();
+    if (!pManager) {
+        return;
+    }
+    for (const auto& [id, concealed] : links) {
+        const int head = pManager->lineOf(id);
+        if (head < 0 || head >= lineBuffer.size()) {
+            continue;
+        }
+        struct Run
+        {
+            int row;
+            int column;
+            int length;
+        };
+        QList<Run> runs;
+        for (int row = head; row < lineBuffer.size() && (row == head || (markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row))); ++row) {
+            const TLineFormat& format = buffer.at(static_cast<size_t>(row));
+            for (int column = 0; column < static_cast<int>(format.size()); ++column) {
+                if (format[static_cast<size_t>(column)].linkIndex() != id) {
+                    continue;
+                }
+                int end = column;
+                while (end < static_cast<int>(format.size()) && format[static_cast<size_t>(end)].linkIndex() == id) {
+                    ++end;
+                }
+                runs.append({row, column, end - column});
+                column = end;
+            }
+        }
+        if (runs.size() == 1) {
+            pManager->moveLink(id, runs.first().row, runs.first().column);
+            continue;
+        }
+        const QList<TrackedHyperlink> taken = pManager->takeLinks({id});
+        if (!concealed || taken.isEmpty()) {
+            continue;
+        }
+        const QString original = taken.first().originalText;
+        int used = 0;
+        for (const Run& run : std::as_const(runs)) {
+            const QStringView piece = QStringView(original).mid(used, run.length);
+            lineBuffer[run.row].replace(run.column, piece.size(), piece.toString());
+            used += static_cast<int>(piece.size());
+        }
+        if (mpModel && !runs.isEmpty()) {
+            emit mpModel->mNotifier.linesChanged(runs.first().row, runs.last().row);
+        }
     }
 }
 

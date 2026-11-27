@@ -439,6 +439,20 @@ void THyperlinkVisibilityManager::anchorLinksAwaitingTheirLine(const int lineNum
     mHasLinksAwaitingTheirLine = false;
 }
 
+int THyperlinkVisibilityManager::lineOf(const int linkId) const
+{
+    const auto it = mTrackedLinks.constFind(linkId);
+    return it == mTrackedLinks.cend() ? csmNotTracked : it->lineNumber;
+}
+
+void THyperlinkVisibilityManager::moveLink(const int linkId, const int lineNumber, const int startColumn)
+{
+    if (const auto it = mTrackedLinks.find(linkId); it != mTrackedLinks.end()) {
+        it->lineNumber = lineNumber;
+        it->startColumn = startColumn;
+    }
+}
+
 void THyperlinkVisibilityManager::slot_checkTimers()
 {
     if (mTrackedLinks.isEmpty()) {

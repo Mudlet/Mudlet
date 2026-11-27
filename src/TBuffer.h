@@ -903,6 +903,7 @@ private:
     void endOpenMarkdownMessage();
     int markdownHeadIndent(int head) const;
     void editMarkdownRanges(TMarkdownBlock& block, int cutFrom, int cutTo, int delta);
+    void placeMarkdownLinks();
     void applyMarkdownLinkLooks(TMarkdownLine& line, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
     void decodeMarkdownOSC(QStringView sequence);
     bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
@@ -1015,6 +1016,8 @@ private:
     // An OSC 8 link's spoiler or visibility on a Markdown line, applied once the line is rendered, and whether the link
     // began on that line
     QHash<int, std::pair<Mudlet::HyperlinkStyling, bool>> mMarkdownLinkLooks;
+    // Links whose visibility was registered for the line being committed, and whether their text was hidden at the start
+    QList<std::pair<int, bool>> mMarkdownLinksToPlace;
     // What translateToPlainText() is reading came from the game
     bool mParsingServerText = false;
 
