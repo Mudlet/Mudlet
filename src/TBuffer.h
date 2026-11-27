@@ -64,6 +64,7 @@ class THyperlinkVisibilityManager;
 class TMarkdown;
 struct TMarkdownBlock;
 struct TMarkdownLine;
+struct TMarkdownLink;
 class TIngestPipeline;
 struct TIngestJob;
 struct TSpeculatedLine;
@@ -885,6 +886,7 @@ private:
     void decodeSGR38(const SgrParameters&, bool isColonSeparated = true);
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
+    bool hyperlinkActionsForUri(const QString& rawUrl, QStringList& command, QStringList& hint, bool* hasCustomTooltip = nullptr);
     void finaliseActiveHyperlink();
     void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
     void carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format);
@@ -900,6 +902,8 @@ private:
     void decodeMarkdownOSC(QStringView sequence);
     bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
     void commitMarkdownLines(QList<TMarkdownLine>&& lines);
+    int addMarkdownLink(const TMarkdownLink& link);
+    void linkMarkdownLine(TMarkdownLine& line);
     qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
@@ -996,6 +1000,8 @@ private:
     QPointer<Host> mpHost;
     // Made on the first OSC 67 the main console's buffer reads
     std::unique_ptr<TMarkdown> mpMarkdown;
+    // What each OSC 8 or Markdown link was sent as, for the Markdown tag of the line it is on
+    QHash<int, QString> mHyperlinkUris;
 
     bool mBold = false;
     // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour

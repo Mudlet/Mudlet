@@ -5294,235 +5294,16 @@ void TBuffer::decodeOSC(const QString& sequence)
                 return;
             }
 
-            // Parse query parameters for enhanced functionality
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
-#endif
-            // Reset styling to defaults before parsing
-            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
-            mCurrentHyperlinkMenu.clear();
-            QMap<QString, QString> queryParams;
-            parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
-
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
-#endif
-
-            // Extract custom tooltip parameter
-            QString customTooltip;
-
-            if (queryParams.contains(qsl("tooltip"))) {
-                customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
-            }
-
-            // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
-
-            QString baseUrl = rawUrl;
-
-            if (systemMayOpenUrl(QUrl(rawUrl))) {
-                int queryStart = baseUrl.indexOf('?');
-                if (queryStart != -1) {
-                    // Strip reserved parameters when corresponding OSC 8 features are enabled
-                    // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
-                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
-                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
-
-                    // Mudlet only removes what the style parser claims, which leaves two kinds of
-                    // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
-                    // for "config"), since keys are compared as literal strings, and one with no
-                    // '=' at all, since the split gives that no key and the style parser passes
-                    // over it. Both are the server's own URL data.
-                    QStringList kept;
-                    for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
-                        if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
-                            continue;
-                        }
-                        kept.append(parameter.text);
-                    }
-
-                    baseUrl = baseUrl.left(queryStart);
-                    if (!kept.isEmpty()) {
-                        baseUrl += '?' + kept.join('&');
-                    }
-                }
-            } else {
-                // On a scheme the system does not open the whole query is Mudlet's, so a '?' in a gmcp: message has to be percent-encoded
-                int queryStart = baseUrl.indexOf('?');
-                if (queryStart != -1) {
-                    baseUrl = baseUrl.left(queryStart);
-                }
-            }
-
             QStringList command;
             QStringList hint;
-
-            if (baseUrl.startsWith(qsl("send:"))) {
-                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
-                mCurrentHyperlinkStyling.baseCommand = innerCommand;
-                command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
-                hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
-            } else if (baseUrl.startsWith(qsl("prompt:"))) {
-                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
-                mCurrentHyperlinkStyling.baseCommand = innerCommand;
-                command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
-                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
-            } else if (baseUrl.startsWith(qsl("gmcp:"))) {
-                QString whyNot;
-                const auto gmcpLink = parseGmcpLinkUri(baseUrl, &whyNot);
-                // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
-                if (gmcpLink && mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection()) {
-                    whyNot = qsl("a selection link's data has to be a JSON object");
-                }
-                if (!whyNot.isEmpty()) {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link, as " << whyNot << ": \"" << baseUrl << "\"";
-                    return;
-                }
-                const QString message = gmcpLink->message();
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionGmcp;
-                mCurrentHyperlinkStyling.baseCommand = message;
-                command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
-                //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
-                hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
-            } else if (baseUrl.startsWith(qsl("local:"))) {
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionLocal;
-                command = {QString()};
-                hint = {QString()};
-            } else {
-                QUrl qurl(baseUrl);
-                QString scheme = qurl.scheme().toLower();
-
-                if (systemMayOpenUrl(qurl)) {
-                    baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
-                    if (baseUrl.isEmpty()) {
-                        qWarning().noquote() << "TBuffer::decodeOSC(...) - Ignored a mailto link with a field hidden in a recipient";
-                        return;
-                    }
-                    mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
-                    mCurrentHyperlinkStyling.baseCommand = baseUrl;
-                    command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    QString action = QObject::tr("Open browser to");
-                    if (scheme == qsl("mailto")) {
-                        //: Start of the tooltip on a game's link that opens the mail app, followed by a colon and the link's mailto: address
-                        action = QObject::tr("Write an email to");
-                    }
-                    hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
-                } else if ((scheme == qsl("telnet") || scheme == qsl("telnets")) && parseTelnetUri(baseUrl)) {
-                    command = {qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
-                    hint = {qsl("%1: %2").arg(QObject::tr("Connect to"), UntrustedText::forTarget(baseUrl))};
-                } else {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
-                    return;
-                }
-            }
-
-            // Add standalone tooltip support (for links without menus)
-            if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
-                // Replace the default hint with the custom tooltip
-                hint = {customTooltip};
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
-#endif
-            }
-
-            // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty()) {
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
-#endif
-                QStringList menuCommands;
-                QStringList menuHints;
-
-                // Add menu items in pairs (label, command)
-                // The first menu item becomes the link's own action (index 0), except on a local: link, where activating it opens the menu
-                // All items (including first) appear in the menu (index 1+)
-                for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
-                    QString menuLabel = mCurrentHyperlinkMenu[i];
-                    QString menuCommand = mCurrentHyperlinkMenu[i + 1];
-
-                    // Determine command type based on prefix
-                    if (menuCommand.startsWith(qsl("send:"))) {
-                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (menuCommand.startsWith(qsl("prompt:"))) {
-                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
-                        menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
-                        // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
-                        // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
-                        QString whyNot;
-                        const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")), &whyNot);
-                        if (!gmcpItem) {
-                            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item, as " << whyNot << ": \"" << menuCommand << "\"";
-                        }
-                        menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
-                        // An item is an action, and this has none: it is left out rather than typed at the game
-                        continue;
-                    } else if (menuCommand == qsl("-")) {
-                        // Special case: "-" creates a menu separator
-                        menuCommands.append(QString());
-                        menuHints.append(QString());
-                    } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
-                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
-                        // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
-                        menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else {
-                        // Treat as direct command
-                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    }
-                }
-
-                // Set the tooltip for the link (what shows on hover)
-                // Use custom tooltip if provided, otherwise say how to open the menu
-                QString linkTooltip;
-                if (!customTooltip.isEmpty()) {
-                    // Custom tooltip explicitly provided
-                    linkTooltip = customTooltip;
-                } else {
-                    // Default tooltip for menu links
-                    linkTooltip = QObject::tr("Right-click for menu");
-                    if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
-                        //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
-                        linkTooltip = QObject::tr("Click for menu");
-                    }
-                }
-
-                // For menus, we need tooltip as first hint, then menu labels
-                // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
-                QStringList finalHints;
-                finalHints.append(linkTooltip); // First: tooltip for hover
-                finalHints.append(menuHints);   // Rest: the menu's item labels
-
-                // Every item may have been left out or be a separator; then the link has no menu and keeps its own action and tooltip
-                bool hasMenuItem = false;
-                for (int i = 0; i < menuCommands.size(); ++i) {
-                    hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
-                }
-                if (hasMenuItem) {
-                    command = menuCommands;
-                    hint = finalHints;
-                } else if (!customTooltip.isEmpty()) {
-                    hint = {customTooltip};
-                }
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Final menu commands:" << command;
-                qDebug() << "[OSC] Final menu hints:" << hint;
-#endif
+            if (!hyperlinkActionsForUri(rawUrl, command, hint)) {
+                return;
             }
 
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
             mCurrentHyperlinkLinkId = addLinkToStore(command, hint);
+            mHyperlinkUris.insert(mCurrentHyperlinkLinkId, rawUrl);
 
             // Store the styling for this link so it can be retrieved later
             mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
@@ -7722,6 +7503,240 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 // Ends the active hyperlink, from either the OSC 8 terminator or the end of the
 // line for one the game never closed. Characters already stamped with the id
 // stay clickable.
+// What an OSC 8 link to rawUrl does and the tooltip it shows, with its style in mCurrentHyperlinkStyling and its menu in
+// mCurrentHyperlinkMenu; false when Mudlet refuses the link
+bool TBuffer::hyperlinkActionsForUri(const QString& rawUrl, QStringList& command, QStringList& hint, bool* hasCustomTooltip)
+{
+    // Parse query parameters for enhanced functionality
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
+#endif
+    // Reset styling to defaults before parsing
+    mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+    mCurrentHyperlinkMenu.clear();
+    QMap<QString, QString> queryParams;
+    parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
+#endif
+
+    // Extract custom tooltip parameter
+    QString customTooltip;
+
+    if (queryParams.contains(qsl("tooltip"))) {
+        customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
+    }
+
+    // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
+
+    QString baseUrl = rawUrl;
+
+    if (systemMayOpenUrl(QUrl(rawUrl))) {
+        int queryStart = baseUrl.indexOf('?');
+        if (queryStart != -1) {
+            // Strip reserved parameters when corresponding OSC 8 features are enabled
+            // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
+            const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+            const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
+
+            // Mudlet only removes what the style parser claims, which leaves two kinds of
+            // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
+            // for "config"), since keys are compared as literal strings, and one with no
+            // '=' at all, since the split gives that no key and the style parser passes
+            // over it. Both are the server's own URL data.
+            QStringList kept;
+            for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
+                if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
+                    continue;
+                }
+                kept.append(parameter.text);
+            }
+
+            baseUrl = baseUrl.left(queryStart);
+            if (!kept.isEmpty()) {
+                baseUrl += '?' + kept.join('&');
+            }
+        }
+    } else {
+        // On a scheme the system does not open the whole query is Mudlet's, so a '?' in a gmcp: message has to be percent-encoded
+        int queryStart = baseUrl.indexOf('?');
+        if (queryStart != -1) {
+            baseUrl = baseUrl.left(queryStart);
+        }
+    }
+
+
+    if (baseUrl.startsWith(qsl("send:"))) {
+        QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
+        mCurrentHyperlinkStyling.baseCommand = innerCommand;
+        command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
+        hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
+    } else if (baseUrl.startsWith(qsl("prompt:"))) {
+        QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
+        mCurrentHyperlinkStyling.baseCommand = innerCommand;
+        command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
+        hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
+    } else if (baseUrl.startsWith(qsl("gmcp:"))) {
+        QString whyNot;
+        const auto gmcpLink = parseGmcpLinkUri(baseUrl, &whyNot);
+        // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
+        if (gmcpLink && mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection()) {
+            whyNot = qsl("a selection link's data has to be a JSON object");
+        }
+        if (!whyNot.isEmpty()) {
+            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link, as " << whyNot << ": \"" << baseUrl << "\"";
+            return false;
+        }
+        const QString message = gmcpLink->message();
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionGmcp;
+        mCurrentHyperlinkStyling.baseCommand = message;
+        command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
+        //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
+        hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
+    } else if (baseUrl.startsWith(qsl("local:"))) {
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionLocal;
+        command = {QString()};
+        hint = {QString()};
+    } else {
+        QUrl qurl(baseUrl);
+        QString scheme = qurl.scheme().toLower();
+
+        if (systemMayOpenUrl(qurl)) {
+            baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
+            if (baseUrl.isEmpty()) {
+                qWarning().noquote() << "TBuffer::decodeOSC(...) - Ignored a mailto link with a field hidden in a recipient";
+                return false;
+            }
+            mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
+            mCurrentHyperlinkStyling.baseCommand = baseUrl;
+            command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
+            QString action = QObject::tr("Open browser to");
+            if (scheme == qsl("mailto")) {
+                //: Start of the tooltip on a game's link that opens the mail app, followed by a colon and the link's mailto: address
+                action = QObject::tr("Write an email to");
+            }
+            hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
+        } else if ((scheme == qsl("telnet") || scheme == qsl("telnets")) && parseTelnetUri(baseUrl)) {
+            command = {qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(baseUrl))};
+            //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
+            hint = {qsl("%1: %2").arg(QObject::tr("Connect to"), UntrustedText::forTarget(baseUrl))};
+        } else {
+            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
+            return false;
+        }
+    }
+
+    // Add standalone tooltip support (for links without menus)
+    if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
+        // Replace the default hint with the custom tooltip
+        hint = {customTooltip};
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
+#endif
+    }
+
+    // Handle menu functionality by extending commands and hints
+    if (!mCurrentHyperlinkMenu.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
+#endif
+        QStringList menuCommands;
+        QStringList menuHints;
+
+        // Add menu items in pairs (label, command)
+        // The first menu item becomes the link's own action (index 0), except on a local: link, where activating it opens the menu
+        // All items (including first) appear in the menu (index 1+)
+        for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
+            QString menuLabel = mCurrentHyperlinkMenu[i];
+            QString menuCommand = mCurrentHyperlinkMenu[i + 1];
+
+            // Determine command type based on prefix
+            if (menuCommand.startsWith(qsl("send:"))) {
+                QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
+                menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (menuCommand.startsWith(qsl("prompt:"))) {
+                QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
+                menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
+                // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
+                // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
+                QString whyNot;
+                const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")), &whyNot);
+                if (!gmcpItem) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item, as " << whyNot << ": \"" << menuCommand << "\"";
+                }
+                menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
+                // An item is an action, and this has none: it is left out rather than typed at the game
+                continue;
+            } else if (menuCommand == qsl("-")) {
+                // Special case: "-" creates a menu separator
+                menuCommands.append(QString());
+                menuHints.append(QString());
+            } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
+                menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
+                // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
+                menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else {
+                // Treat as direct command
+                menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            }
+        }
+
+        // Set the tooltip for the link (what shows on hover)
+        // Use custom tooltip if provided, otherwise say how to open the menu
+        QString linkTooltip;
+        if (!customTooltip.isEmpty()) {
+            // Custom tooltip explicitly provided
+            linkTooltip = customTooltip;
+        } else {
+            // Default tooltip for menu links
+            linkTooltip = QObject::tr("Right-click for menu");
+            if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
+                //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
+                linkTooltip = QObject::tr("Click for menu");
+            }
+        }
+
+        // For menus, we need tooltip as first hint, then menu labels
+        // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
+        QStringList finalHints;
+        finalHints.append(linkTooltip); // First: tooltip for hover
+        finalHints.append(menuHints);   // Rest: the menu's item labels
+
+        // Every item may have been left out or be a separator; then the link has no menu and keeps its own action and tooltip
+        bool hasMenuItem = false;
+        for (int i = 0; i < menuCommands.size(); ++i) {
+            hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
+        }
+        if (hasMenuItem) {
+            command = menuCommands;
+            hint = finalHints;
+        } else if (!customTooltip.isEmpty()) {
+            hint = {customTooltip};
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Final menu commands:" << command;
+        qDebug() << "[OSC] Final menu hints:" << hint;
+#endif
+    }
+
+    if (hasCustomTooltip) {
+        *hasCustomTooltip = !customTooltip.isEmpty();
+    }
+    return true;
+}
+
 void TBuffer::finaliseActiveHyperlink()
 {
     // The rest of a link split by a flush can arrive with the pointer or caret already on it; the redraw as they
@@ -11479,6 +11494,7 @@ void TBuffer::commitMarkdownLines(QList<TMarkdownLine>&& lines)
         if (line.text.isEmpty() && mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
             continue;
         }
+        linkMarkdownLine(line);
         const quint32 id = mpMarkdown->store(std::move(line.block));
         commitLineData(std::move(line.text), TLineFormat(std::move(line.format)), '\n', id);
     }
@@ -11558,4 +11574,63 @@ QString TBuffer::markdownParagraphText(const int lineNumber) const
         text.append(QStringView(lineBuffer.at(row)).mid(wrapIndentWidth(row)));
     }
     return text;
+}
+
+// The id of a link a Markdown link makes, or 0 where an OSC 8 link to the same destination would be refused
+int TBuffer::addMarkdownLink(const TMarkdownLink& link)
+{
+    if (!mpHost->mEnableOSC8Hyperlinks || QUrl(link.destination).scheme().isEmpty() || link.destination.startsWith(qsl("preset:"))) {
+        return 0;
+    }
+    // An OSC 8 link left open across this line keeps its own style and menu
+    const Mudlet::HyperlinkStyling openLinkStyling = std::exchange(mCurrentHyperlinkStyling, {});
+    const QStringList openLinkMenu = std::exchange(mCurrentHyperlinkMenu, {});
+    QStringList command;
+    QStringList hint;
+    bool customTooltip = false;
+    const bool accepted = hyperlinkActionsForUri(link.destination, command, hint, &customTooltip);
+    const Mudlet::HyperlinkStyling styling = std::exchange(mCurrentHyperlinkStyling, openLinkStyling);
+    mCurrentHyperlinkMenu = openLinkMenu;
+    if (!accepted) {
+        return 0;
+    }
+    if (!link.title.isEmpty() && !customTooltip && hint.size() <= 1) {
+        hint = {UntrustedText::forAuthoredText(link.title)};
+    }
+    const int id = addLinkToStore(command, hint);
+    mLinkStore.setStyling(id, styling);
+    mLinkOriginalBackgrounds[id] = mBackGroundColor;
+    mHyperlinkUris.insert(id, link.destination);
+    setLinkState(id, Mudlet::HyperlinkStyling::StateDefault);
+    return id;
+}
+
+// Gives the line's Markdown links their ids, and lists its OSC 8 links in its block beside them
+void TBuffer::linkMarkdownLine(TMarkdownLine& line)
+{
+    const int markdownLinks = static_cast<int>(line.block.links.size());
+    std::vector<bool> fromMarkdown(line.format.size(), false);
+    for (int index = 0; index < markdownLinks; ++index) {
+        const TMarkdownLink& link = line.block.links.at(index);
+        const int id = addMarkdownLink(link);
+        for (int column = link.start; column < link.start + link.length && static_cast<size_t>(column) < line.format.size(); ++column) {
+            fromMarkdown[static_cast<size_t>(column)] = true;
+            if (id) {
+                line.format[static_cast<size_t>(column)].mLinkIndex = static_cast<quint16>(id);
+            }
+        }
+    }
+    for (size_t column = 0; column < line.format.size();) {
+        const int id = line.format[column].linkIndex();
+        if (!id || fromMarkdown[column]) {
+            ++column;
+            continue;
+        }
+        size_t end = column;
+        while (end < line.format.size() && line.format[end].linkIndex() == id && !fromMarkdown[end]) {
+            ++end;
+        }
+        line.block.links.append({static_cast<int>(column), static_cast<int>(end - column), mHyperlinkUris.value(id), {}});
+        column = end;
+    }
 }

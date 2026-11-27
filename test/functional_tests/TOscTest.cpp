@@ -4477,6 +4477,48 @@ private slots:
     mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
                        : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
+
+  // A Markdown link is an OSC 8 link written another way: the same action, the same rules
+  void test_MarkdownLinkRunsWhatTheSameOsc8LinkRuns() {
+    injectData(qsl("\x1b]8;;send:look\x1b\\look\x1b]8;;\x1b\\"));
+    const QStringList osc8 = findFirstLinkCommands();
+    QVERIFY2(!osc8.isEmpty(), "the OSC 8 link to compare with was not made");
+    mpHost->mainConsoleView()->buffer.clear();
+    injectData(qsl("\x1b]67;1\x1b\\[look](send:look)\x1b]67;0\x1b\\"));
+    QCOMPARE(findFirstLinkCommands(), osc8);
+  }
+
+  void test_MarkdownLinkTitleIsItsTooltip() {
+    injectData(qsl("\x1b]67;1\x1b\\[a](send:a \"Walk north\")\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the Markdown link was not made");
+    QCOMPARE(console->getLinkStore().getHintsConst(linkId), QStringList{qsl("Walk north")});
+  }
+
+  void test_MarkdownLinkWithNoSchemeHasNoAction() {
+    injectData(qsl("\x1b]67;1\x1b\\[x](north)\x1b]67;0\x1b\\"));
+    QVERIFY2(findFirstLinkCommands().isEmpty(), "a destination with no scheme was made a link");
+  }
+
+  void test_MarkdownLinksFollowTheHyperlinkPreference() {
+    mpHost->mEnableOSC8Hyperlinks = false;
+    injectData(qsl("\x1b]67;1\x1b\\[look](send:look)\x1b]67;0\x1b\\"));
+    mpHost->mEnableOSC8Hyperlinks = true;
+    QVERIFY2(findFirstLinkCommands().isEmpty(), "a Markdown link was made with hyperlinks turned off");
+  }
+
+  // Markers removed before it move the text an OSC 8 link covers, and the link has to move with it
+  void test_Osc8LinkAfterMarkdownBoldStaysOnItsText() {
+    injectData(qsl("\x1b]67;1\x1b\\**bold** \x1b]8;;send:go\x1b\\go\x1b]8;;\x1b\\\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("bold go"));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 4), 0);
+    QVERIFY2(console->buffer.getLinkIndexAt(line, 5) > 0, "the OSC 8 link left its text");
+    QVERIFY2(console->buffer.getLinkIndexAt(line, 6) > 0, "the OSC 8 link left its text");
+  }
 };
 
 #include "TOscTest.moc"
