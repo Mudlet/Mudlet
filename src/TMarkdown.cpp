@@ -20,8 +20,10 @@
 #include "TMarkdown.h"
 
 #include "TMarkdownInline.h"
+#include "TTextProperties.h"
 
 #include <QCoreApplication>
+#include <QTextBoundaryFinder>
 
 #include "utils.h"
 
@@ -736,6 +738,21 @@ TMarkdownParser::Row TMarkdownParser::renderedRow(const TMarkdownBlock::Kind kin
     return row;
 }
 
+int TMarkdownParser::columns(const QString& text) const
+{
+    if (lineBreakInfo::printableAscii(text)) {
+        return static_cast<int>(text.size());
+    }
+    int width = 0;
+    QTextBoundaryFinder graphemes(QTextBoundaryFinder::Grapheme, text);
+    for (qsizetype from = 0; from < text.size();) {
+        const qsizetype next = graphemes.toNextBoundary();
+        width += graphemeInfo::getGraphemeWidth(QStringView(text).mid(from, next - from), mWideAmbiguous);
+        from = next;
+    }
+    return width;
+}
+
 // Cells padded to their columns' widths and joined by a bar; the delimiter row is a line across them
 TMarkdownParser::Output TMarkdownParser::rowLine(const Row& row) const
 {
@@ -760,7 +777,7 @@ TMarkdownParser::Output TMarkdownParser::rowLine(const Row& row) const
             continue;
         }
         const Text& cell = row.cells.at(column);
-        const int gap = std::max(0, width - static_cast<int>(cell.text.size()));
+        const int gap = std::max(0, width - columns(cell.text));
         const TMarkdownBlock::Align align = mAlign.at(column);
         const int before = align == TMarkdownBlock::Align::Right ? gap : align == TMarkdownBlock::Align::Center ? gap / 2 : 0;
         append(QString(before, u' '), mPlain);
@@ -789,7 +806,7 @@ void TMarkdownParser::holdRow(Row&& row, QList<Output>& out)
         return;
     }
     for (int column = 0; column < row.cells.size(); ++column) {
-        mWidths[column] = std::max(mWidths.at(column), static_cast<int>(row.cells.at(column).text.size()));
+        mWidths[column] = std::max(mWidths.at(column), columns(row.cells.at(column).text));
     }
     mHeldRows.append(std::move(row));
     if (mHeldRows.size() >= csmMaxHeldRows) {

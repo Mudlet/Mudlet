@@ -2972,6 +2972,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         mHyperlinkEnteredMarkdown = mHyperlinkEnteredMarkdown || markdownLine;
         if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty() && !mHyperlinkEnteredMarkdown) {
             finaliseActiveHyperlink();
+        } else if (markdownLine && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+            // Masked once Markdown has taken its markers and spaces out of the line, which would take masked text with them
+            mMarkdownLinkLooks.insert(mCurrentHyperlinkLinkId, {mCurrentHyperlinkStyling, false});
+            mCurrentHyperlinkStartColumn = 0;
         } else {
             carryActiveHyperlinkPastFlush(mMudLine, mMudBuffer);
         }
@@ -11519,6 +11523,7 @@ bool TBuffer::commitMarkdownLine(QString& line, TLineFormat& chars, const char c
     }
     markdown.mParser.setRuleWidth(std::clamp(mWrapAt - mWrapIndent, 3, 1000));
     markdown.mParser.setPlainFormat(TChar(mForeGroundColor, mBackGroundColor));
+    markdown.mParser.setWideAmbiguous(mpHost->wideAmbiguousEAsianGlyphs());
     commitMarkdownLines(markdown.mParser.addLine(line, chars, lineMessage));
     // An off or on sequence part way through this line ended its message, now that the line is in it
     if (!markdown.mLineInMarkdown || markdown.mLineMessage != lineMessage) {
@@ -11714,6 +11719,8 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
             applyMarkdownLinkLooks(line.text, line.format, id, link.start, link.length, styling, true);
         }
     }
+    QHash<int, int> runsOfLink;
+    const int firstOsc8Link = static_cast<int>(line.block.links.size());
     for (size_t column = 0; column < line.format.size();) {
         const int id = line.format[column].linkIndex();
         if (!id || fromMarkdown[column]) {
@@ -11725,12 +11732,20 @@ void TBuffer::linkMarkdownLine(TMarkdownLine& line)
             ++end;
         }
         line.block.links.append({static_cast<int>(column), static_cast<int>(end - column), mHyperlinkUris.value(id), {}});
+        ++runsOfLink[id];
+        column = end;
+    }
+    // A table's bars can split one link into several runs: each is masked, but the link is shown or hidden only when whole
+    for (int index = firstOsc8Link; index < line.block.links.size(); ++index) {
+        const TMarkdownLink& run = line.block.links.at(index);
+        const int id = line.format[static_cast<size_t>(run.start)].linkIndex();
         if (const auto looks = mMarkdownLinkLooks.constFind(id); looks != mMarkdownLinkLooks.cend()) {
             const auto [styling, onOneLine] = looks.value();
-            mMarkdownLinkLooks.erase(looks);
-            applyMarkdownLinkLooks(line.text, line.format, id, static_cast<int>(column), static_cast<int>(end - column), styling, onOneLine);
+            applyMarkdownLinkLooks(line.text, line.format, id, run.start, run.length, styling, onOneLine && runsOfLink.value(id) == 1);
         }
-        column = end;
+    }
+    for (auto link = runsOfLink.cbegin(); link != runsOfLink.cend(); ++link) {
+        mMarkdownLinkLooks.remove(link.key());
     }
 }
 

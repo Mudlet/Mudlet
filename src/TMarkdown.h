@@ -156,6 +156,8 @@ public:
     void setRuleWidth(int columns) { mRuleWidth = columns; }
     // The colors of the characters the grid adds, such as a bullet
     void setPlainFormat(const TChar& format) { mPlain = format; }
+    // The profile's setting for East Asian characters of ambiguous width, as wrapping reads it
+    void setWideAmbiguous(bool wide) { mWideAmbiguous = wide; }
 
     static constexpr int csmMaxQuoteLevels = 8;
     static constexpr int csmMaxListLevels = 8;
@@ -206,6 +208,8 @@ private:
     void closeItemsBeyond(int column);
     bool closesFence(const QString& line) const;
     static QString quotePrefix(quint8 quote);
+    // The columns the console draws the text in, which a wide character or a combining mark makes differ from its length
+    int columns(const QString& text) const;
 
     bool mHavePendingRow = false;
     QElapsedTimer mPendingSince;
@@ -235,6 +239,7 @@ private:
     quint32 mMessage = 0;
     TChar mPlain;
     int mRuleWidth = 80;
+    bool mWideAmbiguous = false;
 };
 
 // The Markdown state of the main console's buffer
