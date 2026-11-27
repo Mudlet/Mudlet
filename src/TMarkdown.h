@@ -150,6 +150,7 @@ public:
     static constexpr int csmMaxQuoteLevels = 8;
     static constexpr int csmMaxListLevels = 8;
     static constexpr int csmMaxTableColumns = 64;
+    static constexpr int csmMaxSectionLevels = 4;
     static constexpr int csmMaxHeldRows = 500;
 
 private:
@@ -183,6 +184,8 @@ private:
     // The table and a row waiting to be its header end, and what was held is returned to be committed
     QList<Output> endTable();
     void holdRow(Row&& row, QList<Output>& out);
+    // The summary of the section just opened, empty when the line after the opening gave none
+    Output summary(const Text& content, bool given) const;
     Output blank(quint8 quote) const;
     void closeItemsBeyond(int column);
     bool closesFence(const QString& line) const;
@@ -198,6 +201,12 @@ private:
     QList<TMarkdownBlock::Align> mAlign;
     QList<int> mWidths;
     QList<Row> mHeldRows;
+    // The sections open, innermost last, and how many more are open past the levels a line can be placed in
+    QList<quint32> mSections;
+    int mSectionsBeyond = 0;
+    quint32 mLastSection = 0;
+    bool mAwaitingSummary = false;
+    bool mSectionStartsOpen = false;
     QList<OpenItem> mItems;
     quint8 mItemsQuote = 0;
     bool mInFence = false;

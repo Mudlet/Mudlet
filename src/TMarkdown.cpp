@@ -21,6 +21,8 @@
 
 #include "TMarkdownInline.h"
 
+#include <QCoreApplication>
+
 #include "utils.h"
 
 TMarkdownMark TMarkdownMark::parse(QStringView value, bool* valid)
@@ -124,13 +126,10 @@ quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark)
     if (!id.isEmpty()) {
         if (const auto previous = mMessageById.constFind(id); previous != mMessageById.cend()) {
             mIdsInOrder.removeOne(id);
-            // The id names this message now; the one it named keeps its record only for the lines it still has
-            if (auto superseded = mRecords.find(previous.value()); superseded != mRecords.end()) {
-                if (mWithLines.contains(previous.value())) {
-                    superseded->id.clear();
-                } else {
-                    mRecords.erase(superseded);
-                }
+            // The id names this message now, and a change reaches only it; the one it named before still shows the id
+            // it was sent with, while it has lines to show it on
+            if (auto superseded = mRecords.find(previous.value()); superseded != mRecords.end() && !mWithLines.contains(previous.value())) {
+                mRecords.erase(superseded);
             }
         }
         mMessageById.insert(id, message);
@@ -275,6 +274,8 @@ TMarkdownParser::Output TMarkdownParser::make(const TMarkdownBlock::Kind kind, c
     line.block.quote = quote;
     line.block.contentStart = static_cast<int>(prefix.size());
     line.block.message = mMessage;
+    line.block.section = static_cast<quint8>(mSections.size());
+    line.block.sectionId = mSections.isEmpty() ? 0 : mSections.constLast();
     switch (kind) {
     case TMarkdownBlock::Kind::Paragraph:
     case TMarkdownBlock::Kind::Heading:
@@ -322,6 +323,21 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
     line.format.reserve(static_cast<size_t>(sourceText.size()));
     for (qsizetype i = 0; i < sourceText.size(); ++i) {
         line.format.push_back(static_cast<size_t>(i) < sourceFormat.size() ? sourceFormat[static_cast<size_t>(i)] : mPlain);
+    }
+
+    // A section's summary is the line straight after its opening, or the section has none
+    if (mAwaitingSummary) {
+        mAwaitingSummary = false;
+        const QString trimmed = line.text.trimmed();
+        if (trimmed.startsWith(qsl("<summary>")) && trimmed.endsWith(qsl("</summary>")) && trimmed.size() >= 19) {
+            int pos = 0;
+            skipIndent(line.text, pos);
+            const int from = pos + 9;
+            const int to = trimmedEnd(line.text, pos) - 10;
+            out << summary(line.mid(from, std::max(from, to)), true);
+            return out;
+        }
+        out << summary({}, false);
     }
 
     // Rule 1
@@ -421,6 +437,32 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
     }
     // Any line but a row ends a table, and a row still waiting for its delimiter row is a paragraph
     out << endTable();
+
+    // Rule 5
+    if (quote == 0) {
+        const QStringView trimmed = QStringView(text).mid(pos, end - pos);
+        const bool opens = trimmed == u"<details>" || trimmed == u"<details open>";
+        if (opens || trimmed == u"</details>") {
+            mItems.clear();
+            if (opens && mSections.size() < csmMaxSectionLevels && mSectionsBeyond == 0) {
+                mSections.append(++mLastSection);
+                mAwaitingSummary = true;
+                mSectionStartsOpen = trimmed == u"<details open>";
+                return out;
+            }
+            if (opens) {
+                ++mSectionsBeyond;
+            } else if (mSectionsBeyond == 0 && !mSections.isEmpty()) {
+                mSections.removeLast();
+                return out;
+            } else if (mSectionsBeyond > 0) {
+                --mSectionsBeyond;
+            }
+            // Past the levels a line can be placed in, or with no section to close, the line is shown as typed
+            out << make(TMarkdownBlock::Kind::Paragraph, 0, prefix, line.mid(pos, end));
+            return out;
+        }
+    }
 
     // Rule 8
     if (const int level = headingLevel(text, pos, end)) {
@@ -545,7 +587,24 @@ QList<TMarkdownParser::Output> TMarkdownParser::endMessage()
     mInFence = false;
     mItems.clear();
     mItemsQuote = 0;
-    return endTable();
+    QList<Output> out = endTable();
+    if (mAwaitingSummary) {
+        mAwaitingSummary = false;
+        out << summary({}, false);
+    }
+    mSections.clear();
+    mSectionsBeyond = 0;
+    return out;
+}
+
+TMarkdownParser::Output TMarkdownParser::summary(const Text& content, const bool given) const
+{
+    const QString marker = qsl("▾ ");
+    //: Shown in the main window for a collapsible section of the game's text that came with no summary of its own
+    const QString prefix = given ? marker : marker + QCoreApplication::translate("TMarkdown", "Details");
+    Output line = make(TMarkdownBlock::Kind::Summary, 0, prefix, content);
+    line.block.open = mSectionStartsOpen;
+    return line;
 }
 
 QList<TMarkdownParser::Output> TMarkdownParser::flushHeld()

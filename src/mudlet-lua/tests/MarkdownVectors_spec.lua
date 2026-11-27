@@ -1,12 +1,9 @@
--- Loads the Markdown Text for MUDs standard's test vectors (fixtures/markdown, described in the standard's
--- VECTORS.md), plays those in the groups GROUPS names through the telnet path, and compares the main console
--- with what each vector expects.
+-- Plays each of the Markdown Text for MUDs standard's test vectors (fixtures/markdown, described in the standard's
+-- VECTORS.md) through the telnet path, and compares the main console with what each vector expects.
 -- Needs --offline for feedTelnet(), as the tests README says.
 
 local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
 
--- The parts of the standard implemented so far
-local GROUPS = {switching = true, lines = true, headings = true, code = true, lists = true, quotes = true, rules = true, emphasis = true, literal = true, color = true, links = true, tables = true}
 
 local ESC = "\27"
 local ON = ESC .. "]67;1" .. ESC .. "\\"
@@ -103,8 +100,8 @@ local function readSpans(lineNumber, column, length, block, plainFormat, colors)
         link = {destination = candidate.destination, title = candidate.title}
       end
     end
-    -- A heading and a summary are bold as a whole in the grid
-    if format.bold and block.kind ~= "heading" and block.kind ~= "summary" then attributes.bold = true end
+    -- A heading is bold as a whole in the grid
+    if format.bold and block.kind ~= "heading" then attributes.bold = true end
     if format.italic then attributes.italic = true end
     if format.strikeout then attributes.strike = true end
     if format.code then attributes.code = true end
@@ -244,12 +241,10 @@ describe("The Markdown Text for MUDs test vectors", function()
   end)
 
   for _, vector in ipairs(file.vectors) do
-    if GROUPS[vector.group] then
-      it(vector.id .. ": " .. vector.rule, function()
-        local lines, messages = play(vector)
-        assert.are.same(vector.lines, lines)
-        assert.are.same(vector.messages, messages)
-      end)
-    end
+    it(vector.id .. ": " .. vector.rule, function()
+      local lines, messages = play(vector)
+      assert.are.same(vector.lines, lines)
+      assert.are.same(vector.messages, messages)
+    end)
   end
 end)

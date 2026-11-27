@@ -213,5 +213,31 @@ describe("Markdown from the game", function()
     assert.are.equal(1, #links)
     assert.are.equal("https://example.com", links[1].destination)
   end)
+
+  it("changes only the named message's mark, and runs no trigger", function()
+    feed(ON:gsub("1", "1;id=specMarkA:mark=busy", 1) .. "SpecMarkA\n" .. OFF)
+    local a = lastLine()
+    feed(ON:gsub("1", "1;id=specMarkB:mark=info", 1) .. "SpecMarkB\n" .. OFF)
+    local b = lastLine()
+    local fired = 0
+    local id = tempTrigger("SpecMark", function() fired = fired + 1 end)
+    finally(function() killTrigger(id) end)
+    feed(ESC .. "]67;2;id=specMarkA:mark=ok" .. ESC .. "\\")
+    assert.are.equal("ok", getMarkdownBlock("main", a).mark)
+    assert.are.equal("info", getMarkdownBlock("main", b).mark)
+    assert.are.equal(0, fired)
+  end)
+
+  it("keeps the 256 most recent ids", function()
+    local messages = {}
+    for index = 0, 256 do
+      messages[#messages + 1] = ESC .. "]67;1;id=specKept" .. index .. ":mark=busy" .. ESC .. "\\SpecKept" .. index .. "\n"
+    end
+    local first = getLastLineNumber("main")
+    feed(table.concat(messages) .. OFF)
+    feed(ESC .. "]67;2;id=specKept0:mark=ok" .. ESC .. "\\" .. ESC .. "]67;2;id=specKept1:mark=ok" .. ESC .. "\\")
+    assert.are.equal("busy", getMarkdownBlock("main", first).mark, "the oldest id still named its message")
+    assert.are.equal("ok", getMarkdownBlock("main", first + 1).mark)
+  end)
 end)
 
