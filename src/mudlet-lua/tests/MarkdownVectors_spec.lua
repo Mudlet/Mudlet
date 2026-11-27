@@ -1,5 +1,6 @@
--- Plays each of the Markdown Text for MUDs standard's test vectors (fixtures/markdown, described in the
--- standard's VECTORS.md) through the telnet path and compares the main console with what the vector expects.
+-- Loads the Markdown Text for MUDs standard's test vectors (fixtures/markdown, described in the standard's
+-- VECTORS.md), plays those in the groups GROUPS names through the telnet path, and compares the main console
+-- with what each vector expects.
 -- Needs --offline for feedTelnet(), as the tests README says.
 
 local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
@@ -68,7 +69,10 @@ local function colorsFor(vector)
     local which, parameters = entry[1], entry[2]
     feed(ESC .. "[" .. parameters .. "mX" .. ESC .. "[0m\n")
     local format = formatAt(getLastLineNumber("main") - 1, 0)
-    byColor[which][rgb(which == "fg" and format.foreground or format.background)] = parameters
+    local color = rgb(which == "fg" and format.foreground or format.background)
+    byColor[which][color] = parameters
+    byColor.plain = byColor.plain or {}
+    byColor.plain[color] = which
   end
   return byColor
 end
@@ -177,6 +181,10 @@ local function play(vector)
   local colors = colorsFor(vector)
   local base, probeLine = probe()
   local plainFormat = formatAt(probeLine, 0)
+  -- A span is told from the text around it by color, so a color the vector names must not be the plain one
+  for color, which in pairs(colors.plain or {}) do
+    assert(color ~= rgb(which == "fg" and plainFormat.foreground or plainFormat.background), "an SGR color the vector names is the profile's own " .. which .. " color")
+  end
   local first = getLastLineNumber("main")
 
   for _, piece in ipairs(vector.input) do
@@ -186,15 +194,13 @@ local function play(vector)
       feed("<T_IAC><T_" .. piece.telnet .. ">")
     end
   end
-  if getLines("main", getLastLineNumber("main"), getLastLineNumber("main") + 1)[1] ~= "" then
-    feed("\n")
-  end
-
-  local last = getLastLineNumber("main") - 1
+  -- Before the game sends a GA, Mudlet holds what follows a line's last newline until it goes quiet, so the
+  -- probe's own newline is what delivers the vector's last sequence. Mudlet also numbers the probe past every
+  -- message the vector made.
+  local after, afterLine = probe()
+  local last = afterLine - 1
   local texts = getLines("main", first, last + 1)
   local lines, messages = {}, {}
-  -- Counted by Mudlet itself: a probe after the vector is numbered past every message the vector made
-  local after = probe()
   for index = 1, after - base - 1 do
     messages[index] = {}
   end

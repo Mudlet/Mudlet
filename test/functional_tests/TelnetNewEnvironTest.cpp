@@ -992,6 +992,38 @@ private slots:
         QVERIFY(mainBuffer().lineBuffer.at(last - 1).startsWith(qsl("SpecHeldRow")));
     }
 
+    void test_turningThePreferenceBackOnDoesNotResumeTheOldMessage()
+    {
+        feed("\x1b]67;1\x1b\\```\n");
+        mpHost->setEnableMarkdown(false);
+        mpHost->setEnableMarkdown(true);
+        feed("SpecAfterReenabling\n");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("SpecAfterReenabling"));
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "the code block from before the preference was turned off carried on");
+    }
+
+    // Deleting the first row of a wrapped paragraph hands its tag on, with offsets in the text that is left
+    void test_aTagHandedToASurvivingRowKeepsItsOffsets()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        pModel->setWrapAt(30);
+        const auto restoreWrap = qScopeGuard([this, pModel] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+        });
+        feed("\x1b]67;1\x1b\\SpecRebase one two three four five six seven eight nine ten [the link](send:x) end\n\x1b]67;0\x1b\\");
+        int head = lastCommittedLine();
+        while (head > 0 && mainBuffer().markdownBuffer.at(head) == 0 && mainBuffer().wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        QVERIFY2(head < lastCommittedLine(), "the paragraph was not wrapped, so this proves nothing");
+        QVERIFY(mainBuffer().deleteLines(head, head));
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(head);
+        QVERIFY2(pBlock, "the paragraph's remaining rows lost its tag");
+        QCOMPARE(pBlock->links.size(), 1);
+        const QString text = mainBuffer().markdownParagraphText(head);
+        QCOMPARE(text.mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
     void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()
     {
         feed("\x1b]67;1;id=specReconnect:mark=busy\x1b\\SpecBeforeReconnect\n");

@@ -714,6 +714,7 @@ public:
     const TMarkdownBlock* markdownBlock(int lineNumber) const;
     const TMarkdown* markdown() const { return mpMarkdown.get(); }
     QString markdownParagraphText(int lineNumber) const;
+    void endMarkdown();
     bool holdsServerWrapLine() const { return !mServerWrapPendingLine.isEmpty(); }
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
@@ -902,7 +903,9 @@ private:
     void decodeMarkdownOSC(QStringView sequence);
     bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
     void commitMarkdownLines(QList<TMarkdownLine>&& lines);
-    int addMarkdownLink(const TMarkdownLink& link);
+    int addMarkdownLink(const TMarkdownLink& link, bool* spoiler);
+    int markdownRowOffset(int head, int row) const;
+    void rebaseMarkdownBlock(quint32 id, int delta);
     void linkMarkdownLine(TMarkdownLine& line);
     qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);
@@ -1002,6 +1005,10 @@ private:
     std::unique_ptr<TMarkdown> mpMarkdown;
     // What each OSC 8 or Markdown link was sent as, for the Markdown tag of the line it is on
     QHash<int, QString> mHyperlinkUris;
+    // The open OSC 8 link reached a Markdown line, so it carries on until its own sequence ends it
+    bool mHyperlinkEnteredMarkdown = false;
+    // What translateToPlainText() is reading came from the game
+    bool mParsingServerText = false;
 
     bool mBold = false;
     // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour

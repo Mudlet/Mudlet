@@ -122,8 +122,16 @@ quint32 TMarkdownMessages::begin(const QString& id, const TMarkdownMark mark)
     }
     mRecords.insert(message, {id, mark});
     if (!id.isEmpty()) {
-        if (mMessageById.contains(id)) {
+        if (const auto previous = mMessageById.constFind(id); previous != mMessageById.cend()) {
             mIdsInOrder.removeOne(id);
+            // The id names this message now; the one it named keeps its record only for the lines it still has
+            if (auto superseded = mRecords.find(previous.value()); superseded != mRecords.end()) {
+                if (mWithLines.contains(previous.value())) {
+                    superseded->id.clear();
+                } else {
+                    mRecords.erase(superseded);
+                }
+            }
         }
         mMessageById.insert(id, message);
         mIdsInOrder.enqueue(id);

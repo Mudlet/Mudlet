@@ -6855,6 +6855,22 @@ void Host::changeSetting(bool& setting, const bool state, const QString& setting
     raiseSettingChangedEvent(settingName, state);
 }
 
+void Host::setEnableMarkdown(const bool state)
+{
+    if (mEnableMarkdown == state) {
+        return;
+    }
+    mEnableMarkdown = state;
+    if (!state && mpMainConsoleModel) {
+        // As the server-wrap flush timer does, so what it commits runs its triggers in the same context
+        mpMainConsoleModel->mTriggerEngineMode = true;
+        mpMainConsoleModel->buffer.endMarkdown();
+        mpMainConsoleModel->mTriggerEngineMode = false;
+        finalizeMainConsole();
+    }
+    mTelnet.sendMarkdownCapability();
+}
+
 void Host::setEnableClosedCaption(const bool state)
 {
     changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));

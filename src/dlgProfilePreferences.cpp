@@ -7651,9 +7651,8 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
         }
-        if (mSnapshot.dirty(checkBox_enableMarkdown) && pHost->mEnableMarkdown != checkBox_enableMarkdown->isChecked()) {
-            pHost->mEnableMarkdown = checkBox_enableMarkdown->isChecked();
-            pHost->mTelnet.sendMarkdownCapability();
+        if (mSnapshot.dirty(checkBox_enableMarkdown)) {
+            pHost->setEnableMarkdown(checkBox_enableMarkdown->isChecked());
         }
 
         if (mSnapshot.dirty(checkBox_expectCSpaceIdInColonLessMColorCode)) {
@@ -9756,9 +9755,8 @@ void dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks(const bool state)
 
 void dlgProfilePreferences::slot_toggleEnableMarkdown(const bool state)
 {
-    if (mpHost && mpHost->mEnableMarkdown != state) {
-        mpHost->mEnableMarkdown = state;
-        mpHost->mTelnet.sendMarkdownCapability();
+    if (mpHost) {
+        mpHost->setEnableMarkdown(state);
     }
 }
 

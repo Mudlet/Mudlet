@@ -226,6 +226,7 @@ public:
 
     quint32 store(TMarkdownBlock&& block);
     const TMarkdownBlock* block(quint32 id) const;
+    TMarkdownBlock* editableBlock(quint32 id) { return mBlocks.contains(id) ? &mBlocks[id] : nullptr; }
     void forget(quint32 id) { mBlocks.remove(id); }
 
 private:

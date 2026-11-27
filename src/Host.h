@@ -742,6 +742,8 @@ public:
     // writes the value back through setConfig() would loop.
     void raiseSettingChangedEvent(const QString& settingName, const bool value);
     void setEnableClosedCaption(const bool state);
+    // Tells the game, and ends any Markdown under way when turned off
+    void setEnableMarkdown(const bool state);
     void setAdvertiseScreenReader(const bool state);
     void setAccessibleLabels(const bool state);
     void setAnnounceIncomingText(const bool state);

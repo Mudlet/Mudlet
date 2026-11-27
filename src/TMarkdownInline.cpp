@@ -97,6 +97,16 @@ public:
 
 private:
     bool free(const int i) const { return !mRemoved[static_cast<size_t>(i)] && !mLiteral[static_cast<size_t>(i)]; }
+    // A character has one link, and an OSC 8 one already there wins
+    bool osc8Covers(const int from, const int to) const
+    {
+        for (int i = from; i < to; ++i) {
+            if (mFormat[static_cast<size_t>(i)].linkIndex() != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
     void removeRange(int from, int to);
     void literalRange(int from, int to);
     int addLink(int from, int to, const QString& destination, const QString& title);
@@ -209,7 +219,7 @@ void Line::scanCodeEscapesAndAutolinks()
             }
             if (close < mSize && mText.at(close) == u'>') {
                 const QString address = mText.mid(i + 1, close - i - 1);
-                if (startsWithAddress(address, 0) || address.startsWith(qsl("mailto:"), Qt::CaseInsensitive)) {
+                if ((startsWithAddress(address, 0) || address.startsWith(qsl("mailto:"), Qt::CaseInsensitive)) && !osc8Covers(i, close + 1)) {
                     mRemoved[static_cast<size_t>(i)] = true;
                     mRemoved[static_cast<size_t>(close)] = true;
                     literalRange(i + 1, close);
@@ -320,10 +330,10 @@ void Line::resolveLinks()
             continue;
         }
         const int textFrom = opener.pos + (opener.image ? 2 : 1);
-        // A character has one link, and an OSC 8 one already there wins
-        bool covered = false;
+        // A link cannot hold another, whether an autolink or an OSC 8 link
+        bool covered = osc8Covers(textFrom, i);
         for (int j = textFrom; j < i; ++j) {
-            covered = covered || mFormat[static_cast<size_t>(j)].linkIndex() != 0;
+            covered = covered || mLink[static_cast<size_t>(j)] >= 0;
         }
         if (covered) {
             continue;
@@ -351,26 +361,41 @@ void Line::findBareAddresses()
         if (i > mFrom && !mText.at(i - 1).isSpace() && !qsl("*_~(").contains(mText.at(i - 1))) {
             continue;
         }
+        // An escaping backslash, already taken out, does not end the address; any other markup does
+        const auto partOfAddress = [this](const int at) {
+            return !mText.at(at).isSpace() && mText.at(at) != u'<' && (!mRemoved[static_cast<size_t>(at)] || mText.at(at) == u'\\');
+        };
         int end = i;
-        while (end < mSize && !mText.at(end).isSpace() && mText.at(end) != u'<' && !mRemoved[static_cast<size_t>(end)]) {
+        int unmatchedClosing = 0;
+        while (end < mSize && partOfAddress(end)) {
+            if (!mRemoved[static_cast<size_t>(end)]) {
+                unmatchedClosing += mText.at(end) == u')' ? 1 : mText.at(end) == u'(' ? -1 : 0;
+            }
             ++end;
         }
         while (end > i) {
             const QChar last = mText.at(end - 1);
-            if (trailing.contains(last)) {
+            if (mRemoved[static_cast<size_t>(end - 1)] || trailing.contains(last)) {
                 --end;
-            } else if (last == u')' && mText.mid(i, end - i).count(u')') > mText.mid(i, end - i).count(u'(')) {
+            } else if (last == u')' && unmatchedClosing > 0) {
+                --unmatchedClosing;
                 --end;
             } else {
                 break;
             }
         }
         const int schemeLength = mText.at(i + 4) == u's' || mText.at(i + 4) == u'S' ? 8 : 7;
-        if (end - i <= schemeLength) {
+        if (end - i <= schemeLength || osc8Covers(i, end)) {
             continue;
         }
+        QString destination;
+        for (int j = i; j < end; ++j) {
+            if (!mRemoved[static_cast<size_t>(j)]) {
+                destination.append(mText.at(j));
+            }
+        }
         literalRange(i, end);
-        addLink(i, end, mText.mid(i, end - i), {});
+        addLink(i, end, destination, {});
         i = end - 1;
     }
 }
@@ -472,7 +497,11 @@ QList<TMarkdownLink> Line::build(QString& text, std::vector<TChar>& format) cons
 
     QList<TMarkdownLink> links;
     for (const Link& link : mLinks) {
-        links.append({column[static_cast<size_t>(link.from)], column[static_cast<size_t>(link.to)] - column[static_cast<size_t>(link.from)], link.destination, link.title});
+        const int start = column[static_cast<size_t>(link.from)];
+        const int length = column[static_cast<size_t>(link.to)] - start;
+        if (length > 0) {
+            links.append({start, length, link.destination, link.title});
+        }
     }
     text = std::move(builtText);
     format = std::move(builtFormat);

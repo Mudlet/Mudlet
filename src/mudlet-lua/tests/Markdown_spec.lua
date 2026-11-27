@@ -8,6 +8,10 @@ local OFF = ESC .. "]67;0" .. ESC .. "\\"
 local function feed(data)
   local ok, message = feedTelnet(data)
   assert(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+  -- Until the game sends a GA, what follows the last newline waits for the game to go quiet (300ms)
+  if data:sub(-1) ~= "\n" then
+    assert(pumpEvents(600), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+  end
 end
 
 local function lastLine(back)
@@ -36,7 +40,8 @@ describe("Markdown from the game", function()
   end)
 
   it("reads a line that arrives in two pieces as one line", function()
-    feed(ON .. "SpecSplit hel")
+    -- Straight on, as two packets of one read would be: a wait would let Mudlet show the first piece on its own
+    assert(feedTelnet(ON .. "SpecSplit hel"))
     feed("lo there\n" .. OFF)
     assert.are.equal("SpecSplit hello there", lineText(lastLine()))
     local block = getMarkdownBlock("main", lastLine())
@@ -163,6 +168,50 @@ describe("Markdown from the game", function()
     feed(ON .. "| SpecHeld |\n|---|\n" .. table.concat(rows, "\n") .. "\n")
     assert.are.equal(header + 503, getLastLineNumber("main"))
     assert.are.equal("SpecHeldRow501", getMarkdownBlock("main", lastLine()).cells[1].text)
+  end)
+
+  it("leaves text a script feeds as it is, and the game's open list as it was", function()
+    feed(ON .. "- SpecServerItem\n")
+    feedTriggers("# SpecLocal\n")
+    local fed = lastLine()
+    feed("  SpecServerMore\n" .. OFF)
+    assert.are.equal("# SpecLocal", lineText(fed))
+    assert.is_nil(getMarkdownBlock("main", fed), "a line a script fed was read as Markdown")
+    local more = getMarkdownBlock("main", lastLine())
+    assert.are.equal("continuation", more.kind)
+  end)
+
+  local function linksOf(markdown)
+    feed(ON .. markdown .. "\n" .. OFF)
+    local block = getMarkdownBlock("main", lastLine())
+    return block.text, block.links or {}
+  end
+
+  it("makes no link of a label that holds a link already", function()
+    local text, links = linksOf("[<https://example.com>](send:y)")
+    assert.are.equal("[https://example.com](send:y)", text)
+    assert.are.equal(1, #links)
+    assert.are.equal("https://example.com", links[1].destination)
+  end)
+
+  it("reads an escaped character as part of a bare address", function()
+    local text, links = linksOf("see https://example.com/a\\_b now")
+    assert.are.equal("see https://example.com/a_b now", text)
+    assert.are.equal(1, #links)
+    assert.are.equal("https://example.com/a_b", links[1].destination)
+  end)
+
+  it("makes no link of an address an OSC 8 link covers", function()
+    local _, links = linksOf(ESC .. "]8;;send:x" .. ESC .. "\\https://example.com" .. ESC .. "]8;;" .. ESC .. "\\")
+    assert.are.equal(1, #links)
+    assert.are.equal("send:x", links[1].destination)
+  end)
+
+  it("makes one link of a destination between angle brackets that looks like an address", function()
+    local text, links = linksOf("[a](<https://example.com>)")
+    assert.are.equal("a", text)
+    assert.are.equal(1, #links)
+    assert.are.equal("https://example.com", links[1].destination)
   end)
 end)
 
