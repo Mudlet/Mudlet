@@ -474,9 +474,34 @@ describe("Markdown from the game", function()
   end)
 
 
+  it("still reads a link after a run of links that never close", function()
+    feed(ON .. string.rep("[a](b", 1900) .. " [SpecLateLink](send:north)\n" .. OFF)
+    local block = getMarkdownBlock("main", lastLine())
+    assert.are.equal(1, #(block.links or {}))
+    assert.are.equal("send:north", block.links[1].destination)
+  end)
+
+  it("still reads a link after code spans that never close", function()
+    local runs = {}
+    for length = 1, 130 do
+      runs[length] = string.rep("`", length) .. "aaaaaaaaaa"
+    end
+    feed(ON .. table.concat(runs) .. " [SpecLateCode](send:north)\n" .. OFF)
+    local block = getMarkdownBlock("main", lastLine())
+    assert.are.equal(1, #(block.links or {}))
+    assert.are.equal("send:north", block.links[1].destination)
+  end)
+
   it("shows a link with no text as typed, rather than losing it", function()
     feed(ON .. "[](send:north) SpecEmptyLink\n" .. OFF)
     assert.are.equal("[](send:north) SpecEmptyLink", getMarkdownBlock("main", lastLine()).text)
+  end)
+
+  it("reads nothing inside a link with no text", function()
+    feed(ON .. "[](send:*north*) SpecEmptyMarks\n" .. OFF)
+    assert.are.equal("[](send:*north*) SpecEmptyMarks", getMarkdownBlock("main", lastLine()).text)
+    feed(ON .. "[](https://example.com) SpecEmptyAddress\n" .. OFF)
+    assert.are.equal(0, #(getMarkdownBlock("main", lastLine()).links or {}))
   end)
 
   it("keeps a held table's mark when a trigger gags its first row and the next message has begun", function()

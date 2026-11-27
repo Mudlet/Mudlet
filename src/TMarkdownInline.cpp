@@ -89,7 +89,6 @@ public:
     , mLiteral(static_cast<size_t>(mSize), false)
     , mFlags(static_cast<size_t>(mSize), TChar::None)
     , mLink(static_cast<size_t>(mSize), -1)
-    , mScanBudget(4 * mSize + 64)
     {
     }
 
@@ -122,9 +121,10 @@ private:
     // The whole code points either side of a run, so a symbol outside the basic plane is read as one
     char32_t codePointBefore(int at) const;
     char32_t codePointAt(int at) const;
-    // Each failed search for a destination or a code span's closing run scans ahead, and a game can send a line that
-    // makes every one fail at its end; one budget for the line, a few times its length, keeps the whole read linear
-    bool spend() { return --mScanBudget > 0; }
+    // A game can send a line on which every search for a destination or a code span's closing run fails at its end;
+    // these are worked out once for the line, so that no search goes over the same text twice
+    void matchParentheses();
+    void findLastRuns();
 
     const QString& mText;
     const std::vector<TChar>& mFormat;
@@ -136,7 +136,10 @@ private:
     std::vector<TChar::AttributeFlags> mFlags;
     std::vector<int> mLink;
     QList<Link> mLinks;
-    int mScanBudget;
+    // The ) that closes each ( in the same stretch without spaces, or -1
+    std::vector<int> mParenMatch;
+    // Where the last run of backticks of each length starts
+    QHash<int, int> mLastRun;
     struct Opener
     {
         int pos = 0;
@@ -184,6 +187,40 @@ void Line::literalRange(const int from, const int to)
     }
 }
 
+void Line::matchParentheses()
+{
+    mParenMatch.assign(static_cast<size_t>(mSize), -1);
+    QList<int> open;
+    for (int i = mFrom; i < mSize; ++i) {
+        const QChar c = mText.at(i);
+        if (c.isSpace()) {
+            open.clear();
+        } else if (c == u'\\' && i + 1 < mSize && asciiPunctuation(mText.at(i + 1))) {
+            ++i;
+        } else if (c == u'(') {
+            open.append(i);
+        } else if (c == u')' && !open.isEmpty()) {
+            mParenMatch[static_cast<size_t>(open.takeLast())] = i;
+        }
+    }
+}
+
+void Line::findLastRuns()
+{
+    for (int i = mFrom; i < mSize;) {
+        if (mText.at(i) != u'`') {
+            ++i;
+            continue;
+        }
+        int run = 0;
+        while (i + run < mSize && mText.at(i + run) == u'`') {
+            ++run;
+        }
+        mLastRun.insert(run, i);
+        i += run;
+    }
+}
+
 int Line::addLink(const int from, const int to, const QString& destination, const QString& title)
 {
     mLinks.append({from, to, destination, title});
@@ -227,8 +264,11 @@ void Line::scanInlines()
             while (i + run < mSize && mText.at(i + run) == u'`') {
                 ++run;
             }
+            if (mLastRun.isEmpty()) {
+                findLastRuns();
+            }
             int close = -1;
-            for (int j = i + run; j < mSize && spend();) {
+            for (int j = i + run; j < mSize && mLastRun.value(run, -1) > i;) {
                 if (mText.at(j) != u'`') {
                     ++j;
                     continue;
@@ -302,7 +342,7 @@ int Line::parseDestination(int at, QString& destination, QString& title)
     skipSpaces(at);
     if (at < mSize && mText.at(at) == u'<') {
         int close = at + 1;
-        while (close < mSize && mText.at(close) != u'>' && mText.at(close) != u'<' && spend()) {
+        while (close < mSize && mText.at(close) != u'>' && mText.at(close) != u'<') {
             close += (mText.at(close) == u'\\' && close + 1 < mSize) ? 2 : 1;
         }
         if (close >= mSize || mText.at(close) != u'>') {
@@ -311,29 +351,23 @@ int Line::parseDestination(int at, QString& destination, QString& title)
         destination = unescaped(QStringView(mText).mid(at + 1, close - at - 1));
         at = close + 1;
     } else {
+        if (mParenMatch.empty()) {
+            matchParentheses();
+        }
         const int start = at;
-        int depth = 0;
-        while (at < mSize && !mText.at(at).isSpace()) {
-            if (!spend()) {
-                return -1;
-            }
+        while (at < mSize && !mText.at(at).isSpace() && mText.at(at) != u')') {
             const QChar c = mText.at(at);
             if (c == u'\\' && at + 1 < mSize && asciiPunctuation(mText.at(at + 1))) {
                 at += 2;
-                continue;
-            }
-            if (c == u'(') {
-                ++depth;
-            } else if (c == u')') {
-                if (depth == 0) {
-                    break;
+            } else if (c == u'(') {
+                const int match = mParenMatch[static_cast<size_t>(at)];
+                if (match < 0) {
+                    return -1;
                 }
-                --depth;
+                at = match + 1;
+            } else {
+                ++at;
             }
-            ++at;
-        }
-        if (depth != 0) {
-            return -1;
         }
         destination = unescaped(QStringView(mText).mid(start, at - start));
     }
@@ -342,7 +376,7 @@ int Line::parseDestination(int at, QString& destination, QString& title)
     if (at < mSize && (mText.at(at) == u'"' || mText.at(at) == u'\'') && at > afterDestination) {
         const QChar quote = mText.at(at);
         int close = at + 1;
-        while (close < mSize && mText.at(close) != quote && spend()) {
+        while (close < mSize && mText.at(close) != quote) {
             close += (mText.at(close) == u'\\' && close + 1 < mSize) ? 2 : 1;
         }
         if (close >= mSize) {
@@ -368,9 +402,10 @@ int Line::closeLink(const int at)
         return at + 1;
     }
     const int textFrom = opener.pos + (opener.image ? 2 : 1);
-    // A link with no text would vanish, destination and all, so it is shown as typed
+    // A link with no text would vanish, destination and all, so all of it is shown as typed
     if (textFrom == at) {
-        return at + 1;
+        literalRange(opener.pos, close + 1);
+        return close + 1;
     }
     // A link cannot hold another, whether an autolink or an OSC 8 link
     bool covered = osc8Covers(textFrom, at);
