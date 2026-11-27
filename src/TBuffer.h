@@ -714,6 +714,8 @@ public:
     const TMarkdownBlock* markdownBlock(int lineNumber) const;
     const TMarkdown* markdown() const { return mpMarkdown.get(); }
     QString markdownParagraphText(int lineNumber) const;
+    // The columns of a paragraph's first row that its tag's offsets count past
+    int markdownHeadIndent(int head) const;
     void endMarkdown();
     QString spokenLine(int lineNumber) const;
     bool holdsServerWrapLine() const { return !mServerWrapPendingLine.isEmpty(); }
@@ -902,7 +904,6 @@ private:
     bool markdownLineUnderWay() const;
     void retireMarkdownRows(int from, int to);
     void endOpenMarkdownMessage();
-    int markdownHeadIndent(int head) const;
     void editMarkdownRanges(TMarkdownBlock& block, int cutFrom, int cutTo, int delta);
     void applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& format, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
     void applyWaitingLinkLooks(QString& text, const TLineFormat& chars);

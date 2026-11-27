@@ -653,10 +653,10 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
-                // Direct, as the mark can change again before a queued call would run, and an app is owed every step
+                // Not queued: the mark is read here, and a queued call would read a later one, skipping a step the app is owed
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::markdownMarkChanged, this, [this, pNewHost](const quint32 message) {
-                    const TMarkdown* pMarkdown = pNewHost->mainConsoleModel().buffer.markdown();
-                    const QString mark = pMarkdown ? pMarkdown->mMessages.mark(message).name() : QString();
+                    // Only the buffer's Markdown state sends it, so it is there to read
+                    const QString mark = pNewHost->mainConsoleModel().buffer.markdown()->mMessages.mark(message).name();
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
                     emit markdownMarkChanged(profile, message, mark);
@@ -2428,11 +2428,86 @@ QList<THeadlessSession::TextRun> THeadlessSession::textRuns(const QString& text,
     return runs;
 }
 
-// The headless enums are copies of the buffer's, cast across, so each must end where the buffer's does
-static_assert(static_cast<int>(TMarkdownBlock::Kind::Summary) == static_cast<int>(THeadlessSession::MarkdownBlock::Kind::Summary));
-static_assert(static_cast<int>(TMarkdownBlock::Marker::Ordered) == static_cast<int>(THeadlessSession::MarkdownBlock::Marker::Ordered));
-static_assert(static_cast<int>(TMarkdownBlock::Task::Done) == static_cast<int>(THeadlessSession::MarkdownBlock::Task::Done));
-static_assert(static_cast<int>(TMarkdownBlock::Align::Right) == static_cast<int>(THeadlessSession::MarkdownBlock::Align::Right));
+namespace {
+
+// Spelled out, with no default, so a kind the buffer gains is a warning here rather than a value apps cannot name
+THeadlessSession::MarkdownBlock::Kind headlessKind(const TMarkdownBlock::Kind kind)
+{
+    using Kind = THeadlessSession::MarkdownBlock::Kind;
+    switch (kind) {
+    case TMarkdownBlock::Kind::None:
+        return Kind::none;
+    case TMarkdownBlock::Kind::Blank:
+        return Kind::blank;
+    case TMarkdownBlock::Kind::Paragraph:
+        return Kind::paragraph;
+    case TMarkdownBlock::Kind::Heading:
+        return Kind::heading;
+    case TMarkdownBlock::Kind::Item:
+        return Kind::item;
+    case TMarkdownBlock::Kind::Continuation:
+        return Kind::continuation;
+    case TMarkdownBlock::Kind::Code:
+        return Kind::code;
+    case TMarkdownBlock::Kind::TableHeader:
+        return Kind::tableHeader;
+    case TMarkdownBlock::Kind::TableDelimiter:
+        return Kind::tableDelimiter;
+    case TMarkdownBlock::Kind::TableRow:
+        return Kind::tableRow;
+    case TMarkdownBlock::Kind::Rule:
+        return Kind::rule;
+    case TMarkdownBlock::Kind::Summary:
+        return Kind::summary;
+    }
+    return Kind::none;
+}
+
+THeadlessSession::MarkdownBlock::Marker headlessMarker(const TMarkdownBlock::Marker marker)
+{
+    using Marker = THeadlessSession::MarkdownBlock::Marker;
+    switch (marker) {
+    case TMarkdownBlock::Marker::None:
+        return Marker::none;
+    case TMarkdownBlock::Marker::Bullet:
+        return Marker::bullet;
+    case TMarkdownBlock::Marker::Ordered:
+        return Marker::ordered;
+    }
+    return Marker::none;
+}
+
+THeadlessSession::MarkdownBlock::Task headlessTask(const TMarkdownBlock::Task task)
+{
+    using Task = THeadlessSession::MarkdownBlock::Task;
+    switch (task) {
+    case TMarkdownBlock::Task::None:
+        return Task::none;
+    case TMarkdownBlock::Task::Open:
+        return Task::open;
+    case TMarkdownBlock::Task::Done:
+        return Task::done;
+    }
+    return Task::none;
+}
+
+THeadlessSession::MarkdownBlock::Align headlessAlign(const TMarkdownBlock::Align align)
+{
+    using Align = THeadlessSession::MarkdownBlock::Align;
+    switch (align) {
+    case TMarkdownBlock::Align::None:
+        return Align::none;
+    case TMarkdownBlock::Align::Left:
+        return Align::left;
+    case TMarkdownBlock::Align::Center:
+        return Align::center;
+    case TMarkdownBlock::Align::Right:
+        return Align::right;
+    }
+    return Align::none;
+}
+
+} // namespace
 
 THeadlessSession::MarkdownBlock THeadlessSession::markdownBlock(const TBuffer& buffer, const int line)
 {
@@ -2441,25 +2516,25 @@ THeadlessSession::MarkdownBlock THeadlessSession::markdownBlock(const TBuffer& b
     if (!pTag) {
         return block;
     }
-    block.kind = static_cast<MarkdownBlock::Kind>(pTag->kind);
+    block.kind = headlessKind(pTag->kind);
     block.contentStart = pTag->contentStart;
     block.message = pTag->message;
-    if (const TMarkdown* pMarkdown = buffer.markdown()) {
-        block.id = pMarkdown->mMessages.id(pTag->message);
-        block.mark = pMarkdown->mMessages.mark(pTag->message).name();
-    }
+    // A line has a block only once the buffer has its Markdown state
+    const TMarkdownMessages& messages = buffer.markdown()->mMessages;
+    block.id = messages.id(pTag->message);
+    block.mark = messages.mark(pTag->message).name();
     block.level = pTag->level;
     block.quote = pTag->quote;
     block.list = pTag->list;
     block.number = pTag->number;
     block.section = pTag->section;
-    block.marker = static_cast<MarkdownBlock::Marker>(pTag->marker);
-    block.task = static_cast<MarkdownBlock::Task>(pTag->task);
+    block.marker = headlessMarker(pTag->marker);
+    block.task = headlessTask(pTag->task);
     block.open = pTag->open;
     block.language = pTag->language;
     block.table = pTag->table;
     for (const TMarkdownBlock::Align align : pTag->align) {
-        block.align.append(static_cast<MarkdownBlock::Align>(align));
+        block.align.append(headlessAlign(align));
     }
     for (const TMarkdownCell& cell : pTag->cells) {
         block.cells.append({cell.start, cell.length});
@@ -2557,6 +2632,13 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
     }
     ShownLine line{text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
     line.markdown = markdownBlock(buffer, first);
+    // The tag's offsets count past the first row's indent, which this text may keep, as when a trigger rewrapped the line
+    if (const int shift = buffer.markdownHeadIndent(first) - firstPadding) {
+        line.markdown.contentStart += shift;
+        for (MarkdownCell& cell : line.markdown.cells) {
+            cell.start += shift;
+        }
+    }
     return line;
 }
 
