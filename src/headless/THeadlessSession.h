@@ -146,6 +146,11 @@ public:
     // profile opened or reset afterwards. Given again for a name, it replaces the earlier one; with no name or no
     // function it is refused. docs/headless.md lists the modules Mudlet itself requires.
     static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
+    // Starts getting the built-in Lua files ready (docs/headless.md) on a thread of Qt's pool, the work the first
+    // profile to load otherwise does: up to a few hundred milliseconds on a phone's first run after an install. For an
+    // app with time to spare before a profile opens, once the application's name is set; a profile that loads
+    // meanwhile waits for it.
+    static void prepareBuiltinLua();
     // A real folder of <name>.aff/.dic Hunspell dictionaries the app carries, searched ahead of the system's and in place
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
     // Hunspell cannot read; empty forgets it.
