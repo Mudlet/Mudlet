@@ -218,7 +218,7 @@ private slots:
         auto* keyUnit = mpHost->getKeyUnit();
         int keycode = Qt::Key_F10;
         int modifier = Qt::NoModifier;
-        const int keyId = mpHost->mLuaInterpreter.startTempKey(modifier, keycode, qsl("killKey(tostring(selfKillKeyId))"));
+        const int keyId = mpHost->mLuaInterpreter.startTempKey(modifier, keycode, qsl("killKey(tostring(selfKillKeyId))")).first;
         QVERIFY(keyId > 0);
         QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("selfKillKeyId = %1").arg(keyId)));
         QVERIFY2(keyUnit->getKey(keyId), "the temp key was not registered");

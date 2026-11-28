@@ -52,6 +52,8 @@
 #include "T2DMap.h"
 #include "TConsole.h"
 #include "TMap.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -392,6 +394,64 @@ private slots:
         QVERIFY2(line >= 0, "the map error never reached the editor's error console");
         const int column = errors.lineBuffer.at(line).indexOf(expected);
         QCOMPARE(errors.buffer.at(line).at(column).foreground(), QColor(255, 128, 0));
+    }
+
+    // Settings are on the profile; a window must pick them up when it opens and again on each change
+    void test_anExtraMapWindowFollowsTheMapperSettings()
+    {
+        const bool showRoomIds = mpHost->mShowRoomID;
+        const bool roundRooms = mpHost->mBubbleMode;
+        const bool showGrid = mpHost->mMapperShowGrid;
+        const double roomSize = mpHost->mRoomSize;
+        const double exitSize = mpHost->mLineSize;
+        TMapViewManager* pManager = map()->getViewManager();
+        QVERIFY2(pManager, "the profile has no manager for extra map windows");
+        auto restore = qScopeGuard([=, this]() {
+            mpMapper->slot_toggleShowRoomIDsFromMenu(showRoomIds);
+            mpMapper->slot_toggleRoundRooms(roundRooms);
+            mpMapper->slot_setShowGrid(showGrid);
+            mpHost->mRoomSize = roomSize;
+            mpHost->mLineSize = exitSize;
+            map()->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
+            map()->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
+            pManager->closeAllViews();
+        });
+
+        mpMapper->slot_toggleShowRoomIDsFromMenu(true);
+        mpMapper->slot_toggleRoundRooms(true);
+        mpHost->mRoomSize = 0.8;
+        const auto [viewId, message] = pManager->createView(0);
+        QVERIFY2(viewId, qPrintable(message));
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        QPointer<T2DMap> pViewMap = pView->get2DMap();
+        QVERIFY(pViewMap);
+        QVERIFY2(pViewMap->mShowRoomID, "a new map window did not show room IDs while the mapper does");
+        QVERIFY2(pViewMap->mBubbleMode, "a new map window drew square rooms while the mapper draws round ones");
+        QCOMPARE(pViewMap->rSize, 0.8);
+
+        mpMapper->slot_toggleShowRoomIDsFromMenu(false);
+        QVERIFY2(!pViewMap->mShowRoomID, "turning room IDs off in the mapper menu left them on in the map window");
+        mpMapper->slot_toggleRoundRooms(false);
+        QVERIFY2(!pViewMap->mBubbleMode, "turning round rooms off in the mapper menu left them round in the map window");
+        mpMapper->slot_setShowGrid(!showGrid);
+        QCOMPARE(pViewMap->mShowGrid, !showGrid);
+        // What setConfig() does: set the profile, then announce it
+        mpHost->mShowRoomID = true;
+        map()->announceMapperSettingChanged(TMap::MapperSetting::ShowRoomIds);
+        QVERIFY2(pViewMap->mShowRoomID, "turning room IDs on through setConfig() left them off in the map window");
+
+        pViewMap->addSymbolToPixmapCache(qsl("test-key"), qsl("A"), Qt::white, false);
+        QVERIFY2(pViewMap->symbolPixmapCacheCount() > 0, "nothing was cached, so a flush would prove nothing");
+        map()->requestMapRepaint();
+        QVERIFY2(pViewMap->symbolPixmapCacheCount() > 0, "a repaint without a size change threw away the cached symbols");
+        mpHost->mRoomSize = 1.2;
+        map()->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
+        QCOMPARE(pViewMap->rSize, 1.2);
+        QCOMPARE(pViewMap->symbolPixmapCacheCount(), 0);
+        mpHost->mLineSize = 5.0;
+        map()->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
+        QCOMPARE(pViewMap->eSize, 5.0);
     }
 
     // A second mapper of the same profile - one in a detached window, say -

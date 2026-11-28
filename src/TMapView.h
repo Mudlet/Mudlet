@@ -82,6 +82,7 @@ private slots:
 
 private:
     void setupUi();
+    void followMapperSettings();
     bool showing3DView() const;
     void sync3DViewFrom2D();
     void sync2DViewFrom3D();
