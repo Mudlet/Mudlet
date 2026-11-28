@@ -142,6 +142,7 @@ set(UNIT_TESTS
     TMxpEntityTagHandlerTest
     TMxpFrameDestTagHandlerTest
     TMxpVersionTagTest
+    MudletAppClientNameTest
     TMxpFormattingTagsTest
     TMxpCustomElementTagHandlerTest
     TMxpModeSecurityTest

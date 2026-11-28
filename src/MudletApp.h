@@ -259,6 +259,10 @@ public:
     // something to read off the suffix.
     static const QString& buildSuffix();
     static const QString& scmVersion();
+    // The name game servers are told, "Mudlet" unless an app that embeds Mudlet has set its own
+    // (THeadlessSession::setClientName()); TTYPE and NEW-ENVIRON send it in capitals, as desktop always has
+    static bool setClientName(const QString& name);
+    static QString clientName();
     static bool release();
     static bool publicTest();
     static bool development();

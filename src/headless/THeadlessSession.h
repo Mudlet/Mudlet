@@ -150,6 +150,11 @@ public:
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
     // Hunspell cannot read; empty forgets it.
     static bool setDictionaryFolder(const QString& folder);
+    // The name every session's game is told this client goes by, such as "Mudlet-Android", for an app that is not
+    // desktop Mudlet and whose games should tell the two apart; set before a session connects. As desktop's "Mudlet",
+    // TTYPE and NEW-ENVIRON send it in capitals and MSDP, GMCP, ATCP and MXP as given. Refused (false) unless, in
+    // capitals, it is a terminal name RFC 1010 allows; empty gives desktop's own again. MudletApp::setClientName().
+    static bool setClientName(const QString& name);
 
     // Names mudlet_core's own Qt resources (":/" images, translations and fonts), so a program linking it statically
     // keeps them; Qt registers them before main() runs

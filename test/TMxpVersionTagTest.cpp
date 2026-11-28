@@ -20,7 +20,9 @@
  ***************************************************************************/
 
 #include "GroupedTest.h"
+#include <QScopeGuard>
 #include <QTest>
+#include "MudletApp.h"
 #include "TMxpVersionTagHandler.h"
 #include "TMxpStubClient.h"
 #include <TMxpTagParser.h>
@@ -58,6 +60,23 @@ private slots:
         tagHandler.handleTag(ctx, stub, versionTag->asTag());
 
         QCOMPARE(stub.sentToServer, "\n\u001B[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=Stub-1.0>\n");
+    }
+
+    void testVersionTagNamesTheAppThatEmbedsMudlet()
+    {
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+        QVERIFY(MudletApp::setClientName(qsl("Mudlet-Test")));
+        const auto forgetName = qScopeGuard([] {
+            MudletApp::setClientName(QString());
+        });
+
+        auto versionTag = parseNode("<Version>");
+        TMxpVersionTagHandler versionTagHandler;
+        TMxpTagHandler& tagHandler = versionTagHandler;
+        tagHandler.handleTag(ctx, stub, versionTag->asTag());
+
+        QCOMPARE(stub.sentToServer, "\n\u001B[1z<VERSION MXP=1.0 CLIENT=Mudlet-Test VERSION=Stub-1.0>\n");
     }
 
     void testVersionStyle()

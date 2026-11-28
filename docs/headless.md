@@ -1559,6 +1559,25 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.
 
+## Embedding it: the name the game is told
+
+A game is told what the client is called in TTYPE (the first answer of MTTS's cycle), NEW-ENVIRON's
+`CLIENT_NAME`, MSDP's `CLIENT_NAME`, GMCP's `Core.Hello`, ATCP's `hello` and MXP's `<VERSION>`
+reply: `MUDLET` in the first two and `Mudlet` in the rest. Games read it to tell clients apart, so an
+app that is not desktop Mudlet, and does not do all that it does, names itself before a session
+connects:
+
+```cpp
+THeadlessSession::setClientName(qsl("Mudlet-Android"));
+```
+
+Every session then sends that name as desktop sends its own: `MUDLET-ANDROID` in TTYPE and
+NEW-ENVIRON, and `Mudlet-Android` in the rest. The version beside it stays Mudlet's. In capitals TTYPE
+carries it, so it must make a terminal name RFC 1010 allows: ASCII letters, digits, `-` and `/`, at most 40,
+starting with a letter and ending with a letter or digit. Anything else is refused with `false`, and
+an empty name gives every protocol Mudlet's own again. Scripts see no difference, as no Lua function
+reads it.
+
 ## Embedding it: the GUI's buttons and the app's state
 
 Some of what the player does in the GUI is a button on its main window or console toolbar, which Lua
