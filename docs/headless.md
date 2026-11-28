@@ -1564,6 +1564,22 @@ Hunspell reads the files with plain file calls, so the folder must be a real one
 app copies its dictionaries into from its package; a `:/` or `assets:/` path is refused, and
 `setDictionaryFolder()` returns `false`.
 
+## Embedding it: the most lines a console keeps
+
+The profile preferences' "Use maximum lines possible" gives the main console as many lines as
+`TBuffer::getMaxBufferSize()` estimates four fifths of the machine's memory holds, and a bigger
+buffer size, the profile's or one `setConsoleBufferSize()` asks for, is clipped to that. A phone
+stops a process long before its memory is used up, so an app there names its own most before it
+starts a session:
+
+```cpp
+THeadlessSession::setMaxConsoleBufferSize(40000);
+```
+
+Every buffer size set afterwards, in any session, takes it in place of the estimate; below 100 it is
+100, and 0 or less goes back to the estimate. A profile keeps the size it saved, as on a desktop with less
+memory than the one it was saved on.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

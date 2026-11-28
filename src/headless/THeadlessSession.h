@@ -152,6 +152,11 @@ public:
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
     // Hunspell cannot read; empty forgets it.
     static bool setDictionaryFolder(const QString& folder);
+    // The most lines a console in any session may keep, which "use maximum lines possible" gives and to which a
+    // bigger buffer size is clipped, as the desktop does with what it estimates the machine's memory can hold; for a
+    // platform that stops a process long before that is used up (Android). Below 100 it is 100; 0 or less goes back
+    // to the estimate. Taken by every buffer size set afterwards.
+    static void setMaxConsoleBufferSize(int lines);
 
     // Names mudlet_core's own Qt resources (":/" images, translations and fonts), so a program linking it statically
     // keeps them; Qt registers them before main() runs

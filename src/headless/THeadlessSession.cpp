@@ -396,6 +396,11 @@ bool THeadlessSession::setDictionaryFolder(const QString& folder)
     return MudletApp::setAppDictionaryFolder(folder);
 }
 
+void THeadlessSession::setMaxConsoleBufferSize(const int lines)
+{
+    TBuffer::setPlatformMaxBufferSize(lines);
+}
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {

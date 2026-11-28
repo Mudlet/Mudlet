@@ -1192,9 +1192,17 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     return lastText;
 }
 
+/* static */ void TBuffer::setPlatformMaxBufferSize(const int lines)
+{
+    smPlatformMaxBufferSize = lines > 0 ? std::max(lines, 100) : 0;
+}
+
 // naive calculation to get a reasonable limit for a maximum buffer size
 int TBuffer::getMaxBufferSize()
 {
+    if (smPlatformMaxBufferSize) {
+        return smPlatformMaxBufferSize;
+    }
     const int64_t memoryTotal = physicalMemoryTotal();
     // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
     // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
