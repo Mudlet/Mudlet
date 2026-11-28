@@ -234,7 +234,8 @@ it is written, so the time its handler runs is when that text was written.
 
 `lineShown`'s last argument, `lineIds`, has an id for each line of its text, as its line feeds part it,
 which no other line of the main console has while that one lasts, and 0 for a line it does not follow, as it
-follows none while `linesUpdated` is not connected.
+follows none while `linesUpdated` is not connected. Nor does it follow a line that a trigger's `echo()` or
+`replace()` began with a line feed: the console makes it a line of its own only after it was sent.
 While `linesUpdated` is connected, a script that later changes one of those lines where it stands
 (`replace()`, `setFgColor()`, `setLink()` or `insertText()` on a line it moved the cursor up to) or
 deletes it with `deleteLine()` has the line sent again in `linesUpdated`, as a `LineUpdate`: its id, and
