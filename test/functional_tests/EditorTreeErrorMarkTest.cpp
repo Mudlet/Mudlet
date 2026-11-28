@@ -127,8 +127,9 @@ private:
         pBroken->registerScript();
         mBrokenScriptId = pBroken->getID();
 
-        // A switched-on script inside a switched-off group is the one WantedOn dot
-        auto* pQuietFolder = new TScript(qsl("A group that is switched off"), mpHost);
+        // A switched-on script inside a switched-off group is the one WantedOn dot. The group's name is short enough
+        // to leave the tree room for a count after it.
+        auto* pQuietFolder = new TScript(qsl("A group switched off"), mpHost);
         pQuietFolder->setIsFolder(true);
         pQuietFolder->setIsActive(false);
         pQuietFolder->registerScript();
@@ -627,7 +628,7 @@ private slots:
                                                   {mSwitchedOffScriptId, qsl("<p>Switched off. Click to switch it on.</p>")},
                                                   {mBrokenScriptId, qsl("<p>Switched off, and its code has an error. Click to switch it on.</p>")},
                                                   {mQuietFolderId, qsl("<p>Switched off, so nothing inside it runs. Click to switch it on.</p>")},
-                                                  {mWantedOnScriptId, qsl("<p>Switched on, but not running: the group \"A group that is switched off\" is switched off. Click to switch it off.</p>")}};
+                                                  {mWantedOnScriptId, qsl("<p>Switched on, but not running: the group \"A group switched off\" is switched off. Click to switch it off.</p>")}};
         QStringList misses;
         for (const auto& [id, tip] : expected) {
             const QString said = pDelegate->dotToolTip(indexOf(id));

@@ -19,6 +19,8 @@
 
 #include "ContentScrollArea.h"
 
+#include "uiDesign.h"
+
 #include <QEvent>
 
 namespace uiDesign {
@@ -26,6 +28,7 @@ namespace uiDesign {
 ContentScrollArea::ContentScrollArea(QWidget* pParent)
 : QScrollArea(pParent)
 {
+    keepRoomForVerticalScrollBar(this);
 }
 
 QSize ContentScrollArea::sizeHint() const

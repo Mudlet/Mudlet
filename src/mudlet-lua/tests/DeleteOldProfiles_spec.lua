@@ -7,10 +7,13 @@ describe("Tests the deleteOldProfiles package", function()
   end
 
   local realGetMudletHomeDir = getMudletHomeDir
-  local specHome = realGetMudletHomeDir():gsub("\\", "/") .. "/delete_old_profiles_spec"
+  local specRoot = realGetMudletHomeDir():gsub("\\", "/") .. "/delete_old_profiles_spec"
+  -- module backups live two folders above a profile's home, as they do for real profiles
+  local specHome = specRoot .. "/profiles/spec"
   local folders = {
     profiles = specHome .. "/current",
     maps = specHome .. "/map",
+    modules = specRoot .. "/moduleBackups",
   }
   local made = {}
 
@@ -56,9 +59,12 @@ describe("Tests the deleteOldProfiles package", function()
   end
 
   setup(function()
+    lfs.mkdir(specRoot)
+    lfs.mkdir(specRoot .. "/profiles")
     lfs.mkdir(specHome)
     lfs.mkdir(folders.profiles)
     lfs.mkdir(folders.maps)
+    lfs.mkdir(folders.modules)
   end)
 
   after_each(removeMade)
@@ -68,7 +74,10 @@ describe("Tests the deleteOldProfiles package", function()
     removeMade()
     lfs.rmdir(folders.profiles)
     lfs.rmdir(folders.maps)
+    lfs.rmdir(folders.modules)
     lfs.rmdir(specHome)
+    lfs.rmdir(specRoot .. "/profiles")
+    lfs.rmdir(specRoot)
   end)
 
   it("keeps the newest save, which Mudlet loads, even when it is older than the cut-off", function()
@@ -166,5 +175,55 @@ describe("Tests the deleteOldProfiles package", function()
 
     assert.is_true(lfs.attributes(folders.maps .. "/old maps", "mode") == "directory", "a folder is not a backup, so it should not be removed")
     assert.is_true(exists("maps", "2020-03-05#12-00-00map.dat"), "March's only map should keep March's spot")
+  end)
+
+  it("keeps a backup a month for each module, not one for all of them", function()
+    makeFile("modules", "Alpha2020-03-01#12-00-00", 1)
+    makeFile("modules", "Beta2020-03-05#12-00-00", 5)
+    makeFile("modules", "Alpha2020-03-10#12-00-00", 10)
+    makeFile("modules", "Beta2020-03-15#12-00-00", 15)
+    makeFile("modules", "Alpha2020-03-25#12-00-00", 25)
+
+    deleteOld("modules")
+
+    assert.is_true(exists("modules", "Alpha2020-03-01#12-00-00"), "Alpha's first backup of the month should be kept")
+    assert.is_true(exists("modules", "Beta2020-03-05#12-00-00"), "Beta's first backup of the month should be kept")
+    assert.is_false(exists("modules", "Alpha2020-03-10#12-00-00"))
+    assert.is_true(exists("modules", "Beta2020-03-15#12-00-00"), "Beta's newest backup should be kept")
+    assert.is_true(exists("modules", "Alpha2020-03-25#12-00-00"), "Alpha's newest backup should be kept")
+  end)
+
+  it("keeps each module's newest backup, even when another module was backed up later", function()
+    makeFile("modules", "Alpha2020-02-01#12-00-00", 1, 2)
+    makeFile("modules", "Alpha2020-02-10#12-00-00", 10, 2)
+    makeFile("modules", "Alpha2020-02-20#12-00-00", 20, 2)
+    makeFile("modules", "Beta2020-03-05#12-00-00", 5)
+
+    deleteOld("modules")
+
+    assert.is_true(exists("modules", "Alpha2020-02-01#12-00-00"), "Alpha's first backup of February should be kept")
+    assert.is_false(exists("modules", "Alpha2020-02-10#12-00-00"))
+    assert.is_true(exists("modules", "Alpha2020-02-20#12-00-00"), "Alpha's newest backup should be kept although Beta's is newer")
+    assert.is_true(exists("modules", "Beta2020-03-05#12-00-00"))
+  end)
+
+  it("still thins out module backups named the way older Mudlet versions did", function()
+    makeFile("modules", "Alpha01-02-2020#12-00-00", 1, 2)
+    makeFile("modules", "Alpha05-02-2020#12-00-00", 5, 2)
+    makeFile("modules", "Alpha09-02-2020#12-00-00", 9, 2)
+    makeFile("modules", "notes", 10, 2)
+    makeFile("modules", "more notes", 11, 2)
+    makeFile("modules", "latest notes", 12, 2)
+    makeFile("modules", "Alpha2020-03-05#12-00-00", 5)
+
+    deleteOld("modules")
+
+    assert.is_true(exists("modules", "Alpha01-02-2020#12-00-00"), "Alpha's first backup of February should be kept")
+    assert.is_false(exists("modules", "Alpha05-02-2020#12-00-00"), "an old-style backup is still a backup of Alpha, so it should be thinned out")
+    assert.is_false(exists("modules", "Alpha09-02-2020#12-00-00"), "Alpha's newest backup is the March one")
+    assert.is_true(exists("modules", "notes"), "February's first file not named like a backup should be kept")
+    assert.is_false(exists("modules", "more notes"), "files not named like a backup should not each be kept forever")
+    assert.is_true(exists("modules", "latest notes"), "the newest file not named like a backup should be kept")
+    assert.is_true(exists("modules", "Alpha2020-03-05#12-00-00"))
   end)
 end)
