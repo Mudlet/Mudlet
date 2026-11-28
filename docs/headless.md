@@ -1697,8 +1697,8 @@ name, as `showSentText` gives `"never"`, `"always"` or `"script"`. A key `getCon
 that gives a table or nothing, is left out. `setSettings()` changes each key as `setConfig()` does,
 events included, and fills a `QMap` with each one it did not take and why: the message `setConfig()`
 gave, its Lua error for a value of the wrong type, or that the value was not a `bool`, a number or a
-string. What it took is kept with the profile and written with its next save, as a script's changes
-are. Both call Mudlet's own functions, so a script that has put its own `getConfig` or `setConfig` in
+string. What it took is kept as a script's change to that key is: most with the profile at its next save,
+and a few, such as the app-wide `showTabConnectionIndicators`, elsewhere. Both call Mudlet's own functions, so a script that has put its own `getConfig` or `setConfig` in
 the globals changes nothing. They are false, reading or changing nothing, where `runLua()` is refused.
 
 ## Embedding it: commands and buttons that scripts add

@@ -10270,7 +10270,6 @@ static const QStringList& playerRoomStyles()
     return styles;
 }
 
-// The player room marker's style, sizes and colours
 struct PlayerRoomMarker
 {
     quint8 style = 0;
@@ -10280,7 +10279,7 @@ struct PlayerRoomMarker
     QColor innerColor;
 };
 
-// From the Host's copy, which the profile keeps: the map's, which a map view draws, is unset until a mapper is made
+// From the Host's copy, the one the profile saves
 static PlayerRoomMarker playerRoomMarker(Host& host)
 {
     PlayerRoomMarker marker;
@@ -10430,6 +10429,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             }
             host.mRoomBorderSize = size;
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BorderSize);
+            host.mpMap->requestMapRepaint();
             return success();
         }
         if (key == qsl("mapLargeAreaExitArrows")) {

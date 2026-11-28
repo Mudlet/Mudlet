@@ -259,11 +259,11 @@ public:
     bool runLua(const QString& code);
     // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
     // string each, an option of several by its name (showSentText as "never", "always" or "script"). A key
-    // getConfig() does not know, or gives nothing for, is left out. Mudlet's own getConfig() is called, not
+    // getConfig() does not know, or gives a table or nothing for, is left out. Mudlet's own getConfig() is called, not
     // whatever a script has put in its place. False, reading nothing, where runLua() is refused.
     bool settings(const QStringList& keys, QVariantMap& values);
     // Changes the profile's settings as Lua's setConfig() does, one key at a time, as the preferences dialog
-    // would: what it takes is kept with the profile and saved with it, as the dialog's are. Each key setConfig()
+    // would, so where the dialog's change is kept the same one is. Each key setConfig()
     // refuses, or whose value is not a bool, a number or a string, goes into refused with why. False, changing
     // nothing, where runLua() is refused.
     bool setSettings(const QVariantMap& values, QMap<QString, QString>& refused);
