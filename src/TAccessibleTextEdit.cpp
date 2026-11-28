@@ -25,6 +25,7 @@
 #include "TAccessibleTextEdit.h"
 #include "TBuffer.h"
 #include "TConsole.h"
+#include "TTextSelection.h"
 #include "Host.h"
 #include "mudlet.h"
 
@@ -154,15 +155,15 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
     }
 
     TTextEdit* edit = textEdit();
-    edit->mPA.setX(columnForOffset(startOffset));
-    edit->mPA.setY(lineForOffset(startOffset));
-    edit->mDragStart = edit->mPA;
-    edit->mPB.setX(columnForOffset(endOffset - 1));
-    edit->mPB.setY(lineForOffset(endOffset - 1));
-    edit->mDragSelectionEnd = edit->mPB;
+    edit->mpSelection->mPA.setX(columnForOffset(startOffset));
+    edit->mpSelection->mPA.setY(lineForOffset(startOffset));
+    edit->mpSelection->mDragStart = edit->mpSelection->mPA;
+    edit->mpSelection->mPB.setX(columnForOffset(endOffset - 1));
+    edit->mpSelection->mPB.setY(lineForOffset(endOffset - 1));
+    edit->mpSelection->mDragSelectionEnd = edit->mpSelection->mPB;
     const QStringList& lineBuffer = edit->mpBuffer->lineBuffer;
-    const bool takesNewline = edit->mPB.y() < lineBuffer.size() && edit->mPB.x() == lineBuffer.at(edit->mPB.y()).size();
-    edit->mPBTakingNewline = takesNewline ? edit->mPB : QPoint(-1, -1);
+    const bool takesNewline = edit->mpSelection->mPB.y() < lineBuffer.size() && edit->mpSelection->mPB.x() == lineBuffer.at(edit->mpSelection->mPB.y()).size();
+    edit->mpSelection->mPBTakingNewline = takesNewline ? edit->mpSelection->mPB : QPoint(-1, -1);
 
     textEdit()->highlightSelection();
 }
@@ -177,7 +178,7 @@ void TAccessibleTextEdit::removeSelection(int selectionIndex)
     }
 
     textEdit()->unHighlight();
-    textEdit()->mSelectedRegion = QRegion(0, 0, 0, 0);
+    textEdit()->mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
     // unHighlight() only deselects the characters, and the screen keeps showing them selected until a repaint
     textEdit()->forceUpdate();
 }

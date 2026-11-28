@@ -40,6 +40,7 @@
 #include "MudletApp.h"
 #include "TMainConsole.h"
 #include "TPaintPacer.h"
+#include "TTextSelection.h"
 #include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
@@ -133,6 +134,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
     mpPacer = new TPaintPacer(*mpBuffer, this);
+    mpSelection = std::make_unique<TTextSelection>(*mpBuffer, mpHost);
     mpPacer->setScreenRows([this]() {
         return mScreenHeight;
     });
@@ -1790,52 +1792,45 @@ void TTextEdit::highlightSelection()
     }
     QRegion newRegion;
 
-    int lineDelta = abs(mPA.y() - mPB.y()) - 1;
+    int lineDelta = abs(mpSelection->mPA.y() - mpSelection->mPB.y()) - 1;
     if (lineDelta > 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
+        QRect rectFirstLine(mpSelection->mPA.x() * mFontWidth, (mpSelection->mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
         newRegion += rectFirstLine;
 
-        QRect rectMiddlePart(0, (mPA.y() + 1 - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, lineDelta * mFontHeight);
+        QRect rectMiddlePart(0, (mpSelection->mPA.y() + 1 - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, lineDelta * mFontHeight);
         newRegion += rectMiddlePart;
 
-        QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mFontWidth, mFontHeight);
+        QRect rectLastLine(0, (mpSelection->mPB.y() - imageTopLine()) * mFontHeight, mpSelection->mPB.x() * mFontWidth, mFontHeight);
         newRegion += rectLastLine;
     }
 
     if (lineDelta == 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
+        QRect rectFirstLine(mpSelection->mPA.x() * mFontWidth, (mpSelection->mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
         newRegion += rectFirstLine;
 
-        QRect rectLastLine(0, (mPB.y() - imageTopLine()) * mFontHeight, mPB.x() * mFontWidth, mFontHeight);
+        QRect rectLastLine(0, (mpSelection->mPB.y() - imageTopLine()) * mFontHeight, mpSelection->mPB.x() * mFontWidth, mFontHeight);
         newRegion += rectLastLine;
     }
 
     if (lineDelta < 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, std::max(mPB.x() - mPA.x(), 1) * mFontWidth, mFontHeight);
+        QRect rectFirstLine(
+                mpSelection->mPA.x() * mFontWidth, (mpSelection->mPA.y() - imageTopLine()) * mFontHeight, std::max(mpSelection->mPB.x() - mpSelection->mPA.x(), 1) * mFontWidth, mFontHeight);
         newRegion += rectFirstLine;
     }
 
-    QRect _r = mSelectedRegion.boundingRect();
+    QRect _r = mpSelection->mSelectedRegion.boundingRect();
     if (lineDelta < 0) {
         _r.setWidth(mScreenWidth * mFontWidth);
     }
     update(_r);
 
-    mSelectedRegion = mSelectedRegion.subtracted(newRegion);
+    mpSelection->mSelectedRegion = mpSelection->mSelectedRegion.subtracted(newRegion);
 
-    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size())); y < endY; ++y) {
-        TLineFormat& line = mpBuffer->buffer.at(y);
-        const int lineSize = static_cast<int>(line.size());
-        const int startX = (y == mPA.y()) ? std::clamp(mPA.x(), 0, lineSize) : 0;
-        const int endX = (y == mPB.y()) ? std::min(mPB.x() + 1, lineSize) : lineSize;
-        if (startX < endX) {
-            line.select(startX, endX);
-        }
-    }
+    mpSelection->markLines();
 
-    update(mSelectedRegion.boundingRect());
+    update(mpSelection->mSelectedRegion.boundingRect());
     update(newRegion);
-    mSelectedRegion = newRegion;
+    mpSelection->mSelectedRegion = newRegion;
 
     QClipboard* clipboard = QApplication::clipboard();
     if (clipboard->supportsSelection()) {
@@ -1852,66 +1847,21 @@ void TTextEdit::highlightSelection()
 
 void TTextEdit::unHighlight()
 {
-    for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
-        if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
-            // Abort if we are considering a line not in the buffer:
-            break;
-        }
-
-        mpBuffer->buffer.at(yIndex).deselect();
-    }
-    mPBTakingNewline = QPoint(-1, -1);
+    mpSelection->unmarkLines();
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
         QAccessible::updateAccessibility(&event);
     }
 }
 
-// ensure that mPA is top-left and mPB is bottom-right
 void TTextEdit::normaliseSelection()
 {
-    if (mDragStart.y() < mDragSelectionEnd.y() || ((mDragStart.y() == mDragSelectionEnd.y()) && (mDragStart.x() < mDragSelectionEnd.x()))) {
-        mPA = mDragStart;
-        mPB = mDragSelectionEnd;
-    } else {
-        mPA = mDragSelectionEnd;
-        mPB = mDragStart;
-    }
+    mpSelection->normalise();
 }
 
 void TTextEdit::expandSelectionToWords()
 {
-    int yind = mPA.y();
-    int xind = mPA.x();
-
-    // Check if yind is within the valid range of lineBuffer
-    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
-        for (; xind >= 0; --xind) {
-            // Ensure xind is within the valid range for the current line
-            if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
-                break; // xind is out of bounds, break the loop
-            }
-            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
-            if (currentChar == QChar::Space || mpHost->mDoubleClickIgnore.contains(currentChar)) {
-                break;
-            }
-        }
-    }
-    mPA.setX(xind + 1);
-
-    yind = mPB.y();
-    xind = mPB.x();
-
-    // Repeat the check for yind and xind for the second part
-    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
-        for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
-            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
-            if (currentChar == QChar::Space || mpHost->mDoubleClickIgnore.contains(currentChar)) {
-                break;
-            }
-        }
-    }
-    mPB.setX(xind - 1);
+    mpSelection->expandToWords();
 }
 
 
@@ -1921,10 +1871,10 @@ void TTextEdit::expandSelectionToLine(int y)
         return;
     }
     unHighlight();
-    mDragStart.setX(0);
-    mDragStart.setY(y);
-    mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
-    mDragSelectionEnd.setY(y);
+    mpSelection->mDragStart.setX(0);
+    mpSelection->mDragStart.setY(y);
+    mpSelection->mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
+    mpSelection->mDragSelectionEnd.setY(y);
     normaliseSelection();
     highlightSelection();
     mMouseTracking = true;
@@ -1967,7 +1917,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     // A script can clear or delete lines while the button is held, taking the line the drag started on
-    if (mDragStart.y() >= static_cast<int>(mpBuffer->buffer.size())) {
+    if (mpSelection->mDragStart.y() >= static_cast<int>(mpBuffer->buffer.size())) {
         mMouseTracking = false;
         return;
     }
@@ -1984,19 +1934,19 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // back to the origin cell, so the selection collapses down again instead of
     // freezing at its last extent. Multi-click (word/line) and Ctrl selections
     // establish their selection in mousePressEvent and so are left untouched here.
-    if (!mCtrlSelecting && mMouseTrackLevel < 2 && cursorLocation == mDragStart && mDragSelectionEnd == mDragStart) {
+    if (!mpSelection->mCtrlSelecting && mpSelection->mMouseTrackLevel < 2 && cursorLocation == mpSelection->mDragStart && mpSelection->mDragSelectionEnd == mpSelection->mDragStart) {
         return;
     }
 
-    if ((mDragSelectionEnd.y() < cursorLocation.y() || (mDragSelectionEnd.y() == cursorLocation.y() && mDragSelectionEnd.x() < cursorLocation.x()))) {
-        mPA = mDragSelectionEnd;
-        mPB = cursorLocation;
+    if ((mpSelection->mDragSelectionEnd.y() < cursorLocation.y() || (mpSelection->mDragSelectionEnd.y() == cursorLocation.y() && mpSelection->mDragSelectionEnd.x() < cursorLocation.x()))) {
+        mpSelection->mPA = mpSelection->mDragSelectionEnd;
+        mpSelection->mPB = cursorLocation;
     } else {
-        mPA = cursorLocation;
-        mPB = mDragSelectionEnd;
+        mpSelection->mPA = cursorLocation;
+        mpSelection->mPB = mpSelection->mDragSelectionEnd;
     }
 
-    for (int yIndex = mPA.y(), total = mPB.y(); yIndex <= total; ++yIndex) {
+    for (int yIndex = mpSelection->mPA.y(), total = mpSelection->mPB.y(); yIndex <= total; ++yIndex) {
         if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
             // Abort if we are considering a line not in the buffer:
             break;
@@ -2005,32 +1955,25 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         mpBuffer->buffer.at(yIndex).deselect();
     }
 
-    const bool anchorFirst = mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x());
+    const bool anchorFirst = mpSelection->mDragStart.y() < cursorLocation.y() || (mpSelection->mDragStart.y() == cursorLocation.y() && mpSelection->mDragStart.x() < cursorLocation.x());
     if (anchorFirst) {
-        mPA = mDragStart;
-        mPB = cursorLocation;
+        mpSelection->mPA = mpSelection->mDragStart;
+        mpSelection->mPB = cursorLocation;
     } else {
-        mPA = cursorLocation;
-        mPB = mDragStart;
+        mpSelection->mPA = cursorLocation;
+        mpSelection->mPB = mpSelection->mDragStart;
     }
-    if (mMouseTrackLevel == 2) {
+    if (mpSelection->mMouseTrackLevel == 2) {
         expandSelectionToWords();
-        // Anchored on a separator, the selection starts at the nearest word, past any separators beside it
-        QPoint& anchoredEnd = anchorFirst ? mPA : mPB;
-        const QString& anchoredLine = mpBuffer->lineBuffer.at(anchoredEnd.y());
-        const int step = anchorFirst ? 1 : -1;
-        while (anchoredEnd.x() >= 0 && anchoredEnd.x() < static_cast<int>(anchoredLine.size())
-               && (anchoredLine.at(anchoredEnd.x()) == QChar::Space || mpHost->mDoubleClickIgnore.contains(anchoredLine.at(anchoredEnd.x())))) {
-            anchoredEnd.rx() += step;
-        }
+        mpSelection->anchorEndToNearestWord(anchorFirst);
     }
-    if (mCtrlSelecting || mMouseTrackLevel == 3) {
-        mPA.setX(0);
-        mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
+    if (mpSelection->mCtrlSelecting || mpSelection->mMouseTrackLevel == 3) {
+        mpSelection->mPA.setX(0);
+        mpSelection->mPB.setX(mpBuffer->buffer.at(mpSelection->mPB.y()).size());
     }
 
     highlightSelection();
-    mDragSelectionEnd = cursorLocation;
+    mpSelection->mDragSelectionEnd = cursorLocation;
     forceUpdate();
 }
 
@@ -2294,23 +2237,23 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         y = std::max(y, 0);
 
         if (event->modifiers() & Qt::ControlModifier) {
-            mCtrlSelecting = true;
+            mpSelection->mCtrlSelecting = true;
         }
 
         bool isOutOfbounds = false;
-        if (!mCtrlSelecting && mpConsole->showTimeStamps()) {
+        if (!mpSelection->mCtrlSelecting && mpConsole->showTimeStamps()) {
             bool isOverTimeStamp = false;
             x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds, &isOverTimeStamp);
             if (isOverTimeStamp) {
                 // If we have clicked on the timestamp then emulate the effect
                 // of control clicking - i.e. select the WHOLE line:
-                mCtrlSelecting = true;
+                mpSelection->mCtrlSelecting = true;
             }
         } else {
             x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds);
         }
 
-        if (mCtrlSelecting) {
+        if (mpSelection->mCtrlSelecting) {
             expandSelectionToLine(y);
             event->accept();
             return;
@@ -2363,16 +2306,16 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             // We are the upper pane and the lower one is not showing
             forceUpdate();
         }
-        mSelectedRegion = QRegion(0, 0, 0, 0);
+        mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
         // Invalid until the first click, so an early click isn't taken as a double-click's second half:
-        if (mLastClickTimer.isValid() && mLastClickTimer.durationElapsed() < 300ms) {
+        if (mpSelection->mLastClickTimer.isValid() && mpSelection->mLastClickTimer.durationElapsed() < 300ms) {
             mMouseTracking = true;
-            mMouseTrackLevel++;
-            if (mMouseTrackLevel > 3) {
-                mMouseTrackLevel = 3;
+            mpSelection->mMouseTrackLevel++;
+            if (mpSelection->mMouseTrackLevel > 3) {
+                mpSelection->mMouseTrackLevel = 3;
             }
 
-            if (mMouseTrackLevel == 3) {
+            if (mpSelection->mMouseTrackLevel == 3) {
                 expandSelectionToLine(y);
                 event->accept();
                 return;
@@ -2385,36 +2328,36 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 return;
             }
 
-            mDragStart.setX(x);
-            mDragStart.setY(y);
-            mDragSelectionEnd.setX(x);
-            mDragSelectionEnd.setY(y);
+            mpSelection->mDragStart.setX(x);
+            mpSelection->mDragStart.setY(y);
+            mpSelection->mDragSelectionEnd.setX(x);
+            mpSelection->mDragSelectionEnd.setY(y);
             normaliseSelection();
-            if (mMouseTrackLevel == 2) {
+            if (mpSelection->mMouseTrackLevel == 2) {
                 expandSelectionToWords();
                 // On a separator the bounds cross, and the drag stays anchored to the clicked cell
-                if (mPA.x() <= mPB.x()) {
-                    mDragStart = mPA;
-                    mDragSelectionEnd = mPB;
+                if (mpSelection->mPA.x() <= mpSelection->mPB.x()) {
+                    mpSelection->mDragStart = mpSelection->mPA;
+                    mpSelection->mDragSelectionEnd = mpSelection->mPB;
                 }
             } else {
-                mPA.setX(0);
-                mPB.setX(mpBuffer->buffer.at(mPB.y()).size());
+                mpSelection->mPA.setX(0);
+                mpSelection->mPB.setX(mpBuffer->buffer.at(mpSelection->mPB.y()).size());
             }
-            mLastClickTimer.start();
+            mpSelection->mLastClickTimer.start();
             highlightSelection();
             event->accept();
             return;
         }
-        mLastClickTimer.start();
+        mpSelection->mLastClickTimer.start();
         mMouseTracking = true;
-        mMouseTrackLevel = 1;
+        mpSelection->mMouseTrackLevel = 1;
         if (y >= mpBuffer->size()) {
             return;
         }
-        mDragStart.setX(x);
-        mDragStart.setY(y);
-        mDragSelectionEnd = mDragStart;
+        mpSelection->mDragStart.setX(x);
+        mpSelection->mDragStart.setY(y);
+        mpSelection->mDragSelectionEnd = mpSelection->mDragStart;
         event->accept();
         return;
     }
@@ -2430,10 +2373,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 void TTextEdit::slot_selectAll()
 {
-    mDragStart = QPoint(0, 0);
-    mDragSelectionEnd = mpBuffer->getEndPos();
-    // need this to convert the above to mPA and mPB:
-    normaliseSelection();
+    mpSelection->selectAll();
 
     highlightSelection();
     // Ensure BOTH panes are updated if the lower one is showing
@@ -2546,24 +2486,8 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // <div></div> tags required around outside of the body <span></spans> for
     // strict HTML 4 as we do not use <p></p>s or anything else
 
-    // Is this a single line then we do NOT need to pad the first (and thus
-    // only) line to the right:
-    bool isSingleLine = (mPA.y() == mPB.y());
-    for (int y = mPA.y(), total = mPB.y(); y <= total; ++y) {
-        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-            return;
-        }
-        if (y == mPA.y()) { // First line of selection
-            if (isSingleLine) {
-                text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y, mPB.x() + 1, mPA.x(), 0));
-            } else { // Not single line
-                text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y, -1, mPA.x(), mPA.x()));
-            }
-        } else if (y == mPB.y()) { // Last line of selection
-            text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y, mPB.x() + 1));
-        } else { // inside lines of selection
-            text.append(mpBuffer->bufferToHtml(mpConsole->showTimeStamps(), y));
-        }
+    if (!mpSelection->appendHtml(text, mpConsole->showTimeStamps())) {
+        return;
     }
     text.append(qsl(" </div></body>\n"
                     "</html>"));
@@ -2581,10 +2505,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 // size) hold for any console the user can right-click on.
 bool TTextEdit::hasSelectedText() const
 {
-    // A double-click on a word separator highlights nothing, yet leaves a
-    // region behind and mPA past mPB
-    const bool endpointsCrossed = mPA.y() > mPB.y() || (mPA.y() == mPB.y() && mPA.x() > mPB.x());
-    return !mpBuffer->lineBuffer.isEmpty() && !mSelectedRegion.isEmpty() && !endpointsCrossed;
+    return mpSelection->hasSelection();
 }
 
 // Only checks that there is a selection to read. mPA and mPB stay as the
@@ -2651,18 +2572,18 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     // Unlike Copy and Copy HTML, "as image" has an obvious default when nothing
     // is selected: a picture of what the user is looking at (#9715).
     bool copyingSelection = establishSelectedText();
-    if (copyingSelection && mPB.y() > lastBufferLine) {
+    if (copyingSelection && mpSelection->mPB.y() > lastBufferLine) {
         // Lines lost off the front of a buffer that reached its limit shift every
         // remaining index down; getSelectedText() compensates the same way. mPA
         // and mPB move rather than a copy of them, so that the deselect below
         // still finds the characters that are about to be drawn.
         const int shift = mpBuffer->mBatchDeleteSize;
-        if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
-            const bool takesNewline = mPB == mPBTakingNewline;
-            mPA.ry() -= shift;
-            mPB.ry() -= shift;
+        if (mpSelection->mPA.y() - shift >= 0 && mpSelection->mPB.y() - shift <= lastBufferLine) {
+            const bool takesNewline = mpSelection->mPB == mpSelection->mPBTakingNewline;
+            mpSelection->mPA.ry() -= shift;
+            mpSelection->mPB.ry() -= shift;
             if (takesNewline) {
-                mPBTakingNewline = mPB;
+                mpSelection->mPBTakingNewline = mpSelection->mPB;
             }
         } else {
             // The selected lines are gone for good, so copy the visible area
@@ -2671,8 +2592,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         }
     }
 
-    int firstLine = mPA.y();
-    int lastLine = mPB.y();
+    int firstLine = mpSelection->mPA.y();
+    int lastLine = mpSelection->mPB.y();
     if (!copyingSelection) {
         const auto [firstVisible, lastVisible] = visibleLines();
         firstLine = firstVisible;
@@ -2737,17 +2658,17 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     }
 
     // unHighlight() forgets that the selection takes in a newline, but the same selection is put back below
-    const QPoint takingNewline = mPBTakingNewline;
+    const QPoint takingNewline = mpSelection->mPBTakingNewline;
     if (copyingSelection) {
         // deselect to prevent inverted colours in image
         unHighlight();
-        mSelectedRegion = QRegion(0, 0, 0, 0);
+        mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
     }
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
     if (copyingSelection) {
-        mPBTakingNewline = takingNewline;
+        mpSelection->mPBTakingNewline = takingNewline;
         highlightSelection();
     }
     // the pixmap cannot be read back while a painter is still active on it
@@ -2855,75 +2776,7 @@ void TTextEdit::slot_copySelectionToSearchBar()
 
 QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTimestamps)
 {
-    // mPA QPoint where selection started
-    // mPB QPoint where selection ended
-    // try to prevent crash if buffer is batch deleted
-    if (const int trimmed = selectionLinesTrimmed()) {
-        const bool takesNewline = mPB == mPBTakingNewline;
-        mPA.ry() -= trimmed;
-        mPB.ry() -= trimmed;
-        if (takesNewline) {
-            mPBTakingNewline = mPB;
-        }
-    }
-    qsizetype startLine = std::max(0, mPA.y());
-    qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
-    // The batch-delete step above can push a selection left on lines a clearWindow() removed off the top
-    if (endLine < startLine) {
-        return {};
-    }
-    qsizetype offset = endLine - startLine;
-    qsizetype startPos = std::max(0, mPA.x());
-    qsizetype endPos = std::min<qsizetype>(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
-    QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
-    if (textLines.isEmpty()) {
-        return {};
-    }
-
-    if (mPA.y() == mPB.y()) {
-        // Is a single line, so trim characters off the beginning and end
-        // according to startPos and endPos:
-        if (!textLines.at(0).isEmpty()) {
-            textLines[0] = textLines.at(0).mid(startPos, endPos - startPos + 1);
-        }
-    } else {
-        // trim characters off the front of the first line according to startPos:
-        if (!textLines.at(0).isEmpty()) {
-            textLines[0] = textLines.at(0).mid(startPos);
-        }
-        // and chop off the required number of QChars from the end of the last
-        // line:
-        if (!textLines.at(offset).isEmpty()) {
-            textLines[offset] = textLines.at(offset).left(1 + endPos);
-        }
-    }
-
-    // A line that word wrapping split off goes back on the end of the one
-    // before, as the game sent it, rather than being copied as a line of its own
-    QString text;
-    for (qsizetype i = 0; i < textLines.size(); ++i) {
-        const int y = static_cast<int>(startLine + i);
-        QStringView line = textLines.at(i);
-        if (mpBuffer->wrapsFromPreviousLine(y)) {
-            const qsizetype columnsNotSelected = (i == 0) ? startPos : 0;
-            line = line.sliced(std::clamp<qsizetype>(mpBuffer->wrapIndentWidth(y) - columnsNotSelected, 0, line.size()));
-            if (i > 0) {
-                text.append(QString(mpBuffer->wrapGapBefore(y), QChar::Space));
-            }
-        } else {
-            if (i > 0) {
-                text.append(newlineChar);
-            }
-            if (showTimestamps) {
-                text.append(mpBuffer->timeStampText(y));
-            }
-        }
-        text.append(line);
-    }
-    if (mPB == mPBTakingNewline && !mpBuffer->wrapsFromPreviousLine(static_cast<int>(endLine) + 1)) {
-        text.append(newlineChar);
-    }
-    return text;
+    return mpSelection->text(newlineChar, showTimestamps);
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
@@ -2932,7 +2785,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     auto eventGlobalPos = event->globalPosition().toPoint();
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
-        mCtrlSelecting = false;
+        mpSelection->mCtrlSelecting = false;
 
         // Clear active state on mouse release
         if (mpBuffer->getActiveLink() != 0) {
@@ -3631,7 +3484,7 @@ void TTextEdit::slot_showSelectionAnalysis()
         return;
     }
     // In the text rather than a label beside it, so a screen reader reads it with the table
-    if (mPA.y() != mPB.y()) {
+    if (mpSelection->mPA.y() != mpSelection->mPB.y()) {
         //: Note above the table in the window opened by the console context menu's "Analyse characters" entry, shown when more than one line was selected
         analysis.prepend(qsl("<p>%1</p>").arg(tr("Only the first line of the selection is analyzed.")));
     }
@@ -3671,7 +3524,7 @@ QString TTextEdit::selectionAnalysisHtml()
 
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
-    int line = qMin(qMax(qMin(mPA.y(), mPB.y()) - selectionLinesTrimmed(), 0), (mpBuffer->lineBuffer.size() - 1));
+    int line = qMin(qMax(qMin(mpSelection->mPA.y(), mpSelection->mPB.y()) - selectionLinesTrimmed(), 0), (mpBuffer->lineBuffer.size() - 1));
 
     int startColumn = -1;
     int endColumn = -1;
@@ -3700,10 +3553,10 @@ QString TTextEdit::selectionAnalysisHtml()
     char utf8Bytes[5];
 
     int total = 0;
-    startColumn = mPA.x();
-    if (mPA.y() == mPB.y()) {
+    startColumn = mpSelection->mPA.x();
+    if (mpSelection->mPA.y() == mpSelection->mPB.y()) {
         // The selection is from mPA.x() to mPB.x()
-        endColumn = mPB.x();
+        endColumn = mpSelection->mPB.x();
         if (endColumn == -1) {
             // Handle the special case where -1 is used to mean "to the end of
             // the line":
@@ -3711,7 +3564,7 @@ QString TTextEdit::selectionAnalysisHtml()
         }
 
     } else {
-        startColumn = mPA.x();
+        startColumn = mpSelection->mPA.x();
         endColumn = lineLength - 1;
     }
     // total is now (that we only show the selected part of the first line and
@@ -4084,7 +3937,7 @@ void TTextEdit::slot_mouseAction(const QString& uniqueName)
 
     // mPA and mPB outlive a dropped selection, so without one the handler gets nils rather than old coordinates
     const bool selected = hasSelectedText();
-    for (const int coordinate : {mPA.x(), mPA.y(), mPB.x(), mPB.y()}) {
+    for (const int coordinate : {mpSelection->mPA.x(), mpSelection->mPA.y(), mpSelection->mPB.x(), mpSelection->mPB.y()}) {
         event.mArgumentList.append(selected ? QString::number(coordinate) : QString());
         event.mArgumentTypeList.append(selected ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
     }
@@ -4549,11 +4402,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     };
 
     auto updateSelection = [&](bool useNewColumn) {
-        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mShiftSelection) {
-            mShiftSelection = true;
-            mDragStart.setY(mCaretLine);
-            mDragStart.setX(mCaretColumn);
-            mDragSelectionEnd.setY(newCaretLine);
+        if (QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) && !mpSelection->mShiftSelection) {
+            mpSelection->mShiftSelection = true;
+            mpSelection->mDragStart.setY(mCaretLine);
+            mpSelection->mDragStart.setX(mCaretColumn);
+            mpSelection->mDragSelectionEnd.setY(newCaretLine);
             // Anchor the moving end at the new caret position (mirroring the
             // continuation branch below). Using the old column here made the
             // first Shift+Arrow press produce a zero-width selection, so the
@@ -4561,23 +4414,23 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             // immediate Ctrl+C copied nothing. Guard against the sentinel
             // newCaretColumn (-1) that Shift+Left leaves when the caret is
             // already at the top-left (0, 0), keeping the safe fallback.
-            mDragSelectionEnd.setX(useNewColumn && newCaretColumn >= 0 ? newCaretColumn : mCaretColumn);
+            mpSelection->mDragSelectionEnd.setX(useNewColumn && newCaretColumn >= 0 ? newCaretColumn : mCaretColumn);
             unHighlight();
             normaliseSelection();
             highlightSelection();
-        } else if (mShiftSelection) {
+        } else if (mpSelection->mShiftSelection) {
             if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ShiftModifier)) {
-                mShiftSelection = false;
+                mpSelection->mShiftSelection = false;
                 unHighlight();
-                mSelectedRegion = QRegion(0, 0, 0, 0);
+                mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
 
                 // keep cursor position as-is because it is only the selection that should be cleared
                 newCaretLine = mCaretLine;
                 newCaretColumn = mCaretColumn;
                 return;
             }
-            mDragSelectionEnd.setY(newCaretLine);
-            mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
+            mpSelection->mDragSelectionEnd.setY(newCaretLine);
+            mpSelection->mDragSelectionEnd.setX(useNewColumn ? newCaretColumn : mCaretColumn);
 
             unHighlight();
             normaliseSelection();
@@ -4817,64 +4670,20 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
 int TTextEdit::offsetForPosition(int line, int column) const
 {
-    int ret = 0;
-
-    for (int i = 0; i < line; i++) {
-        // The text() method adds a '\n' to the end of every line, so account
-        // for it with the '+ 1' below.
-        ret += mpBuffer->line(i).length() + 1;
-    }
-
-    ret += column;
-
-    return ret;
+    return mpSelection->offsetOf(line, column);
 }
 
-// Lines lost off the front of a buffer at its limit shift every index down, while mPA and mPB
-// stay on the old indexes until getSelectedText() catches them up
 int TTextEdit::selectionLinesTrimmed() const
 {
-    const qsizetype lastLine = mpBuffer->lineBuffer.size() - 1;
-    return (mPA.y() > lastLine || mPB.y() > lastLine) ? mpBuffer->mBatchDeleteSize : 0;
+    return mpSelection->linesTrimmed();
 }
 
-// The characters of the accessible text the selection covers, 0 for none: a double-click on a
-// space or a triple-click on an empty line leaves a region but no cells. mPB is the last selected
-// cell, and a whole-line selection leaves it on the newline cell (x == line length), which counts
-// only when mPBTakingNewline says so. Walks just the selected lines, so it stays cheap however
-// long the buffer is.
 int TTextEdit::accessibleSelectionLength() const
 {
-    if (mSelectedRegion.isEmpty()) {
-        return 0;
-    }
-    const int trimmed = selectionLinesTrimmed();
-    const int firstLine = mPA.y() - trimmed;
-    const int lastLine = mPB.y() - trimmed;
-    const int lineCount = static_cast<int>(std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())));
-    if (firstLine < 0 || firstLine > lastLine || lastLine >= lineCount) {
-        return 0;
-    }
-    const bool takesNewline = mPB == mPBTakingNewline;
-    // the text has no newline after its last line
-    if (takesNewline && lastLine == lineCount - 1) {
-        return 0;
-    }
-    const int lastLineLength = static_cast<int>(mpBuffer->buffer.at(lastLine).size());
-    int length = (takesNewline ? lastLineLength + 1 : std::min(mPB.x() + 1, lastLineLength)) - mPA.x();
-    for (int y = firstLine; y < lastLine; ++y) {
-        length += mpBuffer->line(y).length() + 1;
-    }
-    return std::max(length, 0);
+    return mpSelection->accessibleLength();
 }
 
-// Start and one past the end, as the accessible text counts them, or (0, 0) for no selection
 std::pair<int, int> TTextEdit::accessibleSelection() const
 {
-    const int length = accessibleSelectionLength();
-    if (length == 0) {
-        return {0, 0};
-    }
-    const int start = offsetForPosition(mPA.y() - selectionLinesTrimmed(), mPA.x());
-    return {start, start + length};
+    return mpSelection->accessibleRange();
 }

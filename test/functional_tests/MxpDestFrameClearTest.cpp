@@ -34,6 +34,7 @@
 #include "TMxpFrameManager.h"
 #include "TMxpFrameWidgets.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -104,7 +105,7 @@ private:
         // a non-empty region is also the proof that the pane's font metrics
         // are live - highlightSelection() builds it from them - so the copy
         // path's geometry bail-outs cannot green these tests for free
-        if (console->mUpperPane->mSelectedRegion.isEmpty()) {
+        if (console->mUpperPane->mpSelection->mSelectedRegion.isEmpty()) {
             QTest::qFail("select-all put no selection on the frame pane", __FILE__, __LINE__);
             return nullptr;
         }
@@ -239,7 +240,7 @@ private slots:
         if (!frameEmptied()) {
             return;
         }
-        QVERIFY2(pane->mSelectedRegion.isEmpty(), "the EOF clear deleted every line but left the selection standing over them");
+        QVERIFY2(pane->mpSelection->mSelectedRegion.isEmpty(), "the EOF clear deleted every line but left the selection standing over them");
     }
 
     void test_copyAfterAnEofClearStaysInRange()
@@ -294,7 +295,7 @@ private slots:
             return;
         }
         console->mLowerPane->slot_selectAll();
-        QVERIFY2(!console->mLowerPane->mSelectedRegion.isEmpty(), "select-all put no selection on the lower pane");
+        QVERIFY2(!console->mLowerPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the lower pane");
 
         feed(qsl("<DEST %1 EOF></DEST>").arg(mFrameName));
         if (!frameEmptied()) {
@@ -302,7 +303,7 @@ private slots:
         }
         // clearSplit() only hides the lower pane - a stale selection there
         // would come back the next time the frame is scrolled
-        QVERIFY2(console->mLowerPane->mSelectedRegion.isEmpty(), "the EOF clear left the lower pane's selection standing over deleted lines");
+        QVERIFY2(console->mLowerPane->mpSelection->mSelectedRegion.isEmpty(), "the EOF clear left the lower pane's selection standing over deleted lines");
     }
 
     // Closing the split scrollback hides the lower pane, which resizes the

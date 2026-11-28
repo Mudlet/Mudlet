@@ -29,7 +29,6 @@
 
 
 #include <QColor>
-#include <QElapsedTimer>
 #include <QPointer>
 #include <QImage>
 #include <QRect>
@@ -48,6 +47,7 @@ class TConsole;
 class TChar;
 class TGlyphCache;
 class TPaintPacer;
+class TTextSelection;
 
 class QScrollBar;
 class QString;
@@ -179,7 +179,7 @@ public:
     bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
-    QRegion mSelectedRegion;
+    std::unique_ptr<TTextSelection> mpSelection;
 
 public slots:
     void slot_copySelectionToClipboard();
@@ -310,24 +310,10 @@ private:
     // The buffer's linesTrimmedTotal() as of that render
     qint64 mLinesTrimmedAtRender = 0;
     bool mMouseTracking = false;
-    // 1/2/3 for single/double/triple click seen so far
-    int mMouseTrackLevel = 0;
-    bool mCtrlSelecting{};
-    // tracks status of the Shift key for keyboard-based selection
-    bool mShiftSelection{};
     int mCtrlDragStartY{};
-    QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos = 0;
     // The buffer's linesTrimmedTotal() when mOldScrollPos was taken
     qint64 mLinesTrimmedAtOldScrollPos = 0;
-    // top-left point of the selection
-    QPoint mPA;
-    // bottom-right point of the selection
-    QPoint mPB;
-    // Equal to mPB while the selection includes the newline after mPB's line: an
-    // accessibility range ending there leaves mPB where a whole-line selection without
-    // the newline does. Meaningful only while it equals mPB; unHighlight() resets it to (-1, -1).
-    QPoint mPBTakingNewline{-1, -1};
     TBuffer* mpBuffer;
     // Needs to be a QPointer as is used in a couple of lambda functions:
     QPointer<TConsole> mpConsole;
@@ -358,7 +344,6 @@ private:
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;
-    QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     bool mEnableBlinkText = false;

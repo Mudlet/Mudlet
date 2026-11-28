@@ -51,6 +51,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
     PaintPacerTest.cpp
+    TextSelectionTest.cpp
     PasswordEntryTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp

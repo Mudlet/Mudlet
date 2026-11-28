@@ -42,6 +42,7 @@
 #include "TMxpFrameWidgets.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 #include "uiDesign.h"
@@ -753,7 +754,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         connect(pShortcut_copy, &QShortcut::activated, this, [this]() {
             // Selecting in one pane leaves the other's selection behind, so the clicked one goes first
             TTextEdit* pPane = mLowerPane->hasFocus() ? mLowerPane : mUpperPane;
-            if (pPane->mSelectedRegion.isEmpty()) {
+            if (pPane->mpSelection->mSelectedRegion.isEmpty()) {
                 pPane = (pPane == mUpperPane) ? mLowerPane : mUpperPane;
             }
             pPane->slot_copySelectionToClipboard();
@@ -1157,8 +1158,8 @@ void TConsole::clearSelection() const
 {
     mLowerPane->unHighlight();
     mUpperPane->unHighlight();
-    mLowerPane->mSelectedRegion = QRegion(0, 0, 0, 0);
-    mUpperPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mLowerPane->mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
+    mUpperPane->mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
 }

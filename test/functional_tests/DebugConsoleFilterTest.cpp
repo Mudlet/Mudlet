@@ -39,6 +39,7 @@
 #include "TLuaInterpreter.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -940,7 +941,7 @@ private slots:
 
         QTest::mouseClick(console->mUpperPane, Qt::LeftButton, Qt::NoModifier, console->mUpperPane->rect().center());
         console->mUpperPane->slot_selectAll();
-        QVERIFY2(!console->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the console");
+        QVERIFY2(!console->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the console");
 
         QWidget* focused = QApplication::focusWidget();
         QVERIFY2(focused, "nothing in the application has the focus to press Ctrl+C in");
@@ -972,7 +973,7 @@ private slots:
 
         QTest::mouseClick(console->mUpperPane, Qt::LeftButton, Qt::NoModifier, console->mUpperPane->rect().center());
         console->mUpperPane->slot_selectAll();
-        QVERIFY2(!console->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the error console");
+        QVERIFY2(!console->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the error console");
 
         QWidget* focused = QApplication::focusWidget();
         QVERIFY2(focused, "nothing in the application has the focus to press Ctrl+C in");
