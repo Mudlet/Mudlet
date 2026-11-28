@@ -572,10 +572,8 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     resizeWindow(front.name, inPlaceSize(self, fill, front))
   end
 
-  -- what a screen reader reads the gauge as, as a progress bar: the back label is the gauge's size, so its value
-  -- is the gauge's, out of the maximum given, or of 100; one past the end is at the end. A reading it cannot give,
-  -- not a number or out of an infinite maximum, leaves it none, so a reader goes by what the gauge draws; checked
-  -- here, as setLabelAccessibleValue() would warn of it at every prompt
+  -- screen readers read the gauge from its back label, which is the gauge's size; a reading it cannot give is
+  -- checked here, as setLabelAccessibleValue() would warn of it at every prompt
   local maximum = maxValue or 100
   if maximum > 0 and maximum < math.huge and currentValue == currentValue then
     setLabelAccessibleValue(self.back.name, math.min(currentValue, maximum), 0, maximum)

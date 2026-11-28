@@ -279,8 +279,9 @@ color_table["YellowGreen"]            = { 154, 205, 50 }
 -- The value and maximum setGauge() was last given, unless a script has written the gauge's value itself since
 local function gaugeReading(gaugeName)
   local info = gaugesTable[gaugeName]
-  if info.maximum and info.current / info.maximum == info.value then
-    return info.current, info.maximum
+  local given = info.valueSetWith
+  if given and info.value == given.value then
+    return given.current, given.maximum
   end
   return info.value, 1
 end
@@ -625,7 +626,7 @@ function setGauge(gaugeName, currentValue, maxValue, gaugeText)
   local value = currentValue / maxValue
   -- save new values in table, and those given, which moving or resizing the gauge lays it out with again
   gaugesTable[gaugeName].value = value
-  gaugesTable[gaugeName].current, gaugesTable[gaugeName].maximum = currentValue, maxValue
+  gaugesTable[gaugeName].valueSetWith = {current = currentValue, maximum = maxValue, value = value}
   local info = gaugesTable[gaugeName]
   local x, y, w, h = info.x, info.y, info.width, info.height
 
@@ -642,9 +643,8 @@ function setGauge(gaugeName, currentValue, maxValue, gaugeText)
     resizeWindow(gaugeName .. "_front", w, h * value)
     moveWindow(gaugeName .. "_front", x, y)
   end
-  -- what a screen reader reads the gauge as, as Geyser.Gauge:setValue() gives it: a progress bar's value on the
-  -- back label, or none for a reading it cannot give (a maximum not above 0 or infinite, a current value that is not
-  -- a number or is minus infinity), checked here, as setLabelAccessibleValue() would warn of it at every prompt
+  -- screen readers read the gauge from its back label, as Geyser.Gauge:setValue() gives it; a reading it cannot
+  -- give is checked here, as setLabelAccessibleValue() would warn of it at every prompt
   local current, maximum = tonumber(currentValue), tonumber(maxValue)
   if maximum > 0 and maximum < math.huge and current > -math.huge then
     setLabelAccessibleValue(gaugeName .. "_back", math.min(current, maximum), 0, maximum)
