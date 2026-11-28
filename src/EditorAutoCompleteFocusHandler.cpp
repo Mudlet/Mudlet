@@ -23,6 +23,7 @@
 #include "edbee/views/components/texteditorautocompletecomponent.h"
 #include "edbee/views/components/texteditorcomponent.h"
 
+#include <QAccessible>
 #include <QApplication>
 #include <QFocusEvent>
 #include <QKeyEvent>
@@ -77,11 +78,9 @@ bool EditorAutoCompleteFocusHandler::isPopupOpen() const
     return mpMenu && mpMenu->isVisible();
 }
 
-// Routes a key press that was received by the autocomplete popup. Every key is
-// consumed here: it is either handed to the popup list (completion keys) or to
-// the editor (normal typing), never back to the popup menu itself, whose own
-// key handling would close the popup or eat the key.
-void EditorAutoCompleteFocusHandler::routeKeyPress(QKeyEvent* pKeyEvent)
+namespace {
+// Keys the suggestion list acts on: navigate the suggestions, accept or cancel
+bool isCompletionKey(const QKeyEvent* pKeyEvent)
 {
     switch (pKeyEvent->key()) {
     case Qt::Key_Up:
@@ -92,11 +91,26 @@ void EditorAutoCompleteFocusHandler::routeKeyPress(QKeyEvent* pKeyEvent)
     case Qt::Key_Return:
     case Qt::Key_Tab:
     case Qt::Key_Escape:
-        // completion keys, handled by edbee's event filter on the list
-        // (navigate the suggestions, accept or cancel the popup)
+        return true;
+    default:
+        return false;
+    }
+}
+} // namespace
+
+// Routes a key press that was received by the autocomplete popup. Every key is
+// consumed here: it is either handed to the popup list (completion keys) or to
+// the editor (normal typing), never back to the popup menu itself, whose own
+// key handling would close the popup or eat the key.
+void EditorAutoCompleteFocusHandler::routeKeyPress(QKeyEvent* pKeyEvent)
+{
+    if (isCompletionKey(pKeyEvent)) {
+        // handled by edbee's event filter on the list
         QApplication::sendEvent(mpList, pKeyEvent);
         return;
+    }
 
+    switch (pKeyEvent->key()) {
     case Qt::Key_Backspace:
     case Qt::Key_Shift:
         // keep the popup open while deleting text or holding Shift
@@ -141,13 +155,37 @@ bool EditorAutoCompleteFocusHandler::eventFilter(QObject* pWatched, QEvent* pEve
             }
             break;
 
-        case QEvent::InputMethod:
         case QEvent::ShortcutOverride:
-            // input method and shortcut overrides are handled by the editor,
-            // not by the popup
+            // The popup is a QObject child of the editor, so the editor
+            // window's shortcuts still match while it is open - Escape would
+            // close the find bar instead of the popup. Claiming the override
+            // delivers the key to the popup as a key press.
+            if (isPopupOpen()) {
+                auto* keyEvent = static_cast<QKeyEvent*>(pEvent);
+                if (isCompletionKey(keyEvent) && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier))) {
+                    pEvent->accept();
+                    return true;
+                }
+                QApplication::sendEvent(mpEditorComponent, pEvent);
+                return true;
+            }
+            break;
+
+        case QEvent::InputMethod:
             if (isPopupOpen()) {
                 QApplication::sendEvent(mpEditorComponent, pEvent);
                 return true;
+            }
+            break;
+
+        case QEvent::Hide:
+            // The list announced each suggestion as the accessibility focus,
+            // and Qt hands the keyboard focus back to the editor on close
+            // without announcing it, so screen readers stay on a suggestion
+            // in a window that no longer exists.
+            if (QAccessible::isActive() && QApplication::focusWidget() == mpEditorComponent) {
+                QAccessibleEvent focusEvent(mpEditorComponent, QAccessible::Focus);
+                QAccessible::updateAccessibility(&focusEvent);
             }
             break;
 
