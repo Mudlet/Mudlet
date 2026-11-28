@@ -182,8 +182,9 @@ bool EditorAutoCompleteFocusHandler::eventFilter(QObject* pWatched, QEvent* pEve
             // The list announced each suggestion as the accessibility focus,
             // and Qt hands the keyboard focus back to the editor on close
             // without announcing it, so screen readers stay on a suggestion
-            // in a window that no longer exists.
-            if (QAccessible::isActive() && QApplication::focusWidget() == mpEditorComponent) {
+            // in a window that no longer exists. Switching to another
+            // application also closes the popup, and must announce nothing.
+            if (QAccessible::isActive() && QGuiApplication::applicationState() == Qt::ApplicationActive && QApplication::focusWidget() == mpEditorComponent) {
                 QAccessibleEvent focusEvent(mpEditorComponent, QAccessible::Focus);
                 QAccessible::updateAccessibility(&focusEvent);
             }
