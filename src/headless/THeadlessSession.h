@@ -227,8 +227,8 @@ public:
     // Changed in the running profile and stored, as Options::host, port and tls are; an empty host or a port of 0
     // keeps the profile's. Lua's reconnect(), the retry and the automatic reconnect go there from then on, every
     // later connection takes the TLS choice, and an open one stays as it is. setAutoReconnect() is the connection
-    // dialog's "Reconnect automatically", counted from the next lost or failed connection; turning it off calls off
-    // a waiting retry.
+    // dialog's "Reconnect automatically", stored too and counted from the next lost or failed connection; turning it
+    // off calls off a waiting retry.
     // False where submit() is refused or a detail could not be stored; setAddress() also where start() would refuse it.
     bool setAddress(const QString& host, int port, bool tls);
     bool setAutoReconnect(bool reconnect);
@@ -245,9 +245,9 @@ public:
     // The proxy as the running profile holds it. False where submit() is refused.
     bool proxy(Proxy& proxy);
     // As the profile preferences change it: written with the profile's next save, and used from the next connection,
-    // a download's too. The address is trimmed. Refused, changing nothing, for a port outside 0 to 65535, an address
-    // that is not a host's, or a proxy in use without its address or port, which the preferences would quietly
-    // connect around. False where submit() is refused as well.
+    // a download's too, while an open one stays as it is. The address is trimmed. Refused, changing nothing, for a
+    // port outside 0 to 65535, an address that is not a host's, or a proxy in use without its address or port,
+    // which the preferences would quietly connect around. False where submit() is refused as well.
     bool setProxy(const Proxy& proxy);
     // For this run only, as Options::proxyPassword is (empty goes back to the stored one, if any), and used from
     // the next connection. False where submit() is refused.
