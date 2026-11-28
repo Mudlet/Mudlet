@@ -1385,6 +1385,26 @@ than a `leave`'s, whether or not a window ran anything for it, as for the moves 
 window was at the press if it has gone since, and with nil and
 "the profile has no main window" until the first.
 
+`pointer()` runs a label's callbacks, not the links in its text: Mudlet lays out no rich text for a label, so
+the app finds the link the player tapped and passes it to `followLabelLink(label, href)`, which follows it as
+the GUI's label follows a click on it. The link is marked visited where `setLinkStyle()` gave the label a
+visited colour, which restyles its `text` and so names it in `scriptWindowsChanged`, for an anchor the link
+style reaches: `<a href="...">` or `<a href='...'>`, with no entity in a double-quoted `href`, as the visited
+links are compared with the `href` as written, in a label where `containsAnchorTag()` finds a link. Then a
+`send:` link's text goes to the game through the aliases, a `prompt:` link's text replaces the main command
+line's, which `commandLineTextRequested` tells, an `http:` or `https:` link opens through `QDesktopServices`, a
+link of any other scheme that is not a Lua method call, such as `mailto:`, `ftp://` or `javascript:`, runs
+nothing and is noted in the error console, and anything else runs as Lua, all before it returns. The scheme is
+read as a browser reads it, in any case and without the whitespace around the `href`, and a `send:` or
+`prompt:` link's text keeps a trailing space. It returns `ran`, or `failed`, with `errorString()` saying why,
+for a Lua error, a link not run, a web link nothing opened and a `prompt:` link while the game hides input
+(`hiddenInputWanted`): the GUI then puts the text in its hidden-input box, which a frontend with no window
+does not have, so the link is not followed or marked visited. It is `unknown`, with `errorString()` saying
+why, for a name that is not a label's and for an `href` that is not one of the label's links as its `text`
+holds them now, read as Qt reads them, with their entities decoded, and `refused` where `runLua()` is. An app
+that opens web links its own way, as one whose engine runs where it cannot start a browser, may keep them from
+it; they are then not marked visited.
+
 ## Embedding it: calls that do not wait
 
 `start()`, `installPackage()`, `save()` and `shutdown()` return only once they are done, and run the

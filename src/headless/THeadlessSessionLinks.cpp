@@ -22,6 +22,9 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TConsoleModel.h"
+#include "TLabelModel.h"
+#include "TNullConsoleFrontend.h"
+#include "TWindowRegistry.h"
 
 #include <QFile>
 #include <QPointer>
@@ -151,6 +154,62 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     }
     if (self) {
         mErrorString = luaErrorOf(errorText);
+    }
+    return LinkResult::failed;
+}
+
+THeadlessSession::LinkResult THeadlessSession::followLabelLink(const QString& label, const QString& href)
+{
+    if (!usable()) {
+        return LinkResult::refused;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    TLabelModel* pModel = pView && pView->labelRecord(label) ? mpHost->windowRegistry().labelModel(label) : nullptr;
+    if (!pModel) {
+        //: Error from a frontend with no window asked to follow a link in a label that the profile does not have; %1 is the name it gave
+        mErrorString = tr("The profile has no label called \"%1\".").arg(label);
+        return LinkResult::unknown;
+    }
+    // Only a link the label shows can be clicked; a pixmap or movie empties the text, and its links with it
+    if (!TLabelModel::linkTargets(pModel->mText).contains(href)) {
+        //: Error from a frontend with no window asked to follow a link in a label whose text has no link to that address; %1 is the label's name, %2 the link it gave
+        mErrorString = tr("The label \"%1\" has no link to \"%2\".").arg(label, href);
+        return LinkResult::unknown;
+    }
+    // The GUI puts a prompt: link's text in its hidden-input box while the game hides what is typed; with no window
+    // there is no such box, and the main command line takes nothing then, so the link is not followed at all
+    if (mpHost->passwordEntryWanted() && TLabelModel::linkScheme(href) == qsl("prompt")) {
+        //: Error from a frontend with no window asked to follow a prompt: link in a label, which puts text on the input line, while the game hides what is typed, as for a password
+        mErrorString = tr("The game is hiding input, so the link's text was not put on the input line.");
+        return LinkResult::failed;
+    }
+    pView->visitLabelLink(label, href);
+    QString errorText;
+    const auto errorCapture = connect(mpHost, &Host::signal_errorConsolePrint, this, [&errorText](const QString& text) {
+        errorText = text;
+    });
+    const QPointer<THeadlessSession> self(this);
+    // The Lua a link runs may delete the label, so the model is not read again after this
+    const TLabelModel::LinkFollowed followed = pModel->followLink(href);
+    disconnect(errorCapture);
+    switch (followed) {
+    case TLabelModel::LinkFollowed::sent:
+    case TLabelModel::LinkFollowed::prompted:
+    case TLabelModel::LinkFollowed::opened:
+    case TLabelModel::LinkFollowed::ran:
+        return LinkResult::ran;
+    case TLabelModel::LinkFollowed::notOpened:
+    case TLabelModel::LinkFollowed::notRun:
+    case TLabelModel::LinkFollowed::failed:
+        break;
+    }
+    if (self) {
+        if (followed == TLabelModel::LinkFollowed::notOpened) {
+            //: Error from a frontend with no window that followed a web link in a label which no application on the system opened; %1 is the link
+            mErrorString = tr("Nothing opened the web link \"%1\".").arg(href.trimmed());
+        } else {
+            mErrorString = luaErrorOf(errorText);
+        }
     }
     return LinkResult::failed;
 }

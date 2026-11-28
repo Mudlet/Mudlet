@@ -28,6 +28,7 @@
 #include <QSet>
 #include <QSize>
 #include <QString>
+#include <QStringList>
 
 #include <functional>
 #include <optional>
@@ -133,6 +134,27 @@ struct TLabelModel
     QString linkStyledText(const QString& text);
     // What the label shows for its text once the link style or the visited links change
     QString restyledText();
+    // The href of each link in the text, in the order of the text, as QLabel reads them to draw them as links
+    static QStringList linkTargets(const QString& text);
+    // Marks the link visited, as following it does, where a visited colour is set: true when the view should show
+    // restyledText(), false when nothing changed
+    bool visitLink(const QString& link);
+    // What following a link did. A browser drops the whitespace around an href before reading its scheme, and so
+    // does this; the payload of a send: or prompt: link is kept untrimmed, as it can end in a space the player means.
+    enum class LinkFollowed {
+        sent,      // send: its text went to the game, through the aliases
+        prompted,  // prompt: its text is on the main command line, for the player to finish and send
+        opened,    // http: or https: the system opened it
+        notOpened, // http: or https: nothing opened it
+        notRun,    // another scheme and not a Lua method call, such as mailto: - noted in the Errors console
+        ran,       // anything else is Lua, which ran
+        failed     // the Lua did not compile or raised an error, as the Errors console says
+    };
+    // What a click on a link does, whichever frontend shows the label; marking it visited is visitLink()'s
+    LinkFollowed followLink(const QString& link) const;
+    // The scheme followLink() reads: in lower case, before the first colon of the href without the whitespace around
+    // it, and empty where there is no colon or nothing before it
+    static QString linkScheme(const QString& link);
 
     QPointer<Host> mpHost;
     QString mName;

@@ -3768,6 +3768,14 @@ bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
     return true;
 }
 
+void TNullConsoleFrontend::visitLabelLink(const QString& name, const QString& link)
+{
+    const auto it = mLabels.find(name);
+    if (it != mLabels.end() && it->second.pModel->visitLink(link)) {
+        reapplyLabelLinkStyle(it->second);
+    }
+}
+
 // QWidget::resize() takes a negative size as nothing
 bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, const int height)
 {

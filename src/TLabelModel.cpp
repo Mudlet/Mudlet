@@ -20,11 +20,15 @@
 #include "TLabelModel.h"
 
 #include "Host.h"
+#include "TAppFrontend.h"
+#include "TConsoleFrontend.h"
 
+#include <QCoreApplication>
 #include <QFile>
 #include <QImage>
 #include <QRegularExpression>
 #include <QSvgRenderer>
+#include <QTextBlock>
 #include <QTextDocument>
 #include <QTextDocumentFragment>
 
@@ -359,6 +363,89 @@ QString TLabelModel::linkStyledText(const QString& text)
 QString TLabelModel::restyledText()
 {
     return styleLinks(mUnstyledText);
+}
+
+QStringList TLabelModel::linkTargets(const QString& text)
+{
+    // Read as QLabel reads its rich text, so every link it draws, not only those containsAnchorTag() finds: a raw
+    // '<' in a quoted href or a space after the tag's '<' still makes a link
+    QStringList targets;
+    QTextDocument document;
+    document.setHtml(text);
+    for (QTextBlock block = document.begin(); block.isValid(); block = block.next()) {
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            const QTextCharFormat format = it.fragment().charFormat();
+            if (!format.isAnchor()) {
+                continue;
+            }
+            // One link split across fragments by a change of style inside it is still one link
+            if (const QString href = format.anchorHref(); !href.isEmpty() && !targets.contains(href)) {
+                targets.append(href);
+            }
+        }
+    }
+    return targets;
+}
+
+bool TLabelModel::visitLink(const QString& link)
+{
+    if (mLinkVisitedColor.isEmpty()) {
+        return false;
+    }
+    mVisitedLinks.insert(link);
+    return true;
+}
+
+QString TLabelModel::linkScheme(const QString& link)
+{
+    // Check for custom schemes by looking for the colon separator; a browser
+    // also drops the whitespace around an href before reading its scheme
+    const QString href = link.trimmed();
+    const int colonPos = href.indexOf(':');
+    // RFC 3986: schemes are case-insensitive
+    return colonPos > 0 ? href.left(colonPos).toLower() : QString();
+}
+
+TLabelModel::LinkFollowed TLabelModel::followLink(const QString& link) const
+{
+    if (!mpHost) {
+        return LinkFollowed::failed;
+    }
+    if (const QString scheme = linkScheme(link); !scheme.isEmpty()) {
+        // Untrimmed: a prompt: or send: payload can end in a space the player means to keep
+        const QString payload = link.mid(link.indexOf(':') + 1);
+
+        // Handle custom Mudlet URL schemes for Lua commands
+        if (scheme == qsl("send")) {
+            // send: scheme - send the command to the MUD immediately
+            mpHost->send(payload);
+            return LinkFollowed::sent;
+        }
+
+        if (scheme == qsl("prompt")) {
+            // prompt: scheme - put text in command line and wait for user to press enter
+            mpHost->consoleFrontend()->replaceCommandLineText(qsl("main"), payload);
+            return LinkFollowed::prompted;
+        }
+
+        if (scheme == qsl("http") || scheme == qsl("https")) {
+            return TAppFrontend::instance()->openWebPage(link.trimmed()) ? LinkFollowed::opened : LinkFollowed::notOpened;
+        }
+
+        // After a scheme-shaped prefix only a Lua method call - tel:go(), pkg.ui:show "x" - is Lua;
+        // ftp://host, mailto:a@b.c or about:blank are URLs that Lua would only report as syntax errors.
+        static const QRegularExpression schemeName(qsl("^[a-z][a-z0-9+.-]*$"));
+        // Lua allows whitespace and --[[ ]] comments on either side of the method name
+        static const QRegularExpression methodCall(qsl("^(?:\\s|--\\[(=*)\\[.*?\\]\\1\\])*[A-Za-z_][A-Za-z0-9_]*(?:\\s|--\\[(=*)\\[.*?\\]\\2\\])*[(\"'{[]"));
+        if (scheme == qsl("javascript") || (schemeName.match(scheme).hasMatch() && !methodCall.match(payload).hasMatch())) {
+            //: Printed in the Errors console when a link in a label is clicked but neither handled nor run; %1 is the link, %2 its scheme
+            const QString note = QCoreApplication::translate("TLabel", "[LINK:] The label link \"%1\" was not run: %2: is not a scheme Mudlet handles, and the link is not a Lua command.").arg(link, scheme);
+            emit mpHost->signal_errorConsolePrint(note + QChar::LineFeed, QColor(255, 128, 0), QColor(Qt::black));
+            return LinkFollowed::notRun;
+        }
+    }
+
+    return mpHost->mLuaInterpreter.compileAndExecuteScript(link) ? LinkFollowed::ran : LinkFollowed::failed;
 }
 
 // If we have link styling configured and the text contains HTML links,

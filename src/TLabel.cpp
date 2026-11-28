@@ -32,7 +32,6 @@
 
 #include <QAccessible>
 #include <QApplication>
-#include <QDesktopServices>
 #include <QPainter>
 #include <QSvgRenderer>
 #include <QTextBlock>
@@ -40,7 +39,6 @@
 #include <QTextDocument>
 #include <QTextDocumentFragment>
 #include <QTimer>
-#include <QUrl>
 #include <QtEvents>
 #include <chrono>
 #include <utility>
@@ -975,61 +973,22 @@ void TLabel::reapplyLinkStyle()
 
 void TLabel::slot_linkActivated(const QString& link)
 {
-    if (!mLinkVisitedColor.isEmpty()) {
-        mVisitedLinks.insert(link);
+    if (mpModel->visitLink(link)) {
         reapplyLinkStyle();
     }
 
-    // Check for custom schemes by looking for the colon separator; a browser
-    // also drops the whitespace around an href before reading its scheme
-    const QString href = link.trimmed();
-    const int colonPos = href.indexOf(':');
-
-    if (colonPos > 0) {
-        const QString scheme = href.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
-        // Untrimmed: a prompt: or send: payload can end in a space the player means to keep
-        const QString payload = link.mid(link.indexOf(':') + 1);
-
-        // Handle custom Mudlet URL schemes for Lua commands
-        if (scheme == qsl("send")) {
-            // send: scheme - send the command to the MUD immediately
-            mpHost->send(payload);
-            return;
-        }
-
-        if (scheme == qsl("prompt")) {
-            // prompt: scheme - put text in command line and wait for user to press enter
-            if (mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
-                QPointer<TCommandLine> commandLine = mpHost->mainConsoleView()->mpCommandLine;
-                mpHost->mainConsoleView()->printToCommandLine(payload);
-                // Defer the focus operation to avoid issues with QPointer manipulation
-                // during the signal handler execution
-                QTimer::singleShot(0ms, commandLine.data(), [commandLine]() {
-                    if (commandLine) {
-                        commandLine->setFocus();
-                    }
-                });
-            }
-            return;
-        }
-
-        if (scheme == qsl("http") || scheme == qsl("https")) {
-            QDesktopServices::openUrl(QUrl(href));
-            return;
-        }
-
-        // After a scheme-shaped prefix only a Lua method call - tel:go(), pkg.ui:show "x" - is Lua;
-        // ftp://host, mailto:a@b.c or about:blank are URLs that Lua would only report as syntax errors.
-        static const QRegularExpression schemeName(qsl("^[a-z][a-z0-9+.-]*$"));
-        // Lua allows whitespace and --[[ ]] comments on either side of the method name
-        static const QRegularExpression methodCall(qsl("^(?:\\s|--\\[(=*)\\[.*?\\]\\1\\])*[A-Za-z_][A-Za-z0-9_]*(?:\\s|--\\[(=*)\\[.*?\\]\\2\\])*[(\"'{[]"));
-        if (scheme == qsl("javascript") || (schemeName.match(scheme).hasMatch() && !methodCall.match(payload).hasMatch())) {
-            //: Printed in the Errors console when a link in a label is clicked but neither handled nor run; %1 is the link, %2 its scheme
-            const QString note = tr("[LINK:] The label link \"%1\" was not run: %2: is not a scheme Mudlet handles, and the link is not a Lua command.").arg(link, scheme);
-            emit mpHost->signal_errorConsolePrint(note + QChar::LineFeed, QColor(255, 128, 0), QColor(Qt::black));
-            return;
-        }
+    // TLabelModel::followLink() is what a frontend without this widget runs as well
+    if (mpModel->followLink(link) != TLabelModel::LinkFollowed::prompted || !mpHost->mainConsoleView()) {
+        return;
     }
-
-    mpHost->mLuaInterpreter.compileAndExecuteScript(link);
+    // The prompt: link's text is on the command line, for the player to finish
+    if (QPointer<TCommandLine> commandLine = mpHost->mainConsoleView()->mpCommandLine) {
+        // Defer the focus operation to avoid issues with QPointer manipulation
+        // during the signal handler execution
+        QTimer::singleShot(0ms, commandLine.data(), [commandLine]() {
+            if (commandLine) {
+                commandLine->setFocus();
+            }
+        });
+    }
 }
