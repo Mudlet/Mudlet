@@ -353,17 +353,8 @@ bool TRoomDB::__removeRoom(int id)
 bool TRoomDB::removeRoom(int id)
 {
     if (rooms.contains(id) && id > 0) {
-        if (mpMap->mRoomIdHash.value(mpMap->mProfileName) == id) {
-            // Now we store mRoomId for each profile, we must remove any where
-            // this room was used
-            QList<QString> const profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys(id);
-            for (const auto& key : profilesWithUserInThisRoom) {
-                mpMap->mRoomIdHash[key] = 0;
-            }
+        if (forgetLocationsInRooms({id})) {
             mpMap->updateArea(-1);
-        }
-        if (mpMap->mTargetID == id) {
-            mpMap->mTargetID = 0;
         }
         TRoom* pR = getRoom(id);
         if (pR) {
@@ -372,6 +363,22 @@ bool TRoomDB::removeRoom(int id)
         return true;
     }
     return false;
+}
+
+// A player or speedwalk target left on a deleted room ID would follow whichever room reuses it.
+// Returns whether this profile's player was in one of them; the caller announces the change.
+bool TRoomDB::forgetLocationsInRooms(const QSet<int>& ids)
+{
+    const bool playerRoomDeleted = ids.contains(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+    for (int& playerRoomId : mpMap->mRoomIdHash) {
+        if (ids.contains(playerRoomId)) {
+            playerRoomId = 0;
+        }
+    }
+    if (ids.contains(mpMap->mTargetID)) {
+        mpMap->mTargetID = 0;
+    }
+    return playerRoomDeleted;
 }
 
 void TRoomDB::removeRoom(QSet<int>& ids)
@@ -409,6 +416,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
         }
     }
     deleteValuesFromEntranceMap(deletedRoomIds);
+    forgetLocationsInRooms(deletedRoomIds);
     mpTempRoomDeletionSet->clear();
     mpTempRoomDeletionSet = nullptr;
     qDebug() << "TRoomDB::removeRoom(QList<int>) run time for" << roomcount << "rooms:" << timer.nsecsElapsed() * 1.0e-9 << "sec.";

@@ -84,6 +84,26 @@ describe("Tests the room and area database behind the map", function()
       assert.is_nil(getSpecialExitsSwap(outside)["slip inside"])
     end)
 
+    it("deleteArea leaves the player nowhere when they stood in one of its rooms, as deleteRoom does", function()
+      local savedPlayerRoom = getPlayerRoom()
+      local area = addAreaName("RoomDBSpecStoodIn")
+      local standing = makeRoom(area, 0, 0, 10)
+      local beside = makeRoom(area, 1, 0, 10)
+      finally(function()
+        deleteRoom(standing); deleteRoom(beside)
+        deleteArea("RoomDBSpecStoodIn")
+        if savedPlayerRoom and roomExists(savedPlayerRoom) then
+          centerview(savedPlayerRoom)
+        end
+      end)
+
+      centerview(standing)
+      assert.are.equal(standing, getPlayerRoom())
+      assert.is_true(deleteArea(area))
+
+      assert.are.equal(0, getPlayerRoom())
+    end)
+
     it("an area outlives the last of its rooms", function()
       local area = addAreaName("RoomDBSpecEmptied")
       local only = makeRoom(area, 0, 0, 9)

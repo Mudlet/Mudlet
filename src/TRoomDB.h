@@ -123,6 +123,7 @@ private:
 
     int createNewAreaID();
     void roomIdFreed(int id);
+    bool forgetLocationsInRooms(const QSet<int>& ids);
     void deleteDisplacedArea(int, TArea*);
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
