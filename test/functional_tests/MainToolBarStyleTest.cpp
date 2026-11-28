@@ -606,8 +606,9 @@ private slots:
 
     void test_coloredIconsTakeTheColorsOfTheOldPictures()
     {
+        mudlet::self()->setColouredIcons(false);
         auto restore = qScopeGuard([]() {
-            mudlet::self()->setColouredIcons(false);
+            mudlet::self()->setColouredIcons(true);
             TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
         });
         const auto icon = [](const QString& objectName) {
@@ -640,7 +641,7 @@ private slots:
             TestPixels::setAppearanceAndWait(appearance);
             const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
             const QString said = appearanceSaidAs(appearance);
-            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map is in color with the switch off").arg(said)));
+            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map is in color with the icons set to grayscale").arg(said)));
 
             mudlet::self()->setColouredIcons(true);
             const Read map = read(icon(qsl("map_action")));
@@ -667,7 +668,7 @@ private slots:
             }
 
             mudlet::self()->setColouredIcons(false);
-            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map kept its color after the switch went off").arg(said)));
+            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map kept its color after the icons were set to grayscale").arg(said)));
         }
     }
 

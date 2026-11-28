@@ -2774,6 +2774,40 @@ describe("Tests UI functions", function()
       assert.are.same({ current = 30, max = 60 }, applied[1].mv)
     end)
 
+    -- DuneMUD documents Char.Vitals as a delta: after the first message only the
+    -- fields that changed are sent, and Mudlet replaces gmcp.Char.Vitals each time
+    it("should keep what a vitals message sent as a delta leaves out", function()
+      local renderVitals, lock, vitalsData = BaseUI.renderVitals, BaseUI.vitalsLock, BaseUI.vitalsData
+      finally(function()
+        BaseUI.renderVitals, BaseUI.vitalsLock, BaseUI.vitalsData = renderVitals, lock, vitalsData
+      end)
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.renderVitals = function() end
+      BaseUI.vitalsLock, BaseUI.vitalsData = 3, {}
+      local function send(vitals)
+        _G.gmcp = { Char = { Vitals = vitals } }
+        raiseEvent("gmcp.Char.Vitals")
+      end
+
+      send({ hp = 200, maxhp = 200, sp = 150, maxsp = 150 })
+      send({ hp = 50 })
+      assert.are.same({ current = 50, max = 200 }, BaseUI.vitalsData.hp)
+      assert.are.same({ current = 150, max = 150 }, BaseUI.vitalsData.mp)
+      send({ maxhp = 250 })
+      assert.are.same({ current = 50, max = 250 }, BaseUI.vitalsData.hp)
+
+      -- a full reading is newer than a percentage kept from an earlier message
+      send({ nl = 40 })
+      send({ xp = 10, maxxp = 20 })
+      assert.are.same({ current = 10, max = 20 }, BaseUI.vitalsData.xp)
+
+      -- an enemy that GMCP stops mentioning is gone, unlike the other stats
+      send({ enemypct = 40 })
+      assert.are.same({ percent = 40 }, BaseUI.vitalsData.enemy)
+      send({ hp = 60 })
+      assert.is_nil(BaseUI.vitalsData.enemy)
+    end)
+
     -- fed rather than raised: an unknown spelling is picked up from the namespace event
     it("should read a vitals node sent in any casing", function()
       for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
@@ -3636,6 +3670,17 @@ describe("Tests UI functions", function()
       assert.are.equal(2, count)
       assert.is_nil(id)
       assert.is_truthy(tostring(message):find(takenName, 1, true), "a plain button is no toolbar, got: " .. tostring(message))
+    end)
+
+    it("tempButtonToolbar answers nil and a message for a location no bar shows", function()
+      for _, location in ipairs({-1, 4}) do
+        local name = ("bustedTempBadLocation%d%s"):format(location, suffix)
+        local count, id, message = pack(tempButtonToolbar(name, location, 0))
+        assert.are.equal(2, count)
+        assert.is_nil(id)
+        assert.is_truthy(tostring(message):find("location " .. location, 1, true), "the refusal should name the location, got: " .. tostring(message))
+        assert.are.equal(0, exists(name, "button"))
+      end
     end)
 
     it("showing a button toolbar again does not stack another copy of its buttons", function()
@@ -6197,8 +6242,18 @@ describe("Window and label state", function()
     end)
 
     it("setBorderColor round-trips through getBorderColor", function()
-      setBorderColor(11, 22, 33)
+      assert.are.same({true}, {setBorderColor(11, 22, 33)})
       assert.are.same({11, 22, 33}, {getBorderColor()})
+    end)
+
+    it("setBorderColor refuses a component outside 0-255 and keeps the colour it had", function()
+      setBorderColor(11, 22, 33)
+      assert.are.same({nil, "red value 256 needs to be between 0-255"}, {setBorderColor(256, 22, 33)})
+      assert.are.same({nil, "green value -1 needs to be between 0-255"}, {setBorderColor(11, -1, 33)})
+      assert.are.same({nil, "blue value 300 needs to be between 0-255"}, {setBorderColor(11, 22, 300)})
+      assert.are.same({11, 22, 33}, {getBorderColor()})
+      assert.are.same({true}, {setBorderColor(255, 0, 255)})
+      assert.are.same({255, 0, 255}, {getBorderColor()})
     end)
   end)
 
@@ -8905,6 +8960,15 @@ describe("Toolbar buttons", function()
       setButtonState(pushDownButton, false)
     end)
 
+    local function assertBothRefuse(id, message)
+      local getOk, getErr = getButtonState(id)
+      assert.is_nil(getOk, tostring(id))
+      assert.are.equal(message, getErr)
+      local setOk, setErr = setButtonState(id, true)
+      assert.is_nil(setOk, tostring(id))
+      assert.are.equal(message, setErr)
+    end
+
     it("round-trips a button state by name", function()
       assert.is_false(getButtonState(pushDownButton))
       assert.is_true(setButtonState(pushDownButton, true))
@@ -8927,6 +8991,24 @@ describe("Toolbar buttons", function()
       local setOk, setErr = setButtonState(999999, true)
       assert.is_nil(setOk)
       assert.are.equal("no button item with ID 999999 found", setErr)
+    end)
+
+    it("both refuse an item ID that is NaN or rounds outside int's range", function()
+      -- Exact messages, as an unchecked cast gives INT_MIN on x86 and saturates (NaN to 0) on arm64
+      assertBothRefuse(math.huge, "no button item with ID inf found")
+      assertBothRefuse(-math.huge, "no button item with ID -inf found")
+      assertBothRefuse(0 / 0, "no button item with ID nan found")
+      assertBothRefuse(2147483648, "no button item with ID 2147483648 found")
+      assertBothRefuse(-2147483649, "no button item with ID -2147483649 found")
+      assertBothRefuse(2147483647.5, "no button item with ID 2147483647.5 found")
+      assertBothRefuse(-2147483648.5, "no button item with ID -2147483648.5 found")
+    end)
+
+    it("both take an item ID that rounds to an end of int's range as that int", function()
+      assertBothRefuse(2147483647, "no button item with ID 2147483647 found")
+      assertBothRefuse(2147483647.4, "no button item with ID 2147483647 found")
+      assertBothRefuse(-2147483648, "item ID (-2147483648) invalid, it must be equal or greater than zero")
+      assertBothRefuse(-2147483648.4, "item ID (-2147483648) invalid, it must be equal or greater than zero")
     end)
 
     it("getButtonState with no arguments answers the console's own button state", function()
@@ -8955,6 +9037,15 @@ describe("Toolbar buttons", function()
       assert.is_true(setButtonState(id, true))
       assert.is_true(getButtonState(id))
       assert.is_true(getButtonState(pushDownButton), "the ID and the name should be the same button")
+    end)
+
+    it("both round a fractional item ID to the nearest button ID", function()
+      local id = findItems(pushDownButton, "button")[1]
+      assert.is_number(id, "the package did not install " .. pushDownButton)
+      assert.is_false(getButtonState(id))
+      assert.is_true(setButtonState(id - 0.5, true))
+      assert.is_true(getButtonState(id + 0.4))
+      assert.is_true(getButtonState(pushDownButton), "the rounded ID and the name should be the same button")
     end)
 
     it("both refuse a button that is not a push-down one when it is given by ID", function()
