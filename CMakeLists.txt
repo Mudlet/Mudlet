@@ -276,6 +276,11 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
                         OPTION_VARIABLE USE_SPEECH_ENGINES
                         READABLE_NAME "Vosk and sherpa-onnx speech engine loading"
                         DEFAULT ${DESKTOP_ONLY_DEFAULT})
+# Off: an evaluation backend for SGR decoding, and building libghostty-vt needs Zig
+include_optional_module(ENVIRONMENT_VARIABLE WITH_LIBGHOSTTY
+                        OPTION_VARIABLE USE_LIBGHOSTTY
+                        READABLE_NAME "libghostty-vt SGR decoder"
+                        DEFAULT OFF)
 
 # Where CI/build-wasm-dependencies.sh keeps its stamps, under the prefix it built
 set(MUDLET_WASM_DEPS_STAMPS_SUBDIR share/mudlet-wasm-deps)
