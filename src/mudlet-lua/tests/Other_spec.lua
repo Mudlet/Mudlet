@@ -363,6 +363,44 @@ describe("Tests Other.lua functions", function()
       send:revert()
     end)
 
+    it("splits directions written without separators into one step each", function()
+      local sent = {}
+      local send = stub(_G, "send", function(command) sent[#sent + 1] = command end)
+      finally(function() send:revert() end)
+
+      speedwalk("nneeu")
+      assert.are.same({"n", "ne", "e", "u"}, sent)
+
+      sent = {}
+      speedwalk("nneeu", true)
+      assert.are.same({"d", "w", "sw", "s"}, sent)
+
+      sent = {}
+      speedwalk("2in, nout, 10e", true)
+      assert.are.same({"w", "w", "w", "w", "w", "w", "w", "w", "w", "w", "in", "s", "out", "out"}, sent)
+
+      sent = {}
+      speedwalk("eewwen")
+      assert.are.same({"e", "e", "w", "w", "e", "n"}, sent)
+
+      sent = {}
+      speedwalk("nu")
+      assert.are.same({"n", "u"}, sent)
+
+      sent = {}
+      speedwalk("nu", true)
+      assert.are.same({"d", "s"}, sent)
+    end)
+
+    it("walks each of the twelve directions back the opposite way", function()
+      local sent = {}
+      local send = stub(_G, "send", function(command) sent[#sent + 1] = command end)
+      finally(function() send:revert() end)
+
+      speedwalk("n, ne, e, se, s, sw, w, nw, u, d, in, out", true)
+      assert.are.same({"in", "out", "u", "d", "se", "e", "ne", "n", "nw", "w", "sw", "s"}, sent)
+    end)
+
     it("dispatches only the first step synchronously when a delay is given", function()
       local send = spy.on(_G, "send")
 

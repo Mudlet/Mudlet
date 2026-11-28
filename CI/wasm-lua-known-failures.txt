@@ -11,6 +11,7 @@ Error Package_spec.lua: Tests opening a profile whose script fails as it loads r
 Failure Mapper_spec.lua: Tests closing another profile that opened a map widget survives the main window being activated again after the close
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes after resetProfile() then closeProfile()
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes another profile after closeProfile(), then closes
+Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop does not reuse an http request id after resetProfile()
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop loads another profile after closeProfile(), then closes
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop loads another profile after resetProfile(), then resets
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop never runs another function for a timer made while its state closed
@@ -72,6 +73,10 @@ Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk r
 Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life refuses to pause a delayed walk while its last step is being sent
 Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life starts no walk of its own once a sysSpeedwalkStopped handler has started one
 Failure Other_spec.lua: Tests Other.lua functions Tests the events a speedwalk raises over its whole life stops a running delayed walk before starting another
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should call a function with each value in time order
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should clear the variable now, set it at true_time and clear it again at nil_time
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should drop the earlier schedule when called again for the same variable
+Failure Other_spec.lua: Tests Other.lua functions Tests timeframe Should not set the variable once killtimeframe has cancelled it
 Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer kills a repeating timer from inside its own callback
 Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer returns false for a one-shot timer that has already fired
 Failure Other_spec.lua: Tests the timer API Tests the functionality of killTimer stops a pending timer from ever firing and deactivates it
