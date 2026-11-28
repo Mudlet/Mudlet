@@ -6792,6 +6792,12 @@ void TBuffer::keepLineIds()
     }
 }
 
+void TBuffer::dropLineIds()
+{
+    mLineIdsKept = false;
+    lineIdBuffer = QList<qint64>();
+}
+
 void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();

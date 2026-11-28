@@ -649,7 +649,6 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 mShownLinesOfPasses.clear();
                 mSentLineIds.clear();
                 mEditedLineIds.clear();
-                pNewHost->mainConsoleModel().buffer.keepLineIds();
                 pNewHost->mainConsoleModel().mTriggerTextShownElsewhere = [self = QPointer<THeadlessSession>(this)]() {
                     return self && self->lineShownTaken();
                 };
@@ -2480,6 +2479,7 @@ qint64 THeadlessSession::arrivalTime(const TBuffer& buffer, int line)
 
 void THeadlessSession::lineCommitted(const int lineIndex)
 {
+    keepLineIdsWhileFollowed();
     if (mShownLinesOfPasses.isEmpty()) {
         mLineShownLatched = lineShownWanted();
     }
@@ -2539,13 +2539,18 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
     const TLineFormat& firstFormat = buffer.buffer.at(first);
     std::vector<TChar> format(firstFormat.begin() + std::min<qsizetype>(firstPadding, firstFormat.size()), firstFormat.end());
     format.resize(text.size(), format.empty() ? TChar() : format.back());
-    QList<qint64> lineIds{buffer.lineIdBuffer.at(first)};
-    // A line feed a script wrote into a row parts the text there too, into a line with no id of its own
-    lineIds.insert(lineIds.size(), text.count(QChar::LineFeed), 0);
+    // Left for sendShownLines() to fill with 0s while no id is kept
+    const bool idsKept = buffer.lineIdsKept();
+    QList<qint64> lineIds;
+    if (idsKept) {
+        lineIds.append(buffer.lineIdBuffer.at(first));
+        // A line feed a script wrote into a row parts the text there too, into a line with no id of its own
+        lineIds.insert(lineIds.size(), text.count(QChar::LineFeed), 0);
+    }
     for (int y = first + 1; y <= last; ++y) {
         const QString& segment = buffer.lineBuffer.at(y);
         const bool wrapped = buffer.wrapsFromPreviousLine(y);
-        if (!wrapped) {
+        if (!wrapped && idsKept) {
             lineIds.append(buffer.lineIdBuffer.at(y));
         }
         const int padding = wrapped ? buffer.wrapIndentWidth(y) : std::min(buffer.wrapGapBefore(y), buffer.wrapIndentWidth(y));
@@ -2556,7 +2561,9 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         const int from = std::min(padding, static_cast<int>(segment.size()));
         const QStringView added = QStringView(segment).mid(from);
         text.append(added);
-        lineIds.insert(lineIds.size(), added.count(QChar::LineFeed), 0);
+        if (idsKept) {
+            lineIds.insert(lineIds.size(), added.count(QChar::LineFeed), 0);
+        }
         const auto formatFrom = segmentFormat.begin() + std::min<qsizetype>(from, segmentFormat.size());
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
@@ -2651,6 +2658,23 @@ bool THeadlessSession::lineIdHeld(const qint64 lineId) const
 bool THeadlessSession::lineIdsFollowed() const
 {
     return !mSentLineIds.isEmpty() || (!mShownLinesOfPasses.isEmpty() && isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::linesUpdated)));
+}
+
+// Checked as each line comes, not in disconnectNotify(), which may not ask whether a receiver is left; let go only
+// between passes, as the lines they hold are sent with the ids they were given
+void THeadlessSession::keepLineIdsWhileFollowed()
+{
+    if (!mpHost) {
+        return;
+    }
+    TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+    if (isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::linesUpdated))) {
+        buffer.keepLineIds();
+    } else if (buffer.lineIdsKept() && mShownLinesOfPasses.isEmpty()) {
+        buffer.dropLineIds();
+        mSentLineIds.clear();
+        mEditedLineIds.clear();
+    }
 }
 
 // The id of the line lineShown sent that line is part of: the first line of its paragraph, or of the part of one a

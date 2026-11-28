@@ -957,6 +957,65 @@ selectCurrentLine() replace("BEFORE") moveCursorEnd()
         QVERIFY(session.shutdown(false));
     }
 
+    void test_lineIdsAreKeptOnlyWhileLineUpdatesAreFollowed()
+    {
+        const QString name = qsl("Headless Line Ids Kept While Followed");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessReplaceLine(text, with)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then
+      selectCurrentLine() replace(with) moveCursorEnd()
+      return
+    end
+  end
+end
+feedTriggers("before\n")
+)lua")));
+        QCOMPARE(idOf.value(qsl("before"), -1), qint64(0));
+        QVERIFY(buffer.lineIdBuffer.isEmpty());
+
+        // The lines already held get ids once an app follows them, but only those sent since are followed
+        std::optional<QSignalSpy> updated(std::in_place, &session, &THeadlessSession::linesUpdated);
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("followed\n"))")));
+        QCOMPARE(buffer.lineIdBuffer.size(), buffer.lineBuffer.size());
+        const qint64 followed = idOf.value(qsl("followed"));
+        QVERIFY(followed > 0);
+        QCOMPARE(buffer.lineIdBuffer.at(buffer.lineBuffer.indexOf(qsl("followed"))), followed);
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("before", "BEFORE"))")));
+        QVERIFY(!updated->wait(200));
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("followed", "FOLLOWED"))")));
+        QVERIFY(updated->wait(1000));
+        QList<THeadlessSession::LineUpdate> got = takeUpdates(*updated);
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, followed);
+        QCOMPARE(got.first().text, qsl("FOLLOWED"));
+
+        // Let go of with the next line, so a line sent before is not followed when an app follows them again
+        updated.reset();
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("unfollowed\n"))")));
+        QCOMPARE(idOf.value(qsl("unfollowed"), -1), qint64(0));
+        QVERIFY(buffer.lineIdBuffer.isEmpty());
+        updated.emplace(&session, &THeadlessSession::linesUpdated);
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("again\n"))")));
+        const qint64 again = idOf.value(qsl("again"));
+        QVERIFY(again > followed);
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("FOLLOWED", "followed"))")));
+        QVERIFY(!updated->wait(200));
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("again", "AGAIN"))")));
+        QVERIFY(updated->wait(1000));
+        got = takeUpdates(*updated);
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, again);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_linesTrimmedOffTheTopLeaveTheRestFollowed()
     {
         const QString name = qsl("Headless Line Ids Trimmed");

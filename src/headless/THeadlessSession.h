@@ -991,9 +991,9 @@ signals:
     // setFgColor(), setLink(), insertText() on a line it moved the cursor to) or deleted, each named by its
     // lineIds entry: those deleted first, then the others in the order they stand. From the event loop, once for
     // all a turn changed; not for the line lineShown is still to send, for a line trimmed off the top as the
-    // console outgrows its limit, nor after mainConsoleCleared for the lines before it. A line a script's
-    // wrapLine() or insertText() of a line feed split keeps only the first of its parts, and the change of a
-    // link's state, which linksChanged tells of, is not one.
+    // console outgrows its limit, after mainConsoleCleared for the lines before it, nor for those before a line that
+    // came while this was not connected. A line a script's wrapLine() or insertText() of a line feed split keeps
+    // only the first of its parts, and the change of a link's state, which linksChanged tells of, is not one.
     void linesUpdated(const QString& profile, const QList<THeadlessSession::LineUpdate>& updates);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
@@ -1238,6 +1238,7 @@ private:
     qint64 shownLineId(const TBuffer& buffer, int line) const;
     bool lineIdHeld(qint64 lineId) const;
     bool lineIdsFollowed() const;
+    void keepLineIdsWhileFollowed();
     void noteLinesEdited(int firstLine, int lastLine);
     void noteLinesRemoved(int firstLine, int lastLine, bool trimmed);
     void queueLineUpdates();
