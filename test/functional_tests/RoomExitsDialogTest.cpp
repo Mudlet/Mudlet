@@ -35,8 +35,10 @@
  */
 
 #include <QAbstractItemDelegate>
+#include <QAccessible>
 #include <QCheckBox>
 #include <QFileInfo>
+#include <QGroupBox>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QRadioButton>
@@ -319,6 +321,71 @@ private slots:
         QVERIFY2(pDlg->down->text().isEmpty(), "an exit to a deleted room was still shown as a destination");
         QVERIFY(pDlg->stub_down->isEnabled());
         QCOMPARE(pDlg->getActionOnExit(pDlg->down), pDlg->mpAction_noExit);
+    }
+
+    // Each control's screen reader name must include its direction and be
+    // unique across the dialog
+    void everyExitControlHasItsOwnScreenReaderName()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+
+        QSet<QString> namesSeen;
+        for (auto* pGroup : {pDlg->groupBox_nw,
+                             pDlg->groupBox_n,
+                             pDlg->groupBox_ne,
+                             pDlg->groupBox_up,
+                             pDlg->groupBox_w,
+                             pDlg->groupBox_e,
+                             pDlg->groupBox_down,
+                             pDlg->groupBox_sw,
+                             pDlg->groupBox_s,
+                             pDlg->groupBox_se,
+                             pDlg->groupBox_in,
+                             pDlg->groupBox_out}) {
+            const auto controls = pGroup->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+            QCOMPARE(controls.size(), 8);
+            for (auto* pControl : controls) {
+                QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pControl);
+                QVERIFY(pInterface);
+                const QString name = pInterface->text(QAccessible::Name);
+                QVERIFY2(name.contains(pGroup->title()), qPrintable(qsl("%1 is read out as \"%2\"").arg(pControl->objectName(), name)));
+                QVERIFY2(!namesSeen.contains(name), qPrintable(qsl("%1 shares the name \"%2\"").arg(pControl->objectName(), name)));
+                namesSeen.insert(name);
+            }
+        }
+
+        // The checks above still pass if two controls of one exit swap names
+        const QString nw = pDlg->groupBox_nw->title();
+        QCOMPARE(pDlg->nw->accessibleName(), qsl("%1 exit room ID").arg(nw));
+        QCOMPARE(pDlg->noroute_nw->accessibleName(), qsl("%1 exit: no route").arg(nw));
+        QCOMPARE(pDlg->stub_nw->accessibleName(), qsl("%1 exit: stub exit").arg(nw));
+        QCOMPARE(pDlg->weight_nw->accessibleName(), qsl("%1 exit weight").arg(nw));
+        QCOMPARE(pDlg->doortype_none_nw->accessibleName(), qsl("%1 exit: no door").arg(nw));
+        QCOMPARE(pDlg->doortype_open_nw->accessibleName(), qsl("%1 exit: open door").arg(nw));
+        QCOMPARE(pDlg->doortype_closed_nw->accessibleName(), qsl("%1 exit: closed door").arg(nw));
+        QCOMPARE(pDlg->doortype_locked_nw->accessibleName(), qsl("%1 exit: locked door").arg(nw));
+    }
+
+    void theNoRouteBoxesCanBeReachedFromTheKeyboard()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+
+        for (auto* pNoRoute : {pDlg->noroute_nw,
+                               pDlg->noroute_n,
+                               pDlg->noroute_ne,
+                               pDlg->noroute_up,
+                               pDlg->noroute_w,
+                               pDlg->noroute_e,
+                               pDlg->noroute_down,
+                               pDlg->noroute_sw,
+                               pDlg->noroute_s,
+                               pDlg->noroute_se,
+                               pDlg->noroute_in,
+                               pDlg->noroute_out}) {
+            QVERIFY2(pNoRoute->focusPolicy() & Qt::TabFocus, qPrintable(qsl("%1 cannot be tabbed to").arg(pNoRoute->objectName())));
+        }
     }
 
     void typingAKnownRoomIdOpensUpTheRestOfTheRow()
