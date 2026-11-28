@@ -28,17 +28,19 @@
  * pointer changes only its ink, and the hairline the tabs stand on runs on past
  * the last tab to the end of what is under the strip. The same windows made
  * right to left are read again, as the mirror image of all of that. Under a
- * script's sheet that names QTabBar, on the application or on the window, the
- * script draws every strip whole and the design steps aside, and it comes back
- * when the sheet goes, all while the windows stay open. A tab widget on the
- * recipe has the size its pages, its strip and its pane need as its size hint,
- * so given that size it lays its pages out at theirs; under a script's sheet
- * its hint is that of one the design never touched.
+ * script's sheet that names QTabBar, on the application, on the window or on a
+ * widget above a dialog's window, the script draws every strip whole and the
+ * design steps aside, and it comes back when the sheet goes, all while the
+ * windows stay open. A tab widget on the recipe has the size its pages, its
+ * strip and its pane need as its size hint, so given that size it lays its
+ * pages out at theirs; under a script's sheet its hint is that of one the
+ * design never touched.
  *
  * Run with: ctest -R UnderlinedTabStripTest -V
  */
 
 #include <QApplication>
+#include <QDialog>
 #include <QFontInfo>
 #include <QFontMetricsF>
 #include <QHash>
@@ -54,6 +56,7 @@
 #include <QTabBar>
 #include <QTabWidget>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QtTest/QtTest>
 
 #include <algorithm>
@@ -574,14 +577,15 @@ private:
 
     // The script's sheet draws every tab whole, and nothing of the design's is left on the strip: no style of its own
     // on the bar, none of tabBarStyleSheet()'s rules in a sheet on the way to it, no underline, no hairline.
-    // pSheetHolder is the window the script's sheet is on, or null for the application's.
+    // pSheetHolder is the widget the script's sheet is on - the window or one above it - or null for the application's.
     void readTheScriptsStrip(const Strip& strip, const QWidget* pSheetHolder)
     {
         QTabBar* pBar = strip.pBar;
         QVERIFY2(pBar && pBar->isVisible(), qPrintable(qsl("%1: the strip is not on show").arg(strip.what)));
         pBar->setCurrentIndex(0);
         TestPixels::settle();
-        const QString where = qsl("%1 under a script's sheet on %2").arg(strip.what, pSheetHolder ? qsl("the window") : qsl("the application"));
+        const QString holder = !pSheetHolder ? qsl("the application") : pSheetHolder == strip.pWindow ? qsl("the window") : qsl("%1, above the window").arg(pSheetHolder->objectName());
+        const QString where = qsl("%1 under a script's sheet on %2").arg(strip.what, holder);
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
         QVERIFY2(!pBar->testAttribute(Qt::WA_SetStyle), qPrintable(qsl("%1: the bar still wears a style of its own, which the design set").arg(where)));
@@ -830,6 +834,87 @@ private:
         return pTabs;
     }
 
+    // Set up as dlgPackageManager sets itself up: the tab rules on a container inside the window only while
+    // prepareTabStrip() answers true, and decided again on a StyleChange that tabStripOutOfDate() answers true for
+    class RecipeDialog : public QDialog
+    {
+    public:
+        explicit RecipeDialog(QWidget* pParent)
+        : QDialog(pParent)
+        , mpBody(new QWidget(this))
+        , mpTabs(tabWidgetWithKnownPages(mpBody, qsl("recipeTabs"), false))
+        {
+            setObjectName(qsl("recipeDialog"));
+            mpBody->setObjectName(qsl("recipeBody"));
+            auto* pBodyLayout = new QVBoxLayout(mpBody);
+            pBodyLayout->addWidget(mpTabs);
+            auto* pLayout = new QVBoxLayout(this);
+            pLayout->setContentsMargins(0, 0, 0, 0);
+            pLayout->addWidget(mpBody);
+            restyle();
+        }
+
+        QTabWidget* tabs() const { return mpTabs; }
+        bool designed() const { return mDesigned; }
+        int styleChanges() const { return mStyleChanges; }
+
+    protected:
+        void changeEvent(QEvent* pEvent) override
+        {
+            QDialog::changeEvent(pEvent);
+            if (pEvent->type() == QEvent::StyleChange) {
+                ++mStyleChanges;
+                if (uiDesign::tabStripOutOfDate(mpTabs->tabBar())) {
+                    restyle();
+                }
+            }
+        }
+
+    private:
+        void restyle()
+        {
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            mDesigned = uiDesign::prepareTabStrip(mpTabs->tabBar());
+            mpBody->setStyleSheet(qsl("QWidget#recipeBody { background-color: %1; }").arg(tokens.page.name())
+                                  + (mDesigned ? uiDesign::tabBarStyleSheet(qsl("#recipeTabs"), tokens, uiDesign::scmTabPaneInset, mpTabs->layoutDirection()) : QString()));
+        }
+
+        QWidget* mpBody;
+        QTabWidget* mpTabs;
+        bool mDesigned = false;
+        int mStyleChanges = 0;
+    };
+
+    // A dialog under a holder under a grandparent, as one made under the mapper stands under the widgets
+    // setProfileStyleSheet() gives the profile's sheet. All three go in cleanup(), so no sheet on them outlives a test.
+    QWidget* mpGrandparent = nullptr;
+    QWidget* mpHolder = nullptr;
+    RecipeDialog* mpRecipeDialog = nullptr;
+
+    void makeTheDialogsHolders()
+    {
+        mpGrandparent = new QWidget;
+        mpGrandparent->setObjectName(qsl("grandparent"));
+        mpHolder = new QWidget(mpGrandparent);
+        mpHolder->setObjectName(qsl("holder"));
+    }
+
+    // Neither holder is shown: a dialog is a window of its own, which needs no parent on show
+    void openTheRecipeDialog()
+    {
+        mpRecipeDialog = new RecipeDialog(mpHolder);
+        mpRecipeDialog->resize(600, 400);
+        mpRecipeDialog->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpRecipeDialog));
+        TestPixels::settle();
+    }
+
+    Strip recipeDialogStrip() const
+    {
+        const QWidget* pPage = mpRecipeDialog->tabs()->currentWidget();
+        return Strip{qsl("a dialog on the recipe"), mpRecipeDialog->tabs()->tabBar(), mpRecipeDialog, leftIn(pPage, mpRecipeDialog), rightIn(pPage, mpRecipeDialog)};
+    }
+
     void openTheNotepad(const int notes)
     {
         mudlet::self()->slot_notes();
@@ -954,6 +1039,10 @@ private slots:
         if (mpHost && !mpHost->mProfileStyleSheet.isEmpty()) {
             mpHost->setProfileStyleSheet(QString());
         }
+        delete mpGrandparent;
+        mpGrandparent = nullptr;
+        mpHolder = nullptr;
+        mpRecipeDialog = nullptr;
         TestPixels::settle();
     }
 
@@ -1215,6 +1304,86 @@ private slots:
         mpHost->setProfileStyleSheet(QString());
         TestPixels::settle();
         readStrip(notepadStrip(), qsl("the current"));
+    }
+
+    // Qt carries a parent's sheet into a dialog, across the window's edge: a profile's sheet on the mapper reaches a
+    // dialog made under it
+    void test_aSheetOnTheDialogsParentTakesItsStrip()
+    {
+        makeTheDialogsHolders();
+        mpHolder->setStyleSheet(scriptTabSheet());
+        openTheRecipeDialog();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(!mpRecipeDialog->designed(), "prepareTabStrip() gave the design a dialog's strip made under a parent whose sheet names QTabBar");
+        readTheScriptsStrip(recipeDialogStrip(), mpHolder);
+    }
+
+    void test_aSheetFurtherUpTakesTheDialogsStrip()
+    {
+        makeTheDialogsHolders();
+        mpGrandparent->setStyleSheet(scriptTabSheet());
+        openTheRecipeDialog();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(!mpRecipeDialog->designed(), "prepareTabStrip() gave the design a dialog's strip made two widgets under a sheet that names QTabBar");
+        readTheScriptsStrip(recipeDialogStrip(), mpGrandparent);
+    }
+
+    // setProfileStyleSheet() while the dialog is open: the strip changes hands on the StyleChange the parent's sheet
+    // sends the dialog, and back again when the sheet goes
+    void test_aSheetOnTheDialogsParentComesAndGoesWhileItIsOpen()
+    {
+        makeTheDialogsHolders();
+        openTheRecipeDialog();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(mpRecipeDialog->designed(), "SETUP: a script's sheet takes the dialog's tabs with none set");
+
+        const int beforeTheSheet = mpRecipeDialog->styleChanges();
+        mpHolder->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        qInfo().noquote() << qsl("  setting the parent's sheet sent the dialog %1 StyleChange events").arg(QString::number(mpRecipeDialog->styleChanges() - beforeTheSheet));
+        QVERIFY2(mpRecipeDialog->styleChanges() > beforeTheSheet, "setting a sheet on the dialog's parent sent the dialog no StyleChange, so it cannot learn that a script's sheet now reaches it");
+        QVERIFY2(!mpRecipeDialog->designed(), "the design kept the dialog's strip when a sheet naming QTabBar went on its parent");
+        readTheScriptsStrip(recipeDialogStrip(), mpHolder);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        const int whileTheSheetHeld = mpRecipeDialog->styleChanges();
+        mpHolder->setStyleSheet(QString());
+        TestPixels::settle();
+        qInfo().noquote() << qsl("  clearing the parent's sheet sent the dialog %1 StyleChange events").arg(QString::number(mpRecipeDialog->styleChanges() - whileTheSheetHeld));
+        QVERIFY2(mpRecipeDialog->styleChanges() > whileTheSheetHeld, "clearing the sheet on the dialog's parent sent the dialog no StyleChange, so it cannot learn that the script's sheet went");
+        QVERIFY2(mpRecipeDialog->designed(), "the design did not take the dialog's strip back once its parent's sheet went");
+        readStrip(recipeDialogStrip(), qsl("the current"));
+    }
+
+    // A sheet above the dialog about something else leaves the design in place, and one changed to name QTabBar while
+    // the dialog is open takes the strip
+    void test_aParentsSheetNamingNoTabBarLeavesTheDesign()
+    {
+        makeTheDialogsHolders();
+        // theme-fixed: the script's own colour for its buttons, which no strip may take as a reason to step aside
+        mpHolder->setStyleSheet(qsl("QPushButton { color: %1; }").arg(QColor(Qt::red).name()));
+        openTheRecipeDialog();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(mpRecipeDialog->designed(), "the design stepped aside from a dialog's strip for a sheet on its parent that names no QTabBar");
+        readStrip(recipeDialogStrip(), qsl("the current"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        mpHolder->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        QVERIFY2(!mpRecipeDialog->designed(), "the design kept the dialog's strip when its parent's sheet changed to one naming QTabBar");
+        readTheScriptsStrip(recipeDialogStrip(), mpHolder);
     }
 
     // Last, as it leaves the windows made right to left for cleanupTestCase() to close
