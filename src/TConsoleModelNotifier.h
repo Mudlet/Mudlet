@@ -58,6 +58,8 @@ signals:
     // A line that may have been wrapped by the game is being held back for its
     // continuation, which may never come.
     void serverWrapLineHeld();
+    // The mark of a Markdown message changed; no line's text did
+    void markdownMarkChanged(quint32 message);
     void linkCharactersChanged();
     // These lines were restyled or written into where they stand.
     void linesChanged(int firstLine, int lastLine);

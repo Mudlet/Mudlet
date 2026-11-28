@@ -38,6 +38,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -128,8 +129,8 @@ private:
 
     QString analysisOf(TTextEdit* pane, const QPoint& from, const QPoint& to)
     {
-        pane->mPA = from;
-        pane->mPB = to;
+        pane->mpSelection->mPA = from;
+        pane->mpSelection->mPB = to;
         pane->mpContextMenuAnalyser = new QAction(pane);
         pane->slot_analyseSelection();
         return pane->mpContextMenuAnalyser->toolTip();
@@ -162,10 +163,10 @@ private:
         }
         console->print(text);
         TTextEdit* pane = upperPane();
-        pane->mPA = QPoint(0, firstLine);
+        pane->mpSelection->mPA = QPoint(0, firstLine);
         selectToTheEnd(pane);
-        pane->mSelectedRegion = QRegion(0, 0, 1, 1);
-        for (int y = firstLine + 1; y <= pane->mPB.y(); ++y) {
+        pane->mpSelection->mSelectedRegion = QRegion(0, 0, 1, 1);
+        for (int y = firstLine + 1; y <= pane->mpSelection->mPB.y(); ++y) {
             if (buffer.wrapsFromPreviousLine(y)) {
                 return pane;
             }
@@ -196,7 +197,7 @@ private:
         while (lastLine > 0 && buffer.lineBuffer.at(lastLine).isEmpty()) {
             --lastLine;
         }
-        pane->mPB = QPoint(static_cast<int>(buffer.lineBuffer.at(lastLine).size()) - 1, lastLine);
+        pane->mpSelection->mPB = QPoint(static_cast<int>(buffer.lineBuffer.at(lastLine).size()) - 1, lastLine);
     }
 
     int printedLineNumber(const QString& text)
@@ -342,8 +343,8 @@ private slots:
         QVERIFY2(pane->width() > 400 && pane->height() > 100, qPrintable(QStringLiteral("Upper pane too small: %1x%2").arg(pane->width()).arg(pane->height())));
 
         pane->unHighlight();
-        pane->mSelectedRegion = QRegion();
-        QVERIFY(pane->mSelectedRegion.isEmpty());
+        pane->mpSelection->mSelectedRegion = QRegion();
+        QVERIFY(pane->mpSelection->mSelectedRegion.isEmpty());
 
         // Click in the middle of the pane (well past the timestamp gutter), then
         // a move event at the very same pixel - i.e. no movement to a different
@@ -353,7 +354,7 @@ private slots:
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, clickPos);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, clickPos);
 
-        QVERIFY2(pane->mSelectedRegion.isEmpty(), "A click with no drag left a stray selection in the console (regression of #3922)");
+        QVERIFY2(pane->mpSelection->mSelectedRegion.isEmpty(), "A click with no drag left a stray selection in the console (regression of #3922)");
     }
 
     void test_aPressAndReleaseRaiseTheirButtonPlaceAndWindow()
@@ -426,7 +427,7 @@ private slots:
         QVERIFY2(pane, "No upper pane available");
 
         pane->unHighlight();
-        pane->mSelectedRegion = QRegion();
+        pane->mpSelection->mSelectedRegion = QRegion();
 
         const QPointF startPos = QRectF(pane->rect()).center();
         const QPointF endPos = startPos + QPointF(60, 0); // several character cells to the right
@@ -434,7 +435,7 @@ private slots:
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, endPos);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, endPos);
 
-        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "A real drag failed to create a selection");
+        QVERIFY2(!pane->mpSelection->mSelectedRegion.isEmpty(), "A real drag failed to create a selection");
     }
 
     // Regression case for the review fix: once a drag has genuinely selected
@@ -453,20 +454,20 @@ private slots:
         QVERIFY2(pane, "No upper pane available");
 
         pane->unHighlight();
-        pane->mSelectedRegion = QRegion();
+        pane->mpSelection->mSelectedRegion = QRegion();
 
         const QPointF startPos = QRectF(pane->rect()).center();
         const QPointF endPos = startPos + QPointF(60, 0); // several character cells to the right
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, startPos);
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, endPos);
 
-        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The initial drag failed to create a selection");
-        const QRect expandedSelection = pane->mSelectedRegion.boundingRect();
+        QVERIFY2(!pane->mpSelection->mSelectedRegion.isEmpty(), "The initial drag failed to create a selection");
+        const QRect expandedSelection = pane->mpSelection->mSelectedRegion.boundingRect();
 
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, startPos);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, startPos);
 
-        const QRect collapsedSelection = pane->mSelectedRegion.boundingRect();
+        const QRect collapsedSelection = pane->mpSelection->mSelectedRegion.boundingRect();
         QVERIFY2(collapsedSelection.width() < expandedSelection.width(), "Dragging back to the press cell left the earlier selection extent frozen");
     }
 
@@ -482,7 +483,7 @@ private slots:
         QVERIFY2(line.endsWith(qsl("eleven")), qPrintable(qsl("the press is not over a line of prose but over \"%1\"").arg(line)));
 
         pressLeftButton(pane, pressPos, 3);
-        QVERIFY2(pane->mMouseTrackLevel == 3, "the three presses were too far apart to count as a triple-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 3, "the three presses were too far apart to count as a triple-click");
         moveAndReleaseLeftButton(pane, pressPos + QPointF(1, 0));
 
         QCOMPARE(highlightedText(), line);
@@ -531,9 +532,9 @@ private slots:
 
         const QPointF pressPos = cellInMiddleRow(pane, 33);
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
-        QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
+        QVERIFY2(pane->mpSelection->mDragStart.y() > 0, "the press did not start the drag below the first line");
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 25 do moveCursor(0, 0) deleteLine() end")), "the deleteLine() calls failed");
-        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() < pane->mDragStart.y());
+        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() < pane->mpSelection->mDragStart.y());
         const QString highlightedByThePress = highlightedText();
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
@@ -551,9 +552,9 @@ private slots:
 
         const QPointF pressPos = cellInMiddleRow(pane, 33);
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
-        QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
+        QVERIFY2(pane->mpSelection->mDragStart.y() > 0, "the press did not start the drag below the first line");
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nfor i = 1, 200 do echo('refill ' .. i .. '\\n') end")), "the clearWindow() and echo calls failed");
-        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() > pane->mDragStart.y());
+        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() > pane->mpSelection->mDragStart.y());
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
 
@@ -646,7 +647,7 @@ private slots:
         const QString expected = lines.join(QChar::LineFeed);
 
         pressLeftButton(pane, pressPos, 3);
-        QVERIFY2(pane->mMouseTrackLevel == 3, "the three presses were too far apart to count as a triple-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 3, "the three presses were too far apart to count as a triple-click");
         moveAndReleaseLeftButton(pane, releasePos);
 
         QCOMPARE(highlightedText(), expected);
@@ -671,7 +672,7 @@ private slots:
         QCOMPARE(line.mid(18, 20), qsl("distance you faintly"));
 
         pressLeftButton(pane, pressPos, 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         QCOMPARE(highlightedText(), qsl("faintly"));
         QCOMPARE(copiedText(pane), qsl("faintly"));
         moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 20));
@@ -717,7 +718,7 @@ private slots:
         QCOMPARE(lineUnder(pane, pressPos).mid(14, 43), qsl("the distance you faintly hear a grandfather"));
 
         pressLeftButton(pane, pressPos, 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         QCOMPARE(highlightedText(), clickedWord);
 
         for (int i = 0; i < columns.size(); ++i) {
@@ -748,7 +749,7 @@ private slots:
         QCOMPARE(lineBelow.mid(3, 3), qsl("way"));
 
         pressLeftButton(pane, pressPos, 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
 
         // columns 18-25 "distance" on the line above, 31-37 "faintly" on the clicked one
         const QString upwards = lineAbove.mid(18) + QChar::LineFeed + clickedLine.left(38);
@@ -780,7 +781,7 @@ private slots:
         // partway into "grandfather" (columns 46-56) on the line below
         const QString expected = lineUnder(pane, pressPos).mid(31) + QChar::LineFeed + lineUnder(pane, pressPos + lineDown).left(57);
         pressLeftButton(pane, pressPos, 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 47) + lineDown);
         QCOMPARE(highlightedText(), expected);
         QCOMPARE(copiedText(pane), expected);
@@ -837,7 +838,7 @@ private slots:
         };
 
         pressLeftButton(pane, cell(clickedColumn), 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         QCOMPARE(highlightedText(), clickedWord);
         moveAndReleaseLeftButton(pane, cell(releaseColumn));
 
@@ -866,7 +867,7 @@ private slots:
 
         const QPointF pos = cellInMiddleRow(pane, clickedColumn);
         pressLeftButton(pane, pos, 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pos);
         sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
@@ -893,7 +894,7 @@ private slots:
         QCOMPARE(lineUnder(pane, pressPos).at(30), QChar(QChar::Space));
 
         pressLeftButton(pane, pressPos, 2);
-        QVERIFY2(pane->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
+        QVERIFY2(pane->mpSelection->mMouseTrackLevel == 2, "the two presses were too far apart to count as a double-click");
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, pressPos);
 
         QCOMPARE(highlightedText(), QString());
@@ -1010,10 +1011,10 @@ private slots:
         TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
         auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
-        const int continuation = pane->mPA.y() + 1;
+        const int continuation = pane->mpSelection->mPA.y() + 1;
         QVERIFY2(buffer.line(continuation).startsWith(qsl("    ")), qPrintable(qsl("the second line was not indented: '%1'").arg(buffer.line(continuation))));
 
-        pane->mPA = QPoint(2, continuation);
+        pane->mpSelection->mPA = QPoint(2, continuation);
         const QString continuationText = buffer.line(continuation).trimmed();
 
         QCOMPARE(copiedText(pane), mSeveralSpaces.mid(mSeveralSpaces.indexOf(continuationText)));
@@ -1026,15 +1027,15 @@ private slots:
         TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
         auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
-        const int firstLine = pane->mPA.y();
+        const int firstLine = pane->mpSelection->mPA.y();
         const int clockColumn = static_cast<int>(buffer.line(firstLine + 1).indexOf(qsl("clock")));
         QVERIFY2(clockColumn > 4, qPrintable(buffer.line(firstLine + 1)));
 
-        pane->mPA = QPoint(3, firstLine);
-        pane->mPB = QPoint(clockColumn + 4, firstLine + 1);
+        pane->mpSelection->mPA = QPoint(3, firstLine);
+        pane->mpSelection->mPB = QPoint(clockColumn + 4, firstLine + 1);
         QCOMPARE(copiedText(pane), qsl("is very late.   The clock"));
 
-        pane->mPA = QPoint(clockColumn, firstLine + 1);
+        pane->mpSelection->mPA = QPoint(clockColumn, firstLine + 1);
         QCOMPARE(copiedText(pane), qsl("clock"));
     }
 
@@ -1093,9 +1094,9 @@ private slots:
         runLua(qsl("feedTriggers('xxxxxxxxxxxx yyyyyyyyyyyyyyyy \\n')"));
         console->print(qsl("zzz\n"));
         TTextEdit* pane = upperPane();
-        pane->mPA = QPoint(0, firstLine);
+        pane->mpSelection->mPA = QPoint(0, firstLine);
         selectToTheEnd(pane);
-        pane->mSelectedRegion = QRegion(0, 0, 1, 1);
+        pane->mpSelection->mSelectedRegion = QRegion(0, 0, 1, 1);
 
         QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy\nzzz"));
     }
@@ -1154,8 +1155,8 @@ private slots:
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
 
         runLua(qsl("moveCursor(2, %1) insertText('X\\n')").arg(lineNumberOf(qsl("before"))));
-        QCOMPARE(lineNumberOf(qsl("fore")), pane->mPA.y());
-        pane->mPA.ry() += 1;
+        QCOMPARE(lineNumberOf(qsl("fore")), pane->mpSelection->mPA.y());
+        pane->mpSelection->mPA.ry() += 1;
         selectToTheEnd(pane);
 
         QCOMPARE(copiedText(pane), mSeveralSpaces);
@@ -1169,7 +1170,7 @@ private slots:
         TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
         auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
-        const int continuation = pane->mPA.y() + 1;
+        const int continuation = pane->mpSelection->mPA.y() + 1;
         QVERIFY2(buffer.line(continuation).startsWith(qsl("fox ")), qPrintable(buffer.line(continuation)));
 
         runLua(qsl("moveCursor(3, %1) insertText('\\n  ')").arg(continuation));
@@ -1184,10 +1185,10 @@ private slots:
     {
         TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
-        const int firstLine = pane->mPA.y();
+        const int firstLine = pane->mpSelection->mPA.y();
 
         runLua(qsl("moveCursor(0, %1) deleteLine()").arg(firstLine));
-        pane->mPA = QPoint(0, firstLine - 1);
+        pane->mpSelection->mPA = QPoint(0, firstLine - 1);
         selectToTheEnd(pane);
 
         QCOMPARE(copiedText(pane), qsl("before\nfox jumps over the lazy dog"));
@@ -1765,7 +1766,7 @@ private slots:
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, dragEnd);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, dragEnd);
         QVERIFY2(pane->hasSelectedText(), "the drag selected nothing");
-        const QString selected = qsl("%1 %2 %3 %4").arg(pane->mPA.x()).arg(pane->mPA.y()).arg(pane->mPB.x()).arg(pane->mPB.y());
+        const QString selected = qsl("%1 %2 %3 %4").arg(pane->mpSelection->mPA.x()).arg(pane->mpSelection->mPA.y()).arg(pane->mpSelection->mPB.x()).arg(pane->mpSelection->mPB.y());
         QCOMPARE(selectionTheActionSees(), selected);
 
         QTest::qWait(350ms); // long enough after the drag's press not to count as a double-click

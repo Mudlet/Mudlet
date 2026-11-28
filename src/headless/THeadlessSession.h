@@ -109,7 +109,9 @@ public:
         Blink = 0x40,
         // Set in place of Blink when the game asks for both
         FastBlink = 0x80,
-        Concealed = 0x100
+        Concealed = 0x100,
+        // Inline code in a Markdown line; the lines of a fenced block are MarkdownBlock::Kind::code instead
+        Code = 0x200
     };
     Q_DECLARE_FLAGS(TextStyles, TextStyle)
 
@@ -131,6 +133,50 @@ public:
         int link = 0;
 
         bool operator==(const TextRun&) const = default;
+    };
+
+    // The characters [start, start + length) of a table line that are one cell's text, as TextRun counts them
+    struct MarkdownCell
+    {
+        int start = 0;
+        int length = 0;
+
+        bool operator==(const MarkdownCell&) const = default;
+    };
+
+    // The Markdown block a line of the main console is part of, as getMarkdownBlock() gives it to scripts but for the
+    // text and links, which the signal's text and runs carry; kind is none for a line that is not Markdown.
+    // docs/headless.md tells what each field holds.
+    struct MarkdownBlock
+    {
+        enum class Kind { none, blank, paragraph, heading, item, continuation, code, tableHeader, tableDelimiter, tableRow, rule, summary };
+        enum class Marker { none, bullet, ordered };
+        enum class Task { none, open, done };
+        enum class Align { none, left, center, right };
+
+        Kind kind = Kind::none;
+        // Where the line's own text starts in the text sent with it, after what the console draws in front of it
+        int contentStart = 0;
+        quint32 message = 0;
+        QString id;
+        // Empty for none, else the name the game sent, or six lowercase hex digits for a color
+        QString mark;
+        int level = 0;
+        int quote = 0;
+        int list = 0;
+        int number = 0;
+        int section = 0;
+        Marker marker = Marker::none;
+        Task task = Task::none;
+        // On a summary line, whether the game sent its section open
+        bool open = false;
+        QString language;
+        quint32 table = 0;
+        // A table's header line only
+        QList<Align> align;
+        QList<MarkdownCell> cells;
+
+        bool operator==(const MarkdownBlock&) const = default;
     };
 
     // invalidName, invalidConnectionDetails: a profile was to be made under a name, or given a host, port or
@@ -177,7 +223,7 @@ public:
     // follow consoleFontChanged
     QFont consoleFont() const;
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
-    // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText,
+    // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, markdownMarkChanged, localText, errorConsoleText, debugText,
     // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested: a line it fed would be
     // committed in the middle of a write, which TBuffer does not allow.
     Host* host() const;
@@ -185,7 +231,7 @@ public:
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
-    // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
+    // lineShown, mainConsoleCleared, markdownMarkChanged, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
     // signal but quitRequested and mainWindowResizeRequested, which run mid-write, and fail once a close of the
     // profile has begun; submit() checks each line of a paste as a call. It is the app's input line being sent: the
     // main command line holds the line while its aliases run, then is emptied or kept as the profile says, unless
@@ -904,9 +950,10 @@ signals:
     // handler must not run the event loop, as a modal dialog does: the profile's own timers may commit
     // another line or close the profile there, in the middle of this line's commit. runs covers text from its
     // start to its end, in order, with no empty run, and is empty for an empty line; a handler that takes
-    // only the first three or four arguments may be connected. arrivalMSecs is when the line arrived, in ms since
-    // the epoch as debugText's is, the time the GUI's timestamps show; -1 where it has none.
-    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
+    // fewer arguments may be connected. arrivalMSecs is when the line arrived, in ms since
+    // the epoch as debugText's is, the time the GUI's timestamps show; -1 where it has none. markdown is the line's
+    // Markdown block, whose offsets count in text.
+    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, const THeadlessSession::MarkdownBlock& markdown);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
@@ -930,12 +977,25 @@ signals:
     // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
     // of the console line it went into, which is when it was written for a line of its own. continuesLine is for
     // text the console draws on the end of the line sent before it, not as a line below: an echo() after
-    // deleteLine(). A handler that takes fewer arguments may be connected.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine);
+    // deleteLine(). A handler that takes fewer arguments may be connected. markdown is the line's Markdown block, as
+    // outputLine's is, but as the triggers left it: a table line they wrote into, or one written into where the console
+    // drew in front of the text, has none, and so does a line a script wrote.
+    void lineShown(const QString& profile,
+                   const QString& text,
+                   bool isPrompt,
+                   const QList<THeadlessSession::TextRun>& runs,
+                   qint64 arrivalMSecs,
+                   bool continuesLine,
+                   const THeadlessSession::MarkdownBlock& markdown);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
     void mainConsoleCleared(const QString& profile);
+    // The game changed the mark of a Markdown message, named as its lines' blocks name it by message (not id, which a
+    // later message can take); mark is as MarkdownBlock::mark has it. Sent for a message whose lines the console no
+    // longer holds too, not once its id is reused, 256 newer ids push it out, or the connection is renewed. Sent
+    // mid-write, as outputLine is.
+    void markdownMarkChanged(const QString& profile, quint32 message, const QString& mark);
     // The profile started or stopped logging the game's text to a file, where the GUI's logging button changes:
     // from a script's startLogging(), or as it loads with logging left on. fileName is the log being written,
     // empty once it stops. Also false, with logging still off, when a start fails (the reason is printed, as
@@ -1218,6 +1278,7 @@ private:
     // Lua's own message, out of what the GUI's error console shows of it
     static QString luaErrorOf(const QString& consoleText);
     static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);
+    static MarkdownBlock markdownBlock(const TBuffer& buffer, int line);
     static qint64 arrivalTime(const TBuffer& buffer, int line);
     // The console windowLines() reads for the name, null for one it refuses
     TConsoleModel* windowTextModel(const QString& window) const;
@@ -1299,6 +1360,7 @@ private:
         QList<TextRun> runs;
         qint64 arrivalMSecs = -1;
         bool continuesLine = false;
+        MarkdownBlock markdown;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;

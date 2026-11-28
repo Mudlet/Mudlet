@@ -57,6 +57,7 @@
 #include "TAccessibleTextEdit.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -762,7 +763,7 @@ private slots:
 
         waitOutMultiClick();
         clickRepeatedly(pointOfOffset(spaceOffset), 2);
-        QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the two clicks were not taken as a double-click, so no word highlight was built");
+        QVERIFY2(!pane()->mpSelection->mSelectedRegion.isEmpty(), "the two clicks were not taken as a double-click, so no word highlight was built");
         ti->selection(0, &reportedStart, &reportedEnd);
         QCOMPARE(ti->selectionCount(), 0);
         QCOMPARE(reportedStart, 0);
@@ -770,7 +771,7 @@ private slots:
 
         ti->removeSelection(0);
         tripleClickLine(emptyLine);
-        QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the three clicks were not taken as a triple-click, so no line highlight was built");
+        QVERIFY2(!pane()->mpSelection->mSelectedRegion.isEmpty(), "the three clicks were not taken as a triple-click, so no line highlight was built");
         QCOMPARE(ti->selectionCount(), 0);
 
         for (const int offset : {0, offsetOfLine(line) + 3}) {

@@ -52,6 +52,7 @@
 #include "TMap.h"
 #include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
+#include "TMarkdown.h"
 #include "TMedia.h"
 #include "TNullConsoleFrontend.h"
 #include "TRoomDB.h"
@@ -537,6 +538,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         // functions behave the same as for any other committed line:
         mpMainConsoleModel->mTriggerEngineMode = true;
         mpMainConsoleModel->buffer.flushPendingServerWrapJoin();
+        mpMainConsoleModel->buffer.flushMarkdownHeldLines();
         mpMainConsoleModel->mTriggerEngineMode = false;
         finalizeMainConsole();
     });
@@ -639,7 +641,8 @@ void Host::pauseServerWrapFlush()
 void Host::resumeServerWrapFlush()
 {
     mServerWrapFlushPaused = false;
-    if (mpMainConsoleModel->buffer.holdsServerWrapLine()) {
+    const TMarkdown* pMarkdown = mpMainConsoleModel->buffer.markdown();
+    if (mpMainConsoleModel->buffer.holdsServerWrapLine() || (pMarkdown && pMarkdown->mParser.holdsLines())) {
         mServerWrapFlushTimer.start();
     }
 }
@@ -6857,6 +6860,23 @@ void Host::changeSetting(bool& setting, const bool state, const QString& setting
     }
     setting = state;
     raiseSettingChangedEvent(settingName, state);
+}
+
+void Host::setEnableMarkdown(const bool state)
+{
+    if (mEnableMarkdown == state) {
+        return;
+    }
+    mEnableMarkdown = state;
+    if (!state && mpMainConsoleModel) {
+        // As the server-wrap flush timer does, so what it commits runs its triggers in the same context; restored, as a
+        // script spinning the event loop in a trigger can have the dialog change this mid-trigger
+        const bool wasInTriggerEngineMode = std::exchange(mpMainConsoleModel->mTriggerEngineMode, true);
+        mpMainConsoleModel->buffer.endMarkdown();
+        mpMainConsoleModel->mTriggerEngineMode = wasInTriggerEngineMode;
+        finalizeMainConsole();
+    }
+    mTelnet.sendMarkdownCapability();
 }
 
 void Host::setEnableClosedCaption(const bool state)

@@ -164,6 +164,8 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMapPainter.cpp
+    TMarkdown.cpp
+    TMarkdownInline.cpp
     TMedia.cpp
     TMediaVoice.cpp
     TMediaPlaylist.cpp
@@ -294,8 +296,10 @@ set(mudlet_app_SRCS
     TAccessibleLabel.cpp
     TAccessibleTextEdit.cpp
     TCommandLine.cpp
+    TPaintPacer.cpp
     TPasswordEntry.cpp
     TConsole.cpp
+    TConsoleAnnouncements.cpp
     TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
@@ -304,6 +308,7 @@ set(mudlet_app_SRCS
     TFlipButton.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
+    TLinkInteraction.cpp
     TMainConsole.cpp
     TMapView.cpp
     TMapViewManager.cpp
@@ -316,6 +321,7 @@ set(mudlet_app_SRCS
     TTabBar.cpp
     TTextBox.cpp
     TTextEdit.cpp
+    TTextSelection.cpp
     ToolBarOverflow.cpp
     TToolBar.cpp
     TTreeWidget.cpp
@@ -499,6 +505,8 @@ set(mudlet_HDRS
     TMapPainter.h
     TMapViewFrontend.h
     TMapViewsFrontend.h
+    TMarkdown.h
+    TMarkdownInline.h
     TMatchState.h
     TMedia.h
     TMediaVoice.h
@@ -644,8 +652,10 @@ set(mudlet_app_HDRS
     TAccessibleLabel.h
     TAccessibleTextEdit.h
     TCommandLine.h
+    TPaintPacer.h
     TPasswordEntry.h
     TConsole.h
+    TConsoleAnnouncements.h
     TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
@@ -654,6 +664,7 @@ set(mudlet_app_HDRS
     TFlipButton.h
     TKeySequenceEdit.h
     TLabel.h
+    TLinkInteraction.h
     TMainConsole.h
     TMapView.h
     TMapViewManager.h
@@ -666,6 +677,7 @@ set(mudlet_app_HDRS
     TTabBar.h
     TTextBox.h
     TTextEdit.h
+    TTextSelection.h
     ToolBarOverflow.h
     TToolBar.h
     TTreeWidget.h

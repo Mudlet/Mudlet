@@ -48,6 +48,7 @@
 #include "TMainConsole.h"
 #include "TPasswordEntry.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TUiTour.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -255,7 +256,7 @@ private:
         commandLine()->clear();
         commandLine()->setFocus();
         for (TTextEdit* pPane : {mpHost->mpConsole->mUpperPane, mpHost->mpConsole->mLowerPane}) {
-            pPane->mSelectedRegion = QRegion();
+            pPane->mpSelection->mSelectedRegion = QRegion();
         }
         mpServer->forgetReceived();
     }
@@ -784,7 +785,7 @@ private slots:
             mpHost->mpConsole->print(qsl("qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx qzx\n"));
         }
         TTextEdit* pPane = mpHost->mpConsole->mUpperPane;
-        pPane->mSelectedRegion = QRegion();
+        pPane->mpSelection->mSelectedRegion = QRegion();
         QGuiApplication::clipboard()->setText(qsl("before"));
         serverSaysEcho(TN_WILL);
         QVERIFY(box());
@@ -798,7 +799,7 @@ private slots:
         sendMouse(QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, middle - QPointF(60, 0));
         sendMouse(QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, middle + QPointF(60, 0));
         sendMouse(QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, middle + QPointF(60, 0));
-        if (pPane->mSelectedRegion.isEmpty()) {
+        if (pPane->mpSelection->mSelectedRegion.isEmpty()) {
             QSKIP("the drag made no selection on this platform, so there is nothing to copy");
         }
         QCOMPARE(focusWidget(), box());

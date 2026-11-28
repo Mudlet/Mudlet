@@ -50,6 +50,10 @@ set(WINDOW_GROUP_TEST_SOURCES
     DebugFilterBarGlyphTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
+    PaintPacerTest.cpp
+    TextSelectionTest.cpp
+    LinkInteractionTest.cpp
+    ConsoleAnnouncementsTest.cpp
     PasswordEntryTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp

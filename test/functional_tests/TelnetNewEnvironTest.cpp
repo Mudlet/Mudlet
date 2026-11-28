@@ -32,12 +32,18 @@
 // fixed sleep that would pass on a slow runner by accident.
 
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <chrono>
+#include <optional>
 
 #include "Host.h"
+#include "TConsoleModel.h"
+#include "TMarkdown.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
@@ -334,6 +340,7 @@ private slots:
         mpHost->mEnableMNES = false;
         mpHost->mAdvertiseScreenReader = false;
         mpHost->mEnableOSC8Hyperlinks = true;
+        mpHost->mEnableMarkdown = true;
         mpServer->forgetReceived();
     }
 
@@ -867,6 +874,350 @@ private slots:
         // MNES rides on NEW_ENVIRON, so it cannot be advertised without it.
         mpHost->mEnableNEWENVIRON = false;
         QVERIFY2(!(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("MTTS")).second.toInt() & MTTS_STD_MNES), "MNES was advertised in MTTS with NEW_ENVIRON turned off");
+    }
+
+    // A game sends Markdown only to a client that says it renders it
+    void test_markdownIsAdvertisedByThePreference()
+    {
+        QCOMPARE(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("MARKDOWN")).second, qsl("1"));
+        mpHost->mEnableMarkdown = false;
+        QCOMPARE(mpHost->mTelnet.getNewEnvironDataMap().value(qsl("MARKDOWN")).second, qsl("0"));
+        mpHost->mEnableMNES = true;
+        QVERIFY2(!mpHost->mTelnet.getNewEnvironDataMap().contains(qsl("MARKDOWN")), "MARKDOWN was offered under MNES, which allows only its own variables");
+    }
+
+    void test_aMarkdownChangeIsAnnouncedOnItsOwn()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        mpServer->forgetReceived();
+        mpHost->setEnableMarkdown(false);
+
+        QString problem;
+        const QList<EnvironVariable> updates = soleReplyVariables(NEW_ENVIRON_INFO, problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(updates.size(), 1);
+        QCOMPARE(updates.first().type, NEW_ENVIRON_USERVAR);
+        QCOMPARE(updates.first().name, QByteArray("MARKDOWN"));
+        QCOMPARE(updates.first().value, QByteArray("0"));
+    }
+
+    // The packages a GMCP message such as Core.Supports.Set names, read as JSON, or nothing when none was sent
+    static std::optional<QStringList> gmcpPackages(const QList<Subnegotiation>& sent, const QByteArray& message)
+    {
+        for (const Subnegotiation& subnegotiation : sent) {
+            if (!subnegotiation.payload.startsWith(message + ' ')) {
+                continue;
+            }
+            const QJsonDocument document = QJsonDocument::fromJson(subnegotiation.payload.mid(message.size() + 1));
+            if (!document.isArray()) {
+                return std::nullopt;
+            }
+            QStringList packages;
+            for (const QJsonValue& package : document.array()) {
+                if (!package.isString()) {
+                    return std::nullopt;
+                }
+                packages.append(package.toString());
+            }
+            return packages;
+        }
+        return std::nullopt;
+    }
+
+    QList<Subnegotiation> sentGmcp() { return subnegotiationsFor(sentBytes(), static_cast<unsigned char>(OPT_GMCP)); }
+
+    // The GMCP half of the same capability, for a game that reads Core.Supports instead
+    void test_gmcpSupportsListMarkdownWhileItIsOn()
+    {
+        announce(TN_WILL, OPT_GMCP);
+        const std::optional<QStringList> supported = gmcpPackages(sentGmcp(), "Core.Supports.Set");
+        QVERIFY2(supported, "no Core.Supports.Set was sent");
+        QVERIFY2(supported->contains(qsl("Client.Markdown 1")), qPrintable(qsl("Core.Supports.Set left Markdown out: %1").arg(supported->join(qsl(", ")))));
+
+        mpHost->setEnableMarkdown(false);
+        QCOMPARE(gmcpPackages(sentGmcp(), "Core.Supports.Remove"), std::optional<QStringList>(QStringList{qsl("Client.Markdown")}));
+
+        mpHost->setEnableMarkdown(true);
+        QCOMPARE(gmcpPackages(sentGmcp(), "Core.Supports.Add"), std::optional<QStringList>(QStringList{qsl("Client.Markdown 1")}));
+    }
+
+    void test_gmcpSupportsLeaveMarkdownOutWhileItIsOff()
+    {
+        reconnect();
+        mpHost->mEnableMarkdown = false;
+        announce(TN_WILL, OPT_GMCP);
+        const std::optional<QStringList> supported = gmcpPackages(sentGmcp(), "Core.Supports.Set");
+        QVERIFY2(supported, "no Core.Supports.Set was sent");
+        QVERIFY2(supported->filter(QRegularExpression(qsl("^Client\\.Markdown( |$)"))).isEmpty(),
+                 qPrintable(qsl("Core.Supports.Set offered Markdown with it turned off: %1").arg(supported->join(qsl(", ")))));
+    }
+
+    TBuffer& mainBuffer() { return mpHost->mainConsoleModelOrNull()->buffer; }
+    // The last line committed, as the one after it is the line still to come
+    int lastCommittedLine() { return static_cast<int>(mainBuffer().lineBuffer.size()) - 2; }
+
+    void test_markdownSequencesAreIgnoredWhileThePreferenceIsOff()
+    {
+        mpHost->mEnableMarkdown = false;
+        feed("\x1b]67;1\x1b\\# SpecIgnoredHeading\n\x1b]67;0\x1b\\");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("# SpecIgnoredHeading"));
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "a line was read as Markdown with the preference off");
+    }
+
+    // Turned back on, it waits for the game to turn Markdown on again rather than resuming the old message
+    void test_turningThePreferenceOffEndsMarkdownUntilTheGameTurnsItOnAgain()
+    {
+        feed("\x1b]67;1\x1b\\SpecMarkdownOn\n");
+        QVERIFY2(mainBuffer().markdownBlock(lastCommittedLine()), "the line after an on sequence was not Markdown");
+        mpHost->mEnableMarkdown = false;
+        feed("# SpecWhileOff\n");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("# SpecWhileOff"));
+        QVERIFY(!mainBuffer().markdownBlock(lastCommittedLine()));
+        mpHost->mEnableMarkdown = true;
+        feed("# SpecBackOn\n");
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "Markdown came back on with no on sequence");
+        feed("\x1b]67;1\x1b\\SpecOnAgain\n\x1b]67;0\x1b\\");
+        QVERIFY(mainBuffer().markdownBlock(lastCommittedLine()));
+    }
+
+    // What was held is committed as it stands, and what follows is ordinary text
+    void test_turningThePreferenceOffMidTableCommitsTheHeldRows()
+    {
+        feed("\x1b]67;1\x1b\\| SpecHeldHead |\n|---|\n| SpecHeldRow |\n");
+        mpHost->setEnableMarkdown(false);
+        const TMarkdownBlock* pRow = mainBuffer().markdownBlock(lastCommittedLine());
+        QVERIFY2(pRow && pRow->kind == TMarkdownBlock::Kind::TableRow, "turning the preference off did not commit the held row");
+        QVERIFY(mainBuffer().lineBuffer.at(lastCommittedLine()).startsWith(qsl("SpecHeldRow")));
+        feed("SpecAfterTable\n");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("SpecAfterTable"));
+        QVERIFY(!mainBuffer().markdownBlock(lastCommittedLine()));
+    }
+
+    void test_turningThePreferenceBackOnDoesNotResumeTheOldMessage()
+    {
+        feed("\x1b]67;1\x1b\\```\n");
+        mpHost->setEnableMarkdown(false);
+        mpHost->setEnableMarkdown(true);
+        feed("SpecAfterReenabling\n");
+        QCOMPARE(mainBuffer().lineBuffer.at(lastCommittedLine()), qsl("SpecAfterReenabling"));
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "the code block from before the preference was turned off carried on");
+    }
+
+    // Deleting the first row of a wrapped paragraph hands its tag on, with offsets in the text that is left
+    void test_aTagHandedToASurvivingRowKeepsItsOffsets()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        pModel->setWrapAt(30);
+        const auto restoreWrap = qScopeGuard([this, pModel] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+        });
+        feed("\x1b]67;1\x1b\\SpecRebase one two three four five six seven eight nine ten [the link](send:x) end\n\x1b]67;0\x1b\\");
+        int head = lastCommittedLine();
+        while (head > 0 && mainBuffer().markdownBuffer.at(head) == 0 && mainBuffer().wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        QVERIFY2(head < lastCommittedLine(), "the paragraph was not wrapped, so this proves nothing");
+        QVERIFY(mainBuffer().deleteLines(head, head));
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(head);
+        QVERIFY2(pBlock, "the paragraph's remaining rows lost its tag");
+        QCOMPARE(pBlock->links.size(), 1);
+        const QString text = mainBuffer().markdownParagraphText(head);
+        QCOMPARE(text.mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // A screen reader hears a row with its column names, and the lines that only draw the table not at all
+    void test_aTableRowIsSpokenWithItsColumnNames()
+    {
+        feed("\x1b]67;1\x1b\\| Item | Qty |\n|---|---|\n| sword | 1 |\n\x1b]67;0\x1b\\");
+        feed("SpecAfterSpokenTable\n");
+        const int row = lastCommittedLine() - 1;
+        QCOMPARE(mainBuffer().spokenLine(row), qsl("Item: sword, Qty: 1"));
+        QCOMPARE(mainBuffer().spokenLine(row - 1), QString());
+        QCOMPARE(mainBuffer().spokenLine(row - 2), QString());
+        QCOMPARE(mainBuffer().spokenLine(row + 1), qsl("SpecAfterSpokenTable"));
+    }
+
+    // Trimming the first row of a wrapped paragraph off the top hands its tag to the rows left
+    void test_trimmingTheTopOffAWrappedParagraphKeepsItsTag()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        const int savedLimit = mainBuffer().mLinesLimit;
+        const int savedBatch = mainBuffer().mBatchDeleteSize;
+        pModel->setWrapAt(30);
+        const auto restore = qScopeGuard([this, pModel, savedLimit, savedBatch] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+            mainBuffer().mLinesLimit = savedLimit;
+            mainBuffer().mBatchDeleteSize = savedBatch;
+        });
+        feed("\x1b]67;1\x1b\\SpecTrim one two three four five six seven eight nine ten [the link](send:x) end\n\x1b]67;0\x1b\\");
+        int head = lastCommittedLine();
+        while (head > 0 && mainBuffer().markdownBuffer.at(head) == 0 && mainBuffer().wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        QVERIFY2(head < lastCommittedLine(), "the paragraph was not wrapped, so this proves nothing");
+        // Trims every row above the paragraph's second at the next line committed
+        mainBuffer().mBatchDeleteSize = head + 1;
+        mainBuffer().mLinesLimit = static_cast<int>(mainBuffer().lineBuffer.size());
+        feed("SpecTrimmer\n");
+        QVERIFY2(!mainBuffer().lineBuffer.at(0).startsWith(qsl("SpecTrim one")), "the trim did not take the paragraph's first row");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(0);
+        QVERIFY2(pBlock, "the rows left of the paragraph lost its tag");
+        QCOMPARE(pBlock->links.size(), 1);
+        QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // A link left open on a Markdown line carries on, but not into the next connection
+    void test_aLinkLeftOpenInMarkdownEndsWithItsConnection()
+    {
+        feed("\x1b]67;1\x1b\\\x1b]8;;send:look\x1b\\SpecOpenLink\n");
+        QVERIFY2(mainBuffer().getLinkIndexAt(lastCommittedLine(), 0) > 0, "the link was not made");
+        reconnect();
+        feed("SpecNextConnection\n");
+        QCOMPARE(mainBuffer().getLinkIndexAt(lastCommittedLine(), 0), 0);
+    }
+
+    // A screen reader hears a wrapped table row once, at its first row
+    void test_aWrappedTableRowIsSpokenOnce()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        pModel->setWrapAt(20);
+        const auto restoreWrap = qScopeGuard([this, pModel] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+        });
+        feed("\x1b]67;1\x1b\\| Item | Note |\n|---|---|\n| sword | a long note that wraps |\n\x1b]67;0\x1b\\");
+        feed("SpecEnd\n");
+        int row = lastCommittedLine() - 1;
+        QVERIFY2(mainBuffer().wrapsFromPreviousLine(row), "the row did not wrap, so this proves nothing");
+        QCOMPARE(mainBuffer().spokenLine(row), QString());
+        while (mainBuffer().wrapsFromPreviousLine(row)) {
+            --row;
+        }
+        QCOMPARE(mainBuffer().spokenLine(row), qsl("Item: sword, Note: a long note that wraps"));
+    }
+
+    // A row a script edited keeps no tag, and the rows below it still find their table's header
+    void test_aRowBelowAnEditedOneIsStillSpokenWithItsColumnNames()
+    {
+        feed("\x1b]67;1\x1b\\| Item | Qty |\n|---|---|\n| sword | 1 |\n| bow | 2 |\n\x1b]67;0\x1b\\");
+        feed("SpecAfterEditedTable\n");
+        const int bow = lastCommittedLine() - 1;
+        QPoint from(0, bow - 1);
+        QPoint to(1, bow - 1);
+        TChar format = mainBuffer().buffer.at(bow - 1).at(0);
+        QVERIFY(mainBuffer().replaceInLine(from, to, qsl("S"), format));
+        QVERIFY2(!mainBuffer().markdownBlock(bow - 1), "the edited row kept its tag");
+        QCOMPARE(mainBuffer().spokenLine(bow), qsl("Item: bow, Qty: 2"));
+    }
+
+    // A deletion from one wrapped paragraph's middle into another's keeps the second's tag on the rows it leaves
+    void test_aDeletionAcrossTwoParagraphsKeepsTheSecondsTag()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        pModel->setWrapAt(20);
+        const auto restoreWrap = qScopeGuard([this, pModel] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+        });
+        feed("\x1b]67;1\x1b\\SpecParaA one two three four five six\nSpecParaB one two three four [the link](send:x) five\n\x1b]67;0\x1b\\");
+        int headB = lastCommittedLine();
+        while (mainBuffer().markdownBuffer.at(headB) == 0 && mainBuffer().wrapsFromPreviousLine(headB)) {
+            --headB;
+        }
+        int headA = headB - 1;
+        while (mainBuffer().markdownBuffer.at(headA) == 0 && mainBuffer().wrapsFromPreviousLine(headA)) {
+            --headA;
+        }
+        QVERIFY2(headB - headA > 1 && lastCommittedLine() > headB, "the paragraphs did not wrap, so this proves nothing");
+        QVERIFY(mainBuffer().deleteLines(headA + 1, headB));
+        QVERIFY2(mainBuffer().markdownBlock(headA), "the first paragraph lost its tag");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(headA + 1);
+        QVERIFY2(pBlock && pBlock->links.size() == 1, "the second paragraph's rows lost its tag");
+        QCOMPARE(mainBuffer().markdownParagraphText(headA + 1).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // A game sending on sequences part way through one line makes messages no line belongs to, which keep nothing
+    void test_onSequencesPartWayThroughALineLeaveNoRecords()
+    {
+        QByteArray burst("\x1b]67;1\x1b\\SpecBurst");
+        for (int index = 0; index < 50; ++index) {
+            burst.append("\x1b]67;1;mark=ok\x07");
+        }
+        burst.append("\n\x1b]67;0\x1b\\");
+        // Earlier tests' messages with ids are kept, so only what this burst adds is counted
+        const int before = mainBuffer().markdown() ? mainBuffer().markdown()->mMessages.recordCount() : 0;
+        feed(burst);
+        const int added = mainBuffer().markdown()->mMessages.recordCount() - before;
+        QVERIFY2(added <= 2, qPrintable(qsl("%1 records were kept").arg(added)));
+    }
+
+    // Trimming hands a wrapped paragraph's tag to its next row with offsets that count from that row's own text, past
+    // the hanging indent wrapping put in front of it
+    void test_trimmingAParagraphWithAHangingIndentKeepsItsOffsets()
+    {
+        TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+        const int savedLimit = mainBuffer().mLinesLimit;
+        const int savedBatch = mainBuffer().mBatchDeleteSize;
+        pModel->setWrapAt(30);
+        pModel->setHangingIndentCount(2);
+        const auto restore = qScopeGuard([this, pModel, savedLimit, savedBatch] {
+            pModel->setWrapAt(mpHost->mWrapAt);
+            pModel->setHangingIndentCount(mpHost->mWrapHangingIndentCount);
+            mainBuffer().mLinesLimit = savedLimit;
+            mainBuffer().mBatchDeleteSize = savedBatch;
+        });
+        feed("\x1b]67;1\x1b\\SpecHang one two three four five six seven eight nine ten [the link](send:x) end\n\x1b]67;0\x1b\\");
+        int head = lastCommittedLine();
+        while (head > 0 && mainBuffer().markdownBuffer.at(head) == 0 && mainBuffer().wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        QVERIFY2(head < lastCommittedLine() && mainBuffer().wrapIndentWidth(head + 1) > 0, "the paragraph did not wrap with an indent, so this proves nothing");
+        mainBuffer().mBatchDeleteSize = head + 1;
+        mainBuffer().mLinesLimit = static_cast<int>(mainBuffer().lineBuffer.size());
+        feed("SpecTrimmer\n");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(0);
+        QVERIFY2(pBlock && pBlock->links.size() == 1, "the rows left of the paragraph lost its tag");
+        QCOMPARE(mainBuffer().markdownParagraphText(0).mid(pBlock->links.first().start, pBlock->links.first().length), qsl("the link"));
+    }
+
+    // The game's last text ends its message when the connection closes, so it is shown before anything else happens
+    void test_aClosedConnectionShowsWhatMarkdownHeld()
+    {
+        feed("\x1b]67;1\x1b\\| SpecFarewell |\n");
+        // Looked at as the disconnection is announced, which is when scripts and the disconnection event act on it
+        bool shown = false;
+        const auto watch = connect(&mpHost->mTelnet, &cTelnet::signal_disconnected, this, [this, &shown]() {
+            shown = mainBuffer().lineBuffer.contains(qsl("| SpecFarewell |"));
+        });
+        // A failed check returns early, and the connection must not outlive the flag it writes to
+        const auto forget = qScopeGuard([watch] {
+            disconnect(watch);
+        });
+        QSignalSpy disconnected(&mpHost->mTelnet, &cTelnet::signal_disconnected);
+        mpHost->mTelnet.disconnectIt();
+        if (disconnected.isEmpty()) {
+            QVERIFY2(disconnected.wait(15s), "the connection did not close");
+        }
+        disconnect(watch);
+        QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
+        mpHost->mTelnet.reconnect();
+        QVERIFY2(connected.wait(15s), "the profile did not come back after a reconnect");
+        mpServer->forgetReceived();
+        QVERIFY2(shown, "the row the game sent last was not shown by the time the disconnection was announced");
+    }
+
+    void test_aNewConnectionStartsWithMarkdownOffAndForgetsItsIds()
+    {
+        feed("\x1b]67;1;id=specReconnect:mark=busy\x1b\\SpecBeforeReconnect\n");
+        const TMarkdownBlock* pBlock = mainBuffer().markdownBlock(lastCommittedLine());
+        QVERIFY2(pBlock, "the line after an on sequence was not Markdown");
+        const quint32 message = pBlock->message;
+        reconnect();
+        feed("SpecAfterReconnect\n");
+        QVERIFY2(!mainBuffer().markdownBlock(lastCommittedLine()), "Markdown stayed on across a new connection");
+        feed("\x1b]67;2;id=specReconnect:mark=ok\x1b\\");
+        QCOMPARE(mainBuffer().markdown()->mMessages.mark(message).name(), qsl("busy"));
     }
 };
 

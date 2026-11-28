@@ -32,6 +32,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -217,8 +218,8 @@ private slots:
         TTextEdit* pane = paneWithSelection();
         QVERIFY2(pane, "Could not prepare a console with a selection");
         // What a cleared window or a dropped keyboard selection leaves behind
-        pane->mSelectedRegion = QRegion();
-        QVERIFY(pane->mDragStart != pane->mDragSelectionEnd);
+        pane->mpSelection->mSelectedRegion = QRegion();
+        QVERIFY(pane->mpSelection->mDragStart != pane->mpSelection->mDragSelectionEnd);
 
         QMenu* menu = openContextMenu(pane);
         QVERIFY2(menu, "Right-clicking the console opened no context menu");

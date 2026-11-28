@@ -318,6 +318,11 @@ end))lua")
     // IAC SB MSSP MSSP_VAR "TLS" MSSP_VAL <port> IAC SE
     static QByteArray msspTlsPort(const QByteArray& port) { return QByteArray("\xff\xfa\x46\x01TLS\x02") + port + QByteArray("\xff\xf0"); }
 
+    // Lua that has the game send the lines, written with Lua escapes, as one Markdown message
+    static QString feedMarkdown(const QString& lines) { return qsl("feedTelnet('\\27]67;1\\27\\\\%1\\27]67;0\\27\\\\')").arg(lines); }
+
+    static THeadlessSession::MarkdownBlock markdownOf(const QSignalSpy& spy, const qsizetype index, const int argument) { return spy.at(index).at(argument).value<THeadlessSession::MarkdownBlock>(); }
+
     static QStringList outputTexts(const QSignalSpy& spy)
     {
         QStringList texts;
@@ -1738,6 +1743,238 @@ end))lua");
         QVERIFY(indexed.at(1) == run(4, 7, fg, bg, {}));
         QVERIFY(indexed.at(2) == run(11, 4, pHost->mRed, bg, Style::Bold));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_outputLineCarriesTheMarkdownBlock()
+    {
+        const QString name = qsl("Headless Markdown");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(feedMarkdown(qsl("## Head\\n- [ ] task\\n1. one\\n"))));
+        QVERIFY(session.runLua(qsl("feedTelnet('plain\\n')")));
+        const QStringList texts = outputTexts(output);
+        const qsizetype head = texts.indexOf(qsl("Head"));
+        QVERIFY2(head >= 0 && head + 3 < texts.size(), qPrintable(texts.join(QChar::LineFeed)));
+        using Block = THeadlessSession::MarkdownBlock;
+
+        const Block heading = markdownOf(output, head, 5);
+        QCOMPARE(heading.kind, Block::Kind::heading);
+        QCOMPARE(heading.level, 2);
+        QCOMPARE(heading.contentStart, 0);
+
+        const Block task = markdownOf(output, head + 1, 5);
+        QCOMPARE(task.kind, Block::Kind::item);
+        QCOMPARE(task.marker, Block::Marker::bullet);
+        QCOMPARE(task.task, Block::Task::open);
+        QCOMPARE(task.contentStart, texts.at(head + 1).indexOf(qsl("task")));
+
+        const Block ordered = markdownOf(output, head + 2, 5);
+        QCOMPARE(ordered.kind, Block::Kind::item);
+        QCOMPARE(ordered.marker, Block::Marker::ordered);
+        QCOMPARE(ordered.number, 1);
+
+        QCOMPARE(texts.at(head + 3), qsl("plain"));
+        QCOMPARE(markdownOf(output, head + 3, 5).kind, Block::Kind::none);
+    }
+
+    // Every field reaches the app, each from the buffer's own, for every kind of line
+    void test_outputLineCarriesEveryField()
+    {
+        const QString name = qsl("Headless Markdown Fields");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const qsizetype before = output.size();
+        QVERIFY(session.runLua(feedMarkdown(qsl("> - a1\\n>   - b2\\n\\n- item\\n  more\\n\\n2. two\\n- [x] done\\n\\npara\\n\\n---\\n"
+                                                "```lua\\nx = 1\\n```\\n<details open>\\n<summary>S9</summary>\\ninside\\n</details>\\n"
+                                                "| A | B | C |\\n|---|:-:|--:|\\n| 1 | 2 | 3 |\\n"))));
+        using Block = THeadlessSession::MarkdownBlock;
+        QTRY_VERIFY_WITH_TIMEOUT(std::any_of(output.cbegin() + before,
+                                             output.cend(),
+                                             [](const QList<QVariant>& line) {
+                                                 return line.at(5).value<Block>().kind == Block::Kind::tableRow;
+                                             }),
+                                 5000);
+        const auto find = [&output, before](const QString& content) {
+            for (qsizetype i = before; i < output.size(); ++i) {
+                const Block block = output.at(i).at(5).value<Block>();
+                if (block.kind != Block::Kind::none && output.at(i).at(1).toString().mid(block.contentStart) == content) {
+                    return block;
+                }
+            }
+            return Block();
+        };
+        const auto anyOf = [&output, before](const Block::Kind kind) {
+            return std::any_of(output.cbegin() + before, output.cend(), [kind](const QList<QVariant>& line) {
+                return line.at(5).value<Block>().kind == kind;
+            });
+        };
+
+        const Block quoted = find(qsl("a1"));
+        QCOMPARE(quoted.kind, Block::Kind::item);
+        QCOMPARE(quoted.quote, 1);
+        QCOMPARE(quoted.list, 1);
+        const Block nested = find(qsl("b2"));
+        QCOMPARE(nested.quote, 1);
+        QCOMPARE(nested.list, 2);
+        QCOMPARE(find(qsl("more")).kind, Block::Kind::continuation);
+        const Block ordered = find(qsl("two"));
+        QCOMPARE(ordered.marker, Block::Marker::ordered);
+        QCOMPARE(ordered.number, 2);
+        QCOMPARE(find(qsl("done")).task, Block::Task::done);
+        QCOMPARE(find(qsl("para")).kind, Block::Kind::paragraph);
+        QVERIFY(anyOf(Block::Kind::blank));
+        QVERIFY(anyOf(Block::Kind::rule));
+        const Block code = find(qsl("x = 1"));
+        QCOMPARE(code.kind, Block::Kind::code);
+        QCOMPARE(code.language, qsl("lua"));
+        const Block summary = find(qsl("S9"));
+        QCOMPARE(summary.kind, Block::Kind::summary);
+        QVERIFY(summary.open);
+        QCOMPARE(find(qsl("inside")).section, 1);
+
+        qsizetype header = -1;
+        for (qsizetype i = before; i < output.size(); ++i) {
+            if (output.at(i).at(5).value<Block>().kind == Block::Kind::tableHeader) {
+                header = i;
+            }
+        }
+        QVERIFY(header >= 0);
+        const Block head = output.at(header).at(5).value<Block>();
+        QCOMPARE(head.align, (QList<Block::Align>{Block::Align::none, Block::Align::center, Block::Align::right}));
+        const QString headText = output.at(header).at(1).toString();
+        QCOMPARE(head.cells.size(), 3);
+        QCOMPARE(headText.mid(head.cells.at(0).start, head.cells.at(0).length), qsl("A"));
+        QCOMPARE(headText.mid(head.cells.at(2).start, head.cells.at(2).length), qsl("C"));
+        QCOMPARE(output.at(header + 1).at(5).value<Block>().table, head.table);
+    }
+
+    void test_outputLineCarriesATablesCells()
+    {
+        const QString name = qsl("Headless Markdown Table");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const qsizetype before = output.size();
+        QVERIFY(session.runLua(feedMarkdown(qsl("| A | B |\\n|:--|--:|\\n| x | y |\\n"))));
+        QTRY_VERIFY_WITH_TIMEOUT(output.size() >= before + 3, 5000);
+        using Block = THeadlessSession::MarkdownBlock;
+        const Block header = markdownOf(output, before, 5);
+        QCOMPARE(header.kind, Block::Kind::tableHeader);
+        QCOMPARE(header.align, (QList<Block::Align>{Block::Align::left, Block::Align::right}));
+        QVERIFY(header.table != 0);
+        QCOMPARE(markdownOf(output, before + 1, 5).kind, Block::Kind::tableDelimiter);
+        const Block row = markdownOf(output, before + 2, 5);
+        QCOMPARE(row.kind, Block::Kind::tableRow);
+        QCOMPARE(row.table, header.table);
+        const QString text = output.at(before + 2).at(1).toString();
+        QCOMPARE(row.cells.size(), 2);
+        QCOMPARE(text.mid(row.cells.at(0).start, row.cells.at(0).length), qsl("x"));
+        QCOMPARE(text.mid(row.cells.at(1).start, row.cells.at(1).length), qsl("y"));
+    }
+
+    void test_outputLineCarriesTheMessagesIdAndMark()
+    {
+        const QString name = qsl("Headless Markdown Mark");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1;id=craft:mark=busy\\27\\\\work\\n\\27]67;0\\27\\\\')")));
+        const qsizetype work = outputTexts(output).indexOf(qsl("work"));
+        QVERIFY2(work >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const THeadlessSession::MarkdownBlock block = markdownOf(output, work, 5);
+        QCOMPARE(block.id, qsl("craft"));
+        QCOMPARE(block.mark, qsl("busy"));
+        QVERIFY(block.message > 0);
+    }
+
+    void test_aPromptWhileMarkdownIsOnIsNotABlock()
+    {
+        const QString name = qsl("Headless Markdown Prompt");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1\\27\\\\HP> <T_IAC><T_GA>')")));
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;0\\27\\\\')")));
+        const qsizetype prompt = outputTexts(output).indexOf(qsl("HP> "));
+        QVERIFY2(prompt >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        QVERIFY(output.at(prompt).at(2).toBool());
+        QCOMPARE(markdownOf(output, prompt, 5).kind, THeadlessSession::MarkdownBlock::Kind::none);
+    }
+
+    void test_codeIsAStyle()
+    {
+        const QString name = qsl("Headless Markdown Code");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(feedMarkdown(qsl("a `ale` b\\n"))));
+        const qsizetype line = outputTexts(output).indexOf(qsl("a ale b"));
+        QVERIFY2(line >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const auto runs = output.at(line).at(3).value<QList<THeadlessSession::TextRun>>();
+        const auto code = std::find_if(runs.cbegin(), runs.cend(), [](const THeadlessSession::TextRun& run) {
+            return run.start == 2;
+        });
+        QVERIFY2(code != runs.cend(), "the code span is not a run of its own");
+        QCOMPARE(code->length, 3);
+        for (const THeadlessSession::TextRun& run : runs) {
+            QCOMPARE(run.styles.testFlag(THeadlessSession::TextStyle::Code), run.start == 2);
+        }
+    }
+
+    void test_aMarkChangeReachesTheSession()
+    {
+        const QString name = qsl("Headless Markdown Mark Change");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy marks(&session, &THeadlessSession::markdownMarkChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1;id=craft:mark=busy\\27\\\\work\\n\\27]67;0\\27\\\\')")));
+        const qsizetype work = outputTexts(output).indexOf(qsl("work"));
+        QVERIFY2(work >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const quint32 message = markdownOf(output, work, 5).message;
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;2;id=craft:mark=ok\\27\\\\')")));
+        // No line feed follows the sequence, so cTelnet holds it until its posting timer fires
+        QTRY_COMPARE_WITH_TIMEOUT(marks.count(), 1, 5000);
+        QCOMPARE(marks.at(0).at(0).toString(), name);
+        QCOMPARE(marks.at(0).at(1).value<quint32>(), message);
+        QCOMPARE(marks.at(0).at(2).toString(), qsl("ok"));
+    }
+
+    // An app may still show the message though the console no longer holds its lines
+    void test_aMarkChangeForAMessageWithNoLinesLeftStillArrives()
+    {
+        const QString name = qsl("Headless Markdown Mark Gone");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy marks(&session, &THeadlessSession::markdownMarkChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^SpecGone$", [[deleteLine()]]))lua")));
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;1;id=gone:mark=busy\\27\\\\SpecGone\\n\\27]67;0\\27\\\\')")));
+        const qsizetype gone = outputTexts(output).indexOf(qsl("SpecGone"));
+        QVERIFY2(gone >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed)));
+        const quint32 message = markdownOf(output, gone, 5).message;
+        QVERIFY(message > 0);
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY2(std::none_of(buffer.lineBuffer.cbegin(),
+                              buffer.lineBuffer.cend(),
+                              [](const QString& line) {
+                                  return line.contains(qsl("SpecGone"));
+                              }),
+                 "the trigger did not delete the line");
+        QVERIFY(session.runLua(qsl("feedTelnet('\\27]67;2;id=gone:mark=error\\27\\\\')")));
+        QTRY_COMPARE_WITH_TIMEOUT(marks.count(), 1, 5000);
+        QCOMPARE(marks.at(0).at(1).value<quint32>(), message);
+        QCOMPARE(marks.at(0).at(2).toString(), qsl("error"));
     }
 
     // Only the main window makes a ShortcutsManager, and the GUI would open a save that had none with the defaults
@@ -5401,6 +5638,105 @@ feedTriggers("%1\n%2\nabove\nlengthen the line above\nsplit at a line feed\nlast
         QCOMPARE(outputTexts(shown), (QStringList{feeder, wrapper, qsl("above"), qsl("lengthen the line above"), inserted, qsl("split at a line feed and on\n<after the line feed>"), qsl("last")}));
         QVERIFY2(triggerErrors.isEmpty(), qPrintable(outputTexts(triggerErrors).join(QString())));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_lineShownCarriesTheMarkdownBlock()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Markdown"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Markdown"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(feedMarkdown(qsl("# Head\\n"))));
+        const qsizetype head = outputTexts(shown).indexOf(qsl("Head"));
+        QVERIFY2(head >= 0, qPrintable(outputTexts(shown).join(QChar::LineFeed)));
+        const THeadlessSession::MarkdownBlock block = markdownOf(shown, head, 6);
+        QCOMPARE(block.kind, THeadlessSession::MarkdownBlock::Kind::heading);
+        QCOMPARE(block.level, 1);
+    }
+
+    // A trigger's wrapLine() splits the item into rows, the first given the first-line indent, which lineShown joins again
+    void test_aWrappedMarkdownLineKeepsItsOffsetsOnLineShown()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Wrapped Markdown"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Wrapped Markdown"), .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(setWindowWrap("main", 20) setWindowWrapIndent("main", 2))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("SpecWrapItem", [[wrapLine("main", getLineNumber())]]))lua")));
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        const qsizetype rowsBefore = buffer.lineBuffer.size();
+        const QString words = qsl("SpecWrapItem %1").arg(QStringList(12, qsl("word")).join(QChar::Space));
+        QVERIFY(session.runLua(feedMarkdown(qsl("- %1\\n").arg(words))));
+        QVERIFY2(buffer.lineBuffer.size() - rowsBefore > 2, "the item was not wrapped into rows");
+        qsizetype item = -1;
+        for (qsizetype i = 0; i < shown.size(); ++i) {
+            if (markdownOf(shown, i, 6).kind == THeadlessSession::MarkdownBlock::Kind::item) {
+                item = i;
+            }
+        }
+        QVERIFY2(item >= 0, qPrintable(outputTexts(shown).join(QChar::LineFeed)));
+        const THeadlessSession::MarkdownBlock block = markdownOf(shown, item, 6);
+        QCOMPARE(shown.at(item).at(1).toString().mid(block.contentStart), words);
+    }
+
+    // The console drops a row's tag when a trigger writes into it; outputLine, sent before triggers, still has it
+    void test_aTableRowATriggerEchoesOntoIsNoLongerABlock()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Echoed Row"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Echoed Row"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^SpecEchoRow", [[echo(" extra")]]))lua")));
+        QVERIFY(session.runLua(feedMarkdown(qsl("| SpecEchoHead |\\n|---|\\n| SpecEchoRow |\\n"))));
+        const auto rowOf = [](const QSignalSpy& spy) {
+            for (qsizetype i = 0; i < spy.size(); ++i) {
+                if (spy.at(i).at(1).toString().startsWith(qsl("SpecEchoRow"))) {
+                    return i;
+                }
+            }
+            return qsizetype(-1);
+        };
+        // The table ends with the message, and no line feed follows its closing sequence, which cTelnet holds until its posting timer fires
+        QTRY_VERIFY_WITH_TIMEOUT(rowOf(shown) >= 0, 5000);
+        const qsizetype sent = rowOf(output);
+        const qsizetype echoed = rowOf(shown);
+        QVERIFY2(sent >= 0 && echoed >= 0, qPrintable(outputTexts(output).join(QChar::LineFeed) + qsl(" | ") + outputTexts(shown).join(QChar::LineFeed)));
+        QCOMPARE(markdownOf(output, sent, 5).kind, THeadlessSession::MarkdownBlock::Kind::tableRow);
+        QVERIFY(shown.at(echoed).at(1).toString().contains(qsl(" extra")));
+        QCOMPARE(markdownOf(shown, echoed, 6).kind, THeadlessSession::MarkdownBlock::Kind::none);
+    }
+
+    // Only a table line, or an edit inside what the console drew in front of the text, loses its block
+    void test_aHeadingATriggerEchoesOntoKeepsItsBlock()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Echoed Heading"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Echoed Heading"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^SpecEchoHead$", [[echo(" extra")]]))lua")));
+        QVERIFY(session.runLua(feedMarkdown(qsl("# SpecEchoHead\\n"))));
+        const qsizetype head = outputTexts(shown).indexOf(qsl("SpecEchoHead extra"));
+        QVERIFY2(head >= 0, qPrintable(outputTexts(shown).join(QChar::LineFeed)));
+        const THeadlessSession::MarkdownBlock block = markdownOf(shown, head, 6);
+        QCOMPARE(block.kind, THeadlessSession::MarkdownBlock::Kind::heading);
+        QCOMPARE(shown.at(head).at(1).toString().mid(block.contentStart), qsl("SpecEchoHead extra"));
+    }
+
+    void test_linesATriggerFeedsAreNotBlocks()
+    {
+        QVERIFY(writeProfile(qsl("Headless Shown Fed"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Shown Fed"), .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^SpecFeeder$", [[feedTriggers("SpecFed\n")]]))lua")));
+        QVERIFY(session.runLua(feedMarkdown(qsl("# SpecFeeder\\n"))));
+        const QStringList texts = outputTexts(shown);
+        const qsizetype feeder = texts.indexOf(qsl("SpecFeeder"));
+        const qsizetype fed = texts.indexOf(qsl("SpecFed"));
+        QVERIFY2(feeder >= 0 && fed > feeder, qPrintable(texts.join(QChar::LineFeed)));
+        QCOMPARE(markdownOf(shown, feeder, 6).kind, THeadlessSession::MarkdownBlock::Kind::heading);
+        QCOMPARE(markdownOf(shown, fed, 6).kind, THeadlessSession::MarkdownBlock::Kind::none);
     }
 
     // localText leaves out what lineShown sends, so the two draw the console with nothing twice or missing,

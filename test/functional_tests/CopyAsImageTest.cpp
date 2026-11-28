@@ -32,6 +32,7 @@
 #include "TBuffer.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -101,7 +102,7 @@ private:
             return nullptr;
         }
         pane->unHighlight();
-        pane->mSelectedRegion = QRegion();
+        pane->mpSelection->mSelectedRegion = QRegion();
         return pane;
     }
 
@@ -257,7 +258,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        QVERIFY(pane->mSelectedRegion.isEmpty());
+        QVERIFY(pane->mpSelection->mSelectedRegion.isEmpty());
 
         QMenu* menu = openContextMenu(pane);
         QVERIFY2(menu, "Right-clicking the console opened no context menu");
@@ -301,7 +302,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        QVERIFY(pane->mSelectedRegion.isEmpty());
+        QVERIFY(pane->mpSelection->mSelectedRegion.isEmpty());
 
         QMenu* menu = openContextMenu(pane);
         QVERIFY2(menu, "Right-clicking the console opened no context menu");
@@ -322,7 +323,7 @@ private slots:
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 0));
         QVERIFY2(pane, "Could not prepare a console with a selection");
-        QVERIFY(!pane->mSelectedRegion.isEmpty());
+        QVERIFY(!pane->mpSelection->mSelectedRegion.isEmpty());
 
         QMenu* menu = openContextMenu(pane);
         QVERIFY2(menu, "Right-clicking the console opened no context menu");
@@ -355,7 +356,7 @@ private slots:
         QVERIFY2(pane, "Could not prepare a console");
         const int expectedLines = 4;
         dragSelection(pane, QPointF(60, (expectedLines - 1) * pane->mFontHeight));
-        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
+        QVERIFY2(!pane->mpSelection->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
 
         copyAsImage(pane);
 
@@ -559,11 +560,11 @@ private slots:
         const int blankLine = firstBlankLine();
         QVERIFY2(blankLine >= 0, "The console has no blank line to select");
 
-        pane->mDragStart = QPoint(0, blankLine);
-        pane->mDragSelectionEnd = pane->mDragStart;
+        pane->mpSelection->mDragStart = QPoint(0, blankLine);
+        pane->mpSelection->mDragSelectionEnd = pane->mpSelection->mDragStart;
         pane->normaliseSelection();
         pane->highlightSelection();
-        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "Could not select a blank line");
+        QVERIFY2(!pane->mpSelection->mSelectedRegion.isEmpty(), "Could not select a blank line");
 
         copyAsImage(pane);
 
@@ -606,7 +607,7 @@ private slots:
         QVERIFY2(pane, "Could not prepare a console with a selection");
 
         mudlet::self()->getActiveHost()->mainConsoleView()->TConsole::clear();
-        QVERIFY2(pane->mSelectedRegion.isEmpty(), "Clearing the console left a selection behind pointing at lines that are gone");
+        QVERIFY2(pane->mpSelection->mSelectedRegion.isEmpty(), "Clearing the console left a selection behind pointing at lines that are gone");
 
         copyAsImage(pane);
         const QImage image = QApplication::clipboard()->image();
@@ -623,15 +624,15 @@ private slots:
         auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
 
         dragSelection(pane, QPointF(60, 3 * pane->mFontHeight));
-        QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
-        const int selectedLines = pane->mPB.y() - pane->mPA.y() + 1;
+        QVERIFY2(!pane->mpSelection->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
+        const int selectedLines = pane->mpSelection->mPB.y() - pane->mpSelection->mPA.y() + 1;
 
         // enough to push the selection past the end of the buffer, so that the
         // shift is what has to bring it back rather than it happening to still fit
-        const int droppedLines = buffer.lineBuffer.size() - pane->mPB.y() + 2;
-        QVERIFY2(droppedLines > 0 && droppedLines <= pane->mPA.y(), "Could not size a buffer shrink that strands the selection");
+        const int droppedLines = buffer.lineBuffer.size() - pane->mpSelection->mPB.y() + 2;
+        QVERIFY2(droppedLines > 0 && droppedLines <= pane->mpSelection->mPA.y(), "Could not size a buffer shrink that strands the selection");
         shrinkBuffer(buffer, droppedLines);
-        QVERIFY2(pane->mPB.y() > buffer.getLastLineNumber(), "The selection still fits, so the shift is not being exercised");
+        QVERIFY2(pane->mpSelection->mPB.y() > buffer.getLastLineNumber(), "The selection still fits, so the shift is not being exercised");
 
         copyAsImage(pane);
 
@@ -652,10 +653,10 @@ private slots:
         const int lastLine = console->buffer.getLastLineNumber();
 
         // beyond the buffer and beyond any batch-delete adjustment, i.e. gone
-        pane->mDragStart = QPoint(0, lastLine + console->buffer.mBatchDeleteSize + 10);
-        pane->mDragSelectionEnd = QPoint(6, lastLine + console->buffer.mBatchDeleteSize + 12);
+        pane->mpSelection->mDragStart = QPoint(0, lastLine + console->buffer.mBatchDeleteSize + 10);
+        pane->mpSelection->mDragSelectionEnd = QPoint(6, lastLine + console->buffer.mBatchDeleteSize + 12);
         pane->normaliseSelection();
-        pane->mSelectedRegion = QRegion(0, 0, 10, 10);
+        pane->mpSelection->mSelectedRegion = QRegion(0, 0, 10, 10);
 
         copyAsImage(pane);
 

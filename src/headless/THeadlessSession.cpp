@@ -34,6 +34,7 @@
 #include "TGameTransport.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TMarkdown.h"
 #include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 
@@ -652,6 +653,15 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
+                // Not queued: the mark is read here, and a queued call would read a later one, skipping a step the app is owed
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::markdownMarkChanged, this, [this, pNewHost](const quint32 message) {
+                    // Only the buffer's Markdown state sends it, so it is there to read
+                    const QString mark = pNewHost->mainConsoleModel().buffer.markdown()->mMessages.mark(message).name();
+                    const QString profile = mProfileName;
+                    ++gSignalsBeingHandedOut;
+                    emit markdownMarkChanged(profile, message, mark);
+                    --gSignalsBeingHandedOut;
+                });
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this, pNewHost](const QString& text, const TLineFormat& format, const bool continuesLine) {
                     const QString profile = mProfileName;
                     const QList<TextRun> runs = textRuns(text, format, pNewHost->mFgColor, pNewHost->mBgColor);
@@ -2382,6 +2392,7 @@ THeadlessSession::TextStyles textStyles(const TChar& format)
     styles.setFlag(THeadlessSession::TextStyle::Blink, format.isBlinking());
     styles.setFlag(THeadlessSession::TextStyle::FastBlink, format.isFastBlinking());
     styles.setFlag(THeadlessSession::TextStyle::Concealed, format.isConcealed());
+    styles.setFlag(THeadlessSession::TextStyle::Code, format.isCode());
     return styles;
 }
 
@@ -2415,6 +2426,120 @@ QList<THeadlessSession::TextRun> THeadlessSession::textRuns(const QString& text,
         start = end;
     }
     return runs;
+}
+
+namespace {
+
+// Spelled out, with no default, so a kind the buffer gains is a warning here rather than a value apps cannot name
+THeadlessSession::MarkdownBlock::Kind headlessKind(const TMarkdownBlock::Kind kind)
+{
+    using Kind = THeadlessSession::MarkdownBlock::Kind;
+    switch (kind) {
+    case TMarkdownBlock::Kind::None:
+        return Kind::none;
+    case TMarkdownBlock::Kind::Blank:
+        return Kind::blank;
+    case TMarkdownBlock::Kind::Paragraph:
+        return Kind::paragraph;
+    case TMarkdownBlock::Kind::Heading:
+        return Kind::heading;
+    case TMarkdownBlock::Kind::Item:
+        return Kind::item;
+    case TMarkdownBlock::Kind::Continuation:
+        return Kind::continuation;
+    case TMarkdownBlock::Kind::Code:
+        return Kind::code;
+    case TMarkdownBlock::Kind::TableHeader:
+        return Kind::tableHeader;
+    case TMarkdownBlock::Kind::TableDelimiter:
+        return Kind::tableDelimiter;
+    case TMarkdownBlock::Kind::TableRow:
+        return Kind::tableRow;
+    case TMarkdownBlock::Kind::Rule:
+        return Kind::rule;
+    case TMarkdownBlock::Kind::Summary:
+        return Kind::summary;
+    }
+    return Kind::none;
+}
+
+THeadlessSession::MarkdownBlock::Marker headlessMarker(const TMarkdownBlock::Marker marker)
+{
+    using Marker = THeadlessSession::MarkdownBlock::Marker;
+    switch (marker) {
+    case TMarkdownBlock::Marker::None:
+        return Marker::none;
+    case TMarkdownBlock::Marker::Bullet:
+        return Marker::bullet;
+    case TMarkdownBlock::Marker::Ordered:
+        return Marker::ordered;
+    }
+    return Marker::none;
+}
+
+THeadlessSession::MarkdownBlock::Task headlessTask(const TMarkdownBlock::Task task)
+{
+    using Task = THeadlessSession::MarkdownBlock::Task;
+    switch (task) {
+    case TMarkdownBlock::Task::None:
+        return Task::none;
+    case TMarkdownBlock::Task::Open:
+        return Task::open;
+    case TMarkdownBlock::Task::Done:
+        return Task::done;
+    }
+    return Task::none;
+}
+
+THeadlessSession::MarkdownBlock::Align headlessAlign(const TMarkdownBlock::Align align)
+{
+    using Align = THeadlessSession::MarkdownBlock::Align;
+    switch (align) {
+    case TMarkdownBlock::Align::None:
+        return Align::none;
+    case TMarkdownBlock::Align::Left:
+        return Align::left;
+    case TMarkdownBlock::Align::Center:
+        return Align::center;
+    case TMarkdownBlock::Align::Right:
+        return Align::right;
+    }
+    return Align::none;
+}
+
+} // namespace
+
+THeadlessSession::MarkdownBlock THeadlessSession::markdownBlock(const TBuffer& buffer, const int line)
+{
+    MarkdownBlock block;
+    const TMarkdownBlock* pTag = buffer.markdownBlock(line);
+    if (!pTag) {
+        return block;
+    }
+    block.kind = headlessKind(pTag->kind);
+    block.contentStart = pTag->contentStart;
+    block.message = pTag->message;
+    // A line has a block only once the buffer has its Markdown state
+    const TMarkdownMessages& messages = buffer.markdown()->mMessages;
+    block.id = messages.id(pTag->message);
+    block.mark = messages.mark(pTag->message).name();
+    block.level = pTag->level;
+    block.quote = pTag->quote;
+    block.list = pTag->list;
+    block.number = pTag->number;
+    block.section = pTag->section;
+    block.marker = headlessMarker(pTag->marker);
+    block.task = headlessTask(pTag->task);
+    block.open = pTag->open;
+    block.language = pTag->language;
+    block.table = pTag->table;
+    for (const TMarkdownBlock::Align align : pTag->align) {
+        block.align.append(headlessAlign(align));
+    }
+    for (const TMarkdownCell& cell : pTag->cells) {
+        block.cells.append({cell.start, cell.length});
+    }
+    return block;
 }
 
 // A segment a wrap split off has no time of its own, so takes that of the line it came from
@@ -2453,7 +2578,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
     ++gSignalsBeingHandedOut;
-    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex));
+    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex), markdownBlock(buffer, lineIndex));
     --gSignalsBeingHandedOut;
 }
 
@@ -2505,7 +2630,16 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
     }
-    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
+    ShownLine line{text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
+    line.markdown = markdownBlock(buffer, first);
+    // The tag's offsets count past the first row's indent, which this text may keep, as when a trigger rewrapped the line
+    if (const int shift = buffer.markdownHeadIndent(first) - firstPadding) {
+        line.markdown.contentStart += shift;
+        for (MarkdownCell& cell : line.markdown.cells) {
+            cell.start += shift;
+        }
+    }
+    return line;
 }
 
 bool THeadlessSession::lineShownWanted() const
@@ -2544,7 +2678,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QString profile = mProfileName;
     for (const ShownLine& line : lines) {
         ++gSignalsBeingHandedOut;
-        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs, line.continuesLine);
+        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs, line.continuesLine, line.markdown);
         --gSignalsBeingHandedOut;
         if (!self) {
             return false;

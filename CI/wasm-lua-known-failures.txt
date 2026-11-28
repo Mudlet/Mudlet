@@ -40,6 +40,8 @@ Failure Telnet_spec.lua: Tests the Client.GUI package offer records the Client.G
 Failure Alias_spec.lua: Alias processing state across a nested expandAlias command around expandAlias() leaves command holding what a timer expanded
 Failure IDManager_spec.lua: Tests the functionality of IDMgr Tests the functionality of a private manager from getNewIDManager Tests the functionality of IDMgr:registerTimer Should hand the fourth argument to tempTimer as its repeating flag
 Failure IDManager_spec.lua: Tests the functionality of IDMgr Tests the functionality of a private manager from getNewIDManager Tests the functionality of IDMgr:registerTimer Should run the function it was given exactly once
+Failure Markdown_spec.lua: Markdown from the game shows a row that never gets a delimiter row once the game has been quiet a while
+Failure Markdown_spec.lua: Markdown from the game shows a table's rows once the game goes quiet, and pads later rows to them
 Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family a queued line starts speaking when the current one ends
 Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family ttsPause holds the utterance and ttsResume runs it to the end
 Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family ttsSpeak speaks the text and reports it until the engine goes ready again

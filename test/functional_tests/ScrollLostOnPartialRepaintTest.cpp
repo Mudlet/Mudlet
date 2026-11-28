@@ -28,6 +28,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TPaintPacer.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -344,7 +345,7 @@ private slots:
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
         // the filler can leave the pacer running, and the one below has to be the echo's
-        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
+        QTRY_VERIFY(!pane->mpPacer->mpPaintPacer->isActive());
 
         // The paint window is wall-clock time, so a runner that stalls mid-echo
         // closes it first; each attempt paints again to open a new one
@@ -353,10 +354,10 @@ private slots:
             pane->repaint();
             // timed from the end of the paint, which on a loaded runner can use
             // the whole window by itself
-            pane->mSincePaint.restart();
+            pane->mpPacer->mSincePaint.restart();
             lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
             // the whole-pane path arms it at 0 and leaves no region for a paint to cover
-            paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
+            paced = pane->mpPacer->mpPaintPacer->isActive() && pane->mpPacer->mpPaintPacer->interval() > 0;
         }
         QVERIFY2(paced, "twenty lines in a row arrived after their paint window closed, so the pacer never started");
         pane->forceUpdate();
@@ -365,7 +366,7 @@ private slots:
         // A stalled runner can outlast any fixed wait before the timer gets its
         // turn. Not a QTRY on the scrollbar, as a refresh from anywhere within
         // its retry window would hide the loss.
-        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
+        QTRY_VERIFY(!pane->mpPacer->mpPaintPacer->isActive());
         QCOMPARE(scrollBar->maximum(), host->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 

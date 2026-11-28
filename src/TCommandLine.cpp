@@ -33,6 +33,7 @@
 #include "TMainConsole.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TEvent.h"
 #include "mudlet.h"
 
@@ -1316,7 +1317,7 @@ void TCommandLine::slot_clearSelection(bool yes)
     if (TMainConsole* pMainConsole = mpHost->mainConsoleView(); pMainConsole && pMainConsole->mpLastSelectedPane) {
         TTextEdit* pPane = pMainConsole->mpLastSelectedPane;
         pPane->unHighlight();
-        pPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+        pPane->mpSelection->mSelectedRegion = QRegion(0, 0, 0, 0);
         pPane->forceUpdate();
     }
 }

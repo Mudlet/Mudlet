@@ -54,6 +54,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
+#include "TTextSelection.h"
 #include "TUiTour.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -1398,8 +1399,8 @@ private slots:
         pConsole->mLowerPane->slot_selectAll();
         // the upper pane is asked first, so it has to be out of the running for
         // this to be about the lower one at all
-        QVERIFY2(pConsole->mUpperPane->mSelectedRegion.isEmpty(), "the upper pane holds a selection, so a copy from it would prove nothing about the lower one");
-        QVERIFY2(!pConsole->mLowerPane->mSelectedRegion.isEmpty(), "select-all put no selection on the scrollback pane");
+        QVERIFY2(pConsole->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "the upper pane holds a selection, so a copy from it would prove nothing about the lower one");
+        QVERIFY2(!pConsole->mLowerPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the scrollback pane");
         QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
 
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
@@ -1442,11 +1443,11 @@ private slots:
         QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
 
         pConsole->mUpperPane->slot_selectAll();
-        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(!pConsole->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
         QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
 
         QTest::keyPress(pCommandLine, Qt::Key_Control, Qt::ControlModifier);
-        const bool keptAfterCtrl = !pConsole->mUpperPane->mSelectedRegion.isEmpty();
+        const bool keptAfterCtrl = !pConsole->mUpperPane->mpSelection->mSelectedRegion.isEmpty();
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
         QTest::keyRelease(pCommandLine, Qt::Key_Control);
 
@@ -1492,8 +1493,8 @@ private slots:
 
         pConsole->mUpperPane->slot_selectAll();
         pMini->mUpperPane->slot_selectAll();
-        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
-        QVERIFY2(!pMini->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the miniconsole");
+        QVERIFY2(!pConsole->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(!pMini->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the miniconsole");
 
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
 
@@ -1518,7 +1519,7 @@ private slots:
         const QString lineText = qsl("qzxcommandlinetext");
         type(pCommandLine, lineText);
         pCommandLine->selectAll();
-        QVERIFY2(pMini->mUpperPane->mSelectedRegion.isEmpty(), "selecting on the command line left the miniconsole's selection behind");
+        QVERIFY2(pMini->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "selecting on the command line left the miniconsole's selection behind");
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
 
         QCOMPARE(pClipboard->text(), lineText);
@@ -1567,7 +1568,7 @@ private slots:
             QMouseEvent event(type, space, pPane->mapToGlobal(space.toPoint()), Qt::LeftButton, down ? Qt::LeftButton : Qt::NoButton, Qt::NoModifier);
             QApplication::sendEvent(pPane, &event);
         }
-        QVERIFY2(!pPane->mSelectedRegion.isEmpty(), "the double-click never registered, so this proves nothing");
+        QVERIFY2(!pPane->mpSelection->mSelectedRegion.isEmpty(), "the double-click never registered, so this proves nothing");
         QVERIFY2(pConsole->mpLastSelectedPane == pPane, "the double-click did not make the miniconsole the latest selection");
         QVERIFY2(!pPane->hasSelectedText(), "the double-click on the space selected something, so this proves nothing");
 
@@ -1605,11 +1606,11 @@ private slots:
         QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
 
         pConsole->mUpperPane->slot_selectAll();
-        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(!pConsole->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
 
         mpHost->setEnableSpellCheck(false);
 
-        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "switching spell checking off cleared the game window's selection");
+        QVERIFY2(!pConsole->mUpperPane->mpSelection->mSelectedRegion.isEmpty(), "switching spell checking off cleared the game window's selection");
     }
 
     // #10764: a key put in a group made by permGroup(name, "key") reported

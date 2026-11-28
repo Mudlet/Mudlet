@@ -29,7 +29,6 @@
 
 
 #include <QColor>
-#include <QElapsedTimer>
 #include <QPointer>
 #include <QImage>
 #include <QRect>
@@ -47,6 +46,9 @@ class TBuffer;
 class TConsole;
 class TChar;
 class TGlyphCache;
+class TLinkInteraction;
+class TPaintPacer;
+class TTextSelection;
 
 class QScrollBar;
 class QString;
@@ -129,7 +131,6 @@ public:
     void showKeyboardContextMenu();
     void showLinkMenuAt(int linkIndex, const QPoint& globalPosition, bool alreadyActivated = false);
     QPoint caretGlobalPosition();
-    void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer. The upper
@@ -170,15 +171,9 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode = true;
-    // The link whose menu is showing, 0 for none; its actions carry the item's index plus one
-    int mPopupLinkIndex = 0;
-    // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
-    qint64 mPopupLinkIssue = 0;
-    // Activating a local: link with a menu opens the menu, so choosing an item must not change its selection a second time
-    bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
-    QRegion mSelectedRegion;
+    std::unique_ptr<TTextSelection> mpSelection;
 
 public slots:
     void slot_copySelectionToClipboard();
@@ -186,7 +181,6 @@ public slots:
     void slot_selectAll();
     void slot_scrollBarMoved(int);
     void slot_hScrollBarMoved(int);
-    void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
@@ -227,11 +221,8 @@ private:
     void slideScreenWindow(int deviceRows);
     bool backgroundIsOpaque() const;
     void paintNothing(const QRect&);
-    // Coalescing replacement for update() on the paths that new output drives.
-    // Those paints run inside the receive loop, so one per network packet
-    // delays the next packet; capping them at one per paintPaceMs() lets a
-    // flood put several packets' worth of text into a single frame. An
-    // invalid rect means the whole widget.
+    // Coalescing replacement for update() on the paths that new output drives,
+    // paced by mpPacer. An invalid rect means the whole widget.
     void scheduleUpdate(const QRect& rect = QRect());
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
@@ -312,24 +303,10 @@ private:
     // The buffer's linesTrimmedTotal() as of that render
     qint64 mLinesTrimmedAtRender = 0;
     bool mMouseTracking = false;
-    // 1/2/3 for single/double/triple click seen so far
-    int mMouseTrackLevel = 0;
-    bool mCtrlSelecting{};
-    // tracks status of the Shift key for keyboard-based selection
-    bool mShiftSelection{};
     int mCtrlDragStartY{};
-    QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos = 0;
     // The buffer's linesTrimmedTotal() when mOldScrollPos was taken
     qint64 mLinesTrimmedAtOldScrollPos = 0;
-    // top-left point of the selection
-    QPoint mPA;
-    // bottom-right point of the selection
-    QPoint mPB;
-    // Equal to mPB while the selection includes the newline after mPB's line: an
-    // accessibility range ending there leaves mPB where a whole-line selection without
-    // the newline does. Meaningful only while it equals mPB; unHighlight() resets it to (-1, -1).
-    QPoint mPBTakingNewline{-1, -1};
     TBuffer* mpBuffer;
     // Needs to be a QPointer as is used in a couple of lambda functions:
     QPointer<TConsole> mpConsole;
@@ -360,32 +337,14 @@ private:
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;
-    QElapsedTimer mLastClickTimer;
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     bool mEnableBlinkText = false;
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().
-    static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
-    // The cap instead while more than a screen of lines arrives between frames.
-    static constexpr int csmFloodPaintPaceMs = 33;
-    int paintPaceMs() const;
-    QTimer* mpPaintPacer = nullptr;
-    bool mPaintPacerStretched = false;
-    bool mPaintPacerMoved = false;
-    // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
-    // the current frame's window is left.
-    QElapsedTimer mSincePaint;
-    qint64 mLinesAddedAtPaint = 0;
-    // What the deferred repaint has to cover once the pacer fires.
-    QRegion mPendingPaintRegion;
-    // The whole pane went to update() since the last paint, so asking again only costs time.
-    bool mWholePaneRequested = false;
-    // The scrollbar repaints on every range change, so new output moves it
-    // with the paced frame rather than with every packet.
-    bool mScrollBarUpdatePending = false;
+    TPaintPacer* mpPacer = nullptr;
+    TLinkInteraction* mpLinks = nullptr;
     // Set while updateScrollBar() is moving the bar itself, which
     // slot_scrollBarMoved() must not mistake for the user dragging it.
     bool mUpdatingScrollBar = false;
