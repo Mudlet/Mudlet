@@ -152,6 +152,11 @@ private:
     void removeCredential(const QString& service, const QString& account, const QString& profileName, CredentialCallback callback);
     // Combines the keychain delete outcome(s) with the file-fallback removal and reports the result
     void finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError);
+#if defined(Q_OS_MACOS)
+    // Overwrites an entry the keychain refused to delete with an empty value, which every lookup takes for
+    // nothing stored (see runLookupStage()), then finishes the removal
+    void emptyUndeletableCredential(const QString& service, const QString& account, const QString& profileName, const QString& deleteError);
+#endif
 
     // Check if QtKeychain is available and working (asynchronous)
     void isKeychainAvailable(AvailabilityCallback callback);
