@@ -1159,12 +1159,16 @@ private slots:
         file.close();
         pMap->setMmpMapLocation(QUrl::fromLocalFile(localMap).toString());
         QSignalSpy startSpy(pMap, &TMap::signal_mapTransferProgressStart);
+        QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
 
-        pMap->downloadMap();
+        QVERIFY(pMap->downloadMap());
 
         QVERIFY2(consoleShows(qsl("not at a web (http or https) address")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(!consoleShows(localMap), qPrintable(consoleTextSinceMark()));
         QCOMPARE(startSpy.count(), 0);
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("not at a web (http or https) address")), qPrintable(finishedSpy.at(0).at(1).toString()));
         QVERIFY(!pMap->hasActiveTransferProgress());
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a refused location was refused, so the import flag was left set");
     }

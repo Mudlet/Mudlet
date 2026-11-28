@@ -2972,9 +2972,11 @@ bool TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
             url = mmpMapUrl(getMmpMapLocation());
             if (url.isEmpty()) {
                 //: Shown in the main console when the map the game offered is not downloaded
-                postMessage(tr("[ WARN ]  - The map the game offered is not at a web (http or https) address, so it was not downloaded."));
+                const QString warnMsg = tr("[ WARN ]  - The map the game offered is not at a web (http or https) address, so it was not downloaded.");
+                postMessage(warnMsg);
                 mImportRunning = false;
-                return;
+                emit signal_mapDownloadFinished(false, warnMsg);
+                return true;
             }
         } else {
             url = QUrl::fromUserInput(qsl("https://www.%1/maps/map.xml").arg(pHost->mUrl));

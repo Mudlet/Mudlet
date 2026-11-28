@@ -102,8 +102,8 @@ signals:
     // A download that downloadMap() began has ended, once for each: loaded, or
     // not, with the message the console was given saying why, which can be empty;
     // after its progress has closed, where it had started. For a URL that is not
-    // valid, or a map folder that cannot be made, it comes before downloadMap()
-    // returns.
+    // valid or not a web address, or a map folder that cannot be made, it comes
+    // before downloadMap() returns.
     void signal_mapDownloadFinished(bool loaded, const QString& reason);
     void signal_symbolCachesStale();
     void signal_playerRoomStyleChanged();
