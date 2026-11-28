@@ -3746,7 +3746,10 @@ int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelAccessibleValue
 int TLuaInterpreter::setLabelAccessibleValue(lua_State* L)
 {
-    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    // The name is built after the last check that can raise: lua_error() longjmps past its destructor
+    if (!checkStringArg(L, __func__, 1, "label name")) {
+        return lua_error(L);
+    }
     const double given = getVerifiedDouble(L, __func__, 2, "value");
     // The range is optional: 0 to 100 without it
     TLabelAccessibleValue value;
@@ -3756,6 +3759,7 @@ int TLuaInterpreter::setLabelAccessibleValue(lua_State* L)
     if (!lua_isnoneornil(L, 4)) {
         value.max = getVerifiedDouble(L, __func__, 4, "maximum", true);
     }
+    const QString labelName = lua_tostring(L, 1);
     if (labelName.isEmpty()) {
         return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
     }
