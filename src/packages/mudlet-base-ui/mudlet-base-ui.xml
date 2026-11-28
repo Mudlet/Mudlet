@@ -2302,6 +2302,30 @@ local function dockWidth(windowWidth, margin)
   return math.floor(math.min(windowWidth / 4, math.max(narrowestDock, room)))
 end
 
+local chatWelcome = "&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n"
+
+local function showChatWelcome()
+  local pane = BaseUI.chats.all
+  pane:clear()
+  pane:decho(chatWelcome)
+  BaseUI.chatWelcomeWrap = pane.wrapAt
+end
+
+-- Printed lines keep the wrap they had, so a welcome printed before the window had
+-- its size is printed again at the new width, but only while it is all "All" holds
+local function refitChatWelcome()
+  local pane = BaseUI.chats and BaseUI.chats.all
+  if not pane or not BaseUI.chatWelcomeWrap or pane.wrapAt == BaseUI.chatWelcomeWrap then
+    return
+  end
+  local held = table.concat(getLines(pane.name, 0, getLineCount(pane.name)) or {}):gsub("%s", "")
+  if held ~= decho2string(chatWelcome):gsub("%s", "") then
+    BaseUI.chatWelcomeWrap = nil
+    return
+  end
+  showChatWelcome()
+end
+
 -- A width the player gave the dock by dragging its edge is left alone for the session
 function BaseUI.fitDock()
   local dock = BaseUI.container
@@ -2321,6 +2345,7 @@ function BaseUI.fitDock()
   dock:set_constraints(dock)
   -- Mudlet 5.0 does not move the border on set_constraints()
   dock:adjustBorder()
+  refitChatWelcome()
 end
 
 function BaseUI.build()
@@ -2419,7 +2444,7 @@ function BaseUI.build()
   BaseUI.settings.built = true
   BaseUI.saveSettings()
   BaseUI.refreshChatTabs()
-  BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
+  showChatWelcome()
   -- last, so the bars are above the chat window where the two overlap
   BaseUI.createSection("vitals")
   -- the container remembers its own hidden/detached state from the previous
