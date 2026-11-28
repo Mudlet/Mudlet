@@ -8571,17 +8571,32 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
         PortalCard card;
         card.rect = nameRect;
         card.nameRect = nameRect;
-        // Grown from the name away from the exit, so that it covers the name it opens from but never the exit
-        card.openRect.setSize(QSizeF(qMax(scmPortalThumbnailPixels + 2.0 * scmPortalPadding, nameWidth), scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding));
-        if (tip->x() <= nameRect.center().x()) {
-            card.openRect.moveLeft(nameRect.left());
-        } else {
-            card.openRect.moveRight(nameRect.right());
-        }
-        if (tip->y() <= nameRect.center().y()) {
-            card.openRect.moveTop(nameRect.top());
-        } else {
-            card.openRect.moveBottom(nameRect.bottom());
+        // Grown from the name away from the exit, flipped only when that keeps it in view
+        const QSizeF openSize(qMax(scmPortalThumbnailPixels + 2.0 * scmPortalPadding, nameWidth), scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding);
+        const auto grown = [&nameRect, &openSize](const bool rightward, const bool downward) {
+            QRectF grownRect(QPointF(), openSize);
+            if (rightward) {
+                grownRect.moveLeft(nameRect.left());
+            } else {
+                grownRect.moveRight(nameRect.right());
+            }
+            if (downward) {
+                grownRect.moveTop(nameRect.top());
+            } else {
+                grownRect.moveBottom(nameRect.bottom());
+            }
+            return grownRect;
+        };
+        const bool rightward = tip->x() <= nameRect.center().x();
+        const bool downward = tip->y() <= nameRect.center().y();
+        card.openRect = grown(rightward, downward);
+        if (!viewRect.contains(card.openRect)) {
+            for (const auto& [right, down] : {std::pair{rightward, !downward}, std::pair{!rightward, downward}, std::pair{!rightward, !downward}}) {
+                if (const QRectF other = grown(right, down); viewRect.contains(other) && !other.contains(*tip)) {
+                    card.openRect = other;
+                    break;
+                }
+            }
         }
         card.anchor = *tip;
         card.portal = i;
@@ -8615,6 +8630,13 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
 void ModernGLWidget::paintPortals(QPainter& painter)
 {
     QList<PortalCard> cards = portalCards();
+    // Mouse moves keep open what was last drawn open, which may have opened by its name since the view moved
+    mOpenPortalRect = QRectF();
+    for (const PortalCard& card : std::as_const(cards)) {
+        if (card.open) {
+            mOpenPortalRect = card.rect;
+        }
+    }
     if (cards.isEmpty()) {
         return;
     }

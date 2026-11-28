@@ -2257,7 +2257,11 @@ private slots:
         queueFrameAt(widget, westId, 2.0f, QPoint(-8, -8));
         const int wayIn = widget.mStitch.portals().at(card.portal).toRoomId;
         const float scaleBefore = widget.mCameraController.getScale();
-        clickAt(widget, card.rect.center().toPoint());
+        // A click on the rooms it shows goes there too, not to the map room under them
+        moveTo(card.rect.center().toPoint());
+        moveTo(onTheRooms);
+        QCOMPARE(widget.roomUnderPointer(), 0);
+        clickAt(widget, onTheRooms);
         QCOMPARE(widget.mAID, eastId);
         QVERIFY(widget.mFlight);
         finishFlight(widget);
@@ -2270,6 +2274,13 @@ private slots:
     {
         QMouseEvent move(QEvent::MouseMove, QPointF(position), widget.mapToGlobal(QPointF(position)), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         widget.mouseMoveEvent(&move);
+    }
+
+    static void paintPortalsOnce(ModernGLWidget& widget)
+    {
+        QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);
+        QPainter painter(&image);
+        widget.paintPortals(painter);
     }
 
     static QList<ModernGLWidget::PortalCard> openPortalCards(ModernGLWidget& widget)
@@ -2306,6 +2317,7 @@ private slots:
             movePointerTo(widget, second.nameRect.center().toPoint());
             const QList<ModernGLWidget::PortalCard> stillOpen = openPortalCards(widget);
             QCOMPARE(stillOpen.size(), 1);
+            QCOMPARE(stillOpen.first().portal, first.portal);
             // What a click there goes to is the preview drawn on top
             QCOMPARE(widget.portalAt(second.nameRect.center().toPoint()), stillOpen.first().portal);
             movePointerTo(widget, QPoint(5, 5));
@@ -2379,14 +2391,58 @@ private slots:
         QVERIFY(openPortalCards(widget).isEmpty());
         QCOMPARE(widget.portalAt(onTheRooms), -1);
 
-        // As after a zoom: the preview that was open is no longer under the pointer where it was
+        // Nor does it stay open once the view moves it from under the resting pointer
         movePointerTo(widget, east.nameRect.center().toPoint());
         movePointerTo(widget, onTheRooms);
         QCOMPARE(openPortalCards(widget).size(), 1);
-        queueFrameAt(widget, eastId, 2.2f, QPoint(-8, -8));
-        if (!widget.portalCards().isEmpty() && !widget.portalCards().first().nameRect.contains(onTheRooms)) {
-            QVERIFY(openPortalCards(widget).isEmpty());
+        queueFrameAt(widget, eastId, 2.0f, QPoint(-7, -8));
+        QCOMPARE(widget.portalCards().size(), 1);
+        QVERIFY(!widget.portalCards().first().nameRect.contains(onTheRooms));
+        QVERIFY(openPortalCards(widget).isEmpty());
+        movePointerTo(widget, onTheRooms + QPoint(1, 0));
+        QVERIFY(openPortalCards(widget).isEmpty());
+
+        // Drawn open by its name, under a resting pointer, after the view moved, it stays open on the way to its rooms
+        queueFrameAt(widget, eastId, 2.0f, QPoint(-8, -8));
+        movePointerTo(widget, east.nameRect.center().toPoint());
+        QCOMPARE(openPortalCards(widget).size(), 1);
+        queueFrameAt(widget, eastId, 2.02f, QPoint(-8, -8));
+        const QList<ModernGLWidget::PortalCard> zoomed = openPortalCards(widget);
+        QCOMPARE(zoomed.size(), 1);
+        paintPortalsOnce(widget);
+        const QPoint ontoTheRooms =
+                QPointF(zoomed.first().nameRect.center().x(), zoomed.first().nameRect.top() > zoomed.first().rect.top() + 4.0 ? zoomed.first().rect.top() + 2.0 : zoomed.first().rect.bottom() - 2.0)
+                        .toPoint();
+        QVERIFY(!zoomed.first().nameRect.contains(ontoTheRooms));
+        movePointerTo(widget, ontoTheRooms);
+        QCOMPARE(openPortalCards(widget).size(), 1);
+        widget.mPointerInView = false;
+    }
+
+    void test_anOpenPortalPreviewStaysInTheViewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(20);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        int tried = 0;
+        // The view taken north, step by step, until the preview's name sits near its bottom edge
+        for (int y = -10; y <= 30; ++y) {
+            queueFrameAt(widget, westId, 2.0f, QPoint(-8, y));
+            const QRectF view = widget.rect().toRectF();
+            const QList<ModernGLWidget::PortalCard> cards = widget.portalCards();
+            if (cards.size() != 1 || !view.contains(cards.first().nameRect) || cards.first().nameRect.bottom() < view.bottom() - 40.0) {
+                continue;
+            }
+            ++tried;
+            movePointerTo(widget, cards.first().nameRect.center().toPoint());
+            const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
+            QCOMPARE(opened.size(), 1);
+            QVERIFY(view.contains(opened.first().rect));
+            QVERIFY(opened.first().rect.contains(cards.first().nameRect));
+            QVERIFY(!opened.first().rect.contains(cards.first().anchor));
+            movePointerTo(widget, QPoint(5, 5));
         }
+        QVERIFY(tried > 0);
         widget.mPointerInView = false;
     }
 
