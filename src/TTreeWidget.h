@@ -73,8 +73,15 @@ public:
     // view from telling a screen reader where its focus went
     void reportCurrentRow();
 
+    // Which variables get a row; the defaults are the switches over the Variables tree as they start
+    struct VariableRowFilter
+    {
+        bool showHidden = false;
+        bool showFunctions = true;
+    };
+
     // Variables view rows. They are this widget's children, so the bookkeeping dies with them.
-    void buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
+    void buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, const VariableRowFilter& filter);
     void clearVariableRows();
     TVar* variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
     TVar* newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
@@ -99,7 +106,7 @@ private:
     };
 
     struct VariableRowLook;
-    void addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden, const VariableRowLook& look);
+    void addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, const VariableRowFilter& filter, const VariableRowLook& look);
     bool rowsStandForCurrentVariables(VarUnit* pVarUnit) const;
     void adoptVariableTree(VarUnit* pVarUnit);
 

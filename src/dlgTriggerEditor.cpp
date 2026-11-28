@@ -1542,7 +1542,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     mpAction_searchIncludeVariables = new QAction(tr("Include variables"), this);
     mpAction_searchIncludeVariables->setObjectName(qsl("mpAction_searchIncludeVariables"));
-    mpAction_searchIncludeVariables->setToolTip(utils::richText(tr("Search variables (slower)")));
+    //: Tooltip on "Include variables" in the menu behind the magnifier of the editor's search field, also shown on the "Search variables too" row of the search results
+    mpAction_searchIncludeVariables->setToolTip(utils::richText(tr("Search variables from every view (slower). The Variables view always searches them.")));
     mpAction_searchIncludeVariables->setCheckable(true);
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
 
@@ -1663,7 +1664,32 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
     mpLabel_hiddenVariablesCount->hide();
     pHiddenVariablesRow->addStretch(1);
     pHiddenVariablesRow->addWidget(mpLabel_hiddenVariablesCount);
-    verticalLayout_frame_left->insertLayout(1, pHiddenVariablesRow);
+    // As far apart as the wrapped lines of a form's option row, so the two boxes do not read as one control
+    mpLayout_variableSwitches = new QVBoxLayout();
+    mpLayout_variableSwitches->setSpacing(scmEditorRowControlGap);
+    mpLayout_variableSwitches->addLayout(pHiddenVariablesRow);
+    verticalLayout_frame_left->insertLayout(1, mpLayout_variableSwitches);
+
+    // A row of its own: the pane is narrow, and both switches' words and the count on one line would be cut short in
+    // a longer language
+    mpCheckBox_showFunctionVariables = new QCheckBox(this);
+    mpCheckBox_showFunctionVariables->setObjectName(qsl("editorShowFunctions"));
+    //: Switch over the editor's Variables tree that lists the variables holding a Lua function, or leaves them out
+    mpCheckBox_showFunctionVariables->setText(tr("Show functions"));
+    //: Tooltip on the "Show functions" switch over the editor's Variables tree
+    mpCheckBox_showFunctionVariables->setToolTip(utils::richText(tr("Lists the variables that hold a Lua function. A function cannot be edited here or kept with the profile.")));
+    mpCheckBox_showFunctionVariables->setChecked(mShowFunctionVariables);
+    mpCheckBox_showFunctionVariables->hide();
+    // applyEditorShellStyle() first ran before this switch existed, and runs again only on a change of appearance
+    mpCheckBox_showFunctionVariables->setStyleSheet(checkBox_displayAllVariables->styleSheet());
+    uiDesign::keepClickFocusOffControls(mpCheckBox_showFunctionVariables);
+    connect(mpCheckBox_showFunctionVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleFunctionVariables);
+    auto* pFunctionVariablesRow = new QHBoxLayout();
+    pFunctionVariablesRow->setContentsMargins(pHiddenVariablesRow->contentsMargins());
+    pFunctionVariablesRow->addWidget(mpCheckBox_showFunctionVariables);
+    pFunctionVariablesRow->addStretch(1);
+    mpLayout_variableSwitches->addLayout(pFunctionVariablesRow);
+    QWidget::setTabOrder(checkBox_displayAllVariables, mpCheckBox_showFunctionVariables);
 
     searchSplitter = new QSplitter(Qt::Vertical);
 
@@ -1686,6 +1712,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     verticalLayout_frame_left->addWidget(searchSplitter);
     verticalLayout_frame_left->setStretchFactor(searchSplitter, 1);
+    fitVariableSwitchGaps();
     // Under a stylesheet setParent() hands a widget back the palette it had before one was set, and
     // applyEditorShellStyle() skips a repeat while the colours stand, so the trees adopted above are inked again
     inkEditorTrees();
@@ -2883,7 +2910,32 @@ void dlgTriggerEditor::slot_toggleHiddenVariables(bool state)
     if (showHiddenVars != state) {
         showHiddenVars = state;
         repopulateVars();
+        searchAgainForVariables();
     }
+}
+
+void dlgTriggerEditor::slot_toggleFunctionVariables(bool state)
+{
+    if (mShowFunctionVariables != state) {
+        mShowFunctionVariables = state;
+        repopulateVars();
+        searchAgainForVariables();
+    }
+}
+
+// In the Variables view the variables are already read, and are what is being looked for
+bool dlgTriggerEditor::searchCoversVariables() const
+{
+    return mCurrentView == EditorViewType::cmVarsView || mSearchOptions.testFlag(enums::EditorSearchOptionIncludeVariables);
+}
+
+// A result opens through its variable's row, so one found before the rows changed could open nothing
+void dlgTriggerEditor::searchAgainForVariables()
+{
+    if (mSearchTerm.isEmpty() || !searchCoversVariables()) {
+        return;
+    }
+    slot_searchMudletItems(comboBox_searchTerms->findText(mSearchTerm, Qt::MatchFixedString | Qt::MatchCaseSensitive));
 }
 
 void dlgTriggerEditor::slot_viewStatsAction()
@@ -3629,7 +3681,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
     searchTimers(s);
     searchKeys(s);
 
-    if (mSearchOptions & enums::EditorSearchOptionIncludeVariables) {
+    const bool variablesSearched = searchCoversVariables();
+    if (variablesSearched) {
         searchVariables(s);
     }
 
@@ -3658,8 +3711,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         treeWidget_searchResults->addTopLevelItem(pNotice);
     }
 
-    // Variables are left out unless asked for, which reads as "not found" to someone looking for one
-    if (!(mSearchOptions & enums::EditorSearchOptionIncludeVariables) && (noMatches || mCurrentView == EditorViewType::cmVarsView)) {
+    // Variables left out of the search read as "not found" to someone looking for one
+    if (!variablesSearched && noMatches) {
         //: Clickable last row of the editor's search results when variables were left out of the search; clicking it turns on "Include variables" and searches again
         auto* pOffer = new QTreeWidgetItem(QStringList{tr("Search variables too")});
         pOffer->setData(0, uiDesign::SearchResultDelegate::RowKindRole, static_cast<int>(uiDesign::SearchResultDelegate::ActionRow));
@@ -3740,6 +3793,10 @@ void dlgTriggerEditor::searchVariables(const QString& text)
         while (itVarDecendent.hasNext()) {
             TVar* varDecendent = itVarDecendent.next();
             if (!showHiddenVars && vu->isHidden(varDecendent)) {
+                continue;
+            }
+            // The walk starts at the global itself, and a function has no members, so this one test covers both
+            if (!mShowFunctionVariables && varDecendent->getValueType() == LUA_TFUNCTION) {
                 continue;
             }
 
@@ -10645,7 +10702,7 @@ void dlgTriggerEditor::repopulateVars()
     LuaInterface* lI = mpHost->getLuaInterface();
     lI->getVars(false);
     VarUnit* vu = lI->getVarUnit();
-    treeWidget_variables->buildVariableRows(vu, mpVarBaseItem, vu->getBase(), showHiddenVars);
+    treeWidget_variables->buildVariableRows(vu, mpVarBaseItem, vu->getBase(), {.showHidden = showHiddenVars, .showFunctions = mShowFunctionVariables});
     mpVarBaseItem->setExpanded(true);
     treeWidget_variables->setUpdatesEnabled(true);
     treeWidget_variables->setCurrentItem(mpVarBaseItem);
@@ -10699,6 +10756,24 @@ void dlgTriggerEditor::updateHiddenVariablesCount()
     }
     mpLabel_hiddenVariablesCount->clear();
     checkBox_displayAllVariables->setAccessibleName(checkBox_displayAllVariables->text());
+}
+
+// The switches are a block of the pane's column, so they stand off the search field and the tree as far as a column's
+// blocks stand apart. Part of each gap is already there, and the margin over the trees is the style's.
+void dlgTriggerEditor::fitVariableSwitchGaps()
+{
+    if (!mpLayout_variableSwitches || !mpWidget_itemTreesPane || !mpWidget_itemTreesPane->layout()) {
+        return;
+    }
+    // A layout whose rows are all hidden still takes the height of its margins
+    if (checkBox_displayAllVariables->isHidden()) {
+        mpLayout_variableSwitches->setContentsMargins(0, 0, 0, 0);
+        return;
+    }
+    const int paneSpacing = std::max(verticalLayout_frame_left->spacing(), 0);
+    const int searchRowBottom = widget_searchTerm->layout() ? widget_searchTerm->layout()->contentsMargins().bottom() : 0;
+    const int treesTop = mpWidget_itemTreesPane->layout()->contentsMargins().top();
+    mpLayout_variableSwitches->setContentsMargins(0, std::max(scmEditorColumnSpacing - paneSpacing - searchRowBottom, 0), 0, std::max(scmEditorColumnSpacing - paneSpacing - treesTop, 0));
 }
 
 void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidgetItem* pWidgetItemParent)
@@ -11357,6 +11432,10 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpVarsMainArea->setVisible(view == EditorViewType::cmVarsView);
     treeWidget_variables->setVisible(view == EditorViewType::cmVarsView);
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
+    if (mpCheckBox_showFunctionVariables) {
+        mpCheckBox_showFunctionVariables->setVisible(view == EditorViewType::cmVarsView);
+    }
+    fitVariableSwitchGaps();
     // Only hidden here: inside the Variables view updateHiddenVariablesCount() decides
     if (mpLabel_hiddenVariablesCount && view != EditorViewType::cmVarsView) {
         mpLabel_hiddenVariablesCount->hide();
@@ -11793,6 +11872,8 @@ void dlgTriggerEditor::slot_showVariables()
     mpCurrentVarItem = nullptr;
     checkBox_displayAllVariables->show();
     checkBox_displayAllVariables->setChecked(showHiddenVars);
+    mpCheckBox_showFunctionVariables->show();
+    mpCheckBox_showFunctionVariables->setChecked(mShowFunctionVariables);
     if (!hasItemToShow(treeWidget_variables)) {
         clearVarForm();
     } else {
@@ -11812,6 +11893,8 @@ void dlgTriggerEditor::show_vars()
     mpSourceEditorArea->show();
     checkBox_displayAllVariables->show();
     checkBox_displayAllVariables->setChecked(showHiddenVars);
+    mpCheckBox_showFunctionVariables->show();
+    mpCheckBox_showFunctionVariables->setChecked(mShowFunctionVariables);
     updateHiddenVariablesCount();
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
@@ -16815,10 +16898,6 @@ void dlgTriggerEditor::restyleEditorIcons()
 
     restyleEditorTreeHeadingIcons();
 
-    if (mpVariableTreeDelegate) {
-        mpVariableTreeDelegate->restyle();
-    }
-
     if (mpTriggersMainArea) {
         QToolButton* pClearSoundFile = mpTriggersMainArea->toolButton_clearSoundFile;
         pClearSoundFile->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
@@ -17449,6 +17528,14 @@ void dlgTriggerEditor::applyEditorShellStyle()
         // The row's font, not the label's: a rule naming the label stops it inheriting from what it sits on
         mpLabel_hiddenVariablesCount->setFont(uiDesign::chipFont(frame_left));
     }
+    // On each switch itself, as they sit in none of the forms the choice rules are set on; the pane's sheet inks
+    // their words
+    for (QCheckBox* pSwitch : {checkBox_displayAllVariables, mpCheckBox_showFunctionVariables.data()}) {
+        if (pSwitch) {
+            pSwitch->setStyleSheet(choiceRules);
+            uiDesign::keepClickFocusOffControls(pSwitch);
+        }
+    }
 
     // A handle with no heading carries each neighbour's tone up to its hairline, and a sheet's fill is invisible to it
     frame_left->setProperty(uiDesign::scmProp_paneTone, paneColor);
@@ -17462,10 +17549,12 @@ void dlgTriggerEditor::applyEditorShellStyle()
     // manager through itemRowStyleSheet(), so the two lists cannot disagree about a chosen row.
     const QString treeRules = uiDesign::itemRowStyleSheet(qsl("QTreeWidget"), tokens, paneColor, scmEditorTreeRowGutter) + uiDesign::scrollBarStyleSheet(qsl("QTreeWidget"), tokens, paneColor);
 
-    const QList<QTreeWidget*> panelTrees{treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree};
+    const QList<QTreeWidget*> panelTrees{treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, mpFolderTree};
     for (QTreeWidget* pTreeWidget : panelTrees) {
         pTreeWidget->setStyleSheet(treeRules);
     }
+    // VariableTreeDelegate draws its kept box from this rule, so it is the check box the forms carry
+    treeWidget_variables->setStyleSheet(treeRules + uiDesign::itemCheckMarkStyleSheet(qsl("QTreeWidget"), tokens));
 
     // The branch column is left to the style here: its arrow is what says a heading can be folded away
     treeWidget_searchResults->setStyleSheet(treeRules + qsl("QTreeWidget#editorSearchResults::item { padding: 0px 2px; }"));
@@ -17474,6 +17563,10 @@ void dlgTriggerEditor::applyEditorShellStyle()
     for (uiDesign::EditorTreeDelegate* pDelegate : std::as_const(mEditorTreeDelegates)) {
         pDelegate->setColouredMarks(mudlet::self() && mudlet::self()->colouredIcons());
         pDelegate->restyle();
+    }
+    // After the tree's sheet, or the kept boxes are cached from the rule it replaced
+    if (mpVariableTreeDelegate) {
+        mpVariableTreeDelegate->restyle();
     }
     if (mpSearchResultDelegate) {
         mpSearchResultDelegate->restyle();
@@ -17745,6 +17838,8 @@ void dlgTriggerEditor::changeEvent(QEvent* e)
         mPatternTypeColumnWidth = 0;
         alignEditorFormLeadLabels();
         fitEditorOptionsSpinBoxes();
+        // ...and the margin a style leaves over the trees, which the switches above them are stood off by
+        fitVariableSwitchGaps();
     }
 
     // Result rows are measured off the font, and the restyle below runs only on a colour change

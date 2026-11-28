@@ -78,6 +78,11 @@ int EditorTreeRowDelegate::rowLevelOf(const QModelIndex& index) const
     return treeRowLevelOf(index);
 }
 
+int EditorTreeRowDelegate::dotSlotSize() const
+{
+    return scmTreeDotDiameter;
+}
+
 // None at the top level: that row is the tree's own heading, and the trees use an undecorated root
 EditorTreeRowDelegate::ChevronState EditorTreeRowDelegate::chevronOf(const QModelIndex& index, const int level) const
 {
@@ -109,7 +114,8 @@ EditorTreeRowDelegate::composeDecoration(const int key, const int level, const C
     }
 
     const int lead = level * mIndentStep;
-    const int dotWidth = dotSlot ? scmTreeDotDiameter : 0;
+    const int dotSize = dotSlotSize();
+    const int dotWidth = dotSlot ? dotSize : 0;
     const int markWidth = mark.isNull() ? 0 : scmTreeMarkSize;
     const int gap = (dotWidth > 0 && markWidth > 0) ? scmTreeDotGap : 0;
     const int slotWidth = std::max(lead + dotWidth + gap + markWidth, 1);
@@ -122,7 +128,7 @@ EditorTreeRowDelegate::composeDecoration(const int key, const int level, const C
         painter.drawPixmap(QPointF(lead - mIndentStep + (mIndentStep - scmTreeChevronBox) / 2.0, (scmTreeSlotHeight - scmTreeChevronBox) / 2.0), chevronGlyph(chevron));
     }
     if (!dot.isNull()) {
-        painter.drawPixmap(QPointF(lead, (scmTreeSlotHeight - scmTreeDotDiameter) / 2.0), dot);
+        painter.drawPixmap(QPointF(lead, (scmTreeSlotHeight - dotSize) / 2.0), dot);
     }
     if (markWidth > 0) {
         painter.drawPixmap(QPointF(lead + dotWidth + gap, (scmTreeSlotHeight - scmTreeMarkSize) / 2.0), mark);
@@ -152,7 +158,8 @@ QRect EditorTreeRowDelegate::dotHitRect(const QStyleOptionViewItem& option, cons
 
     // The mark and a little slack only, so the rest of the leading edge can still start a drag
     const int lead = rowLevelOf(index) * mIndentStep;
-    const QRect dotRect(decorationRect.left() + lead, decorationRect.top() + (decorationRect.height() - scmTreeDotDiameter) / 2, scmTreeDotDiameter, scmTreeDotDiameter);
+    const int dotSize = dotSlotSize();
+    const QRect dotRect(decorationRect.left() + lead, decorationRect.top() + (decorationRect.height() - dotSize) / 2, dotSize, dotSize);
     return dotRect.adjusted(-scmTreeMarkHitSlack, -scmTreeMarkHitSlack, scmTreeMarkHitSlack, scmTreeMarkHitSlack);
 }
 

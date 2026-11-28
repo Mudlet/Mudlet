@@ -312,6 +312,7 @@ public:
     [[nodiscard]] QList<QLabel*> editorFormLeadLabels() const;
     void alignEditorFormLeadLabels();
     void fitEditorOptionsSpinBoxes();
+    void fitVariableSwitchGaps();
     void reflectTriggerMatchMode();
     // The one way the options strip is opened or closed on purpose
     void setTriggerOptionsShown(const bool shown);
@@ -425,6 +426,7 @@ signals:
 
 public slots:
     void slot_toggleHiddenVariables(bool);
+    void slot_toggleFunctionVariables(bool);
     void slot_hideVariable(bool);
     void slot_variableSelected(QTreeWidgetItem*);
     void slot_variableChanged(QTreeWidgetItem*);
@@ -781,6 +783,8 @@ private:
     void searchTimers(const QString& text);
     void searchKeys(const QString& text);
     void searchVariables(const QString& text);
+    bool searchCoversVariables() const;
+    void searchAgainForVariables();
     void recursiveSearchTriggers(TTrigger*, const QString&);
     void recursiveSearchAlias(TAlias*, const QString& text);
     void recursiveSearchScripts(TScript*, const QString& text);
@@ -901,6 +905,9 @@ private:
     QList<uiDesign::EditorTreeDelegate*> mEditorTreeDelegates;
     uiDesign::VariableTreeDelegate* mpVariableTreeDelegate = nullptr;
     QPointer<QLabel> mpLabel_hiddenVariablesCount;
+    QPointer<QCheckBox> mpCheckBox_showFunctionVariables;
+    // Both switches' rows, whose gaps are set again on a change of view or of style
+    QPointer<QVBoxLayout> mpLayout_variableSwitches;
 
     // QPointer: the splitter handle owns the strip and can take it down on teardown while this window is still
     // asked about the heading
@@ -991,6 +998,7 @@ private:
     // Counting walks the whole tree, which a fillout would otherwise do per item added
     QTimer* mpTimer_statusCounts = nullptr;
     bool showHiddenVars = false;
+    bool mShowFunctionVariables = true;
 
     QTreeWidgetItem* mpActionBaseItem = nullptr;
     QTreeWidgetItem* mpAliasBaseItem = nullptr;

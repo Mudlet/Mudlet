@@ -70,6 +70,7 @@ protected:
     void restyleInks(const ThemeTokens& tokens) override;
     void clearGlyphs() const override;
     [[nodiscard]] bool carriesDot(const QModelIndex& index) const override;
+    [[nodiscard]] int dotSlotSize() const override;
     void dotPressed() override;
 
 private:
@@ -103,7 +104,8 @@ private:
     // Checked on paint, not in restyle(): an interface font change comes without a theme change
     void syncPreviewFont() const;
 
-    [[nodiscard]] QPixmap keptGlyph(const KeptState kept, const bool selected) const;
+    // The tree's sheet carries no :selected rule for its indicator, so a chosen row's box is the same picture
+    [[nodiscard]] QPixmap keptGlyph(const KeptState kept) const;
     [[nodiscard]] QPixmap typeGlyph(const TypeMark type, const QColor& ink, const int cacheSlot) const;
     [[nodiscard]] QPixmap hiddenGlyph(const QColor& ink, const int cacheSlot) const;
     [[nodiscard]] int inkSlotFor(const RowState& state, const bool selected) const;
@@ -116,7 +118,6 @@ private:
     QColor mChromeInk;
     QColor mSelectedInk;
     QColor mDisabledInk;
-    QColor mKeptFill;
 
     mutable QFont mPreviewFont;
     mutable QFontMetrics mPreviewMetrics{QFont()};
@@ -125,7 +126,7 @@ private:
     static constexpr int scmInkCount = 3;
     mutable QPixmap mTypeGlyphs[scmInkCount * scmTypeMarkCount];
     mutable QPixmap mHiddenGlyphs[scmInkCount];
-    mutable QPixmap mKeptGlyphs[2 * scmKeptStateCount];
+    mutable QPixmap mKeptGlyphs[scmKeptStateCount];
 };
 
 } // namespace uiDesign

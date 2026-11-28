@@ -119,7 +119,7 @@ private:
                                "keptTable = {member = 'kept'}"));
         interface->getVars(false);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << QStringLiteral("Variables"));
-        tree.buildVariableRows(interface->getVarUnit(), rootItem, interface->getVarUnit()->getBase(), false);
+        tree.buildVariableRows(interface->getVarUnit(), rootItem, interface->getVarUnit()->getBase(), {});
         return rootItem;
     }
 
@@ -1569,7 +1569,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
 
         QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("dotHolderTable.member"));
         QVERIFY2(dottedItem, "the global has to have a row of its own in the Variables view");
@@ -1585,7 +1585,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
 
         QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("greyed.global"));
         QVERIFY(dottedItem);
@@ -1614,7 +1614,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
 
         QTreeWidgetItem* item = childItemNamed(rootItem, qsl("rebuiltName"));
         QVERIFY2(item, "the row has to be there before the tree is rebuilt");
@@ -1646,7 +1646,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
 
         QTreeWidgetItem* item = childItemNamed(rootItem, qsl("replacedName"));
         QVERIFY2(item, "the row has to be there before the profile is reset");
@@ -1671,7 +1671,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
         QTreeWidgetItem* strandedItem = childItemNamed(rootItem, qsl("strandedName"));
         QVERIFY(strandedItem);
 
@@ -1700,7 +1700,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
         QTreeWidgetItem* strandedItem = childItemNamed(rootItem, qsl("strandedName"));
         QVERIFY2(strandedItem && tree.variableForRow(vu, strandedItem), "the row has to resolve before the tree is replaced");
 
@@ -1710,7 +1710,7 @@ private slots:
 
         // deliberately without the clearVariableRows() repopulateVars() does:
         auto* rebuiltRoot = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
-        tree.buildVariableRows(replacement, rebuiltRoot, replacement->getBase(), false);
+        tree.buildVariableRows(replacement, rebuiltRoot, replacement->getBase(), {});
 
         QVERIFY2(!tree.variableForRow(replacement, strandedItem), "a row from the tree that was replaced must resolve to nothing");
     }
@@ -1726,7 +1726,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
 
         QTreeWidgetItem* item = childItemNamed(rootItem, qsl("clearedName"));
         QVERIFY2(item && tree.variableForRow(vu, item), "the row has to resolve before it is cleared");
@@ -1748,7 +1748,7 @@ private slots:
         TTreeWidget tree(nullptr);
         auto* rootItem = new QTreeWidgetItem(&tree, QStringList() << qsl("Variables"));
         VarUnit* vu = interface->getVarUnit();
-        tree.buildVariableRows(vu, rootItem, vu->getBase(), false);
+        tree.buildVariableRows(vu, rootItem, vu->getBase(), {});
 
         QVERIFY2(childItemNamed(rootItem, qsl("rootNeighbour")), "the walk has to have built rows below the root");
         QVERIFY2(!tree.variableForRow(vu, rootItem), "the root row stands for no variable");

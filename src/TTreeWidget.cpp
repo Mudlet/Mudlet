@@ -308,21 +308,24 @@ struct TTreeWidget::VariableRowLook
     QString saveToolTip;
 };
 
-void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
+void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, const VariableRowFilter& filter)
 {
     // Old rows stand for variables this walk replaces, so drop them rather than re-validate by stamp
     clearVariableRows();
     mVariablesGeneration = pVarUnit->treeGeneration();
     //: Tooltip on a row in the editor's Variables view, offering to keep that variable between sessions
     const VariableRowLook look{.saveToolTip = utils::richText(tr("Checked variables will be saved and loaded with your profile."))};
-    addVariableRows(pVarUnit, pParent, pVariable, showHidden, look);
+    addVariableRows(pVarUnit, pParent, pVariable, filter, look);
 }
 
-void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden, const VariableRowLook& look)
+void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, const VariableRowFilter& filter, const VariableRowLook& look)
 {
     QList<QTreeWidgetItem*> cList;
     for (TVar* child : pVariable->getChildren(true)) {
-        if (!showHidden && pVarUnit->isHidden(child)) {
+        if (!filter.showHidden && pVarUnit->isHidden(child)) {
+            continue;
+        }
+        if (!filter.showFunctions && child->getValueType() == LUA_TFUNCTION) {
             continue;
         }
         auto pItem = new QTreeWidgetItem(QStringList() << child->getName());
@@ -343,7 +346,7 @@ void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, T
         mVariableForRow.insert(pItem, child);
         cList.append(pItem);
         if (child->getValueType() == LUA_TTABLE) {
-            addVariableRows(pVarUnit, pItem, child, showHidden, look);
+            addVariableRows(pVarUnit, pItem, child, filter, look);
         }
     }
     pParent->addChildren(cList);
