@@ -98,6 +98,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    DetachedWindowFullScreenTest.cpp
     DetachedWindowToggleStateTest.cpp
     GlobalSettingsFlushTest.cpp
     AppFrontendAsyncTest.cpp
@@ -114,10 +115,12 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WindowStaysOnTopTest.cpp
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollUpShortBufferTest.cpp
+    HorizontalWheelScrollTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
@@ -194,8 +197,10 @@ set(TELNET_GROUP_TEST_SOURCES
     PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
+    ProxyCredentialsTest.cpp
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
+    TelnetTerminalTypeCycleTest.cpp
     TelnetTlsPromptTest.cpp
     TOscTest.cpp
     MirrorToStdOutTest.cpp
@@ -315,6 +320,7 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDialogTest.cpp
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
+    MapMoveSelectionDialogTest.cpp
     MapOffscreenCustomLineTest.cpp
     MapPainterTest.cpp
     MapRoomNameVisibilityTest.cpp
@@ -344,9 +350,9 @@ set(MAP_GROUP_TEST_SOURCES
     RoomExitsDeletedEditItemTest.cpp
 )
 
-# CameraController and GeometryManager are only compiled into the library with the 3D mapper
+# GLWidget, CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp LegacyMapZoomTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -609,6 +615,12 @@ add_test(NAME HeadlessHostSmokeTestWithMudletIni
     COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
         test_profileWithNoMainWindowTakesItsSettingsFromMudletIni)
 list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithMudletIni)
+# Qt sizes dock sides from their hints until a dock is first resized, and no window goes back to that. Mudlet making
+# room for a user window by resizing its side is the switch only a test starting from the hints can see.
+add_test(NAME ProfileSwitchMiniconsoleTestFromDockHints
+    COMMAND $<TARGET_FILE:functional_window_tests> ProfileSwitchMiniconsoleTest
+        test_aUserWindowDockedBelowTheFrontMapDockReachesAHiddenProfile)
+list(APPEND allFunctionalTestNames ProfileSwitchMiniconsoleTestFromDockHints)
 # The headless blocking calls run again on Qt's own Unix event dispatcher, which, as Windows' and macOS' do, sleeps
 # once it has sent what was posted, where glib's returns: an answer given from a posted event must still end the wait
 if(USE_HEADLESS AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -768,6 +780,14 @@ set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DP
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
+# Waits out each dock layout and tab switch, close to 40s on a fast machine
+set_tests_properties(ProfileSwitchMiniconsoleTest PROPERTIES TIMEOUT 300)
+
+# ActionBarPlacementTest takes 36 to 60s on the macOS arm64 CI runners, around the default 60s
+set_tests_properties(ActionBarPlacementTest PROPERTIES TIMEOUT 300)
+
+# NawsWidthReportTest ran out of the default 60s on a Windows CI runner with every case so far passing
+set_tests_properties(NawsWidthReportTest PROPERTIES TIMEOUT 300)
 
 # AppStartupTeardownTest starts the application eight times over, as far as
 # forwarding a link, and a sanitiser build spends seconds on each of those start-ups

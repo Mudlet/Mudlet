@@ -228,6 +228,36 @@ private slots:
                  qPrintable(qsl("the plain button reads %1 under the pointer and %2 at rest").arg(plain.hover.name(), plain.rest.name())));
         QVERIFY2(TestPixels::distance(plain.pressed, plain.hover) > scmStatesApart,
                  qPrintable(qsl("the plain button reads %1 pressed and %2 under the pointer").arg(plain.pressed.name(), plain.hover.name())));
+        // Against black the ratio rises with the tone's own luminance
+        const auto lightOf = [](const QColor& tone) {
+            return uiDesign::contrastRatio(tone, QColor(Qt::black));
+        };
+        QVERIFY2(lightOf(plain.hover) < lightOf(plain.rest) && lightOf(plain.pressed) < lightOf(plain.hover),
+                 qPrintable(qsl("the plain button reads %1 at rest, %2 under the pointer and %3 pressed, so a press does not sink further than the pointer took it")
+                                    .arg(plain.rest.name(), plain.hover.name(), plain.pressed.name())));
+    }
+
+    // macOS in its light appearance: on white, a wash of so pale an accent is lighter than the hover's grey
+    void test_aPressSinksPastTheHoverUnderAPaleAccent()
+    {
+        showButtons(false);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QPalette pale = QApplication::palette();
+        pale.setColor(QPalette::Window, Qt::white);
+        pale.setColor(QPalette::Base, Qt::white);
+        pale.setColor(QPalette::Highlight, QColor(0xa5, 0xcd, 0xff));
+        mTokens = uiDesign::themeTokens(pale);
+        mpContainer->setStyleSheet(uiDesign::buttonStyleSheet(mTokens));
+        QCoreApplication::processEvents();
+
+        const auto lightOf = [](const QColor& tone) {
+            return uiDesign::contrastRatio(tone, QColor(Qt::black));
+        };
+        const States plain = statesOf(mpPlain);
+        QVERIFY2(lightOf(plain.pressed) < lightOf(plain.hover),
+                 qPrintable(qsl("the plain button reads %1 under the pointer and the lighter %2 pressed, so a press looks like letting go").arg(plain.hover.name(), plain.pressed.name())));
     }
 };
 

@@ -122,8 +122,8 @@ private slots:
     // first sound, so even that one is placed.
     void test_aGameThatSendsMediaHasItsFirstSoundPlaced()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        if (const QString backend = qEnvironmentVariable("QT_MEDIA_BACKEND"); !backend.isEmpty() && backend != qsl("ffmpeg")) {
+            QSKIP("A backend other than FFmpeg is named, so it is never checked.");
         }
         QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the game said anything.");
         QString package = qsl("Client.Media.Default");
@@ -1204,21 +1204,22 @@ private:
     // Measured, not assumed: QAudioBufferOutput is documented to work only on Qt's FFmpeg backend
     QString noPanningReason() const
     {
-        return qsl("This Qt Multimedia backend (\"%1\") hands no audio to a voice, so a placed sound plays as recorded here. Needs Qt's FFmpeg backend.")
+        return qsl("The media backend Qt loaded for QT_MEDIA_BACKEND=\"%1\" hands no audio to a voice, so a placed sound plays as recorded here. "
+                   "Needs Qt's FFmpeg backend, which a Qt built without it replaces with another.")
                 .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")));
     }
 
-    // Asking starts the one-time probe of a backend nobody named, which takes a moment to answer
+    // Asking starts the one-time probe, which takes a moment to answer; a backend other than FFmpeg is never
+    // probed. FFmpeg named is not taken on trust here: a Qt without it plays through another backend.
     static bool backendPlaces()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            return !TMediaVoice::unsupported();
-        }
-        return QTest::qWaitFor(
+        const bool answered = QTest::qWaitFor(
                 []() {
-                    return !TMediaVoice::unsupported();
+                    TMediaVoice::unsupported();
+                    return TMediaVoice::probePassed() || TMediaVoice::probeFailed() || !TMediaVoice::probeStarted();
                 },
                 QDeadlineTimer(6s));
+        return answered && !TMediaVoice::unsupported();
     }
 
     TMediaData playingData(const QString& fileName) const

@@ -68,6 +68,7 @@
 #include <QStringDecoder>
 #include <QtGlobal>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <memory>
@@ -750,7 +751,7 @@ void cTelnet::connectIt(const QString& address, int port)
         if (mDecompressionRecursionDepth > 0) {
             // A trigger on the last words of the connection that ended: tearing
             // it down from inside their read would reset the parse it is in
-            QTimer::singleShot(0ms, this, [this, address, port]() {
+            QTimer::singleShot(10ms, this, [this, address, port]() {
                 connectIt(address, port);
             });
             return;
@@ -842,6 +843,11 @@ void cTelnet::connectIt(const QString& address, int port)
     // After the aborts above, which report the connection they end: an attempt that never
     // connects must not be timed from one that did, which could set off an automatic reconnect
     mConnectionTimer.invalidate();
+    // A Disconnect with no connection to end - offline, waiting to retry, or mid name lookup - is
+    // never cleared by a disconnection, and would pass this attempt's failure off as the user's doing
+    mDontReconnect = false;
+    mDisconnectRequested = false;
+    ++mConnectAttempts;
 
     // mpHost is a QPointer and can in principle be cleared if the Host is
     // destroyed mid-connect; slot authors must null-check before dereferencing.
@@ -1097,12 +1103,16 @@ void cTelnet::handleFailedConnection()
 
     emit signal_disconnected(mpHost);
 
+    // Taken first, as a handler that reconnects clears it for its own attempt
+    const bool calledOff = mDontReconnect;
+    const quint64 attemptsBefore = mConnectAttempts;
     TEvent event{};
     event.mArgumentList.append(qsl("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    const bool retry = mAutoReconnect && !mDontReconnect;
+    const bool redialled = mConnectAttempts != attemptsBefore;
+    const bool retry = mAutoReconnect && !calledOff && !mDontReconnect && !redialled;
     mDontReconnect = false;
     if (!retry) {
         return;
@@ -1422,11 +1432,11 @@ void cTelnet::slot_socketConnected()
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 #if defined(Q_OS_WINDOWS)
     // Windows fixes a socket's receive buffer at 64 KB, so a burst of game text refills it every
-    // 64 KB with a notifier round trip each time; other platforms size it themselves. The cap on
-    // Qt's own buffer leaves what the queued reads have not caught up with in the socket instead
+    // 64 KB with a notifier round trip each time; other platforms size it themselves.
     mpSocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024);
-    mpSocket->setReadBufferSize(1024 * 1024);
 #endif
+    // Leaves what the queued reads have not caught up with in the socket rather than in memory
+    mpSocket->setReadBufferSize(1024 * 1024);
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
@@ -1488,6 +1498,13 @@ void cTelnet::slot_socketDisconnected()
 {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
+#endif
+#if !defined(QT_NO_SSL)
+    // A failed handshake would fail the same way on the other address family's attempt to the same
+    // game, which would then be reported as a second disconnection; a mere drop may be one path's fault
+    if (!mpSocket && mSslHandshakeFailed && mPendingConnectionAttempts > 1) {
+        abortLosingSocket(sender() == &mSocket_ipV4 ? &mSocket_ipV6 : &mSocket_ipV4);
+    }
 #endif
     mLookingUpHost = false;
     mPendingConnectionAttempts = 0;
@@ -1584,9 +1601,14 @@ void cTelnet::finishDisconnection()
 
     // Double-check Host is still valid before raising event
     if (mpHost && !mpHost->isClosingDown()) {
+        // A handler that reconnects clears this for its own attempt, but the end being reported was still the user's
+        const bool calledOff = mDontReconnect;
         event.mArgumentList.append(qsl("sysDisconnectionEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
+        if (calledOff) {
+            mDontReconnect = true;
+        }
     }
 
     QTime timeDiff(0, 0, 0, 0);
@@ -3087,6 +3109,16 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
+QString cTelnet::getNewEnvironOSCHyperlinksGmcp()
+{
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksLocal()
+{
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
+}
+
 bool cTelnet::oscHyperlinkConfigFeatureEnabled()
 {
     return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
@@ -3170,6 +3202,8 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SELECTION"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSelection()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SPOILER"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSpoiler()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_DISABLED"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksDisabled()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_GMCP"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksGmcp()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_LOCAL"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksLocal()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
@@ -4582,6 +4616,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             raiseProtocolEvent("sysProtocolDisabled", "channel102");
         }
 
+        // MTTS: a game sends DONT then DO TTYPE around a copyover to restart the
+        // cycle, and its first SEND after that expects the client name again
+        if (option == OPT_TERMINAL_TYPE) {
+            mCycleCountMTTS = 0;
+        }
+
         if (myOptionState.test(idxOption) || (!announcedState.test(idxOption))) {
             sendTelnetOption(TN_WONT, option);
             announcedState.set(idxOption);
@@ -5259,14 +5299,14 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         msg = normalisedMsg;
     }
 
-    const qsizetype firstNewline = msg.indexOf('\n');
-    const qsizetype firstSpace = msg.indexOf(' ');
-
-    // if we see a space before a newline, or no newlines at all,
-    // then that's the separator for message and data
-    const qsizetype separator = Q_LIKELY((firstSpace != -1 && firstSpace < firstNewline) || firstNewline == -1) ? firstSpace : firstNewline;
-    QString packageMessage = fromUtf8KeepingBom(separator == -1 ? msg : msg.first(separator));
-    QByteArray data = separator == -1 ? QByteArray() : msg.sliced(separator + 1).toByteArray();
+    // A package name holds no whitespace; a CR left on the name of "Package\r\n{...}"
+    // would file the data under a name no script asks for
+    const auto separatorAt = std::ranges::find_if(msg, [](const char ch) {
+        return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+    });
+    const qsizetype nameLength = separatorAt - msg.begin();
+    QString packageMessage = fromUtf8KeepingBom(msg.first(nameLength));
+    QByteArray data = separatorAt == msg.end() ? QByteArray() : msg.sliced(nameLength + 1).toByteArray();
 
     if (onlyWhitespace(data)) { // Example: Core.Ping
         QString emptyObject = qsl("{}");
@@ -5280,7 +5320,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         return;
     }
 
-    // The package name holds neither separator, so these match it exactly when they would the whole message
+    // The package name holds no separator, so these match it exactly when they would the whole message
     bool serverDeclinedBaseUi = false;
     if (packageMessage.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
@@ -5344,6 +5384,8 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
             packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive) || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive);
     const bool forMedia = mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive);
     const bool forLogin = packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive);
+    // A reconnect token signs in without the password, so gmcp gets none of this message
+    const bool loginToken = !packageMessage.compare(qsl("Char.Login.Token"), Qt::CaseInsensitive);
     if (forDiscord || forMedia || forLogin) {
         QString dataText = fromUtf8KeepingBom(data);
         if (forDiscord) {
@@ -5357,7 +5399,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         }
     }
 
-    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+    mpHost->mLuaInterpreter.setGMCPTable(packageMessage, loginToken ? QByteArrayLiteral("{}") : data);
 
     // A game that brings its own interface can decline the built-in starter UI
     // up front with Client.GUI {"baseui": false}. The same event an installed
@@ -5391,10 +5433,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
         transcodedMsg = msg;
     }
 
-    transcodedMsg.remove(QChar::LineFeed);
-    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-    transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-    // remove \r's from the data, as yajl doesn't like it
+    // A multi-line value such as DESCRIPTION arrives with telnet's CR LF line ends
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
@@ -5621,6 +5660,10 @@ void cTelnet::setChannel102Variables(const QString& msg)
 void cTelnet::setAutoReconnect(bool status)
 {
     mAutoReconnect = status;
+    // A retry already waiting after a failed connection would otherwise still run
+    if (!status) {
+        mTimerFailedConnectionRetry->stop();
+    }
 }
 
 void cTelnet::atcpComposerCancel()
@@ -5944,7 +5987,8 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            mMudData.assign(mud_data, i + 1, std::string::npos);
+            // Appended, as a feedTelnet() from a trigger in that post can have left a partial line ahead of this
+            mMudData.append(mud_data, i + 1, std::string::npos);
             mPartialLineHeldSince.start();
         } else {
             if (mMudData.empty()) {
@@ -5987,9 +6031,10 @@ void cTelnet::slot_timerPosting()
     // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
 
-    postData();
-    mMudData = "";
+    // Ahead of the post, with mMudData left alone after it: during a trigger on this line, a read
+    // in its nested event loop or a feedTelnet() can leave a partial line of its own for this timer
     mIsTimerPosting = false;
+    postData();
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
@@ -6181,6 +6226,92 @@ void cTelnet::recordReplayChunk(const qint32 interval, const char* data, const q
 #endif
 }
 
+// A reconnect token signs in without the password and replays get shared, so a Char.Login.Token is
+// recorded as its name alone. A name that could still be one is held back, as a message can be split across reads.
+QByteArray cTelnet::redactedForReplay(const char* data, const qint32 length)
+{
+    static constexpr QLatin1StringView loginToken("Char.Login.Token");
+    // setGMCPVariables() drops a leading BOM, so a token named after one still reaches the authenticator
+    static constexpr QByteArrayView bom("\xEF\xBB\xBF");
+    QByteArray recorded;
+    recorded.reserve(length);
+    for (const char ch : QByteArrayView(data, length)) {
+        switch (mReplayRedaction) {
+        case ReplayRedaction::Text:
+            recorded += ch;
+            if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::Iac;
+            }
+            break;
+        case ReplayRedaction::WithheldIac:
+            if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::Withheld;
+                break;
+            }
+            // Any IAC but IAC IAC ends what is withheld, as processSocketData() takes it for a missing SE
+            recorded += TN_IAC;
+            [[fallthrough]];
+        case ReplayRedaction::Iac:
+            recorded += ch;
+            if (ch == TN_SB) {
+                mReplayRedaction = ReplayRedaction::SubnegotiationOption;
+            } else if (ch == TN_WILL || ch == TN_WONT || ch == TN_DO || ch == TN_DONT) {
+                mReplayRedaction = ReplayRedaction::NegotiatedOption;
+            } else {
+                mReplayRedaction = ReplayRedaction::Text;
+            }
+            break;
+        case ReplayRedaction::NegotiatedOption:
+            // The option, even an IAC, as processSocketData() takes it
+            recorded += ch;
+            mReplayRedaction = ReplayRedaction::Text;
+            break;
+        case ReplayRedaction::SubnegotiationOption:
+            recorded += ch;
+            if (static_cast<unsigned char>(ch) == OPT_GMCP) {
+                mReplayGmcpName.clear();
+                mReplayRedaction = ReplayRedaction::GmcpName;
+            } else if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::Iac;
+            } else {
+                mReplayRedaction = ReplayRedaction::Text;
+            }
+            break;
+        case ReplayRedaction::GmcpName: {
+            const bool nameEnds = ch == TN_IAC || ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '\0';
+            if (!nameEnds) {
+                mReplayGmcpName += ch;
+            }
+            QByteArrayView name(mReplayGmcpName);
+            if (name.startsWith(bom)) {
+                name = name.sliced(bom.size());
+            }
+            if (!nameEnds) {
+                if (!bom.startsWith(mReplayGmcpName) && !loginToken.startsWith(QLatin1StringView(name), Qt::CaseInsensitive)) {
+                    recorded += mReplayGmcpName;
+                    mReplayRedaction = ReplayRedaction::Text;
+                }
+                break;
+            }
+            recorded += mReplayGmcpName;
+            if (!loginToken.compare(QLatin1StringView(name), Qt::CaseInsensitive)) {
+                mReplayRedaction = ch == TN_IAC ? ReplayRedaction::WithheldIac : ReplayRedaction::Withheld;
+            } else {
+                recorded += ch;
+                mReplayRedaction = ch == TN_IAC ? ReplayRedaction::Iac : ReplayRedaction::Text;
+            }
+            break;
+        }
+        case ReplayRedaction::Withheld:
+            if (ch == TN_IAC) {
+                mReplayRedaction = ReplayRedaction::WithheldIac;
+            }
+            break;
+        }
+    }
+    return recorded;
+}
+
 bool cTelnet::startReplayRecording(const QString& fileName)
 {
     if (mRecordReplay) {
@@ -6193,6 +6324,7 @@ bool cTelnet::startReplayRecording(const QString& fileName)
     mRecordLastChunkMSecTimeOffset = 0;
     mRecordingChunkTimer.start();
     mRecordingChunkCount = 0;
+    mReplayRedactionUnseeded = true;
     mRecordReplay = true;
     return true;
 }
@@ -6446,9 +6578,13 @@ void cTelnet::endReplay(const QString& message)
 void cTelnet::slot_processReplayChunk()
 {
     mReplayChunkPending = false;
+    // Counted as processSocketData() counts: a read in a trigger's nested event loop
+    // would land ahead of the rest of the chunk
+    ++mDecompressionRecursionDepth;
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
+    int forcedOffPrompts = 0;
     for (int i = 0; i < datalen; ++i) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
@@ -6522,12 +6658,18 @@ void cTelnet::slot_processReplayChunk()
         }
 
         if (recvdGA) {
-            mGA_Driver = true;
-            cleandata.push_back('\n');
             recvdGA = false;
-            gotPrompt(cleandata);
-            cleandata = "";
-            emit signal_promptReceived();
+            if (!mFORCE_GA_OFF) {
+                mGA_Driver = true;
+                // '\xff' marks the line as a prompt for isPrompt() and prompt triggers, as on the socket path
+                cleandata.push_back('\xff');
+                gotPrompt(cleandata);
+                cleandata = "";
+                emit signal_promptReceived();
+            } else {
+                cleandata.push_back('\n');
+                ++forcedOffPrompts;
+            }
         }
     } //for
 
@@ -6535,10 +6677,14 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
     mPromptStartPosted = false;
+    for (int prompt = 0; prompt < forcedOffPrompts; ++prompt) {
+        emit signal_promptReceived();
+    }
 
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
+    --mDecompressionRecursionDepth;
     if (loadingReplay) {
         loadReplayChunk();
     }
@@ -6560,15 +6706,18 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
-#if defined(Q_OS_WINDOWS)
-    // This runs inside the socket notifier, which Qt's Windows dispatcher serves ahead of every
-    // timer: reading here as well as in the queued chain would hold the timers off until a flood
-    // was all in. The Unix dispatcher runs timers every turn; there the skip only slows a burst
+    // One read to an event-loop turn however long a flood lasts, or input, timers and painting wait for
+    // them all. The pending read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
     if (mReadPending) {
         return;
     }
-#endif
     readPendingSocketData();
+    // Queued even with nothing left to read: QSslSocket emits readyRead() for each record it decrypts,
+    // many in one turn, and those after this one have to wait for the next turn
+    if (!mReadPending) {
+        mReadPending = true;
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
 }
 
 // Requeues itself for what is left after one BUFFER_SIZE read, or deferred by a drain: readyRead()
@@ -6578,23 +6727,20 @@ void cTelnet::slot_socketReadyToBeRead()
 void cTelnet::readPendingSocketData()
 {
     mReadPending = false;
-    if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect) {
+    // drainBeforeDisconnection() does the reading once the close is noticed
+    if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect || mDisconnectionPending) {
         return;
     }
-    // Qt never emits a socket's readyRead() from inside its handler, but a trigger's nested event loop can take up a
-    // transport's report; read then, it would be parsed in the middle of the read the trigger is part of
-    if (!mpSocket && mDecompressionRecursionDepth > 0) {
-        if (!mTransportReadDeferred) {
-            mTransportReadDeferred = true;
-            QTimer::singleShot(10ms, this, [this]() {
-                mTransportReadDeferred = false;
-                readPendingSocketData();
-            });
-        }
+    // A trigger is running a nested event loop: a read now, from a socket or a transport, would land
+    // in the middle of the one it is part of. mReadPending keeps it to one retry at a time
+    if (mDecompressionRecursionDepth > 0) {
+        mReadPending = true;
+        QTimer::singleShot(10ms, this, &cTelnet::readPendingSocketData);
         return;
     }
 
-    if (readSocketDataOnce()) {
+    // A trigger's nested event loop can have postponed one during that read
+    if (readSocketDataOnce() && !mReadPending) {
         mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
@@ -6613,7 +6759,11 @@ bool cTelnet::readSocketDataOnce()
         std::array<char, BUFFER_SIZE + 10> in_buffer;
 
         amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
-        processSocketData(in_buffer.data(), amount);
+        // The read queued behind every readyRead() finds nothing once a burst is in, and inside a
+        // trigger's nested event loop at the depth cap that would warn of lost data
+        if (amount > 0) {
+            processSocketData(in_buffer.data(), amount);
+        }
     } else if (unreadBytes() > 0) {
         std::array<char, BUFFER_SIZE + 10> in_buffer;
 
@@ -6753,8 +6903,8 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     // went through out_buffer above):
     cleandata.reserve(static_cast<size_t>(datalen));
 
-    // A compressed read can inflate to nothing. Older Mudlets refuse a replay
-    // holding an empty chunk, so its wait carries over to the next chunk.
+    // A read can come to nothing once inflated, or once redacted below. Older Mudlets
+    // refuse a replay holding an empty chunk, so its wait carries over to the next chunk.
     const bool recordingThisRead = !loopbackTesting && mRecordReplay && datalen > 0;
     // Replays play back without a decompressor, so what follows an MCCP start
     // sequence in a plain read is held back until parsing shows whether
@@ -6773,12 +6923,29 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     const auto recordPart = [this, &waitToRecord, &waitRecorded](const char* data, const qint32 length) {
         // Processing can end the recording, e.g. a script disconnecting
         if (length > 0 && mRecordReplay) {
-            recordReplayChunk(waitToRecord, data, length);
-            waitToRecord = 0;
-            waitRecorded = true;
+            const QByteArray recorded = redactedForReplay(data, length);
+            // What redaction held back from the read before can take this past the most playback accepts in a chunk
+            for (qsizetype from = 0; from < recorded.size(); from += static_cast<qsizetype>(BUFFER_SIZE)) {
+                const auto size = std::min(static_cast<qsizetype>(BUFFER_SIZE), recorded.size() - from);
+                recordReplayChunk(waitToRecord, recorded.constData() + from, static_cast<qint32>(size));
+                waitToRecord = 0;
+                waitRecorded = true;
+            }
         }
     };
     if (recordingThisRead) {
+        if (mReplayRedactionUnseeded) {
+            // Seeded here rather than when recording starts: that can be partway through a read, or before connecting resets the parser.
+            // Started inside a subnegotiation, the recording would play its rest back as text, and it could be a token.
+            if (insb) {
+                mReplayRedaction = iac ? ReplayRedaction::WithheldIac : ReplayRedaction::Withheld;
+            } else if (iac2) {
+                mReplayRedaction = ReplayRedaction::NegotiatedOption;
+            } else {
+                mReplayRedaction = iac ? ReplayRedaction::Iac : ReplayRedaction::Text;
+            }
+            mReplayRedactionUnseeded = false;
+        }
         recordPart(buffer, heldBackToRecord ? compressionStartAt : datalen);
     }
 
@@ -6896,6 +7063,14 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                 // MCCP1's has no IAC before its SE, so it would swallow what follows
                                 recordPart(heldBackToRecord, static_cast<qint32>(buffer + i - 2 - heldBackToRecord));
                                 heldBackRecorded = true;
+                            }
+                            // The parser starts the compressed stream clean, and the start sequence that got it there is not recorded
+                            const bool gmcpNameHeld = mReplayRedaction == ReplayRedaction::GmcpName;
+                            mReplayRedaction = ReplayRedaction::Text;
+                            if (heldBackToRecord && gmcpNameHeld) {
+                                // Even a whole token name has no data with it here, as the parser ended its subnegotiation
+                                const QByteArray name = std::exchange(mReplayGmcpName, {});
+                                recordPart(name.constData(), static_cast<qint32>(name.size()));
                             }
                             buffer += i + 3; //bugfix: BenH
                             int restLength = datalen - i - 3;

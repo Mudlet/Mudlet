@@ -710,6 +710,7 @@ public:
     void setUseMaxConsoleBufferSize(bool useMax) { mUseMaxConsoleBufferSize = useMax; }
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
+    void setProxyPassword(const QString&);
     void updateAnsi16ColorsInTable();
     void updateExtendedAnsiColorsInTable();
     // Store/retrieve all the settings in one call:
@@ -1312,6 +1313,9 @@ public:
     QColor mUpperLevelColor{scmDefaultUpperLevelColor};
     static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
     QColor mRoomBorderColor{scmDefaultRoomBorderColor};
+    // For rooms whose environment has no colour of its own; unset, it is mRed_2, as those rooms were before it existed
+    QColor mMapperDefaultRoomColor;
+    QColor mapperDefaultRoomColor() const { return mMapperDefaultRoomColor.isValid() ? mMapperDefaultRoomColor : mRed_2; }
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
@@ -1362,6 +1366,9 @@ public:
     bool mMapperShowGrid = false;
     // The modern 3D view draws the areas next to the one shown past its edges, and previews of those it cannot place
     bool mMapperStitchAreas = true;
+    // Deleting a room leaves the exits that led to it as stubs rather than removing them (mapDeletedRoomExitsAsStubs);
+    // deleting a whole area still removes them
+    bool mMapperDeletedRoomExitsAsStubs = false;
     // What the built-in map buttons (main toolbar, Show Map menu entry and its
     // shortcut, detached window toolbar) do for this profile; scripts set it
     // through setConfig("mapperButton", ...). Deliberately not saved with the
@@ -1421,6 +1428,10 @@ public:
     // shortcuts options visually impaired players have to switch between the input line and the main window
     enum class CaretShortcut { None, Tab, CtrlTab, F6 };
     Q_ENUM(CaretShortcut)
+    // The combination a Mudlet shortcut would hold to clash with this choice (Meta+Tab for Ctrl+Tab on macOS); empty for None
+    static QKeyCombination caretShortcutCombination(CaretShortcut);
+    // Whether a key with these modifiers is the one the given choice toggles caret mode with
+    static bool caretShortcutMatches(CaretShortcut, QKeyCombination);
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
     // Bumped each time TMainConsole::focusActiveCommandLine() or caret mode takes the keyboard, so that function's

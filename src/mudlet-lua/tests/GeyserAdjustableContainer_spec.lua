@@ -1254,6 +1254,71 @@ describe("Tests the Adjustable.Container mouse handlers", function()
         assert.is_true(math.abs(container:get_x() - originalX) <= 1)
       end)
 
+      -- one event only: its position is relative to the label, which has not moved yet
+      local function dragEdge(grabX, grabY, moveX, moveY)
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, grabY))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, grabY))
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", grabX + moveX, grabY + moveY))
+      end
+
+      local function near(expected, actual)
+        assert.is_true(math.abs(expected - actual) <= 1, string.format("expected %s, got %s", expected, actual))
+      end
+
+      it("keeps the right edge put when the left edge is dragged past the minimum width", function()
+        local right = container:get_x() + container:get_width()
+        dragEdge(5, 100, 300, 0)
+        near(75, container:get_width())
+        near(right, container:get_x() + container:get_width())
+      end)
+
+      it("keeps the right edge put when the left edge is dragged past the window's edge", function()
+        local right = container:get_x() + container:get_width()
+        dragEdge(5, 100, -100, 0)
+        near(0, container:get_x())
+        near(right, container:get_x() + container:get_width())
+      end)
+
+      it("keeps the bottom edge put when the top edge is dragged past the minimum height", function()
+        local bottom = container:get_y() + container:get_height()
+        dragEdge(100, 2, 0, 300)
+        near(25, container:get_height())
+        near(bottom, container:get_y() + container:get_height())
+      end)
+
+      it("keeps the left edge put when the right edge is dragged past the window's edge", function()
+        local left = container:get_x()
+        local winw = getMainWindowSize()
+        dragEdge(195, 100, winw, 0)
+        near(left, container:get_x())
+        near(winw, container:get_x() + container:get_width())
+      end)
+
+      -- a negative position would be read as one measured from the window's far edge
+      it("keeps a container wider than the window at the window's left edge when dragged", function()
+        local winw = getMainWindowSize()
+        container:resize(winw + 100, nil)
+        drag(100, 100, 1, 10)
+        near(0, container:get_x())
+      end)
+
+      it("brings a container partly past the window's left edge back in when its bottom edge is dragged", function()
+        local winw = getMainWindowSize()
+        container:move(-(winw + 50), nil)
+        near(-50, container:get_x())
+        dragEdge(100, 195, 0, 10)
+        near(0, container:get_x())
+        near(200, container:get_width())
+      end)
+
+      it("keeps the right edge of a container partly past the window's left edge put when its left edge is dragged", function()
+        local winw = getMainWindowSize()
+        container:move(-(winw + 50), nil)
+        dragEdge(5, 100, 10, 0)
+        near(0, container:get_x())
+        near(150, container:get_width())
+      end)
+
       it("raises for an event with no position rather than guess one", function()
         container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
         container:onClick(container.adjLabel, mouseEvent("LeftButton", 100, 100))
@@ -4259,6 +4324,50 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
       assert.is_truthy(tostring(container.x):find("px$"))
       assert.are.equal("20%", container.width)
+    end)
+
+    it("keeps a container inside another one where it is when its position turns into pixels", function()
+      local parent = Geyser.Container:new({name = "gapAbsoluteParent", x = 100, y = 80, width = 400, height = 300})
+      finally(function() parent:delete() end)
+      local container = Adjustable.Container:new({name = "gapAbsoluteNested", x = "10%", y = "10%", width = "50%", height = "50%", autoLoad = false, autoSave = false}, parent)
+      containers[#containers + 1] = container
+
+      container:setAbsolute(false, true)
+
+      assert.are.equal("40px", container.x)
+      assert.are.equal("30px", container.y)
+      assert.are.equal(140, container:get_x())
+      assert.are.equal(110, container:get_y())
+    end)
+
+    it("keeps a container that sticks out left of and above its parent where it is when its position turns into pixels", function()
+      local parent = Geyser.Container:new({name = "gapAbsoluteOutParent", x = 100, y = 80, width = 400, height = 300})
+      finally(function() parent:delete() end)
+      local container = Adjustable.Container:new({name = "gapAbsoluteOut", x = "0%-20", y = "0%-30", width = "50%", height = "50%", autoLoad = false, autoSave = false}, parent)
+      containers[#containers + 1] = container
+      assert.are.equal(80, container:get_x())
+      assert.are.equal(50, container:get_y())
+
+      container:setAbsolute(false, true)
+
+      assert.are.equal(80, container:get_x())
+      assert.are.equal(50, container:get_y())
+    end)
+
+    it("keeps a container inside a parent at a fractional position where it is when its position turns into pixels", function()
+      local outer = Geyser.Container:new({name = "gapAbsoluteFracOuter", x = 0, y = 0, width = 1421, height = 1421})
+      finally(function() outer:delete() end)
+      local parent = Geyser.Container:new({name = "gapAbsoluteFracParent", x = "33.33333%", y = "33.33333%", width = "50%", height = "50%"}, outer)
+      local container = Adjustable.Container:new({name = "gapAbsoluteFrac", x = 40, y = 40, width = "50%", height = "50%", autoLoad = false, autoSave = false}, parent)
+      containers[#containers + 1] = container
+      local x, y = container:get_x(), container:get_y()
+
+      container:setAbsolute(false, true)
+
+      assert.are.equal("40px", container.x)
+      assert.are.equal("40px", container.y)
+      assert.are.equal(x, container:get_x())
+      assert.are.equal(y, container:get_y())
     end)
 
     it("turns the axis its container has a size on into percentages", function()
