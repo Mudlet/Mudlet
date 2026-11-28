@@ -617,13 +617,28 @@ jobs:
         echo "MUDLET_TEST_MMCP_DIR=${peer_dir}" >> "${GITHUB_ENV}"
         echo "MMCP peer fixture ready on 127.0.0.1:$(cat "${peer_dir}/port")"
 
+    - name: (Linux) Check the Lua spec runner
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      run: python3 -I "${{github.workspace}}/CI/test-run-lua-specs.py"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
-      # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes 480-730s under ASan, and the rest is headroom for a slow runner.
+      # wall-clock time, so the suite needs a budget of its own, with headroom for a
+      # slow runner.
       timeout-minutes: 20
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
+      # A Mudlet process per spec file, three at a time: one fewer than the runner's four
+      # cores leaves one for the X servers, the fixtures and Mudlet's helper threads. Spec
+      # files that talk to a fixture run one at a time, as a fixture serves one client, and
+      # only they get the fake Discord's runtime directory and library path. --budget ends
+      # inside timeout-minutes, so a hung process is still stopped and reported.
+      run: |
+        python3 -I "${{github.workspace}}/CI/run-lua-specs.py" \
+          --jobs 3 --xvfb --budget 1080 \
+          --failure-marker /tmp/busted-tests-failed \
+          --fixture-env "XDG_RUNTIME_DIR=${MUDLET_TEST_DISCORD_RUNTIME_DIR}" \
+          --fixture-env "LD_LIBRARY_PATH=${MUDLET_TEST_DISCORD_LIB_PATH}" \
+          -- "${{github.workspace}}/src/mudlet" --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         # Off by default; the flood specs pend without it
@@ -645,16 +660,16 @@ jobs:
         # following it is a regression rather than an environment quirk. The
         # macOS runners are not gated: their window server can refuse a resize.
         MUDLET_TEST_REQUIRE_WINDOW_RESIZE: 1
-        # The fake Discord IPC server's socket lives in this runtime directory,
-        # and the bundled discord-rpc library is only reachable through this
-        # library path - without both the Discord specs have nothing to talk to.
+        # The fake Discord IPC server's socket lives in its runtime directory, and
+        # the bundled discord-rpc library is only reachable through its library
+        # path - the runner hands both to the spec files that talk to a fixture,
+        # and without them the Discord specs have nothing to talk to.
         MUDLET_TEST_REQUIRE_DISCORD: 1
-        XDG_RUNTIME_DIR: ${{env.MUDLET_TEST_DISCORD_RUNTIME_DIR}}
-        LD_LIBRARY_PATH: ${{env.MUDLET_TEST_DISCORD_LIB_PATH}}
-        # The session bus socket lives in the runtime directory replaced above,
-        # so Qt's D-Bus platform theme can no longer find it and would fall back
-        # to spawning dbus-launch. Point it at nothing instead: libdbus leaks
-        # the buffer it reads the autolaunch reply into (1032 bytes, reported
+        # The session bus socket lives in the runtime directory, which the spec
+        # files that talk to a fixture get in place of the runner's own, so Qt's
+        # D-Bus platform theme there can no longer find it and would fall back to
+        # spawning dbus-launch. Point every process at nothing instead: libdbus
+        # leaks the buffer it reads the autolaunch reply into (1032 bytes, reported
         # against this job by LeakSanitizer with no Mudlet frames in the stack),
         # and no spec needs a session bus.
         DBUS_SESSION_BUS_ADDRESS: 'disabled:'

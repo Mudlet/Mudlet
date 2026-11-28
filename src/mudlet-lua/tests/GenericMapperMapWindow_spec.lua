@@ -38,6 +38,8 @@ describe("Tests the generic mapper's map window", function()
     savedPrevious = Geyser.windowList.my_mapper
     Geyser.windowList.my_mapper = nil
     realNew = Geyser.Mapper.new
+    -- stubbed through _G below: busted gives this file an environment of its own,
+    -- and a plain assignment would stay in it, out of the mapper's reach
     realCloseMapWidget = closeMapWidget
     made = {}
     Geyser.Mapper.new = function(_, cons)
@@ -49,7 +51,7 @@ describe("Tests the generic mapper's map window", function()
 
   after_each(function()
     Geyser.Mapper.new = realNew
-    closeMapWidget = realCloseMapWidget
+    _G.closeMapWidget = realCloseMapWidget
     Geyser.windowList.my_mapper = savedPrevious
     restore(map.defaults.map_window, savedDefaults)
     restore(map.configs.map_window, savedWindow)
@@ -104,7 +106,7 @@ describe("Tests the generic mapper's map window", function()
   it("hides the map it already has rather than opening another", function()
     local previous = stubMapper({embedded = false})
     Geyser.windowList.my_mapper = previous
-    closeMapWidget = function() return true end
+    _G.closeMapWidget = function() return true end
     map.configs.map_window.embedded = false
     map.configs.map_window.dock = "left"
     map.configs.map_window.shown = true
@@ -120,7 +122,7 @@ describe("Tests the generic mapper's map window", function()
     map.configs.map_window.dock = "floating"
     map.showMap(true)
     Geyser.windowList.my_mapper = made[1]
-    closeMapWidget = function() return nil, "map widget already closed" end
+    _G.closeMapWidget = function() return nil, "map widget already closed" end
     map.showMap()
     assert.is_true(map.configs.map_window.shown)
     assert.are.equal(1, #made)
@@ -198,7 +200,7 @@ describe("Tests the generic mapper's map window", function()
     it("applies window settings changed while the map window was hidden when it is next shown", function()
       map.showMap = realShowMap
       Geyser.windowList.my_mapper = stubMapper({embedded = false})
-      closeMapWidget = function() return true end
+      _G.closeMapWidget = function() return true end
       map.configs.map_window.embedded = false
       map.configs.map_window.dock = "floating"
       map.configs.map_window.shown = false
