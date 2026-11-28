@@ -2269,6 +2269,11 @@ void Host::reportDisplayFontChangeToEditor()
 // Shaped as the "main window font" one above
 void Host::raiseEditorFontChange()
 {
+    if (mEditorFontReportHeld) {
+        mEditorFontReportPending = true;
+        return;
+    }
+
     // As in raiseSettingChangedEvent(): a value read from the profile's own file is not a change
     if (!TAppFrontend::hasView() || hasConsoleView()) {
         const QFont font = getEditorFont();
@@ -2288,6 +2293,31 @@ void Host::raiseEditorFontChange()
     const QFont reported = getEditorFont();
     mEditorFontReported = TFontAttributes(reported);
     emit signal_editorFontChanged(reported);
+}
+
+Host::EditorFontReportHold::EditorFontReportHold(Host* pHost)
+{
+    if (pHost && !pHost->mEditorFontReportHeld) {
+        mpHost = pHost;
+        mpHost->mEditorFontReportHeld = true;
+    }
+}
+
+Host::EditorFontReportHold::~EditorFontReportHold()
+{
+    release();
+}
+
+void Host::EditorFontReportHold::release()
+{
+    if (!mpHost) {
+        return;
+    }
+    Host* pHost = std::exchange(mpHost, nullptr);
+    pHost->mEditorFontReportHeld = false;
+    if (std::exchange(pHost->mEditorFontReportPending, false)) {
+        pHost->raiseEditorFontChange();
+    }
 }
 
 // a little message to make the player feel special for helping us find bugs

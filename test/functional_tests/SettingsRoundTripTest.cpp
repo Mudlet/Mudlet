@@ -153,6 +153,23 @@ private:
         return result;
     }
 
+    // The strings of a global Lua array, in order; empty when there is no such table
+    QStringList luaStrings(const char* name) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        QStringList result;
+        const int count = lua_istable(L, -1) ? static_cast<int>(lua_objlen(L, -1)) : 0;
+        for (int index = 1; index <= count; ++index) {
+            lua_rawgeti(L, -1, index);
+            const char* value = lua_tostring(L, -1);
+            result.append(value ? QString::fromUtf8(value) : QString());
+            lua_pop(L, 1);
+        }
+        lua_pop(L, 1);
+        return result;
+    }
+
     static bool comboItemEnabled(const QComboBox* pComboBox, const int row)
     {
         const auto* pModel = qobject_cast<const QStandardItemModel*>(pComboBox->model());
@@ -1352,6 +1369,91 @@ private slots:
         const TFontAttributes displayBefore(display);
         QCOMPARE(displayAfter.mName, displayBefore.mName);
         QCOMPARE(displayAfter.mPointSize, displayBefore.mPointSize);
+#endif
+    }
+
+    // The anti-aliasing write raises the editor font change while the Host still holds the size that the editor
+    // font write after it replaces; an apply carrying both raises it once, with the final size and anti-aliasing
+    void test_anApplyRaisesOneEditorFontChangeWithTheFontItEndsOn()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QVERIFY(mpHost->fontsAntiAlias());
+        const QFont display = mpHost->getDisplayFont();
+        // Clicking the anti-alias box rebuilds the display font with the other strategy straight away
+        restoreLater([this, display]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+            mpHost->setFontsAntiAlias(true);
+            mpHost->setDisplayFont(display, Host::DisplayFontChange::UserChoice);
+        });
+        const int ownSize = 14;
+        mpHost->setEditorFont(QFont(mEditorOwnFamily, ownSize));
+        mpHost->setEditorFontFollowsDisplay(false);
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+        const auto antiAliased = [](const QFont& font) {
+            return !(font.styleStrategy() & QFont::NoAntialias);
+        };
+
+        QVERIFY(runLua(qsl("editorFontReports = {}\n"
+                           "editorFontReportHandler = registerAnonymousEventHandler('sysSettingChanged', function(_, key, family, size)\n"
+                           "  if key == 'editor font' then\n"
+                           "    editorFontReports[#editorFontReports + 1] = family .. ' ' .. tostring(size)\n"
+                           "  end\n"
+                           "end)\n")));
+        restoreLater([this]() {
+            runLua(qsl("killAnonymousEventHandler(editorFontReportHandler)"));
+        });
+        const auto reportFor = [this](const int size) {
+            return QStringList{qsl("%1 %2").arg(mEditorOwnFamily).arg(size)};
+        };
+        const auto reportsSeen = [this]() {
+            const QStringList reports = luaStrings("editorFontReports");
+            return qsl("scripts were given %1 \"editor font\" change(s): %2").arg(reports.size()).arg(reports.join(qsl(", ")));
+        };
+
+        openPreferences();
+        QSpinBox* pSize = mpPreferences->spinBox_editorFontSize;
+        QCheckBox* pAntiAlias = mpPreferences->checkBox_antiAlias;
+        QVERIFY(!mpPreferences->checkBox_editorFontFollowsDisplay->isChecked());
+        QCOMPARE(pSize->value(), ownSize);
+        QVERIFY(pAntiAlias->isChecked());
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        QSignalSpy fontSpy(mpHost, &Host::signal_editorFontChanged);
+
+        pSize->setValue(ownSize + 1);
+        pAntiAlias->click();
+        QVERIFY2(applyAndWait(applySpy), "editing the size and toggling anti-aliasing never wrote the settings back");
+        QVERIFY2(luaStrings("editorFontReports") == reportFor(ownSize + 1), qPrintable(reportsSeen()));
+        QCOMPARE(fontSpy.count(), 1);
+        QCOMPARE(fontSpy.at(0).at(0).value<QFont>().pointSize(), ownSize + 1);
+        QVERIFY2(!antiAliased(fontSpy.at(0).at(0).value<QFont>()), "the editor's listeners were given the font with the anti-aliasing it had before the apply");
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize + 1);
+        QVERIFY(!mpHost->fontsAntiAlias());
+        QVERIFY(!antiAliased(mpHost->getEditorFont()));
+
+        QVERIFY(runLua(qsl("editorFontReports = {}")));
+        fontSpy.clear();
+        applySpy.clear();
+        pAntiAlias->click();
+        QVERIFY2(applyAndWait(applySpy), "toggling anti-aliasing never wrote the settings back");
+        QVERIFY2(luaStrings("editorFontReports") == reportFor(ownSize + 1), qPrintable(reportsSeen()));
+        QCOMPARE(fontSpy.count(), 1);
+        QVERIFY(antiAliased(fontSpy.at(0).at(0).value<QFont>()));
+        QVERIFY(mpHost->fontsAntiAlias());
+
+        QVERIFY(runLua(qsl("editorFontReports = {}")));
+        fontSpy.clear();
+        applySpy.clear();
+        pSize->setValue(ownSize + 2);
+        QVERIFY2(applyAndWait(applySpy), "editing the size never wrote the settings back");
+        QVERIFY2(luaStrings("editorFontReports") == reportFor(ownSize + 2), qPrintable(reportsSeen()));
+        QCOMPARE(fontSpy.count(), 1);
+        QCOMPARE(fontSpy.at(0).at(0).value<QFont>().pointSize(), ownSize + 2);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize + 2);
+        QVERIFY(antiAliased(mpHost->getEditorFont()));
 #endif
     }
 

@@ -706,6 +706,20 @@ public:
     QFont editorFontBase();
     // The display font moved, which moves the editor's too while it follows
     void reportDisplayFontChangeToEditor();
+    // Holds the editor font change back until release(), or the end of its scope, then raises it at most
+    // once, with the font as it ends up. A hold taken while another is held leaves the raising to that one.
+    class EditorFontReportHold
+    {
+    public:
+        explicit EditorFontReportHold(Host*);
+        ~EditorFontReportHold();
+        EditorFontReportHold(const EditorFontReportHold&) = delete;
+        EditorFontReportHold& operator=(const EditorFontReportHold&) = delete;
+        void release();
+
+    private:
+        Host* mpHost = nullptr;
+    };
     int getConsoleBufferSize() const { return mConsoleBufferSize; }
     void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
     bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
@@ -1001,6 +1015,8 @@ private:
     // What the editor's listeners were last given: getEditorFont() resolves the family on every read,
     // so a package bringing or taking it away changes the font without anything being set
     std::optional<TFontAttributes> mEditorFontReported;
+    bool mEditorFontReportHeld = false;
+    bool mEditorFontReportPending = false;
     // The main console view aliases it by reference, which is safe as every frontend destroys the view before
     // the Host (mudlet::profileClosing()).
     std::unique_ptr<TConsoleModel> mpMainConsoleModel;

@@ -7410,6 +7410,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(comboBox_logFileNameFormat)) {
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
+        // The anti-aliasing and editor font writes each raise the editor font change, the first while the Host still
+        // holds the font the later ones replace
+        Host::EditorFontReportHold editorFontReportHold(pHost);
         if (mSnapshot.dirty(checkBox_antiAlias)) {
             pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
         }
@@ -7531,6 +7534,7 @@ void dlgProfilePreferences::applyAll()
             // pick stored nothing, and the font on show is what the player leaves from
             pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked(), ownFontStored ? Host::EditorFontStart::EarlierChoice : Host::EditorFontStart::FontOnShow);
         }
+        editorFontReportHold.release();
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
         if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
