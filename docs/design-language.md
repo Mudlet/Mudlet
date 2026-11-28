@@ -639,7 +639,7 @@ given both by the code that builds it, before `exec()`.
 ### Tabs
 
 A tab is a word on the line it switches. `tabBarStyleSheet(tabWidgetSelector,
-tokens, paneInset)` and `prepareTabStrip(pTabBar)` draw every strip of tabs that
+tokens, paneInset, direction)` and `prepareTabStrip(pTabBar)` draw every strip of tabs that
 way - the notepad's notes, the package manager's three views, the connection
 window's "My games" / "All games" and "Connect to" / "Options" - and `TTabBar`
 paints the profile strip the same way from the same constants. The words stand
@@ -703,6 +703,12 @@ the labels start on the tab widget's own edge, the line the information box unde
 them stands on. Configure room does the same, as its shell's margin holds the
 strip off the window's edge. In document mode a `QTabWidget` paints no pane at all, so
 `prepareTabStrip()` turns document mode off - the notepad's `.ui` file has it on.
+`QTabWidget` adds a fixed frame round its pages to its size hints
+(`CT_TabWidget`, 4px each way in the base styles) that this pane does not draw,
+so `prepareTabStrip()` also gives the tab widget a style whose `CT_TabWidget` is
+the room the sheet's pane really takes: a tab widget on the recipe has exactly
+what its pages, its strip and its inset need as its size hint and its minimum,
+and a dialog can size itself from them.
 
 A bare `QTabBar` is laid across the whole width of its pane by the window holding
 it and draws the hairline as its own base. `QStyleSheetStyle` hands
@@ -773,6 +779,23 @@ makes `QEvent::Move` on the button the one moment after every layout, and the
 keeper puts the cross back at the end of the tab's own extent, on the word's
 line. Its own `move()` sends a second `Move`, so the wanted position is compared
 before it is asked for.
+
+A script's sheet that names `QTabBar` takes a strip's tabs whole, on these
+strips as on the profile strip below: `scriptSheetTakesTheTabs()` answers for
+both, from the application's sheet or the one on the widget a profile's sheet is
+set on, which for a dialog is its own window. Mudlet's sheets go on the widgets
+under the window, so their `QTabBar` rules never count. Left to Qt the two sheets
+would merge property by property - the design's colours and padding winning, the
+script's widths and corners laid over them - which is neither look. While a
+script's sheet holds, `prepareTabStrip()` puts back what it changed (the strip's
+style, the base, document mode, `expanding`, the crosses' size and place) and
+answers false, and the window leaves `tabBarStyleSheet()` out of every sheet that
+reaches the bar; the connection window also gives its pages their own margins
+back, as the pane is Qt's framed one again. A new strip calls `prepareTabStrip()`
+where its window builds its sheets and includes `tabBarStyleSheet()` only when it
+answers true; on the window's `StyleChange`, which comes with every sheet set on
+the application or the window, it builds them again when `tabStripOutOfDate()`
+answers true.
 
 #### The profile strip
 

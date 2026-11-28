@@ -68,6 +68,7 @@
 #include <QSvgRenderer>
 #include <iterator>
 #include <QStyleOptionTab>
+#include <QStyleOptionTabWidgetFrame>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTimer>
@@ -1645,12 +1646,14 @@ QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix)
     return rules;
 }
 
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset)
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset, const Qt::LayoutDirection direction)
 {
     // The bar is both a sub-control of the tab widget (::tab-bar) and a QTabBar descendant, so both selectors are used
     const QString bar = tabWidgetSelector + qsl(" QTabBar");
     const QString inset = QString::number(paneInset);
     const QString hairline = QString::number(scmInputBorderWidth);
+    const QString gap = QString::number(scmTabGap);
+    const QString trailingGap = direction == Qt::RightToLeft ? qsl("0px 0px 0px %1px").arg(gap) : qsl("0px %1px 0px 0px").arg(gap);
 
     QString rules =
             // The pane's top edge is the hairline, lifted onto the bar's bottom row so the chosen tab's underline covers it
@@ -1669,9 +1672,9 @@ QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& to
             // the strip's style sets the word of a tab not chosen back to the bar's own weight
             + bar
             + qsl("::tab { background: transparent; color: %1; font-weight: %2; border: none; border-bottom: %3px solid transparent;"
-                  " padding: %4px 0px %5px 0px; margin: 0px %6px 0px 0px; }")
+                  " padding: %4px 0px %5px 0px; margin: %6; }")
                       .arg(tokens.mutedText.name(), QString::number(static_cast<int>(scmTabChosenWeight)), QString::number(scmTabUnderlineWidth), QString::number(scmTabPaddingTop))
-                      .arg(QString::number(scmTabUnderlineAir), QString::number(scmTabGap))
+                      .arg(QString::number(scmTabUnderlineAir), trailingGap)
             + bar + qsl("::tab:hover { color: %1; }").arg(tokens.accentText.name()) + bar
             + qsl("::tab:selected { color: %1; border-bottom-color: %2; }").arg(tokens.accentText.name(), tokens.accent.name())
             // After :selected, which it would otherwise lose the tie to
@@ -1703,11 +1706,21 @@ public:
     // signals to want - a qobject_cast for this class matches every QObject
     static constexpr char scmName[] = "uiDesignTabCloseBoxKeeper";
 
-    explicit TabCloseBoxKeeper(QObject* pParent)
-    : QObject(pParent)
+    // Made before the strip is readied, so it holds what the bar had for releaseTabStrip() to put back
+    explicit TabCloseBoxKeeper(QTabBar* pTabBar)
+    : QObject(pTabBar)
+    , mPlainDrawBase(pTabBar->drawBase())
+    , mPlainExpanding(pTabBar->expanding())
     {
         setObjectName(QLatin1StringView(scmName));
+        if (const auto* pTabWidget = qobject_cast<const QTabWidget*>(pTabBar->parentWidget())) {
+            mPlainDocumentMode = pTabWidget->documentMode();
+        }
     }
+
+    bool plainDrawBase() const { return mPlainDrawBase; }
+    bool plainExpanding() const { return mPlainExpanding; }
+    bool plainDocumentMode() const { return mPlainDocumentMode; }
 
     void keep(QAbstractButton* pButton)
     {
@@ -1761,11 +1774,16 @@ protected:
         }
         return QObject::eventFilter(pWatched, pEvent);
     }
+
+private:
+    const bool mPlainDrawBase;
+    const bool mPlainExpanding;
+    bool mPlainDocumentMode = false;
 };
 
-// What QStyleSheetStyle leaves to the style under it while the strip's sheet draws the tabs: the word, the base and
-// where the tabs line up. The rest goes to the application style, as it would for a bar with no style of its own.
-class TabStripStyle : public QCommonStyle
+// Every call goes on to the application style of the moment, so it follows the base style the appearance swaps in.
+// Under a sheet QStyleSheetStyle passes what it does not draw to the style set on a widget, for its children too.
+class ApplicationStyleRelay : public QCommonStyle
 {
 public:
     void polish(QWidget* pWidget) override { qApp->style()->polish(pWidget); }
@@ -1773,11 +1791,6 @@ public:
 
     void drawPrimitive(PrimitiveElement element, const QStyleOption* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
     {
-        // The platform's own base is a band behind the whole bar on macOS
-        if (element == PE_FrameTabBarBase && pOption) {
-            paintTabStripHairline(pPainter, pOption->rect, themeTokens());
-            return;
-        }
         qApp->style()->drawPrimitive(element, pOption, pPainter, pWidget);
     }
 
@@ -1793,22 +1806,7 @@ public:
 
     void drawItemText(QPainter* pPainter, const QRect& rect, int flags, const QPalette& palette, bool enabled, const QString& text, QPalette::ColorRole textRole = QPalette::NoRole) const override
     {
-        const bool aTabsWord = mTabWordNext && text == mTabWord;
-        mTabWordNext = false;
-        if (!aTabsWord) {
-            qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
-            return;
-        }
-        pPainter->save();
-        if (mTabWordQuiet) {
-            QFont font = pPainter->font();
-            font.setWeight(mQuietWeight);
-            pPainter->setFont(font);
-        }
-        // From the leading edge: a word lighter than the box it was measured for would otherwise stand off the line
-        // every other row of the window starts on
-        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | Qt::AlignLeft, palette, enabled, text, textRole);
-        pPainter->restore();
+        qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
     }
 
     void drawItemPixmap(QPainter* pPainter, const QRect& rect, int alignment, const QPixmap& pixmap) const override { qApp->style()->drawItemPixmap(pPainter, rect, alignment, pixmap); }
@@ -1837,6 +1835,63 @@ public:
         return qApp->style()->sizeFromContents(type, pOption, contentsSize, pWidget);
     }
 
+    int pixelMetric(PixelMetric metric, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->pixelMetric(metric, pOption, pWidget); }
+
+    int styleHint(StyleHint hint, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr, QStyleHintReturn* pReturnData = nullptr) const override
+    {
+        return qApp->style()->styleHint(hint, pOption, pWidget, pReturnData);
+    }
+
+    QPixmap standardPixmap(StandardPixmap pixmap, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
+    {
+        return qApp->style()->standardPixmap(pixmap, pOption, pWidget);
+    }
+
+    QIcon standardIcon(StandardPixmap icon, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->standardIcon(icon, pOption, pWidget); }
+
+    QPixmap generatedIconPixmap(QIcon::Mode mode, const QPixmap& pixmap, const QStyleOption* pOption) const override { return qApp->style()->generatedIconPixmap(mode, pixmap, pOption); }
+
+    int layoutSpacing(QSizePolicy::ControlType one, QSizePolicy::ControlType other, Qt::Orientation orientation, const QStyleOption* pOption, const QWidget* pWidget) const override
+    {
+        return qApp->style()->layoutSpacing(one, other, orientation, pOption, pWidget);
+    }
+};
+
+// What QStyleSheetStyle leaves to the style under it while the strip's sheet draws the tabs: the word, the base and
+// where the tabs line up. The rest goes to the application style, as it would for a bar with no style of its own.
+class TabStripStyle : public ApplicationStyleRelay
+{
+public:
+    void drawPrimitive(PrimitiveElement element, const QStyleOption* pOption, QPainter* pPainter, const QWidget* pWidget = nullptr) const override
+    {
+        // The platform's own base is a band behind the whole bar on macOS
+        if (element == PE_FrameTabBarBase && pOption) {
+            paintTabStripHairline(pPainter, pOption->rect, themeTokens());
+            return;
+        }
+        qApp->style()->drawPrimitive(element, pOption, pPainter, pWidget);
+    }
+
+    void drawItemText(QPainter* pPainter, const QRect& rect, int flags, const QPalette& palette, bool enabled, const QString& text, QPalette::ColorRole textRole = QPalette::NoRole) const override
+    {
+        const bool aTabsWord = mTabWordNext && text == mTabWord;
+        mTabWordNext = false;
+        if (!aTabsWord) {
+            qApp->style()->drawItemText(pPainter, rect, flags, palette, enabled, text, textRole);
+            return;
+        }
+        pPainter->save();
+        if (mTabWordQuiet) {
+            QFont font = pPainter->font();
+            font.setWeight(mQuietWeight);
+            pPainter->setFont(font);
+        }
+        // From the leading edge: a word lighter than the box it was measured for would otherwise stand off the line
+        // every other row of the window starts on
+        qApp->style()->drawItemText(pPainter, rect, (flags & ~Qt::AlignHorizontal_Mask) | QStyle::visualAlignment(mTabWordDirection, Qt::AlignLeft), palette, enabled, text, textRole);
+        pPainter->restore();
+    }
+
     int pixelMetric(PixelMetric metric, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
     {
         if (metric == PM_TabCloseIndicatorWidth || metric == PM_TabCloseIndicatorHeight) {
@@ -1861,6 +1916,7 @@ public:
                 mTabWordNext = true;
                 mTabWord = pTab->text;
                 mTabWordQuiet = !(pTab->state & State_Selected);
+                mTabWordDirection = pTab->direction;
                 mQuietWeight = pWidget ? pWidget->font().weight() : QFont::Normal;
             }
             break;
@@ -1870,23 +1926,10 @@ public:
         return qApp->style()->styleHint(hint, pOption, pWidget, pReturnData);
     }
 
-    QPixmap standardPixmap(StandardPixmap pixmap, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override
-    {
-        return qApp->style()->standardPixmap(pixmap, pOption, pWidget);
-    }
-
-    QIcon standardIcon(StandardPixmap icon, const QStyleOption* pOption = nullptr, const QWidget* pWidget = nullptr) const override { return qApp->style()->standardIcon(icon, pOption, pWidget); }
-
-    QPixmap generatedIconPixmap(QIcon::Mode mode, const QPixmap& pixmap, const QStyleOption* pOption) const override { return qApp->style()->generatedIconPixmap(mode, pixmap, pOption); }
-
-    int layoutSpacing(QSizePolicy::ControlType one, QSizePolicy::ControlType other, Qt::Orientation orientation, const QStyleOption* pOption, const QWidget* pWidget) const override
-    {
-        return qApp->style()->layoutSpacing(one, other, orientation, pOption, pWidget);
-    }
-
 private:
     mutable bool mTabWordNext = false;
     mutable bool mTabWordQuiet = false;
+    mutable Qt::LayoutDirection mTabWordDirection = Qt::LeftToRight;
     mutable QString mTabWord;
     mutable QFont::Weight mQuietWeight = QFont::Normal;
 };
@@ -1897,30 +1940,79 @@ QStyle* tabStripStyle()
     static auto* spStyle = new TabStripStyle;
     return spStyle;
 }
-} // namespace
 
-void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens)
+// QTabWidget's size hints are its pages and strip plus CT_TabWidget, a fixed 4px each way in the base styles, while
+// its pages are laid out in SE_TabWidgetTabContents, which follows the sheet's ::pane. Here CT_TabWidget is that room.
+class TabPaneStyle : public ApplicationStyleRelay
 {
-    if (!pPainter || base.isEmpty()) {
-        return;
+public:
+    QSize sizeFromContents(ContentsType type, const QStyleOption* pOption, const QSize& contentsSize, const QWidget* pWidget = nullptr) const override
+    {
+        const auto* pFrame = qstyleoption_cast<const QStyleOptionTabWidgetFrame*>(pOption);
+        // A tab widget on one of the pages reaches this through the sheet's style without having it set
+        if (type != CT_TabWidget || !pFrame || !pWidget || !pWidget->testAttribute(Qt::WA_SetStyle)) {
+            return ApplicationStyleRelay::sizeFromContents(type, pOption, contentsSize, pWidget);
+        }
+        // Measured by the style QTabWidget lays out with (the sheet's, while one reaches it) on a pane too large for any
+        // side to be cut short. The same room for any contents: heightForWidth() takes it from empty contents.
+        QStyleOptionTabWidgetFrame trial(*pFrame);
+        trial.rect = QRect(0, 0, QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        QSize room = trial.rect.size() - pWidget->style()->subElementRect(SE_TabWidgetTabContents, &trial, pWidget).size();
+        // contentsSize holds the strip already
+        switch (pFrame->shape) {
+        case QTabBar::RoundedWest:
+        case QTabBar::RoundedEast:
+        case QTabBar::TriangularWest:
+        case QTabBar::TriangularEast:
+            room.rwidth() -= pFrame->tabBarSize.width();
+            break;
+        default:
+            room.rheight() -= pFrame->tabBarSize.height();
+            break;
+        }
+        return contentsSize + room;
     }
-    pPainter->fillRect(QRect(base.left(), base.bottom() - scmInputBorderWidth + 1, base.width(), scmInputBorderWidth), tokens.border);
+};
+
+// Shared by every tab widget on the recipe and never deleted, as tabStripStyle() is
+QStyle* tabPaneStyle()
+{
+    static auto* spStyle = new TabPaneStyle;
+    return spStyle;
 }
 
-void prepareTabStrip(QTabBar* pTabBar)
+// There while the strip is readied, and only then
+TabCloseBoxKeeper* keeperOf(const QTabBar* pTabBar)
 {
-    if (!pTabBar) {
-        return;
-    }
-
     QObject* pFound = pTabBar->findChild<QObject*>(QLatin1StringView(TabCloseBoxKeeper::scmName), Qt::FindDirectChildrenOnly);
-    auto* pKeeper = pFound ? static_cast<TabCloseBoxKeeper*>(pFound) : new TabCloseBoxKeeper(pTabBar);
-    if (!pFound) {
+    return pFound ? static_cast<TabCloseBoxKeeper*>(pFound) : nullptr;
+}
+
+QList<QAbstractButton*> crossesOf(const QTabBar* pTabBar)
+{
+    QList<QAbstractButton*> crosses;
+    for (int i = 0; i < pTabBar->count(); ++i) {
+        for (const QTabBar::ButtonPosition side : {QTabBar::LeftSide, QTabBar::RightSide}) {
+            auto* pCross = qobject_cast<QAbstractButton*>(pTabBar->tabButton(i, side));
+            if (pCross && !qobject_cast<QToolButton*>(pCross)) {
+                crosses << pCross;
+            }
+        }
+    }
+    return crosses;
+}
+
+void readyTabStrip(QTabBar* pTabBar)
+{
+    TabCloseBoxKeeper* pKeeper = keeperOf(pTabBar);
+    if (!pKeeper) {
+        pKeeper = new TabCloseBoxKeeper(pTabBar);
         // In document mode QTabWidget paints no pane, and the pane's top edge is the hairline here; setDocumentMode()
         // also sets the bar's base, so it goes first
         auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget());
         if (pTabWidget) {
             pTabWidget->setDocumentMode(false);
+            pTabWidget->setStyle(tabPaneStyle());
         }
         // A bar of its own spans its pane and draws the hairline as its base; under a tab widget the pane draws it
         pTabBar->setDrawBase(!pTabWidget);
@@ -1933,21 +2025,75 @@ void prepareTabStrip(QTabBar* pTabBar)
     // Crosses made before the filter was installed are caught here; the StyleChange makes the bar re-lay its tabs from
     // their new size()
     bool anyCut = false;
-    for (int i = 0; i < pTabBar->count(); ++i) {
-        for (const QTabBar::ButtonPosition side : {QTabBar::LeftSide, QTabBar::RightSide}) {
-            auto* pCross = qobject_cast<QAbstractButton*>(pTabBar->tabButton(i, side));
-            if (!pCross || qobject_cast<QToolButton*>(pCross)) {
-                continue;
-            }
-            anyCut = anyCut || pCross->size() != QSize(scmTabCloseBoxSize, scmTabCloseBoxSize);
-            pKeeper->keep(pCross);
-            pKeeper->placeBesideTheWord(pCross);
-        }
+    for (QAbstractButton* pCross : crossesOf(pTabBar)) {
+        anyCut = anyCut || pCross->size() != QSize(scmTabCloseBoxSize, scmTabCloseBoxSize);
+        pKeeper->keep(pCross);
+        pKeeper->placeBesideTheWord(pCross);
     }
     if (anyCut) {
         QEvent styleChanged(QEvent::StyleChange);
         QApplication::sendEvent(pTabBar, &styleChanged);
     }
+}
+
+// The bar a script's sheet then draws behaves as a plain QTabBar: Qt's own measure and place for its crosses, the
+// application style's metrics and hints, the base and document mode it had
+void releaseTabStrip(QTabBar* pTabBar)
+{
+    TabCloseBoxKeeper* pKeeper = keeperOf(pTabBar);
+    if (!pKeeper) {
+        return;
+    }
+    // First: the crosses are measured below by the style they inherit from the bar
+    pTabBar->setStyle(nullptr);
+    if (auto* pTabWidget = qobject_cast<QTabWidget*>(pTabBar->parentWidget())) {
+        // It sets the bar's base too, so it goes first
+        pTabWidget->setDocumentMode(pKeeper->plainDocumentMode());
+        pTabWidget->setStyle(nullptr);
+    }
+    pTabBar->setDrawBase(pKeeper->plainDrawBase());
+    pTabBar->setExpanding(pKeeper->plainExpanding());
+    // Its filters on the bar and on the crosses go with it
+    delete pKeeper;
+    for (QAbstractButton* pCross : crossesOf(pTabBar)) {
+        pCross->setMinimumSize(0, 0);
+        pCross->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        pCross->resize(pCross->sizeHint());
+    }
+    QEvent styleChanged(QEvent::StyleChange);
+    QApplication::sendEvent(pTabBar, &styleChanged);
+}
+} // namespace
+
+void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens)
+{
+    if (!pPainter || base.isEmpty()) {
+        return;
+    }
+    pPainter->fillRect(QRect(base.left(), base.bottom() - scmInputBorderWidth + 1, base.width(), scmInputBorderWidth), tokens.border);
+}
+
+bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder)
+{
+    return qApp->styleSheet().contains(qsl("QTabBar")) || (pScriptSheetHolder && pScriptSheetHolder->styleSheet().contains(qsl("QTabBar")));
+}
+
+bool prepareTabStrip(QTabBar* pTabBar)
+{
+    if (!pTabBar) {
+        return false;
+    }
+    if (scriptSheetTakesTheTabs(pTabBar->window())) {
+        releaseTabStrip(pTabBar);
+        return false;
+    }
+    readyTabStrip(pTabBar);
+    return true;
+}
+
+bool tabStripOutOfDate(const QTabBar* pTabBar)
+{
+    return pTabBar && (keeperOf(pTabBar) != nullptr) == scriptSheetTakesTheTabs(pTabBar->window());
 }
 
 void keepClickFocusOffControls(QWidget* pRoot)

@@ -34,6 +34,7 @@
  */
 
 #include <QFileInfo>
+#include <QLayout>
 #include <QMessageBox>
 #include <QPointer>
 #include <QSignalSpy>
@@ -282,6 +283,21 @@ private slots:
         mudlet::self()->slot_multiView(false);
 
         QVERIFY2(!stillMarked, "multiview put the profile on show and its tab still claims text the player has not seen");
+    }
+
+    // The hairline the tabs stand on runs across the whole window, so the bar
+    // has to: the first name's inset is the tab's own
+    void test_theProfileStripsSpanTheirWindows()
+    {
+        spansItsParent(mudlet::self()->mpTabBar, qsl("the main window"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+        TTabBar* pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+        spansItsParent(pTabBar, qsl("a detached window"));
     }
 
     // A detached window holding one profile names its connection state in its
@@ -689,6 +705,22 @@ private:
             return nullptr;
         }
         return tabBars.first();
+    }
+
+    void spansItsParent(TTabBar* pTabBar, const QString& where)
+    {
+        QWidget* pParent = pTabBar->parentWidget();
+        QVERIFY2(pParent, qPrintable(qsl("the tab bar of %1 has no parent to span").arg(where)));
+        // A window that is not on show lays itself out only when asked
+        if (QLayout* pLayout = pParent->layout()) {
+            pLayout->activate();
+        }
+        const QRect bar = pTabBar->geometry();
+        qInfo().noquote() << qsl("  %1: the tab bar stands at %2,%3 %4x%5 in a %6px wide parent")
+                                     .arg(where, QString::number(bar.x()), QString::number(bar.y()), QString::number(bar.width()), QString::number(bar.height()), QString::number(pParent->width()));
+        QVERIFY2(bar.left() == 0 && bar.width() == pParent->width(),
+                 qPrintable(qsl("the tab bar of %1 runs from %2 to %3 across a %4px wide parent, so the hairline the tabs stand on stops short of the window's edges")
+                                    .arg(where, QString::number(bar.left()), QString::number(bar.right()), QString::number(pParent->width()))));
     }
 
     // The call cTelnet::postData() makes with each batch of text from the game

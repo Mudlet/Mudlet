@@ -271,6 +271,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpTabBar->insertTab(scmAllGamesTab, tr("All games"));
     mpTabBar->setAccessibleName(tr("games shown"));
     mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
+    // Before prepareTabStrip(), so a script's sheet that takes the tabs finds them packed as they were before the design
+    mpTabBar->setExpanding(false);
     uiDesign::prepareTabStrip(mpTabBar);
     uiDesign::prepareTabStrip(tabWidget_connectionInfo->tabBar());
     verticalLayout_gamesList->insertWidget(0, mpTabBar);
@@ -554,15 +556,24 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     const QColor errorColour = uiDesign::errorInk(tokens);
 
+    const bool designedTabs = uiDesign::prepareTabStrip(mpTabBar);
+    uiDesign::prepareTabStrip(tabWidget_connectionInfo->tabBar());
     // On the bar itself: a sheet on widget_topLeft would reach the games list, which draws its own selection
-    mpTabBar->setStyleSheet(uiDesign::tabBarStyleSheet(qsl("QWidget#widget_topLeft"), tokens));
+    mpTabBar->setStyleSheet(designedTabs ? uiDesign::tabBarStyleSheet(qsl("QWidget#widget_topLeft"), tokens, uiDesign::scmTabPaneInset, mpTabBar->layoutDirection()) : QString());
     // No inset: the strip's first word and the form under it start on the tab widget's own edge, the line the
     // information box below them stands on
-    tabWidget_connectionInfo->setStyleSheet(uiDesign::tabBarStyleSheet(qsl("QTabWidget#tabWidget_connectionInfo"), tokens, 0));
+    tabWidget_connectionInfo->setStyleSheet(designedTabs ? uiDesign::tabBarStyleSheet(qsl("QTabWidget#tabWidget_connectionInfo"), tokens, 0, tabWidget_connectionInfo->layoutDirection()) : QString());
     for (QWidget* pPage : {tab_connection_info, tab_options}) {
-        if (QLayout* pForm = pPage->layout()) {
+        QLayout* pForm = pPage->layout();
+        if (!pForm) {
+            continue;
+        }
+        if (designedTabs) {
             QStyle* pStyle = pPage->style();
             pForm->setContentsMargins(0, pStyle->pixelMetric(QStyle::PM_LayoutTopMargin, nullptr, pPage), 0, pStyle->pixelMetric(QStyle::PM_LayoutBottomMargin, nullptr, pPage));
+        } else {
+            // The pane a script's sheet leaves is Qt's framed one, which the labels stand clear of
+            pForm->unsetContentsMargins();
         }
     }
 
@@ -639,6 +650,10 @@ bool dlgConnectionProfiles::event(QEvent* event)
         QMetaObject::invokeMethod(this, &dlgConnectionProfiles::resolveTabFonts, Qt::QueuedConnection);
     }
     if (event->type() == QEvent::StyleChange) {
+        // A script's sheet comes or goes with one, on the application or on this dialog
+        if (uiDesign::tabStripOutOfDate(mpTabBar)) {
+            applyConnectionShellStyle();
+        }
         QMetaObject::invokeMethod(this, &dlgConnectionProfiles::fitGamesListToItsColumns, Qt::QueuedConnection);
     }
     return QDialog::event(event);

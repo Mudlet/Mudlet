@@ -271,13 +271,25 @@ inline constexpr int scmTabCloseGlyphSize = 8;
 inline constexpr int scmTabCloseGap = 4;
 inline constexpr QFont::Weight scmTabChosenWeight = QFont::DemiBold;
 
-// Call prepareTabStrip() on the bar too. paneInset is the pane's margin at its sides and foot, and where the strip
-// starts: 0 where nothing under the strip needs keeping off a window's edge. A crowded strip's scroll buttons are left
-// alone: their arrows belong to a QToolButton the bar makes, and a face without them is a blank square.
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset = scmTabPaneInset);
+// Call prepareTabStrip() on the bar too, and leave these rules out of every sheet that reaches it while that answers
+// false. paneInset is the pane's margin at its sides and foot, and where the strip starts: 0 where nothing under the
+// strip needs keeping off a window's edge. direction is the bar's layoutDirection(): Qt never mirrors a sheet's
+// margins, so the gap after each tab is written on its trailing side. A crowded strip's scroll buttons are left alone:
+// their arrows belong to a QToolButton the bar makes, and a face without them is a blank square.
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset = scmTabPaneInset, const Qt::LayoutDirection direction = Qt::LeftToRight);
 
-// Safe before or after the bar holds tabs
-void prepareTabStrip(QTabBar* pTabBar);
+// A script's sheet that names QTabBar takes a strip's tabs whole: the application's, or the one on pScriptSheetHolder,
+// the widget a profile's sheet is set on. Mudlet's own sheets never go on that widget, or their rules would count.
+bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder);
+
+// Answers whether the design draws the strip; false while a script's sheet takes the tabs, and the bar is then put
+// back as it was. Safe before or after the bar holds tabs, and to repeat. The bar's QTabWidget then has what its
+// pages, strip and pane need as its size hints.
+bool prepareTabStrip(QTabBar* pTabBar);
+
+// True once a script's sheet has come or gone since prepareTabStrip() last ran: ask on the window's StyleChange and
+// restyle then. The restyle sets sheets only under the window, which sends the window no StyleChange back.
+bool tabStripOutOfDate(const QTabBar* pTabBar);
 
 // Along the bottom row of base, the row a chosen tab's underline is drawn over
 void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens);

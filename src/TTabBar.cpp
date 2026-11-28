@@ -44,7 +44,8 @@ static const int TAB_REORDER_DELAY_MS = 150;             // Delay before allowin
 // the strip
 bool TStyle::scriptSheetTakesTheTabs() const
 {
-    return qApp->styleSheet().contains(qsl("QTabBar")) || (mpTabBar && mpTabBar->styleSheet().contains(qsl("QTabBar")));
+    // setGlobalStyleSheet() puts a profile's sheet on the bar itself
+    return uiDesign::scriptSheetTakesTheTabs(mpTabBar);
 }
 
 // Qt paints a reordered tab's drag pixmap with the rect moved to the origin, so tabAt() on it

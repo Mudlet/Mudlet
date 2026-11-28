@@ -402,8 +402,10 @@ void dlgNotepad::applyNotepadShellStyle()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
+    const bool designedTabs = uiDesign::prepareTabStrip(tabWidget->tabBar());
     const QString centralRules =
-            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name()) + uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens)
+            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name())
+            + (designedTabs ? uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens, uiDesign::scmTabPaneInset, tabWidget->layoutDirection()) : QString())
             + uiDesign::inputStyleSheet(tokens, qsl("#centralwidget"))
             + qsl("QWidget#notepadFindBar { background-color: %1; border-top: %2px solid %3; }").arg(tokens.page.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.border.name())
             // Borderless: a frame round a glyph this small reads as a second control
@@ -1137,7 +1139,7 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 }
 
 // Under "follow the system" a system theme change emits no signal_appearanceChanged; the style or
-// palette change Qt sends is the only notice
+// palette change Qt sends is the only notice. A script's sheet comes or goes with a StyleChange too.
 void dlgNotepad::changeEvent(QEvent* event)
 {
     QMainWindow::changeEvent(event);
