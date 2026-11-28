@@ -255,6 +255,21 @@ QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
             windows.append(scriptWindowOf(records[i], 0));
         }
     }
+    for (ScriptWindow& window : windows) {
+        if (window.kind != ScriptWindow::Kind::mxpFrame) {
+            continue;
+        }
+        if (const std::optional<TNullMxpFrameFrontend::Tabs> tabs = pView->nullMxpFrames().tabs(window.name)) {
+            // Not emplace(): clang judges FrameTabs not default-constructible while ScriptWindow is incomplete
+            window.frameTabs = ScriptWindow::FrameTabs{};
+            ScriptWindow::FrameTabs& frameTabs = *window.frameTabs;
+            for (const auto& [page, title] : tabs->pages) {
+                frameTabs.pages.append({page, title});
+            }
+            frameTabs.current = static_cast<int>(tabs->current);
+            frameTabs.shown = tabs->shown;
+        }
+    }
     return windows;
 }
 
@@ -576,6 +591,34 @@ bool THeadlessSession::closeUserWindow(const QString& name)
     //: Error from a frontend with no window closing a user window the profile could not hide; %1 is its name
     mErrorString = tr("The user window \"%1\" could not be closed.").arg(name);
     return false;
+}
+
+bool THeadlessSession::selectFrameTab(const QString& page)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    const std::optional<QString> header = pView ? pView->nullMxpFrames().headerOf(page) : std::nullopt;
+    if (!header) {
+        //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) that is no page of any frame's tab header; %1 is the name it gave
+        mErrorString = tr("No MXP frame has a tab called \"%1\".").arg(page);
+        return false;
+    }
+    TNullMxpFrameFrontend& frames = pView->nullMxpFrames();
+    const std::optional<TNullMxpFrameFrontend::Tabs> tabs = frames.tabs(*header);
+    if (!tabs) {
+        //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) whose own console a script moved out of the frame or deleted, so its tab header is not given to the frontend; %1 is the name of the frame the header is on
+        mErrorString = tr("A script moved the console of the MXP frame \"%1\" out of it or deleted it, so its tabs cannot be brought forward here.").arg(*header);
+        return false;
+    }
+    if (!tabs->shown) {
+        //: Error from a frontend with no window asked to bring forward a tab of an MXP frame (a window the game opened) whose tab header is hidden, as inside a hidden window, so a player could not click it; %1 is the name of the frame the header is on
+        mErrorString = tr("The tabs of the MXP frame \"%1\" are not shown, so none of them can be brought forward.").arg(*header);
+        return false;
+    }
+    frames.selectPage(*header, page);
+    return true;
 }
 
 bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& event)

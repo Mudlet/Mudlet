@@ -967,11 +967,13 @@ void TNullMxpFrameFrontend::reportTabArea(const QString& name, const QSize& size
     });
 }
 
-void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, const bool showHeader, const bool scrolling)
+void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, const bool showHeader, const bool scrolling)
 {
     mHeaders.erase(name);
+    mTitles.erase(name);
     if (showHeader) {
         mHeaders[name].pages.push_back(name);
+        mTitles[name] = title;
     }
     mHosts[name] = hostName;
     mPlaces[name] = geometry.topLeft();
@@ -995,19 +997,21 @@ void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QStri
 std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& name, const QString&, const QSize& size, const bool scrolling)
 {
     mHeaders.erase(name);
+    mTitles.erase(name);
     mHosts[name] = QString();
     mPlaces.erase(name);
     mView.addFrameConsole(name, size, true, QString(), scrolling);
     return size;
 }
 
-void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, const bool scrolling, const bool select)
+void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, const bool scrolling, const bool select)
 {
     const auto header = mHeaders.find(parentName);
     if (header == mHeaders.end()) {
         return;
     }
     header->second.pages.push_back(name);
+    mTitles[name] = title;
     if (select) {
         header->second.current = header->second.pages.size() - 1;
     }
@@ -1070,6 +1074,55 @@ QPoint TNullMxpFrameFrontend::consolePlace(const QString& name) const
     return (place != mPlaces.end() ? place->second : QPoint()) + QPoint(0, header);
 }
 
+std::optional<TNullMxpFrameFrontend::Tabs> TNullMxpFrameFrontend::tabs(const QString& name) const
+{
+    const auto header = mHeaders.find(name);
+    // Not told once the frame's own console is moved out or deleted, though the GUI keeps drawing the header there
+    if (header == mHeaders.end() || !mView.inOwnFrame(name)) {
+        return std::nullopt;
+    }
+    Tabs tabs;
+    tabs.current = header->second.current;
+    for (const QString& page : header->second.pages) {
+        const auto title = mTitles.find(page);
+        tabs.pages.emplace_back(page, title != mTitles.end() ? title->second : page);
+    }
+    // Only what holds the page in front can hide the header: pageShown() leaves out a script hiding that page itself
+    tabs.shown = pageShown(header->second.pages.at(header->second.current));
+    return tabs;
+}
+
+std::optional<QString> TNullMxpFrameFrontend::headerOf(const QString& name) const
+{
+    for (const auto& [headerName, header] : mHeaders) {
+        if (std::find(header.pages.cbegin(), header.pages.cend(), name) != header.pages.cend()) {
+            return headerName;
+        }
+    }
+    return std::nullopt;
+}
+
+void TNullMxpFrameFrontend::selectPage(const QString& headerName, const QString& pageName)
+{
+    const auto header = mHeaders.find(headerName);
+    if (header == mHeaders.end()) {
+        return;
+    }
+    const std::vector<QString>& pages = header->second.pages;
+    const auto found = std::find(pages.cbegin(), pages.cend(), pageName);
+    if (found == pages.cend()) {
+        return;
+    }
+    const auto page = static_cast<size_t>(found - pages.cbegin());
+    // QTabWidget::setCurrentIndex() to the index already in front changes nothing
+    if (page == header->second.current) {
+        return;
+    }
+    header->second.current = page;
+    mView.sizeFrameConsole(pageName, header->second.area);
+    reportPages();
+}
+
 void TNullMxpFrameFrontend::reportPages()
 {
     mView.mWindowNotifier.note();
@@ -1126,6 +1179,7 @@ void TNullMxpFrameFrontend::reportFramesWithin(const QString& name)
 void TNullMxpFrameFrontend::destroyFrame(const QString& name)
 {
     mHeaders.erase(name);
+    mTitles.erase(name);
     mHosts.erase(name);
     mConsoleSizes.erase(name);
     mPlaces.erase(name);
@@ -1200,6 +1254,7 @@ void TNullMxpFrameFrontend::focusFrame(const QString& name)
 void TNullMxpFrameFrontend::clear()
 {
     mHeaders.clear();
+    mTitles.clear();
     mHosts.clear();
     mConsoleSizes.clear();
     mPlaces.clear();

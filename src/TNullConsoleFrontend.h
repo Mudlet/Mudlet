@@ -43,6 +43,8 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
+#include <utility>
 #include <vector>
 
 class Host;
@@ -79,9 +81,9 @@ public:
     {
     }
 
-    void createInternalFrame(const QString& name, const QString& hostName, const QString&, const QRect& geometry, bool showHeader, bool scrolling) override;
+    void createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling) override;
     std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool scrolling) override;
-    void createTabFrame(const QString& name, const QString&, const QString& parentName, const QSize& size, bool scrolling, bool select) override;
+    void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select) override;
     bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
     void showFrame(const QString& name) override;
@@ -99,6 +101,21 @@ public:
     QString host(const QString& name) const;
     // Where a frame's console is in that widget: under the header of the frame it is a page of, else at its frame's corner
     QPoint consolePlace(const QString& name) const;
+    // A frame's tab header, as TMxpFrameWidgets' QTabWidget shows it: each page's frame name and the title on its tab,
+    // the first being the frame's own console, the index of the page in front, and whether the header shows; none for
+    // a frame without a header, or whose own console a script moved out of it or deleted
+    struct Tabs
+    {
+        std::vector<std::pair<QString, QString>> pages;
+        size_t current = 0;
+        bool shown = false;
+    };
+    std::optional<Tabs> tabs(const QString& name) const;
+    // The frame whose header has name among its pages, its own included; none for a frame that is no page
+    std::optional<QString> headerOf(const QString& name) const;
+    // As a click on pageName's tab in headerName's tab header, which QTabWidget::setCurrentIndex() makes: the page
+    // comes to the front, at the size the header gives the page in front. Nothing when it is no page of that header.
+    void selectPage(const QString& headerName, const QString& pageName);
 
 private:
     // A QTabWidget's pages by frame name, the first being the header frame's own console
@@ -123,6 +140,8 @@ private:
     std::map<QString, QSize> mConsoleSizes;
     // Each internal frame's container's corner, in the widget it is built inside
     std::map<QString, QPoint> mPlaces;
+    // The title on the tab of each frame that is a page of a header, its own included
+    std::map<QString, QString> mTitles;
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
@@ -444,6 +463,9 @@ public:
     bool hasKeyboardFocus() const override { return false; }
     TMxpFrameFrontend& mxpFrames() override { return mMxpFrames; }
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
+    // The same, for what only the null view's frames tell: their tab headers
+    TNullMxpFrameFrontend& nullMxpFrames() { return mMxpFrames; }
+    const TNullMxpFrameFrontend& nullMxpFrames() const { return mMxpFrames; }
     // Every window a script made and every MXP frame of the game, in no order; not buffers, which are never shown
     std::vector<WindowRecord> windowRecords() const;
     // The model of a console windowRecords() lists; null for any other name
