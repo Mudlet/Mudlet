@@ -133,6 +133,20 @@ public:
         bool operator==(const TextRun&) const = default;
     };
 
+    // A line lineShown sent, as the main console now holds it, or deleted
+    struct LineUpdate
+    {
+        // One of the lineIds lineShown sent it with
+        qint64 lineId = 0;
+        QString text;
+        QList<TextRun> runs;
+        bool isPrompt = false;
+        // Whereupon text and runs are empty, and the id is not used again
+        bool deleted = false;
+
+        bool operator==(const LineUpdate&) const = default;
+    };
+
     // invalidName, invalidConnectionDetails: a profile was to be made under a name, or given a host, port or
     // TLS, that the connection dialog would not take; nothing is stored. poolClosing: the profiles of a
     // session, this one or another, are still closing, from its shutdown() or, once it is deleted, from the
@@ -953,8 +967,17 @@ signals:
     // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
     // of the console line it went into, which is when it was written for a line of its own. continuesLine is for
     // text the console draws on the end of the line sent before it, not as a line below: an echo() after
-    // deleteLine(). A handler that takes fewer arguments may be connected.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine);
+    // deleteLine(). lineIds has an id for each line of text, as its line feeds part it, which linesUpdated names
+    // the line by, and 0 for one it does not follow. A handler that takes fewer arguments may be connected.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine, const QList<qint64>& lineIds);
+    // Lines lineShown sent while this was connected that a script has since changed where they stand (replace(),
+    // setFgColor(), setLink(), insertText() on a line it moved the cursor to) or deleted, each named by its
+    // lineIds entry: those deleted first, then the others in the order they stand. From the event loop, once for
+    // all a turn changed; not for the line lineShown is still to send, for a line trimmed off the top as the
+    // console outgrows its limit, nor after mainConsoleCleared for the lines before it. A line a script's
+    // wrapLine() or insertText() of a line feed split keeps only the first of its parts, and the change of a
+    // link's state, which linksChanged tells of, is not one.
+    void linesUpdated(const QString& profile, const QList<THeadlessSession::LineUpdate>& updates);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -1192,6 +1215,11 @@ private:
     QList<ShownLine> takeTriggerWrites(bool taken);
     // False if a handler deleted the session
     bool sendShownLines(const QList<ShownLine>& lines);
+    qint64 shownLineId(const TBuffer& buffer, int line) const;
+    void noteLinesEdited(int firstLine, int lastLine);
+    void noteLinesRemoved(int firstLine, int lastLine, bool trimmed);
+    void queueLineUpdates();
+    void sendLineUpdates();
     void closeDebugConsole();
     // The relays of how the main console is drawn, in THeadlessSessionOutput.cpp
     void connectOutputRelays(Host*, unsigned int run);
@@ -1314,6 +1342,12 @@ private:
     unsigned int mAddonCommandsQueuedRun = 0;
     // The same for buttonsChanged
     unsigned int mButtonsQueuedRun = 0;
+    // The same for linesUpdated
+    unsigned int mLineUpdatesQueuedRun = 0;
+    // The lineIds lineShown sent while linesUpdated was connected, of lines the main console still holds
+    QSet<qint64> mSentLineIds;
+    // Those of them a script changed or deleted since linesUpdated was last sent
+    QSet<qint64> mEditedLineIds;
     std::unique_ptr<HostManager> mpPool;
     struct ShownLine
     {
@@ -1322,6 +1356,7 @@ private:
         QList<TextRun> runs;
         qint64 arrivalMSecs = -1;
         bool continuesLine = false;
+        QList<qint64> lineIds;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;

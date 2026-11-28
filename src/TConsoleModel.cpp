@@ -452,6 +452,12 @@ bool TConsoleModelNotifier::linkChangedConnected() const
     return isSignalConnected(linkChangedSignal);
 }
 
+bool TConsoleModelNotifier::linesRemovedConnected() const
+{
+    static const QMetaMethod linesRemovedSignal = QMetaMethod::fromSignal(&TConsoleModelNotifier::linesRemoved);
+    return isSignalConnected(linesRemovedSignal);
+}
+
 void TConsoleModel::notifyPrinted(const QString& text, const PrintedInto into, const TChar& format, const bool startsLine)
 {
     if (text.isEmpty() || !mNotifier.textPrintedConnected()) {

@@ -223,14 +223,25 @@ as a line of its own: an `echo()` after `clearWindow()` or a `feedTriggers()`, a
 `send()`; an `echo()` after `deleteLine()` comes with `continuesLine`, as below. An app that draws the console as the GUI does draws `lineShown`, wrapping each
 line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
 it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
-trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
-inserts is sent as a line of its own.
+trigger makes to a line already sent, as by moving the cursor up to it, is not sent again by `lineShown`,
+though what it inserts is sent as a line of its own; `linesUpdated` tells of it, as below.
 
 Their fifth argument, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
 time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
 into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
-first three, four or five arguments may still be connected. `localText` carries no time of its own: it is sent as
+first three, four, five or six arguments may still be connected. `localText` carries no time of its own: it is sent as
 it is written, so the time its handler runs is when that text was written.
+
+`lineShown`'s last argument, `lineIds`, has an id for each line of its text, as its line feeds part it,
+which no other line of the main console has while that one lasts, and 0 for a line it does not follow.
+While `linesUpdated` is connected, a script that later changes one of those lines where it stands
+(`replace()`, `setFgColor()`, `setLink()` or `insertText()` on a line it moved the cursor up to) or
+deletes it with `deleteLine()` has the line sent again in `linesUpdated`, as a `LineUpdate`: its id, and
+its text, runs and prompt flag as `lineShown` would send them now, or `deleted`. It comes from the event
+loop, once for all the lines a turn changed, those deleted first and then the rest in the order they
+stand. Lines trimmed off the top as the console outgrows its limit, and those before a `clearWindow()`,
+are dropped without one. A change that splits a line, as `wrapLine()` or an `insertText()` of a line feed
+does, updates only its first part, and the change of a link's state is told by `linksChanged`, not here.
 
 `timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
 timestamp button does, and `setTimeStampsShown()` presses that button: the choice is saved for the
