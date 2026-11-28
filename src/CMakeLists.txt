@@ -1342,10 +1342,18 @@ if(APPLE AND USE_GUI)
     target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
+  # Sparkle compares nothing past the first "-" of a version, so "5.1.0-ptb-<date>-<sha>"
+  # is 5.1.0 on every day and a PTB never sees a later one as newer. The PTB feed's
+  # sparkle:version in .github/workflows/create-github-release.yml has to match this.
+  set(MUDLET_BUNDLE_VERSION "${APP_VERSION}${APP_BUILD}")
+  if(APP_BUILD MATCHES "^-ptb-([0-9]+)-([0-9]+)-([0-9]+)-")
+    set(MUDLET_BUNDLE_VERSION "${APP_VERSION}.${CMAKE_MATCH_1}${CMAKE_MATCH_2}${CMAKE_MATCH_3}")
+  endif()
+
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
     MACOSX_BUNDLE ON
     MACOSX_BUNDLE_BUNDLE_NAME Mudlet
-    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
+    MACOSX_BUNDLE_BUNDLE_VERSION ${MUDLET_BUNDLE_VERSION}
     MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in"

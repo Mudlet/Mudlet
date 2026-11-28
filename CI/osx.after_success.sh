@@ -278,6 +278,14 @@ if [ "${DEPLOY}" = "deploy" ]; then
       echo "== Creating a release build =="
     fi
 
+    # The appcast's sparkle:version has to be the CFBundleVersion of the app in the
+    # dmg, so create-github-release.yml gets it from here rather than working it out
+    # Checked first: PlistBuddy answers a missing file on stdout, with exit 0
+    MACOS_BUNDLE_VERSION=""
+    if [ -f "${app}/Contents/Info.plist" ]; then
+      MACOS_BUNDLE_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${app}/Contents/Info.plist" 2>/dev/null || true)
+    fi
+
     if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-${ARCH}" "$app"
     else
@@ -317,6 +325,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
         echo "VERSION=${VERSION}"
         echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
         echo "BUILD_COMMIT=${BUILD_COMMIT}"
+        echo "MACOS_BUNDLE_VERSION=${MACOS_BUNDLE_VERSION}"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
     else
@@ -326,6 +335,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
         echo "VERSION=${VERSION}"
         echo "MUDLET_VERSION_BUILD=${MUDLET_VERSION_BUILD}"
         echo "BUILD_COMMIT=${BUILD_COMMIT}"
+        echo "MACOS_BUNDLE_VERSION=${MACOS_BUNDLE_VERSION}"
       } >> "$GITHUB_ENV"
 
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="

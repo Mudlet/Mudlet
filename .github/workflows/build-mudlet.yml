@@ -661,7 +661,8 @@ jobs:
           --arg commit "${BUILD_COMMIT}" \
           --arg ref "${GITHUB_REF}" \
           --arg event "${GITHUB_EVENT_NAME}" \
-          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event}' \
+          --arg bundle_version "${MACOS_BUNDLE_VERSION}" \
+          '{version: $version, build_suffix: $build_suffix, commit: $commit, ref: $ref, event: $event, bundle_version: $bundle_version}' \
           > release-metadata.json
 
     - name: Upload release metadata
