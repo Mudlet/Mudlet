@@ -187,6 +187,7 @@ private slots:
                                                                      "myFunction = function() return 1 end\n"
                                                                      "myKeyed = { alpha = 1, beta = 2 }\n"
                                                                      "myList = { 10, 20, 30 }\n"
+                                                                     "myEmpty = {}\n"
                                                                      "myNested = { kept = \"yes\" }\n"
                                                                      "myParagraph = \"first line\\nsecond line\"\n"
                                                                      "myLeadingBreak = \"\\nafter a break\\n\"\n")),
@@ -200,7 +201,7 @@ private slots:
 
         openTheVariablesView();
         QStringList missing;
-        for (const QString& name : {qsl("myString"), qsl("myNumber"), qsl("myBoolean"), qsl("myFunction"), qsl("myKeyed"), qsl("myList"), qsl("myNested")}) {
+        for (const QString& name : {qsl("myString"), qsl("myNumber"), qsl("myBoolean"), qsl("myFunction"), qsl("myKeyed"), qsl("myList"), qsl("myEmpty"), qsl("myNested")}) {
             if (!variableRow(name)) {
                 missing << name;
             }
@@ -330,8 +331,9 @@ private slots:
         const QList<QPair<QString, QString>> expected{{qsl("myString"), qsl("\"north\"")},
                                                       {qsl("myNumber"), qsl("42")},
                                                       {qsl("myBoolean"), qsl("true")},
-                                                      {qsl("myKeyed"), qsl("{ 2 keys }")},
-                                                      {qsl("myList"), qsl("{ 3 items }")},
+                                                      {qsl("myKeyed"), qsl("(2)")},
+                                                      {qsl("myList"), qsl("(3)")},
+                                                      {qsl("myEmpty"), QString()},
                                                       {qsl("myFunction"), qsl("function")},
                                                       {qsl("myParagraph"), qsl("\"first line\u2026\"")},
                                                       {qsl("myLeadingBreak"), qsl("\"after a break\"")}};
