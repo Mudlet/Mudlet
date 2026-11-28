@@ -790,8 +790,8 @@ script's widths and corners laid over them - which is neither look. While a
 script's sheet holds, `prepareTabStrip()` puts back what it changed (the strip's
 style, the base, document mode, `expanding`, the crosses' size and place) and
 answers false, and the window leaves `tabBarStyleSheet()` out of every sheet that
-reaches the bar; the connection window also gives its pages their own margins
-back, as the pane is Qt's framed one again. A new strip calls `prepareTabStrip()`
+reaches the bar; the connection window and Configure room also give their pages
+their own margins back, as the pane is Qt's framed one again. A new strip calls `prepareTabStrip()`
 where its window builds its sheets and includes `tabBarStyleSheet()` only when it
 answers true; on the window's `StyleChange`, which comes with every sheet set on
 the application or the window, it builds them again when `tabStripOutOfDate()`
@@ -2131,12 +2131,15 @@ and the `.ui` file was rewritten for it, since the layout itself changed. The wi
 as the Room tab needs and keeps that size whichever tab is on show.
 `applyRoomPropertiesShellStyle()` builds one sheet, set on `roomPropertiesShell` and never on
 the dialog, and runs again on `mudlet::signal_appearanceChanged` and on a style, palette or font
-change of the dialog. OK carries `uiDesign::scmProp_primaryButton`.
+change of the dialog. A script's sheet that names `QTabBar`, on the application or on the dialog,
+takes the strip whole: the sheet holds the tab recipe only while `prepareTabStrip()` answers true,
+and the `StyleChange` such a sheet comes or goes with builds it again. OK carries
+`uiDesign::scmProp_primaryButton`.
 
 | Name | What it is |
 | --- | --- |
-| `roomPropertiesShell` | The widget holding the tabs and the buttons, which the one sheet is set on: the tab recipe on `#tabWidget_room`, the input recipe scoped to `#tab_general` and to `#roomPropertiesScriptData >`, the choice recipe on `#tab_general`, the button recipe on the shell and the scroll bar recipe on the table and the value box. The child combinator keeps the input recipe off the key a table cell is typed into, which it would draw as a field taller than the row |
-| `tab_general`, `tab_userData` | The Room and Script data tabs, on the tab recipe with no pane inset, since the shell's margin already holds the strip off the window's edge. Each page's layout keeps the style's top and bottom margins and none at its sides, so the words of both pages start on the line the first tab's word does. The tab widget takes its size from the recipe: `prepareTabStrip()` gives it the size its pages, strip and pane need |
+| `roomPropertiesShell` | The widget holding the tabs and the buttons, which the one sheet is set on: the tab recipe on `#tabWidget_room` unless a script's sheet takes the tabs, the input recipe scoped to `#tab_general` and to `#roomPropertiesScriptData >`, the choice recipe on `#tab_general`, the button recipe on the shell and the scroll bar recipe on the table and the value box. The child combinator keeps the input recipe off the key a table cell is typed into, which it would draw as a field taller than the row |
+| `tab_general`, `tab_userData` | The Room and Script data tabs, on the tab recipe with no pane inset, since the shell's margin already holds the strip off the window's edge. Each page's layout keeps the style's top and bottom margins and none at its sides, so the words of both pages start on the line the first tab's word does. The tab widget takes its size from the recipe: `prepareTabStrip()` gives it the size its pages, strip and pane need. While a script's sheet takes the tabs the pages have the style's own margins, as the pane is Qt's framed one again, and their words no longer start on the first tab's |
 | `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, set apart by space with nothing drawn under them (see "Section headings"): a line's height above the second and third, a quarter of one under each. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, bold, in capitals drawn by the font, inked `sectionHeadingInk(tokens, tokens.page)` |
 | `label_hash`, `roomPropertiesHashCaption` | "Room hash", since a game's own ID for a room may be the room's number and scripts call it the hash: the field says "None" while the room has none, and the caption under it which games fill it in - those that name their rooms with text instead of a number - or, while several rooms are configured, that a hash belongs to one room. `label_hashWarning` takes the caption's place, in the warning hue walked to `scmTextMinimumRatio`, while the hash typed belongs to another room |
 | `roomPropertiesPreviewColumn` | A column of its own beside the four "On the map" rows, spanning them and as wide as it needs, the window as much wider: `roomPropertiesPreviewRule`, a 1px hairline in `border` as tall as those rows, then as much room as the window leaves after the tab's content, which `fitThePreviewColumn()` measures once the tab is laid out, so the tile stands midway between the hairline and the window's edge. In it `roomPropertiesPreviewLabel`, "Preview" as a field label in `mutedText`, centred and given the Room color row's height so it stands on that row's line, and under it `label_preview`, the 48px tile centred in the room left: the room's colour, the room's own border colour and width where it has them (a width step is a pixel, held to a quarter of the tile) and otherwise the map's border while the profile shows borders, round in bubble mode, and the symbol fitted to it by `RoomAppearance::paintSymbol()`, redrawn on every edit |

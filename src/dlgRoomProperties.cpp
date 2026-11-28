@@ -126,12 +126,26 @@ LinesAndBreaks splitAtLineBreaks(const QString& text)
     return result;
 }
 
-// Each "\n" of the edited text written as the break the shown text had there. A break beside a line unchanged from
-// the start or the end keeps its own; breaks between changed lines take those of the lines they replace in turn, and
-// past those the break the shown text has most
-QString withShownLineBreaks(const QString& edited, const LinesAndBreaks& shown)
+QString joined(const LinesAndBreaks& text)
 {
-    const QStringList lines = edited.split(QLatin1Char('\n'));
+    QString result;
+    for (qsizetype line = 0; line < text.lines.size(); ++line) {
+        result.append(text.lines.at(line));
+        if (line < text.breaks.size()) {
+            result.append(text.breaks.at(line));
+        }
+    }
+    return result;
+}
+
+// The edited text's lines, each "\n" between them given the break the shown text had there. A break beside a line
+// unchanged from the start or the end keeps its own; breaks between changed lines take those of the lines they
+// replace in turn, and past those the break the shown text has most
+LinesAndBreaks withShownLineBreaks(const QString& edited, const LinesAndBreaks& shown)
+{
+    LinesAndBreaks result;
+    result.lines = edited.split(QLatin1Char('\n'));
+    const QStringList& lines = result.lines;
     const qsizetype count = lines.size();
     const qsizetype shownCount = shown.lines.size();
     const qsizetype fewer = std::min(count, shownCount);
@@ -155,23 +169,18 @@ QString withShownLineBreaks(const QString& edited, const LinesAndBreaks& shown)
         }
     }
 
-    QString result;
-    result.reserve(edited.size() + count);
-    for (qsizetype line = 0; line < count; ++line) {
-        result.append(lines.at(line));
-        if (line + 1 == count) {
-            break;
-        }
+    result.breaks.reserve(count - 1);
+    for (qsizetype line = 0; line + 1 < count; ++line) {
         // The break standing as far from the end of the shown text as this one does from the end of the edited text
         const qsizetype fromTheEnd = line + shownCount - count;
         if (line < sameAtStart && line + 1 < shownCount) {
-            result.append(shown.breaks.at(line));
+            result.breaks << shown.breaks.at(line);
         } else if (line + 1 >= count - sameAtEnd && fromTheEnd >= 0) {
-            result.append(shown.breaks.at(fromTheEnd));
+            result.breaks << shown.breaks.at(fromTheEnd);
         } else if (line + 1 < shownCount - sameAtEnd) {
-            result.append(shown.breaks.at(line));
+            result.breaks << shown.breaks.at(line);
         } else {
-            result.append(usual);
+            result.breaks << usual;
         }
     }
     return result;
@@ -542,7 +551,6 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     for (QWidget* pScaffolding : {static_cast<QWidget*>(tab_general), static_cast<QWidget*>(tab_userData), static_cast<QWidget*>(pScriptDataPane), static_cast<QWidget*>(roomPropertiesScriptData)}) {
         uiDesign::markAsShellSurface(pScaffolding);
     }
-    uiDesign::prepareTabStrip(tabWidget_room->tabBar());
     dialogButtonBox->button(QDialogButtonBox::Ok)->setProperty(uiDesign::scmProp_primaryButton, true);
 
     // Made after setupUi() set the form's tab order, the colour fields and the opacity box would come after OK and
@@ -1111,12 +1119,13 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
     const QStringList captions{qsl("#roomPropertiesHashCaption"), qsl("#roomPropertiesWeightCaption"), qsl("#label_userDataInstructions")};
     const QStringList warnings{qsl("#label_hashWarning"), qsl("#roomPropertiesJsonWarning"), qsl("#label_userDataWarning")};
 
+    const bool designedTabs = uiDesign::prepareTabStrip(tabWidget_room->tabBar());
     // The input recipe stops at the value box on the Script data tab: further down, it would draw the key typed into
     // an added row as a field taller than the row it is typed in
     const QString rules =
             qsl("#roomPropertiesShell { background-color: %1; }").arg(tokens.page.name()) + qsl("QWidget[settingsSurface=\"true\"] { background-color: transparent; border: none; }")
-            + uiDesign::tabBarStyleSheet(qsl("#tabWidget_room"), tokens, scmPagesInset) + uiDesign::inputStyleSheet(tokens, qsl("#tab_general"))
-            + uiDesign::inputStyleSheet(tokens, qsl("#roomPropertiesScriptData >")) + uiDesign::choiceStyleSheet(tokens, qsl("#tab_general"))
+            + (designedTabs ? uiDesign::tabBarStyleSheet(qsl("#tabWidget_room"), tokens, scmPagesInset, tabWidget_room->layoutDirection()) : QString())
+            + uiDesign::inputStyleSheet(tokens, qsl("#tab_general")) + uiDesign::inputStyleSheet(tokens, qsl("#roomPropertiesScriptData >")) + uiDesign::choiceStyleSheet(tokens, qsl("#tab_general"))
             + uiDesign::buttonStyleSheet(tokens, qsl("#roomPropertiesShell")) + headings.join(qsl(", "))
             + qsl(" { color: %1; background: transparent; font-size: %2pt; font-weight: bold; }").arg(uiDesign::sectionHeadingInk(tokens, tokens.page).name(), captionSize)
             + qsl("#roomPropertiesPreviewRule { background-color: %1; }").arg(tokens.border.name()) + labels.join(qsl(", "))
@@ -1150,8 +1159,13 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
     // No margin at the sides, so a page's words start where the first tab's word does; the air under the strip and
     // over the buttons is the style's, which differs between the appearances
     for (QWidget* pPage : {tab_general, tab_userData}) {
-        const QStyle* pStyle = pPage->style();
-        pPage->layout()->setContentsMargins(0, pStyle->pixelMetric(QStyle::PM_LayoutTopMargin, nullptr, pPage), 0, pStyle->pixelMetric(QStyle::PM_LayoutBottomMargin, nullptr, pPage));
+        if (designedTabs) {
+            const QStyle* pStyle = pPage->style();
+            pPage->layout()->setContentsMargins(0, pStyle->pixelMetric(QStyle::PM_LayoutTopMargin, nullptr, pPage), 0, pStyle->pixelMetric(QStyle::PM_LayoutBottomMargin, nullptr, pPage));
+        } else {
+            // The pane a script's sheet leaves is Qt's framed one, which the rows stand clear of
+            pPage->layout()->unsetContentsMargins();
+        }
     }
 
     static_cast<UserDataValueDelegate*>(mpValueDelegate)->setMixedInk(uiDesign::readableOn(tokens.field, tokens.disabledText, tokens.text, uiDesign::scmQuietMinimumRatio));
@@ -1774,7 +1788,10 @@ void dlgRoomProperties::showChosenValue()
     const bool mixed = pItem && pItem->data(scmMixedValueRole).toBool();
     const QString value = pItem && !mixed ? pItem->text() : QString();
     mShownAsJson = shownIndented(value);
-    mShownText = mShownAsJson ? jsonIndented(value) : value;
+    const QString shownText = mShownAsJson ? jsonIndented(value) : value;
+    const LinesAndBreaks shown = splitAtLineBreaks(shownText);
+    mShownLines = shown.lines;
+    mShownBreaks = shown.breaks;
     {
         const QSignalBlocker blocker(roomPropertiesValueBox);
         if (!pItem) {
@@ -1786,7 +1803,7 @@ void dlgRoomProperties::showChosenValue()
             //: Placeholder of the value box on the Script data tab of the Configure room window when the chosen row's value is empty
             roomPropertiesValueBox->setPlaceholderText(tr("No value yet"));
         }
-        roomPropertiesValueBox->setPlainText(mShownText);
+        roomPropertiesValueBox->setPlainText(shownText);
         roomPropertiesValueBox->setReadOnly(!pItem);
         roomPropertiesValueBox->setFont(mShownAsJson ? uiDesign::fixedPitchFont(font()) : QFont());
     }
@@ -1829,7 +1846,10 @@ void dlgRoomProperties::slot_valueBoxEdited()
     }
     // The box gives back "\n" for every kind of line break: each gets back the one the value had there, so a mapper
     // script matching the value as the game sent it still finds the room
-    QString value = withShownLineBreaks(plainTextKeepingSpaces(*roomPropertiesValueBox), splitAtLineBreaks(mShownText));
+    const LinesAndBreaks edited = withShownLineBreaks(plainTextKeepingSpaces(*roomPropertiesValueBox), LinesAndBreaks{mShownLines, mShownBreaks});
+    mShownLines = edited.lines;
+    mShownBreaks = edited.breaks;
+    QString value = joined(edited);
     if (mShownAsJson) {
         // Saved in the shape it was stored in, the layout taken out again; once it no longer reads as JSON there is
         // no telling layout from content, so it is saved as typed
@@ -2013,7 +2033,8 @@ void dlgRoomProperties::changeEvent(QEvent* pEvent)
         return;
     }
     // A reader following the system's appearance gets no signal_appearanceChanged when it changes, only these; the
-    // value box's padding also follows the direction
+    // value box's padding also follows the direction, and a script's sheet that takes the tabs comes or goes with a
+    // StyleChange
     if (pEvent->type() == QEvent::StyleChange || pEvent->type() == QEvent::PaletteChange || pEvent->type() == QEvent::FontChange || pEvent->type() == QEvent::LayoutDirectionChange) {
         applyRoomPropertiesShellStyle();
     }

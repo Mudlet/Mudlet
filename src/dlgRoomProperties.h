@@ -151,8 +151,10 @@ private:
     QString mOriginalHash;
     // The rooms' area, or std::nullopt where they are in different ones
     std::optional<int> mOriginalAreaId;
-    // What the value box was given for the chosen row, whose line breaks an edit in the box is written back with
-    QString mShownText;
+    // The value box's lines as they stand, each break between them the one the value has there. Each edit is held
+    // against the box as the last one left it: two edits far apart leave no line as first shown at either end
+    QStringList mShownLines;
+    QStringList mShownBreaks;
     // The chosen row is a JSON list or table the value box shows indented
     bool mShownAsJson = false;
     bool mKeyColumnFitted = false;

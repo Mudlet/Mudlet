@@ -647,6 +647,195 @@ private:
         return QString();
     }
 
+    // The design's tabs, read in both appearances: each word in its ink with nothing behind it, the chosen one on the
+    // accent underline and heavier, the hairline running on to the pane's end, and the first word on the pages' edge
+    void readTheDesignsTabs(dlgRoomProperties* pDlg)
+    {
+        const auto restoreAppearance = qScopeGuard([]() {
+            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+            TestPixels::settle();
+        });
+        // A flat fill or a hairline reads back to a level or two
+        constexpr int inkTolerance = 2;
+        QTabBar* pBar = pDlg->tabWidget_room->tabBar();
+        // The tab less its trailing gap, the air over the word and the room under it for the underline
+        const auto wordLine = [pDlg, pBar](const int index) {
+            const QRect tab = pBar->tabRect(index);
+            return QRect(pBar->mapTo(pDlg, QPoint(tab.left(), tab.top() + uiDesign::scmTabPaddingTop)),
+                         QSize(tab.width() - uiDesign::scmTabGap, tab.height() - uiDesign::scmTabPaddingTop - uiDesign::scmTabPaddingBottom));
+        };
+        const int hairlineRow = pBar->mapTo(pDlg, QPoint(0, pBar->height() - 1)).y();
+        const int paneRight = pDlg->tabWidget_room->mapTo(pDlg, QPoint(pDlg->tabWidget_room->width() - 1, 0)).x();
+        const QList<QPair<QWidget*, QList<const QWidget*>>> contentOf{{pDlg->tab_general, {pDlg->label_roomIdValue, pDlg->label_name, pDlg->roomPropertiesMapHeadingText}},
+                                                                      {pDlg->tab_userData, {pDlg->label_userDataInstructions, pDlg->tableWidget_userData, pDlg->pushButton_addUserData}}};
+
+        for (const auto appearance : {enums::Appearance::light, enums::Appearance::dark}) {
+            TestPixels::setAppearanceAndWait(appearance, pDlg);
+            QList<int> firstWordCoverage;
+            for (const auto& [pPage, content] : contentOf) {
+                pDlg->tabWidget_room->setCurrentWidget(pPage);
+                TestPixels::settle();
+                const int chosen = pDlg->tabWidget_room->currentIndex();
+                const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+                const QImage shot = TestPixels::shot(pDlg);
+                const QString where = qsl("%1 appearance, %2 chosen").arg(appearance == enums::Appearance::light ? qsl("light") : qsl("dark"), pBar->tabText(chosen));
+                for (int index = 0; index < pBar->count(); ++index) {
+                    const QRect line = wordLine(index);
+                    const QColor ink = index == chosen ? tokens.accentText : tokens.mutedText;
+                    // Columns past halfway from the page to the word's ink, so antialiased fringes count where they are
+                    // more word than page
+                    int first = -1;
+                    int last = -1;
+                    int covered = 0;
+                    int onThePage = 0;
+                    bool inkRead = false;
+                    for (int x = line.left(); x <= line.right(); ++x) {
+                        for (int y = line.top(); y <= line.bottom(); ++y) {
+                            const QColor read = TestPixels::sampled(shot, QPoint(x, y));
+                            onThePage += TestPixels::readsAs(read, tokens.page, inkTolerance) ? 1 : 0;
+                            inkRead = inkRead || TestPixels::readsAs(read, ink, inkTolerance);
+                            if (2 * TestPixels::distance(read, tokens.page) >= TestPixels::distance(ink, tokens.page)) {
+                                first = first < 0 ? x : first;
+                                last = x;
+                                ++covered;
+                            }
+                        }
+                    }
+                    QVERIFY2(first >= 0 && inkRead, qPrintable(qsl("%1: tab %2's word is not drawn in %3").arg(where, pBar->tabText(index), ink.name())));
+                    QVERIFY2(2 * onThePage > line.width() * line.height(),
+                             qPrintable(qsl("%1: behind tab %2's word only %3 of %4 pixels are the page, so the tab has a face of its own")
+                                                .arg(where, pBar->tabText(index))
+                                                .arg(onThePage)
+                                                .arg(line.width() * line.height())));
+                    for (int row = hairlineRow - uiDesign::scmTabUnderlineWidth + 1; row <= hairlineRow; ++row) {
+                        for (int x = first; x <= last; ++x) {
+                            const QColor read = TestPixels::sampled(shot, QPoint(x, row));
+                            QVERIFY2(TestPixels::readsAs(read, tokens.accent, inkTolerance) == (index == chosen),
+                                     qPrintable(qsl("%1: under tab %2's word, at %3,%4, the strip reads %5 where the accent is %6")
+                                                        .arg(where, pBar->tabText(index))
+                                                        .arg(x)
+                                                        .arg(row)
+                                                        .arg(read.name(), tokens.accent.name())));
+                        }
+                    }
+                    if (index != 0) {
+                        continue;
+                    }
+                    firstWordCoverage.append(covered);
+                    QFont drawn = pBar->font();
+                    if (index == chosen) {
+                        drawn.setWeight(uiDesign::scmTabChosenWeight);
+                    }
+                    const int wordStart = first - std::max(0, qRound(QFontMetricsF(drawn).leftBearing(pBar->tabText(0).at(0))));
+                    for (const QWidget* pContent : content) {
+                        const int contentLeft = pContent->mapTo(pDlg, QPoint()).x();
+                        QVERIFY2(std::abs(wordStart - contentLeft) <= 1,
+                                 qPrintable(qsl("%1: the first tab's word starts at x %2, %3 at %4").arg(where).arg(wordStart).arg(pContent->objectName()).arg(contentLeft)));
+                    }
+                }
+                // The hairline runs on past the last tab to the end of the pane
+                const QColor lineEnd = TestPixels::sampled(shot, QPoint(paneRight, hairlineRow));
+                QVERIFY2(TestPixels::readsAs(lineEnd, tokens.border, inkTolerance),
+                         qPrintable(qsl("%1: at the pane's end the strip's bottom row reads %2, not the hairline %3").arg(where, lineEnd.name(), tokens.border.name())));
+                QVERIFY2(!TestPixels::readsAs(TestPixels::sampled(shot, QPoint(paneRight, hairlineRow - 1)), tokens.border, inkTolerance),
+                         qPrintable(qsl("%1: the row over the hairline is the hairline's colour too").arg(where)));
+            }
+            QVERIFY2(firstWordCoverage.size() == 2 && firstWordCoverage.at(0) > firstWordCoverage.at(1),
+                     qPrintable(qsl("%1 appearance: \"Room\" covers %2 pixels chosen and %3 not, so it is not drawn heavier when chosen")
+                                        .arg(appearance == enums::Appearance::light ? qsl("light") : qsl("dark"))
+                                        .arg(firstWordCoverage.value(0))
+                                        .arg(firstWordCoverage.value(1))));
+        }
+    }
+
+    // theme-fixed: a script's sheet writes colours of its own, and its tabs are read against them
+    static QColor scriptTabFill() { return QColor(0x33, 0x33, 0x33); }
+    static QColor scriptTabInk() { return QColor(Qt::white); }
+
+    static QString scriptTabSheet() { return qsl("QTabBar::tab { background: %1; color: %2; padding: 8px; }").arg(scriptTabFill().name(), scriptTabInk().name()); }
+
+    static QColor commonestColour(const QImage& grab, const QRect& logical)
+    {
+        QHash<QRgb, int> counts;
+        for (int y = logical.top(); y <= logical.bottom(); ++y) {
+            for (int x = logical.left(); x <= logical.right(); ++x) {
+                const QColor read = TestPixels::sampled(grab, QPoint(x, y));
+                if (read.isValid()) {
+                    ++counts[read.rgb()];
+                }
+            }
+        }
+        QRgb commonest = 0;
+        int most = -1;
+        for (auto it = counts.cbegin(); it != counts.cend(); ++it) {
+            if (it.value() > most) {
+                most = it.value();
+                commonest = it.key();
+            }
+        }
+        return QColor(commonest);
+    }
+
+    // Antialiasing leaves only a word's stems at full coverage, so the device pixel furthest from the fill carries its ink
+    static QColor strongestInk(const QImage& grab, const QRect& logical, const QColor& behind)
+    {
+        const qreal ratio = grab.devicePixelRatio();
+        const QRect scanned = QRect(qRound(logical.left() * ratio), qRound(logical.top() * ratio), qRound(logical.width() * ratio), qRound(logical.height() * ratio)) & grab.rect();
+        QColor strongest = behind;
+        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
+            for (int x = scanned.left(); x <= scanned.right(); ++x) {
+                const QColor pixel = grab.pixelColor(x, y);
+                if (TestPixels::distance(pixel, behind) > TestPixels::distance(strongest, behind)) {
+                    strongest = pixel;
+                }
+            }
+        }
+        return strongest;
+    }
+
+    // Nothing of the design's is left on the strip: no style of its own on the bar, none of tabBarStyleSheet()'s rules
+    // in a sheet on the way to it, and every tab filled and inked as the script's sheet says; the Room tab keeps every
+    // row whole under the script's taller tabs
+    void readTheScriptsTabs(dlgRoomProperties* pDlg, const QString& when)
+    {
+        constexpr int inkTolerance = 2;
+        QTabBar* pBar = pDlg->tabWidget_room->tabBar();
+        pDlg->tabWidget_room->setCurrentWidget(pDlg->tab_general);
+        TestPixels::settle();
+
+        QVERIFY2(!pBar->testAttribute(Qt::WA_SetStyle), qPrintable(qsl("%1: the bar still wears the style the design gave it").arg(when)));
+        for (const QWidget* pOnTheWay = pBar; pOnTheWay; pOnTheWay = pOnTheWay->parentWidget()) {
+            const QString sheet = pOnTheWay->styleSheet();
+            QVERIFY2(!sheet.contains(qsl("QTabBar")) && !sheet.contains(qsl("::tab")) && !sheet.contains(qsl("::pane")),
+                     qPrintable(qsl("%1: the sheet on %2 still carries the design's tab rules, and they reach the bar").arg(when, pOnTheWay->objectName())));
+        }
+
+        const QImage shot = TestPixels::shot(pDlg);
+        for (int index = 0; index < pBar->count(); ++index) {
+            const QRect tab(pBar->mapTo(pDlg, pBar->tabRect(index).topLeft()), pBar->tabRect(index).size());
+            const QColor fill = commonestColour(shot, tab);
+            QVERIFY2(TestPixels::readsAs(fill, scriptTabFill(), inkTolerance),
+                     qPrintable(qsl("%1: tab %2 is filled %3 rather than the script's %4").arg(when, pBar->tabText(index), fill.name(), scriptTabFill().name())));
+            const QColor ink = strongestInk(shot, tab, fill);
+            QVERIFY2(TestPixels::readsAs(ink, scriptTabInk(), inkTolerance),
+                     qPrintable(qsl("%1: tab %2's word is written in %3 rather than the script's %4").arg(when, pBar->tabText(index), ink.name(), scriptTabInk().name())));
+        }
+        for (const QWidget* pPage : {static_cast<const QWidget*>(pDlg->tab_general), static_cast<const QWidget*>(pDlg->tab_userData)}) {
+            const QMargins margins = pPage->layout()->contentsMargins();
+            QVERIFY2(margins.left() > 0 && margins.right() > 0, qPrintable(qsl("%1: %2 keeps no margin at its sides, so its rows meet the frame of Qt's pane").arg(when, pPage->objectName())));
+        }
+        QVERIFY2(pDlg->tab_general->height() >= pDlg->tab_general->sizeHint().height(),
+                 qPrintable(qsl("%1: the Room tab is %2px tall where its rows need %3px").arg(when).arg(pDlg->tab_general->height()).arg(pDlg->tab_general->sizeHint().height())));
+    }
+
+    // Pasted before the first word of what the value box shows: one edit, and one step for undo
+    static void pasteAtTheStartOfTheValue(dlgRoomProperties* pDlg, const QString& pasted)
+    {
+        QPlainTextEdit* pBox = valueBox(pDlg);
+        pBox->moveCursor(QTextCursor::Start);
+        pBox->insertPlainText(pasted);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -887,101 +1076,45 @@ private slots:
         auto* pDlg = openDialogOn({scmFirstRoom});
         pDlg->show();
         QVERIFY(QTest::qWaitForWindowExposed(pDlg));
-        const auto restoreAppearance = qScopeGuard([]() {
-            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+        readTheDesignsTabs(pDlg);
+    }
+
+    // As in every other window with tabs, a script's sheet that names QTabBar takes the strip whole, whether it was
+    // set before the window opened or while it is open, and the design's tabs come back once it goes
+    void aScriptsSheetNamingTheTabBarTakesTheTabsAndGivesThemBack()
+    {
+        const auto restoreTheApplicationsSheet = qScopeGuard([]() {
+            qApp->setStyleSheet(QString());
             TestPixels::settle();
         });
-        // A flat fill or a hairline reads back to a level or two
-        constexpr int inkTolerance = 2;
-        QTabBar* pBar = pDlg->tabWidget_room->tabBar();
-        // The tab less its trailing gap, the air over the word and the room under it for the underline
-        const auto wordLine = [pDlg, pBar](const int index) {
-            const QRect tab = pBar->tabRect(index);
-            return QRect(pBar->mapTo(pDlg, QPoint(tab.left(), tab.top() + uiDesign::scmTabPaddingTop)),
-                         QSize(tab.width() - uiDesign::scmTabGap, tab.height() - uiDesign::scmTabPaddingTop - uiDesign::scmTabPaddingBottom));
-        };
-        const int hairlineRow = pBar->mapTo(pDlg, QPoint(0, pBar->height() - 1)).y();
-        const int paneRight = pDlg->tabWidget_room->mapTo(pDlg, QPoint(pDlg->tabWidget_room->width() - 1, 0)).x();
-        const QList<QPair<QWidget*, QList<const QWidget*>>> contentOf{{pDlg->tab_general, {pDlg->label_roomIdValue, pDlg->label_name, pDlg->roomPropertiesMapHeadingText}},
-                                                                      {pDlg->tab_userData, {pDlg->label_userDataInstructions, pDlg->tableWidget_userData, pDlg->pushButton_addUserData}}};
-
-        for (const auto appearance : {enums::Appearance::light, enums::Appearance::dark}) {
-            TestPixels::setAppearanceAndWait(appearance, pDlg);
-            QList<int> firstWordCoverage;
-            for (const auto& [pPage, content] : contentOf) {
-                pDlg->tabWidget_room->setCurrentWidget(pPage);
-                TestPixels::settle();
-                const int chosen = pDlg->tabWidget_room->currentIndex();
-                const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-                const QImage shot = TestPixels::shot(pDlg);
-                const QString where = qsl("%1 appearance, %2 chosen").arg(appearance == enums::Appearance::light ? qsl("light") : qsl("dark"), pBar->tabText(chosen));
-                for (int index = 0; index < pBar->count(); ++index) {
-                    const QRect line = wordLine(index);
-                    const QColor ink = index == chosen ? tokens.accentText : tokens.mutedText;
-                    // Columns past halfway from the page to the word's ink, so antialiased fringes count where they are
-                    // more word than page
-                    int first = -1;
-                    int last = -1;
-                    int covered = 0;
-                    int onThePage = 0;
-                    bool inkRead = false;
-                    for (int x = line.left(); x <= line.right(); ++x) {
-                        for (int y = line.top(); y <= line.bottom(); ++y) {
-                            const QColor read = TestPixels::sampled(shot, QPoint(x, y));
-                            onThePage += TestPixels::readsAs(read, tokens.page, inkTolerance) ? 1 : 0;
-                            inkRead = inkRead || TestPixels::readsAs(read, ink, inkTolerance);
-                            if (2 * TestPixels::distance(read, tokens.page) >= TestPixels::distance(ink, tokens.page)) {
-                                first = first < 0 ? x : first;
-                                last = x;
-                                ++covered;
-                            }
-                        }
-                    }
-                    QVERIFY2(first >= 0 && inkRead, qPrintable(qsl("%1: tab %2's word is not drawn in %3").arg(where, pBar->tabText(index), ink.name())));
-                    QVERIFY2(2 * onThePage > line.width() * line.height(),
-                             qPrintable(qsl("%1: behind tab %2's word only %3 of %4 pixels are the page, so the tab has a face of its own")
-                                                .arg(where, pBar->tabText(index))
-                                                .arg(onThePage)
-                                                .arg(line.width() * line.height())));
-                    for (int row = hairlineRow - uiDesign::scmTabUnderlineWidth + 1; row <= hairlineRow; ++row) {
-                        for (int x = first; x <= last; ++x) {
-                            const QColor read = TestPixels::sampled(shot, QPoint(x, row));
-                            QVERIFY2(TestPixels::readsAs(read, tokens.accent, inkTolerance) == (index == chosen),
-                                     qPrintable(qsl("%1: under tab %2's word, at %3,%4, the strip reads %5 where the accent is %6")
-                                                        .arg(where, pBar->tabText(index))
-                                                        .arg(x)
-                                                        .arg(row)
-                                                        .arg(read.name(), tokens.accent.name())));
-                        }
-                    }
-                    if (index != 0) {
-                        continue;
-                    }
-                    firstWordCoverage.append(covered);
-                    QFont drawn = pBar->font();
-                    if (index == chosen) {
-                        drawn.setWeight(uiDesign::scmTabChosenWeight);
-                    }
-                    const int wordStart = first - std::max(0, qRound(QFontMetricsF(drawn).leftBearing(pBar->tabText(0).at(0))));
-                    for (const QWidget* pContent : content) {
-                        const int contentLeft = pContent->mapTo(pDlg, QPoint()).x();
-                        QVERIFY2(std::abs(wordStart - contentLeft) <= 1,
-                                 qPrintable(qsl("%1: the first tab's word starts at x %2, %3 at %4").arg(where).arg(wordStart).arg(pContent->objectName()).arg(contentLeft)));
-                    }
-                }
-                // The hairline runs on past the last tab to the end of the pane
-                const QColor lineEnd = TestPixels::sampled(shot, QPoint(paneRight, hairlineRow));
-                QVERIFY2(TestPixels::readsAs(lineEnd, tokens.border, inkTolerance),
-                         qPrintable(qsl("%1: at the pane's end the strip's bottom row reads %2, not the hairline %3").arg(where, lineEnd.name(), tokens.border.name())));
-                QVERIFY2(!TestPixels::readsAs(TestPixels::sampled(shot, QPoint(paneRight, hairlineRow - 1)), tokens.border, inkTolerance),
-                         qPrintable(qsl("%1: the row over the hairline is the hairline's colour too").arg(where)));
-            }
-            QVERIFY2(firstWordCoverage.size() == 2 && firstWordCoverage.at(0) > firstWordCoverage.at(1),
-                     qPrintable(qsl("%1 appearance: \"Room\" covers %2 pixels chosen and %3 not, so it is not drawn heavier when chosen")
-                                        .arg(appearance == enums::Appearance::light ? qsl("light") : qsl("dark"))
-                                        .arg(firstWordCoverage.value(0))
-                                        .arg(firstWordCoverage.value(1))));
+        qApp->setStyleSheet(scriptTabSheet());
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        TestPixels::settle();
+        readTheScriptsTabs(pDlg, qsl("a sheet set before the window opened"));
+        if (QTest::currentTestFailed()) {
+            return;
         }
+
+        qApp->setStyleSheet(QString());
+        TestPixels::settle();
+        readTheDesignsTabs(pDlg);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        qApp->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        readTheScriptsTabs(pDlg, qsl("a sheet set while the window is open"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        qApp->setStyleSheet(QString());
+        TestPixels::settle();
+        readTheDesignsTabs(pDlg);
     }
 
     // As tall as the Room tab needs, whichever tab is on show and whatever the Script data tab holds
@@ -3039,6 +3172,65 @@ private slots:
         }
     }
 
+    // Each edit is held against the value as the edit before left it: two edits at opposite ends leave no line as first
+    // shown at either end, and the breaks would be handed out by line number, every one a line down from its own
+    void twoEditsAtOppositeEndsLeaveEveryLineBreakWithItsLine()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a\nb\r\nc\rd")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(chooseRow(pDlg, qsl("notes")));
+        pasteAtTheStartOfTheValue(pDlg, qsl("x\n"));
+        typeAtTheEndOfTheValue(pDlg, qsl("!"));
+        pDlg->accept();
+
+        // The new break is the one the value has most: of three used once each, the first
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("x\na\nb\r\nc\rd!")}}));
+    }
+
+    // Undo and redo are edits like any other, each held against the box as the step before left it
+    void undoingTwoEditsGivesBackTheValueAsStoredAndRedoBringsThemBack()
+    {
+        buildMap();
+        const QString stored = qsl("a\nb\r\nc\rd");
+        room(scmFirstRoom)->userData = {{qsl("notes"), stored}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(chooseRow(pDlg, qsl("notes")));
+        pasteAtTheStartOfTheValue(pDlg, qsl("x\n"));
+        typeAtTheEndOfTheValue(pDlg, qsl("!"));
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), qsl("x\na\nb\r\nc\rd!"));
+        valueBox(pDlg)->undo();
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), qsl("x\na\nb\r\nc\rd"));
+        valueBox(pDlg)->undo();
+        QCOMPARE(valueBox(pDlg)->toPlainText(), qsl("a\nb\nc\nd"));
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), stored);
+        valueBox(pDlg)->redo();
+        valueBox(pDlg)->redo();
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), qsl("x\na\nb\r\nc\rd!"));
+        valueBox(pDlg)->undo();
+        valueBox(pDlg)->undo();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
+    // A value written with "\r\n" throughout keeps it after edits at both ends, the breaks of the lines they add included
+    void editsAtBothEndsOfAValueOfOneKindOfBreakKeepThatBreak()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("A dim hall.\r\nCandles.\r\nA door.")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QVERIFY(chooseRow(pDlg, qsl("description")));
+        pasteAtTheStartOfTheValue(pDlg, qsl("North.\n"));
+        addALineAtTheEnd(pDlg, qsl("Shut."));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("North.\r\nA dim hall.\r\nCandles.\r\nA door.\r\nShut.")}}));
+    }
+
     // A JSON list or table stored with nothing between its entries is laid out to be read, in a fixed-width face, and
     // taking the layout out again gives back the very text that was stored
     void aJsonTableIsShownIndentedAndTheLayoutComesOutAgainWhole()
@@ -3585,7 +3777,6 @@ private slots:
         QVERIFY(mEmitted.changeName);
         QCOMPARE(mEmitted.newName, qsl("Armoury"));
     }
-
 };
 
 #include "RoomPropertiesDialogTest.moc"
