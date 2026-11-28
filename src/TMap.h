@@ -281,6 +281,9 @@ public:
 
     void setMmpMapLocation(const QString& location);
     QString getMmpMapLocation() const;
+    // The URL downloadMap() fetches a game's MMP map location from, or an empty
+    // one where that would not be a web (http or https) URL with a host
+    static QUrl mmpMapUrl(const QString& location);
 
     // has setRoomNamesShown ever been called on this map?
     bool getRoomNamesPresent();
