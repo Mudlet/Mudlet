@@ -532,6 +532,22 @@ private slots:
         QVERIFY(!subject()->hasExitLock(DIR_NORTH));
     }
 
+    // A door left on a direction with no exit reappears on whatever exit setExit() puts there next
+    void deletingAnExitClearsItsDoor()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->doortype_closed_n->isChecked());
+
+        clearByTyping(pDlg->n);
+        QVERIFY2(pDlg->doortype_closed_n->isChecked(), "the button has to reach Save still checked for save() to be what drops the door");
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getExit(DIR_NORTH), -1);
+        QCOMPARE(subject()->getDoor(qsl("n")), 0);
+    }
+
     void namingNoRoomDeletesTheExitAndItsSpeedwalkLock()
     {
         buildMap();
@@ -562,6 +578,21 @@ private slots:
 
         QVERIFY(subject()->hasExitStub(DIR_EAST));
         QVERIFY2(subject()->hasExitLock(DIR_EAST), "the lock ticked on a stub was not saved");
+    }
+
+    void aDoorSetOnAStubIsSaved()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->stub_e->isChecked());
+        QVERIFY(pDlg->doortype_locked_e->isEnabled());
+
+        pDlg->doortype_locked_e->click();
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QVERIFY(subject()->hasExitStub(DIR_EAST));
+        QCOMPARE(subject()->getDoor(qsl("e")), 3);
     }
 
     void aStoredStubLockSurvivesAnUnrelatedSave()

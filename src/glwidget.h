@@ -50,6 +50,7 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    static float scaleAfterWheel(float scale, int angleDeltaY);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -91,7 +92,10 @@ public:
 
 private:
     bool contextCreationFailed() const;
+    void applyScale();
     void applyBackgroundTranslucency();
+    // Colors a room whose environment has no color of its own, and its material, if the mapper has a default room color
+    void applyDefaultRoomColor(float* material) const;
     QPointer<Host> mpHost;
     // In place of the map while the window cannot show what this view draws
     QLabel* mpUnsharedLabel = nullptr;
