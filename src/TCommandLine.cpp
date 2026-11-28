@@ -234,6 +234,29 @@ void TCommandLine::processNormalKey(QEvent* event)
     spellCheck();
 }
 
+// Text from an input method, such as Chinese or Japanese, or a dead key, never arrives as a KeyPress
+void TCommandLine::processInputMethod(QEvent* event)
+{
+    const QString before = toPlainText();
+    {
+        const UserEditScope userEdit(*this);
+        QPlainTextEdit::event(event);
+    }
+    // The text being composed is laid out in the line too, so it can wrap before it is committed
+    adjustHeight();
+
+    // The preedit is not in toPlainText(), so only an event that changed the committed text counts as an edit
+    const QString after = toPlainText();
+    if (after == before) {
+        return;
+    }
+    mHistoryBuffer = 0;
+    if (mCompletion.lineEdited(after)) {
+        mCompletion.restartHistoryWalk();
+    }
+    spellCheck();
+}
+
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
     // Don't process keybindings if the host is closing down to prevent crashes
@@ -706,8 +729,12 @@ bool TCommandLine::event(QEvent* event)
         }
     }
 
-    if (event->type() == QEvent::KeyPress || event->type() == QEvent::InputMethod) {
-        // Keys that fell through the switch, Space among them, and dead-key and IME composition
+    if (event->type() == QEvent::InputMethod) {
+        processInputMethod(event);
+        return true;
+    }
+    if (event->type() == QEvent::KeyPress) {
+        // Keys that fell through the switch, Space among them
         const UserEditScope userEdit(*this);
         return QPlainTextEdit::event(event);
     }
