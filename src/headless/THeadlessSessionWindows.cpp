@@ -260,7 +260,9 @@ QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
             continue;
         }
         if (const std::optional<TNullMxpFrameFrontend::Tabs> tabs = pView->nullMxpFrames().tabs(window.name)) {
-            ScriptWindow::FrameTabs& frameTabs = window.frameTabs.emplace();
+            // Not emplace(): clang judges FrameTabs not default-constructible while ScriptWindow is incomplete
+            window.frameTabs = ScriptWindow::FrameTabs{};
+            ScriptWindow::FrameTabs& frameTabs = *window.frameTabs;
             for (const auto& [page, title] : tabs->pages) {
                 frameTabs.pages.append({page, title});
             }
