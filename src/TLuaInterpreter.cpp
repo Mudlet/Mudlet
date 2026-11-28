@@ -10195,7 +10195,7 @@ int TLuaInterpreter::removeFileWatch(lua_State* L)
 }
 
 // The profile's console colours, the sixteen by the names color_table gives them
-static QColor Host::*consoleColorMember(QStringView key)
+static QColor Host::* consoleColorMember(QStringView key)
 {
     static const std::array<std::pair<QStringView, QColor Host::*>, 20> members{{
             {u"ansiBlack", &Host::mBlack},
@@ -10228,7 +10228,7 @@ static QColor Host::*consoleColorMember(QStringView key)
 }
 
 // The 2D map's colours, as the preferences' Mapper colors tab keeps them; the sixteen colour the default environments
-static QColor Host::*mapColorMember(QStringView key)
+static QColor Host::* mapColorMember(QStringView key)
 {
     static const std::array<std::pair<QStringView, QColor Host::*>, 23> members{{
             {u"mapBackgroundColor", &Host::mBgColor_2},
@@ -10436,7 +10436,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->requestMapRepaint();
             return success();
         }
-        if (QColor Host::*member = mapColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
+        if (QColor Host::* member = mapColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
             const QString name = getVerifiedString(L, __func__, 2, "value");
             const QColor color = hexColorKeepingAlpha(name, host.*member);
             if (!color.isValid()) {
@@ -10714,7 +10714,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.getKeyUnit()->mRunAllKeyMatches = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (QColor Host::*member = consoleColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
+    if (QColor Host::* member = consoleColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
         const QString name = getVerifiedString(L, __func__, 2, "value");
         static const QRegularExpression hexColor(qsl("^#[0-9A-Fa-f]{6}$"));
         if (!hexColor.match(name).hasMatch()) {
@@ -11667,11 +11667,11 @@ int TLuaInterpreter::getConfig(lua_State* L)
         it->second();
         return 1;
     }
-    if (QColor Host::*member = consoleColorMember(key)) {
+    if (QColor Host::* member = consoleColorMember(key)) {
         lua_pushstring(L, (host.*member).name().toUtf8().constData());
         return 1;
     }
-    if (QColor Host::*member = mapColorMember(key)) {
+    if (QColor Host::* member = mapColorMember(key)) {
         lua_pushstring(L, (host.*member).name().toUtf8().constData());
         return 1;
     }
