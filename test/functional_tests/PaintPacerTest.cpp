@@ -123,9 +123,11 @@ private slots:
         });
         pacer.paintStarted(QRegion());
         QCOMPARE(pacer.paceMs(), TPaintPacer::csmPaintPaceMs);
-        for (int line = 0; line < 6; ++line) {
+        for (int line = 0; line < 5; ++line) {
             buffer.appendEmptyLine();
         }
+        QCOMPARE(pacer.paceMs(), TPaintPacer::csmPaintPaceMs);
+        buffer.appendEmptyLine();
         QCOMPARE(pacer.paceMs(), TPaintPacer::csmFloodPaintPaceMs);
     }
 

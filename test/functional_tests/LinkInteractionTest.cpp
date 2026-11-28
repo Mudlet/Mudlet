@@ -17,7 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QLabel>
 #include <QMenu>
+#include <QWidgetAction>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -121,6 +123,20 @@ private slots:
         QCOMPARE(console->buffer.getActiveLink(), 0);
     }
 
+    // A link whose commands were all dropped has nothing to run either
+    void test_aLinkWithNoCommandsActsAsText()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        TLinkInteraction links(console->buffer, console->model(), nullptr);
+        const int empty = console->buffer.mLinkStore.addLinks({}, {});
+        QVERIFY(empty);
+        QCOMPARE(links.press(empty), TLinkInteraction::Press::text);
+        QCOMPARE(console->buffer.getActiveLink(), 0);
+        console->buffer.setFocusedLink(empty);
+        QCOMPARE(links.activateFocused(), TLinkInteraction::Activate::ignored);
+        QCOMPARE(links.menuKeyOnFocused(), TLinkInteraction::Activate::ignored);
+    }
+
     void test_aPressOnALinkWithAMenuOpensIt()
     {
         TMainConsole* console = mpHost->mainConsoleView();
@@ -200,6 +216,25 @@ private slots:
         first->trigger();
         QCOMPARE(ran.count(), 1);
         delete menu;
+    }
+
+    void test_theMenuHasItsTitleAndSeparators()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        TLinkInteraction links(console->buffer, console->model(), nullptr);
+        const int send = linkTo(qsl("send:attack?config={\"title\":\"Combat\",\"menu\":[{\"Strike\":\"send:strike\"},\"-\",{\"Flee\":\"send:flee\"}]}"));
+        QVERIFY(send);
+        std::unique_ptr<QMenu> menu(links.buildMenu(send, nullptr, QFont(), false));
+        QStringList shape;
+        for (QAction* action : menu->actions()) {
+            if (auto* title = qobject_cast<QWidgetAction*>(action)) {
+                auto* label = qobject_cast<QLabel*>(title->defaultWidget());
+                shape << qsl("title:%1").arg(label ? label->text() : QString());
+            } else {
+                shape << (action->isSeparator() ? qsl("-") : action->text());
+            }
+        }
+        QCOMPARE(shape, (QStringList{qsl("title:Combat"), qsl("-"), qsl("Strike"), qsl("-"), qsl("Flee")}));
     }
 
     // The store holds 20000 ids, so a script's flood of links can hand an open menu's id to another link

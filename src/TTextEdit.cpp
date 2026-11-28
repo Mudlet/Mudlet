@@ -4283,6 +4283,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         if (!mpConsole) {
             break;
         }
+        const int focusedLink = mpBuffer->getFocusedLink();
         switch (mpLinks->activateFocused()) {
         case TLinkInteraction::Activate::none:
             break;
@@ -4295,7 +4296,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         case TLinkInteraction::Activate::ran:
             return;
         case TLinkInteraction::Activate::menu:
-            showLinkMenuAt(mpBuffer->getFocusedLink(), caretGlobalPosition(), true);
+            showLinkMenuAt(focusedLink, caretGlobalPosition(), true);
             return;
         }
         break;
