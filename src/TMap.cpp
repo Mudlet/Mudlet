@@ -41,7 +41,6 @@
 #include "mapInfoContributorManager.h"
 
 #include <QBuffer>
-#include <QCoreApplication>
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFileInfo>
@@ -92,6 +91,17 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
         return 1.0;
     }
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
+}
+
+// qRound() of a number an int cannot hold asserts in a debug build and is undefined
+// behaviour otherwise, so a damaged JSON map's number reads as 0 instead
+int jsonInt(const QJsonValue& value)
+{
+    const double number = value.toDouble();
+    if (!(number >= std::numeric_limits<int>::min() && number <= std::numeric_limits<int>::max())) {
+        return 0;
+    }
+    return qRound(number);
 }
 
 // Not QFont::PreferNoShaping: Qt's unshaped text path treats Private Use Area
@@ -351,6 +361,11 @@ bool TMap::setRoomArea(int id, int area)
         // instantiate the required TArea structure - this seems a bit twisty
         // and convoluted, but it was how previous code was wired up and we need
         // to retain the API for the lua subsystem...
+    } else if (pR->getArea() == area && pA->getAreaRooms().contains(id)) {
+        // Mapping scripts set the area of every room they arrive in, and redoing
+        // it would make the next path search rebuild the whole map's graph.
+        // A new room's area is -1 before that area holds it, hence the second test.
+        return true;
     }
 
     const bool result = pR->setArea(area);
@@ -777,13 +792,19 @@ void TMap::audit()
                             appendAreaErrorMsg(areaID, tr("[ WARN ] - CONVERTING: cannot convert old style label with id: %1.").arg(i));
                         }
                     }
-                    if ((l.size.width() > std::numeric_limits<qreal>::max()) || (l.size.width() < -std::numeric_limits<qreal>::max())) {
-                        pArea->mMapLabels[i].size.setWidth(l.pix.width());
-                    }
-                    if ((l.size.height() > std::numeric_limits<qreal>::max()) || (l.size.height() < -std::numeric_limits<qreal>::max())) {
-                        pArea->mMapLabels[i].size.setHeight(l.pix.height());
-                    }
                 }
+            }
+        }
+    }
+
+    // A damaged file can hold a NaN or infinite label size, which the 2D map cannot round to pixels
+    for (auto* pArea : mpRoomDB->getAreaMap()) {
+        for (auto& label : pArea->mMapLabels) {
+            if (!std::isfinite(label.size.width())) {
+                label.size.setWidth(label.pix.width());
+            }
+            if (!std::isfinite(label.size.height())) {
+                label.size.setHeight(label.pix.height());
             }
         }
     }
@@ -1997,8 +2018,7 @@ bool TMap::restore(QString location)
                 appendErrorMsgWithNoLf(infoMsg);
                 postMessage(infoMsg);
             }
-            // Allow for somethings to be updated - especially on Windows?
-            QCoreApplication::processEvents();
+            emit signal_mapProgressRepaintWanted();
         }
         return false;
     }
@@ -2333,7 +2353,7 @@ bool TMap::restore(QString location)
     return canRestore; //FIXME
 }
 
-// Reads the newest map file from the profile and retrieves some stats and data,
+// Reads the newest binary (.dat) map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
 // copied across (if the room STILL exists)!  This is to avoid a replacement map
@@ -2350,12 +2370,10 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
         pProfileHost->waitForMapAutosave();
     }
-    QString folder;
-    QStringList entries;
-    folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
+    const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
+    // Only binary maps can be read here: the first bytes of a JSON export or other
+    // text file read as a format version far beyond ours, so no player room is read
+    const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
 
     if (entries.isEmpty()) {
         return false;
@@ -2834,7 +2852,6 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     QListIterator<QString> itMapMsg(mapAuditErrors);
     while (itMapMsg.hasNext()) {
         pHost->mErrorLogStream << itMapMsg.next() << QLatin1Char('\n');
-        ;
     }
 
     pHost->mErrorLogStream << createFileHeaderLine(tr("Area issues"), QLatin1Char('='));
@@ -2869,7 +2886,6 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
         QListIterator<QString> itMapRoomMsg(itRoomsMsg.value());
         while (itMapRoomMsg.hasNext()) {
             pHost->mErrorLogStream << itMapRoomMsg.next() << QLatin1Char('\n');
-            ;
         }
     }
 
@@ -2930,7 +2946,13 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     QUrl url;
     if (remoteUrl.isEmpty()) {
         if (!getMmpMapLocation().isEmpty()) {
-            url = QUrl::fromUserInput(getMmpMapLocation());
+            url = mmpMapUrl(getMmpMapLocation());
+            if (url.isEmpty()) {
+                //: Shown in the main console when the map the game offered is not downloaded
+                postMessage(tr("[ WARN ]  - The map the game offered is not at a web (http or https) address, so it was not downloaded."));
+                mImportRunning = false;
+                return;
+            }
         } else {
             url = QUrl::fromUserInput(qsl("https://www.%1/maps/map.xml").arg(pHost->mUrl));
         }
@@ -2981,8 +3003,6 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     const QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
-    QCoreApplication::processEvents();
-    // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
     //: %1 is the name of the current Mudlet profile
@@ -3297,11 +3317,8 @@ void TMap::reportStringToProgressDialog(const QString text)
 {
     if (hasActiveTransferProgress()) {
         updateTransferProgressLabel(text);
-        // Needed to make the changed text show, it does increase the overall
-        // time a little but as the main usage is when parsing XML room data
-        // and that can take MORE THAN A MINUTE the activity is essential to
-        // inform the user that something IS happening...
-        QCoreApplication::processEvents();
+        // Parsing XML room data can take more than a minute, so a window that shows the text must repaint it now
+        emit signal_mapProgressRepaintWanted();
     }
 }
 
@@ -3474,6 +3491,18 @@ void TMap::setMmpMapLocation(const QString& location)
 QString TMap::getMmpMapLocation() const
 {
     return mMmpMapLocation;
+}
+
+// A file: or qrc: location would have the game pick a file on the player's computer, or in Mudlet, to be read as the
+// profile's map. QUrl::fromUserInput(), as downloadMap() reads it, turns a bare path into a file: URL.
+/*static*/ QUrl TMap::mmpMapUrl(const QString& location)
+{
+    const QUrl url = QUrl::fromUserInput(location);
+    // QUrl gives the scheme in lower case
+    if ((url.scheme() != qsl("http") && url.scheme() != qsl("https")) || url.host().isEmpty()) {
+        return {};
+    }
+    return url;
 }
 
 bool TMap::getRoomNamesPresent()
@@ -3656,7 +3685,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    QCoreApplication::processEvents();
+    emit signal_mapProgressRepaintWanted();
     QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
@@ -3880,11 +3909,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("no areas detected") : qsl("no areas detected"))};
     }
 
-    mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
+    mProgressDialogAreasTotal = jsonInt(mapObj[QLatin1String("areaCount")]);
     mProgressDialogAreasCount = 0;
-    mProgressDialogRoomsTotal = qRound(mapObj[QLatin1String("roomCount")].toDouble());
+    mProgressDialogRoomsTotal = jsonInt(mapObj[QLatin1String("roomCount")]);
     mProgressDialogRoomsCount = 0;
-    mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
+    mProgressDialogLabelsTotal = jsonInt(mapObj[QLatin1String("labelCount")]);
     mProgressDialogLabelsCount = 0;
     mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
@@ -3906,7 +3935,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    QCoreApplication::processEvents();
+    emit signal_mapProgressRepaintWanted();
 
     // A file not written by Mudlet may not give these, and an empty one cannot name an area
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
@@ -3924,16 +3953,13 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    // qRound() returns an int, so dividing by an int literal here used to be
-    // integer division and every load rounded the factor to a whole number -
-    // issue #10176, which turned anything below 1.0 into a 0 that stops room
-    // symbols being drawn at all. The 1000 is to keep the value to the three
-    // decimals the preferences offer:
-    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
+    // Not qRound(), whose int overflows on a huge factor; the 1000 keeps the
+    // value to the three decimals the preferences offer
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(std::round(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
-    const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
-    quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
-    quint8 const playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());
+    const int playerRoomStyle = jsonInt(mapObj[QLatin1String("playerRoomStyle")]);
+    quint8 const playerRoomOuterDiameterPercentage = jsonInt(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")]);
+    quint8 const playerRoomInnerDiameterPercentage = jsonInt(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")]);
     QColor playerRoomOuterColor;
     QColor playerRoomInnerColor;
 
@@ -4237,14 +4263,15 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
                                                      QString::number(mProgressDialogLabelsCount),
                                                      QString::number(mProgressDialogLabelsTotal)));
     }
-    QCoreApplication::processEvents();
+    // Where the progress dialog's Abort reaches the operation, in the GUI
+    emit signal_mapProgressRepaintWanted();
     return mMapProgressCancelRequested;
 }
 
 void TMap::areasAboutToBeDeleted()
 {
-    // The export walks the live areas and pumps the event loop as it goes, so a
-    // script can delete the one it is writing; it stops at its next progress step
+    // The export walks the live areas and, in the GUI, pumps the event loop as it
+    // goes, so a script can delete the one it is writing; it stops at its next progress step
     if (mJsonExportInProgress) {
         mJsonExportLostAnArea = true;
         mMapProgressCancelRequested = true;
@@ -4452,10 +4479,8 @@ QColor TMap::getColor(int id)
     int env = room->environment;
     if (mEnvColors.contains(env)) {
         env = mEnvColors.value(env);
-    } else {
-        if (!mCustomEnvColors.contains(env)) {
-            env = 1;
-        }
+    } else if (!mCustomEnvColors.contains(env)) {
+        return mpHost->mapperDefaultRoomColor();
     }
     switch (env) {
     case 1:

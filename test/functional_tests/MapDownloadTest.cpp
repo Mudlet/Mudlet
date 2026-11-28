@@ -55,12 +55,18 @@
 
 #include <QDataStream>
 #include <QSaveFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
 #include <QHash>
 #include <QHostAddress>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLineEdit>
+#include <QPointer>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTcpServer>
@@ -73,6 +79,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
+#include "T2DMap.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoom.h"
@@ -543,6 +550,20 @@ private:
             mpHost->showHideOrCreateMapper(false);
         }
         return mpHost->mpMap->mapper();
+    }
+
+    // The overlay's buttons carry no object names, so the text is the only
+    // handle on the right one - through translate() rather than a literal,
+    // so a run with a translator loaded still finds it.
+    static QPushButton* emptyStateDownloadButton(const QFrame* overlay)
+    {
+        const auto buttons = overlay->findChildren<QPushButton*>();
+        for (QPushButton* button : buttons) {
+            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
+                return button;
+            }
+        }
+        return nullptr;
     }
 
     // A reply reports its progress no more often than an interval of Qt's own,
@@ -1047,6 +1068,59 @@ private slots:
         QCOMPARE(mpMapServer->requestedPaths(), QStringList{qsl("/mmp.xml")});
     }
 
+    // Client.Map can name a file on the player's computer, or something else
+    // that is not on the web, for Mudlet to read as the profile's map. Such a
+    // location is never kept, so there is nothing to offer, and the console says
+    // so without repeating it.
+    void test_aGameCanOfferOnlyAMapOnTheWeb()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        const QString localMap = mConfigDir.filePath(qsl("offered-local.xml"));
+        QFile file(localMap);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write(scmMapXml), scmMapXml.size());
+        file.close();
+        const auto offer = [this](const QString& location) {
+            mpHost->setMmpMapLocation(QString::fromUtf8(QJsonDocument(QJsonObject{{qsl("url"), location}}).toJson()));
+        };
+
+        const QStringList refused{QUrl::fromLocalFile(localMap).toString(), localMap, qsl("data:text/xml,<map/>"), qsl("qrc:/map.xml"), qsl("ftp://example.com/map.xml"), qsl("https:///map.xml")};
+        for (const QString& location : refused) {
+            mConsoleMark = mpHost->mainConsoleView()->buffer.getLastLineNumber();
+            offer(location);
+            QVERIFY2(pMap->getMmpMapLocation().isEmpty(), qPrintable(qsl("%1 was kept as the game's map").arg(location)));
+            QVERIFY2(consoleShows(qsl("not at a web (http or https) address")), qPrintable(consoleTextSinceMark()));
+            QVERIFY2(!consoleShows(location), qPrintable(consoleTextSinceMark()));
+        }
+
+        // Read as downloadMap() reads it: the scheme in any case, or none, which is http
+        for (const QString& location : {qsl("HTTPS://example.com/map.xml"), qsl("example.com/map.xml")}) {
+            offer(location);
+            QCOMPARE(pMap->getMmpMapLocation(), location);
+        }
+    }
+
+    // A location TMap was given directly, past Host's check, is still not fetched
+    void test_aStoredMapLocationNotOnTheWebIsNotDownloaded()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        const QString localMap = mConfigDir.filePath(qsl("stored-local.xml"));
+        QFile file(localMap);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write(scmMapXml), scmMapXml.size());
+        file.close();
+        pMap->setMmpMapLocation(QUrl::fromLocalFile(localMap).toString());
+        QSignalSpy startSpy(pMap, &TMap::signal_mapTransferProgressStart);
+
+        pMap->downloadMap();
+
+        QVERIFY2(consoleShows(qsl("not at a web (http or https) address")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(!consoleShows(localMap), qPrintable(consoleTextSinceMark()));
+        QCOMPARE(startSpy.count(), 0);
+        QVERIFY(!pMap->hasActiveTransferProgress());
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a refused location was refused, so the import flag was left set");
+    }
+
     // The game answers, but with a document that stops part way through - the
     // shape a server cutting the response short produces. The reader has already
     // cleared the map by the time the parse fails, so the least that has to be
@@ -1420,17 +1494,7 @@ private slots:
 
         auto* overlay = pMapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
         QVERIFY2(overlay, "the mapper has no empty-state overlay");
-        // The overlay's buttons carry no object names, so the text is the only
-        // handle on the right one - through translate() rather than a literal,
-        // so a run with a translator loaded still finds it.
-        QPushButton* downloadButton = nullptr;
-        const auto buttons = overlay->findChildren<QPushButton*>();
-        for (QPushButton* button : buttons) {
-            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
-                downloadButton = button;
-                break;
-            }
-        }
+        QPushButton* downloadButton = emptyStateDownloadButton(overlay);
         QVERIFY2(downloadButton, "the mapper's empty state has no \"Download from game\" button");
         QVERIFY2(downloadButton->isHidden(), "the download button was offered before the game had advertised a map");
 
@@ -1478,6 +1542,148 @@ private slots:
                          15s),
                  "the download after an aborted one never finished");
         QVERIFY2(consoleShows(qsl("map downloaded and stored")), "the download after an aborted one was refused, so the import flag was left set");
+    }
+
+    // A download started from the empty state that comes to nothing must give
+    // back its choices, or the player is left with a blank map and nothing to retry with
+    void test_theMappersEmptyStateReturnsWhenADownloadComesToNothing()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper && pMapper->isVisible(), "the mapper is not on screen to show its empty state");
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+        pMap->setMmpMapLocation(mpMapServer->url(qsl("/stalled.xml")));
+        pMapper->updateEmptyStateOverlay();
+
+        auto* emptyState = pMapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
+        auto* progress = pMapper->findChild<QFrame*>(qsl("mapProgressOverlay"));
+        QVERIFY(emptyState && progress);
+        QVERIFY2(emptyState->isVisible(), "an empty map with an MMP location did not offer its empty state");
+        QPushButton* downloadButton = emptyStateDownloadButton(emptyState);
+        QVERIFY(downloadButton);
+
+        downloadButton->click();
+        QVERIFY2(progress->isVisible(), "the download put no progress overlay on the mapper");
+        QVERIFY2(!emptyState->isVisible(), "the empty state stayed up over the download's progress");
+        progress->findChild<QPushButton*>()->click();
+        QVERIFY2(emptyState->isVisible(), "an aborted download left the empty map without its choices");
+
+        pMap->setMmpMapLocation(mpMapServer->url(qsl("/nosuchmap.xml")));
+        downloadButton->click();
+        QVERIFY2(QTest::qWaitFor(
+                         [pMap]() {
+                             return !pMap->hasActiveTransferProgress();
+                         },
+                         15s),
+                 "the failed map download never finished");
+        QVERIFY2(consoleShows(qsl("Map download encountered an error")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(emptyState->isVisible(), "a failed download left the empty map without its choices");
+
+        pMap->setMmpMapLocation(mpMapServer->url(qsl("/map.xml")));
+        downloadButton->click();
+        QVERIFY2(QTest::qWaitFor(
+                         [pMap]() {
+                             return !pMap->hasActiveTransferProgress();
+                         },
+                         15s),
+                 "the map download never finished");
+        QVERIFY2(consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(!emptyState->isVisible(), "the empty state came back over the map that was just downloaded");
+    }
+
+    // A mapper hidden mid-download still has the progress overlay to come back to, so an
+    // update meanwhile must leave the 2D map's own empty-map text suppressed under it
+    void test_theEmptyMapTextStaysSuppressedUnderADownloadWhileTheMapperIsHidden()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper && pMapper->isVisible(), "the mapper is not on screen to show the download's progress");
+        auto* p2dMap = pMapper->findChild<T2DMap*>();
+        auto* progress = pMapper->findChild<QFrame*>(qsl("mapProgressOverlay"));
+        QVERIFY(p2dMap && progress);
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+
+        pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml")));
+        QVERIFY2(progress->isVisible(), "the download put no progress overlay on the mapper");
+        QVERIFY(p2dMap->mSuppressEmptyStateMessage);
+
+        pMapper->hide();
+        pMapper->updateEmptyStateOverlay();
+        pMapper->show();
+        const bool suppressed = p2dMap->mSuppressEmptyStateMessage;
+        pMap->slot_downloadCancel();
+        QVERIFY2(!pMap->hasActiveTransferProgress(), "the stalled download could not be cancelled");
+        QVERIFY2(suppressed, "the 2D map's empty-map text came back under the download's progress");
+    }
+
+    // The empty map's "Load map..." loads from its file dialog's finished(), while QFileDialog::done() is still running.
+    // A JSON load pumps events to repaint its progress, and on macOS the native dialog's result arrives outside any Qt
+    // event, where that pump runs whatever delete the dialog has waiting and frees it under done().
+    void test_theEmptyMapsLoadButtonKeepsItsDialogUntilTheMapIsLoaded()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper, "the profile has no mapper widget to show the empty state on");
+        TMap* pMap = mpHost->mpMap.data();
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("load.json"));
+        pMap->mapClear();
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Loaded Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(pMap->addRoom(1));
+        QVERIFY(pMap->setRoomArea(1, areaId));
+        QVERIFY2(pMap->writeJsonMapFile(path).first, "the map to load could not be written");
+        // As Delete map leaves it
+        pMap->mapClear();
+        pMap->updateArea(-1);
+
+        // Qt's own dialog, as a native one cannot be answered from here
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+        const auto nativeDialogsBack = qScopeGuard([]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, false);
+        });
+        auto* overlay = pMapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
+        QVERIFY2(overlay, "the mapper has no empty-state overlay");
+        // updateArea()'s signal goes out on the next event loop pass
+        QTRY_VERIFY2(overlay->isVisible(), "the emptied map shows no empty state to load a map from");
+        QPushButton* loadButton = nullptr;
+        const auto buttons = overlay->findChildren<QPushButton*>();
+        for (QPushButton* button : buttons) {
+            if (button->text() == QCoreApplication::translate("dlgMapper", "Load map...")) {
+                loadButton = button;
+                break;
+            }
+        }
+        QVERIFY2(loadButton, "the empty state has no \"Load map...\" button");
+        loadButton->click();
+        const QPointer<QFileDialog> dialog = pMapper->findChild<QFileDialog*>();
+        QVERIFY2(dialog, "\"Load map...\" opened no file dialog");
+        dialog->setDirectory(dir.path());
+        auto* fileNameEdit = dialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+        QVERIFY2(fileNameEdit, "the file dialog has no file name field to type into");
+        fileNameEdit->setText(qsl("load.json"));
+        QCOMPARE(dialog->selectedFiles(), QStringList{path});
+
+        // Stands in for that pump: each repaint runs whatever delete the dialog has waiting
+        int repaints = 0;
+        bool dialogLivedThroughTheLoad = true;
+        const QMetaObject::Connection pump = connect(pMap, &TMap::signal_mapProgressRepaintWanted, this, [&repaints, &dialogLivedThroughTheLoad, &dialog]() {
+            ++repaints;
+            if (dialog) {
+                QCoreApplication::sendPostedEvents(dialog, QEvent::DeferredDelete);
+            }
+            dialogLivedThroughTheLoad = dialogLivedThroughTheLoad && !dialog.isNull();
+        });
+        // As QDialog::done() emits it, but with none of the dialog's own code running, so a dialog deleted part way
+        // through fails the check below rather than crashing the test
+        emit dialog->finished(QDialog::Accepted);
+        disconnect(pump);
+
+        QVERIFY2(repaints > 0, "the JSON load never repainted its progress, so nothing here stood in for the pump");
+        QVERIFY2(pMap->mpRoomDB->getRoom(1), "the map in the chosen file was not loaded");
+        QVERIFY2(dialogLivedThroughTheLoad, "the file dialog was deleted while its finished() was still loading the map");
+        settleDeferredDeletes();
+        QVERIFY2(!dialog, "the file dialog was never deleted");
     }
 };
 

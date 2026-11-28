@@ -26,8 +26,10 @@
 
 #include "ExitAppearance.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
+#include "TBackgroundTask.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -40,32 +42,15 @@
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QFontMetrics>
-#include <QFutureWatcher>
 #include <QImage>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPointer>
 #include <QRadialGradient>
+#include <QSettings>
 #include <QSetIterator>
 #include <QVector3D>
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
-/* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
- * Debian and Ubuntu are missing the
- * ./include/QtConcurrent/QtConcurrentTask file that contains the single
- * line:
- * #include "qtconcurrenttask.h" // IWYU pragma: export
- *
- * that is present in the Qt on-line installer install (for Qt 6.10.1)
- * - so building Mudlet using the latter succeed whereas it breaks on the
- * GitHub CI runners (qt 6.9.0). So use the less "pretty" direct include.
- * It appears that this is an upstream Qt bug as the MacOS builds (also
- * for Qt 6.9.0) are failing in the same manner. Yet the Windows build
- * using the later Qt 6.11.0 succeed!*/
-#include <qtconcurrenttask.h>
-#else
-#include <QtConcurrentTask>
-#endif
 
 #include <algorithm>
 #include <climits>
@@ -115,6 +100,15 @@ int xyExitFor(const TRoom& room, const QString& key)
     }
     return 0;
 }
+
+// An unscaled label is drawn at its pixmap's size whatever the zoom, so its stored size does not say what it covers
+QSize drawnLabelSize(const TMapLabel& label, const qreal roomWidth, const qreal roomHeight)
+{
+    if (label.noScaling) {
+        return label.pix.deviceIndependentSize().toSize();
+    }
+    return QSize(abs(qRound(label.size.width() * roomWidth)), abs(qRound(label.size.height() * roomHeight)));
+}
 } // namespace
 
 // A special exit can be named like a normal one ("n", "up"...); a custom line by
@@ -131,6 +125,27 @@ int TMapPainter::customLineDestination(const TRoom& room, const QString& key)
         }
     }
     return room.getSpecialExits().value(key);
+}
+
+bool TMapPainter::directionalExitLinesEnabled()
+{
+    QSettings* settings = MudletApp::getQSettings();
+    return !settings || settings->value(qsl("directionalExitLines"), true).toBool();
+}
+
+bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
+{
+    if (!exit.destination) {
+        return false;
+    }
+    const int reverse = TMap::scmReverseDirections.value(exit.direction);
+    if (!reverse || exit.destination->getExit(reverse) != room.getId()) {
+        return false;
+    }
+    // Only a line that gets back here draws the connection; one that stops short leaves the plain line needed. Within
+    // the tolerance customLineRunsStraightTo() allows
+    const QList<QPointF> points = exit.destination->customLines.value(TRoom::dirCodeToShortString(reverse));
+    return !points.isEmpty() && QLineF(points.last(), QPointF(room.x(), room.y())).length() <= 0.1;
 }
 
 // Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them
@@ -163,7 +178,12 @@ bool TMapPainter::customLineRunsStraightTo(const TRoom& owner, const TRoom& othe
     return false;
 }
 
-// key format: <QColor.name()><QString of one or more QChars>
+// A grid mode room fills its whole cell, so its symbol is made at a different size
+static QString symbolPixmapKey(const QColor& symbolColor, const QString& symbol, const bool gridMode)
+{
+    return qsl("%1_%2_%3").arg(symbolColor.name(), gridMode ? qsl("g") : qsl("n"), symbol);
+}
+
 void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
     // Prevents small, unreadable symbols:
@@ -183,10 +203,14 @@ void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, 
         symbolRectangle = QRectF(0.0, 0.0, mRoomWidth * rSize, mRoomHeight * rSize);
     }
 
-    auto pixmap = new QPixmap(symbolRectangle.toRect().size());
+    // At the target's device pixel ratio: a 1x pixmap is scaled up when painted, which makes the symbol blocky or blurred
+    const QSize logicalSize = symbolRectangle.toRect().size();
+    auto pixmap = new QPixmap((QSizeF(logicalSize) * mSymbolPixmapDevicePixelRatio).toSize());
+    pixmap->setDevicePixelRatio(mSymbolPixmapDevicePixelRatio);
     pixmap->fill(Qt::transparent);
 
-    if (symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
+    // A tiny export zoom can leave a symbol no device pixels to be painted on
+    if (pixmap->isNull() || symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
         // if the space to draw the symbol on is too small then do not create
         // anything on the pixmap as it will be unreadable - instead insert an
         // empty pixmap:
@@ -195,7 +219,7 @@ void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, 
     }
 
     QPainter symbolPainter(pixmap);
-    RoomAppearance::paintSymbol(symbolPainter, pixmap->rect(), text, symbolColor, mpMap->mMapSymbolFont, mpMap->mMapSymbolFontFudgeFactor, mSymbolFontSize);
+    RoomAppearance::paintSymbol(symbolPainter, QRect(QPoint(), logicalSize), text, symbolColor, mpMap->mMapSymbolFont, mpMap->mMapSymbolFontFudgeFactor, mSymbolFontSize);
     symbolPainter.end();
 
     if (!mSymbolPixmapCache.insert(key, pixmap)) {
@@ -593,7 +617,7 @@ void TMapPainter::drawRoom(QPainter& painter,
     // Do we need to draw the room symbol:
     if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
         const QColor symbolColor = RoomAppearance::symbolColor(pRoom->mSymbolColor, roomColor);
-        auto pixmapKey = qsl("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
+        const QString pixmapKey = symbolPixmapKey(symbolColor, pRoom->mSymbol, isGridMode);
         if (!mSymbolPixmapCache.contains(pixmapKey)) {
             addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
         }
@@ -621,13 +645,15 @@ void TMapPainter::drawRoom(QPainter& painter,
                 *                         |  +---+  |
                 *                         |Rectangle|
                 *                         +---------+
-                *                            |<->|<--symbolRect.width()
-                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                *                            |<->|<--symbolSize.width()
+                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolSize.width())/2.0
                 * similarly for the y-offset
                 */
 
-            painter.drawPixmap(QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
-                               *pix);
+            const QSizeF symbolSize = pix->deviceIndependentSize();
+            const int symbolLeft = qRound(roomRectangle.left() + (roomRectangle.width() - symbolSize.width()) / 2.0);
+            const int symbolTop = qRound(roomRectangle.top() + (roomRectangle.height() - symbolSize.height()) / 2.0);
+            painter.drawPixmap(QPoint(symbolLeft, symbolTop), *pix);
         }
 
         painter.restore();
@@ -1267,14 +1293,15 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
         if (!showVnums && !room->mSymbol.isEmpty()) {
             const QColor roomColor = environmentColor(room->environment);
             const QColor symbolColor = RoomAppearance::symbolColor(room->mSymbolColor, roomColor);
-            const QString pixmapKey = qsl("%1_%2").arg(symbolColor.name(), room->mSymbol);
+            const QString pixmapKey = symbolPixmapKey(symbolColor, room->mSymbol, true);
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
                 addSymbolToPixmapCache(pixmapKey, room->mSymbol, symbolColor, true);
             }
             if (const QPixmap* pix = mSymbolPixmapCache.object(pixmapKey); pix && !pix->isNull()) {
                 painter.save();
                 painter.setBackgroundMode(Qt::TransparentMode);
-                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - pix->width()) / 2.0), qRound(roomRect.top() + (roomRect.height() - pix->height()) / 2.0)), *pix);
+                const QSizeF symbolSize = pix->deviceIndependentSize();
+                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - symbolSize.width()) / 2.0), qRound(roomRect.top() + (roomRect.height() - symbolSize.height()) / 2.0)), *pix);
                 painter.restore();
             }
         }
@@ -1538,6 +1565,76 @@ static bool withinViewportBounds(const QRect& bounds, const int x, const int y)
 // Of the dot on the end of an exit stub, as a fraction of a room's spacing
 static constexpr qreal cStubDotRadius = 0.1;
 
+// drawPolyline() is 2-3x slower than drawLine(), and almost every exit path is a straight line
+static void drawExitPath(QPainter& painter, const QVector<QPointF>& path)
+{
+    if (path.size() == 2) {
+        painter.drawLine(path.at(0), path.at(1));
+    } else {
+        painter.drawPolyline(path.data(), path.size());
+    }
+}
+
+QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub) const
+{
+    if (leavesByStub) {
+        *leavesByStub = false;
+    }
+    const auto onCompass = [](const int direction) {
+        return direction >= DIR_NORTH && direction <= DIR_SOUTHWEST;
+    };
+    if (!mDirectionalExitLines || !exit.destination || !onCompass(exit.direction)) {
+        return {from, to};
+    }
+    const TRoom& destination = *exit.destination;
+    // A straight line already leaves origin in that direction when other lies on the ray from it
+    const auto liesAhead = [](const TRoom& origin, const int direction, const TRoom& other) {
+        const QVector3D unit = TMap::scmUnitVectors.value(direction);
+        const qint64 ux = qRound(unit.x());
+        const qint64 uy = qRound(unit.y());
+        // scmUnitVectors has y increasing southward, room coordinates northward
+        const qint64 dx = qint64{other.x()} - origin.x();
+        const qint64 dy = qint64{origin.y()} - other.y();
+        if ((ux == 0) != (dx == 0) || (uy == 0) != (dy == 0) || ux * dx < 0 || uy * dy < 0) {
+            return false;
+        }
+        return ux == 0 || uy == 0 || qAbs(dx) == qAbs(dy);
+    };
+    // The same fixed point a custom line in that direction starts from, so the two meet up
+    const auto stubEnd = [&](const QPointF& center, const int direction) {
+        const QVector3D unit = TMap::scmUnitVectors.value(direction);
+        return QPointF(center.x() + unit.x() * mRoomWidth / 2.0, center.y() + unit.y() * mRoomHeight / 2.0);
+    };
+
+    // The way back in, preferring the reverse direction, so both rooms of a two-way exit draw the same path
+    int backDirection = 0;
+    const int reverse = TMap::scmReverseDirections.value(exit.direction);
+    if (destination.getExit(reverse) == room.getId()) {
+        backDirection = reverse;
+    } else {
+        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+            if (destination.getExit(direction) == room.getId()) {
+                backDirection = direction;
+                break;
+            }
+        }
+    }
+
+    // One end bending turns the line off the other end's axis too, so then both leave through their stubs
+    if (liesAhead(room, exit.direction, destination) && (!backDirection || liesAhead(destination, backDirection, room))) {
+        return {from, to};
+    }
+    QVector<QPointF> path{from, stubEnd(from, exit.direction)};
+    if (leavesByStub) {
+        *leavesByStub = true;
+    }
+    if (backDirection) {
+        path << stubEnd(to, backDirection);
+    }
+    path << to;
+    return path;
+}
+
 void TMapPainter::paintRoomExits(QPainter& painter,
                                  QPen& pen,
                                  QList<ExitToPaint>& exitList,
@@ -1561,10 +1658,10 @@ void TMapPainter::paintRoomExits(QPainter& painter,
     int maxSkippableSpan = 0;
     if (lodTier && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
         const auto exitDropped = [&](const int span) {
-            return float(span) * mRoomWidth <= lodBlobSize.width() && float(span) * mRoomHeight <= lodBlobSize.height();
+            return static_cast<float>(span) * mRoomWidth <= lodBlobSize.width() && static_cast<float>(span) * mRoomHeight <= lodBlobSize.height();
         };
-        const double unitsAcrossBlob = qMin(lodBlobSize.width() / double(mRoomWidth), lodBlobSize.height() / double(mRoomHeight));
-        maxSkippableSpan = int(qBound(0.0, std::floor(unitsAcrossBlob), double(INT_MAX / 2)));
+        const double unitsAcrossBlob = qMin(lodBlobSize.width() / static_cast<double>(mRoomWidth), lodBlobSize.height() / static_cast<double>(mRoomHeight));
+        maxSkippableSpan = static_cast<int>(qBound(0.0, std::floor(unitsAcrossBlob), static_cast<double>(INT_MAX / 2)));
         while (maxSkippableSpan > 0 && !exitDropped(maxSkippableSpan)) {
             --maxSkippableSpan;
         }
@@ -1590,7 +1687,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
     mLodExitIndexRoomsHandedOver = -1;
     if (!mLodExitIndexDisabled && maxSkippableSpan > 0 && pArea->lodVisibleExitRoomCount(zLevel, maxSkippableSpan) < viewportRooms.size()) {
         roomsToPaint = pArea->lodVisibleExitRooms(zLevel, maxSkippableSpan);
-        mLodExitIndexRoomsHandedOver = int(roomsToPaint.size());
+        mLodExitIndexRoomsHandedOver = static_cast<int>(roomsToPaint.size());
         QSet<int> alreadyListed{roomsToPaint.cbegin(), roomsToPaint.cend()};
         for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
             // All of them: the index only covers exits drawn as plain lines.
@@ -1622,7 +1719,10 @@ void TMapPainter::paintRoomExits(QPainter& painter,
         if (pRoom->customLines.empty()) {
             const float roomX = pRoom->x() * mRoomWidth + mRX;
             const float roomY = pRoom->y() * -1 * mRoomHeight + mRY;
-            return !(roomX < 0 || roomY < 0 || roomX > widgetWidth || roomY > widgetHeight);
+            // A bent exit line leaves through a stub half a cell out, which shows while the room's centre is just off
+            const float marginX = mDirectionalExitLines ? mRoomWidth / 2.0f : 0.0f;
+            const float marginY = mDirectionalExitLines ? mRoomHeight / 2.0f : 0.0f;
+            return !(roomX < -marginX || roomY < -marginY || roomX > widgetWidth + marginX || roomY > widgetHeight + marginY);
         }
         const float miny = pRoom->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
         const float maxy = pRoom->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
@@ -1659,8 +1759,8 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (!lodTier || pDestination->getArea() != mAreaID) {
                 return true;
             }
-            const float xReach = float(qAbs(qint64{pDestination->x()} - room->x())) * mRoomWidth;
-            const float yReach = float(qAbs(qint64{pDestination->y()} - room->y())) * mRoomHeight;
+            const float xReach = static_cast<float>(qAbs(qint64{pDestination->x()} - room->x())) * mRoomWidth;
+            const float yReach = static_cast<float>(qAbs(qint64{pDestination->y()} - room->y())) * mRoomHeight;
             return xReach > lodBlobSize.width() || yReach > lodBlobSize.height();
         };
 
@@ -1677,49 +1777,49 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (!room->customLines.contains(key_n)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNorth(), pER->getSouth() != _id});
+                    exitList.push_back({pER, room->getNorth(), pER->getSouth() != _id, false, DIR_NORTH});
                 }
             }
             if (!room->customLines.contains(key_ne)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNortheast(), pER->getSouthwest() != _id});
+                    exitList.push_back({pER, room->getNortheast(), pER->getSouthwest() != _id, false, DIR_NORTHEAST});
                 }
             }
             if (!room->customLines.contains(key_e)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getEast(), pER->getWest() != _id});
+                    exitList.push_back({pER, room->getEast(), pER->getWest() != _id, false, DIR_EAST});
                 }
             }
             if (!room->customLines.contains(key_se)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSoutheast(), pER->getNorthwest() != _id});
+                    exitList.push_back({pER, room->getSoutheast(), pER->getNorthwest() != _id, false, DIR_SOUTHEAST});
                 }
             }
             if (!room->customLines.contains(key_s)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSouth(), pER->getNorth() != _id});
+                    exitList.push_back({pER, room->getSouth(), pER->getNorth() != _id, false, DIR_SOUTH});
                 }
             }
             if (!room->customLines.contains(key_sw)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSouthwest(), pER->getNortheast() != _id});
+                    exitList.push_back({pER, room->getSouthwest(), pER->getNortheast() != _id, false, DIR_SOUTHWEST});
                 }
             }
             if (!room->customLines.contains(key_w)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getWest(), pER->getEast() != _id});
+                    exitList.push_back({pER, room->getWest(), pER->getEast() != _id, false, DIR_WEST});
                 }
             }
             if (!room->customLines.contains(key_nw)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNorthwest(), pER->getSoutheast() != _id});
+                    exitList.push_back({pER, room->getNorthwest(), pER->getSoutheast() != _id, false, DIR_NORTHWEST});
                 }
             }
         } else {
@@ -1727,56 +1827,56 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSouth() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSouth() != _id, false, DIR_NORTH});
                 }
             }
             exitRoomId = room->getNortheast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSouthwest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSouthwest() != _id, false, DIR_NORTHEAST});
                 }
             }
             exitRoomId = room->getEast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getWest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getWest() != _id, false, DIR_EAST});
                 }
             }
             exitRoomId = room->getSoutheast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNorthwest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNorthwest() != _id, false, DIR_SOUTHEAST});
                 }
             }
             exitRoomId = room->getSouth();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNorth() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNorth() != _id, false, DIR_SOUTH});
                 }
             }
             exitRoomId = room->getSouthwest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNortheast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNortheast() != _id, false, DIR_SOUTHWEST});
                 }
             }
             exitRoomId = room->getWest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getEast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getEast() != _id, false, DIR_WEST});
                 }
             }
             exitRoomId = room->getNorthwest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id, false, DIR_NORTHWEST});
                 }
             }
         }
@@ -1787,6 +1887,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             exit.drawnByCustomLine = !exit.oneWay
                                      && (customLineRunsStraightTo(*room, *pDestination)
                                          || (customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && customLineRunsStraightTo(*pDestination, *room)));
+            exit.returnDrawnByCustomLine = customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && returnExitHasCustomLine(*room, exit);
         }
 
         if (!room->customLines.empty()) {
@@ -1994,14 +2095,21 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             // This was a QLine (so used integer coordinates), but lets
             // try with a QLineF as we are using floating point numbers:
             QLineF line;
-            if (!areaExit && !exit.drawnByCustomLine) {
+            bool leavesByStub = false;
+            const QVector<QPointF> path = areaExit ? QVector<QPointF>{} : exitLinePath(*room, exit, p2.toPointF(), p1.toPointF(), &leavesByStub);
+            // A straight custom line covers only a straight exit line; a bent one only the custom line of its way back does
+            const bool drawnByCustomLine = path.size() > 2 ? exit.returnDrawnByCustomLine : exit.drawnByCustomLine;
+            if (!areaExit && !drawnByCustomLine) {
                 // Non-area exit:
-                // Exits to the same room overlap, so one being one-way arrows them all.
-                bool oneWayToDestination = false;
-                for (const ExitToPaint& other : exitList) {
-                    if (other.oneWay && other.destinationId == rID) {
-                        oneWayToDestination = true;
-                        break;
+                // Straight exits to the same room overlap, so one being one-way arrows them all. A bent one is
+                // drawn apart and keeps its own.
+                bool oneWayToDestination = exit.oneWay;
+                if (path.size() == 2) {
+                    for (const ExitToPaint& other : exitList) {
+                        if (other.oneWay && other.destinationId == rID && exitLinePath(*room, other, p2.toPointF(), p1.toPointF()).size() == 2) {
+                            oneWayToDestination = true;
+                            break;
+                        }
                     }
                 }
                 if (!oneWayToDestination) {
@@ -2010,11 +2118,16 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     // /restore() to protect - removed along with the QPen
                     // copy that was never installed via setPen() and so
                     // never actually took effect.
-                    const QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    painter.drawLine(l0);
+                    drawExitPath(painter, path);
                 } else {
-                    // one way non-area exit - draw arrow
-                    QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
+                    // one way non-area exit - draw arrow, on the longest leg of a bent line
+                    QLineF l0;
+                    for (qsizetype i = 1; i < path.size(); ++i) {
+                        const QLineF leg(path.at(i - 1), path.at(i));
+                        if (leg.length() > l0.length()) {
+                            l0 = leg;
+                        }
+                    }
                     QLineF k0 = l0;
                     k0.setLength((l0.length() - exitWidth * 5.0) / 2.0);
                     const qreal dx = k0.dx();
@@ -2027,7 +2140,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     oneWayLinePen.setStyle(Qt::DotLine);
                     oneWayLinePen.setCapStyle(Qt::SquareCap);
                     painter.setPen(oneWayLinePen);
-                    painter.drawLine(l0);
+                    drawExitPath(painter, path);
 
                     l0.setLength(exitWidth * 5.0);
                     const QPointF _p1 = l0.p2();
@@ -2159,29 +2272,8 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (!room->doors.empty()) {
                 QString doorKey;
                 int doorStatus = 0;
-                if (room->getSouth() == rID && room->doors.contains(key_s)) {
-                    doorKey = key_s;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNorth() == rID && room->doors.contains(key_n)) {
-                    doorKey = key_n;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getSouthwest() == rID && room->doors.contains(key_sw)) {
-                    doorKey = key_sw;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getSoutheast() == rID && room->doors.contains(key_se)) {
-                    doorKey = key_se;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNortheast() == rID && room->doors.contains(key_ne)) {
-                    doorKey = key_ne;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNorthwest() == rID && room->doors.contains(key_nw)) {
-                    doorKey = key_nw;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getWest() == rID && room->doors.contains(key_w)) {
-                    doorKey = key_w;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getEast() == rID && room->doors.contains(key_e)) {
-                    doorKey = key_e;
+                if (const QString key = TRoom::dirCodeToShortString(exit.direction); room->doors.contains(key)) {
+                    doorKey = key;
                     doorStatus = room->doors.value(doorKey);
                 }
                 // Else not an XY-plane exit and doorStatus/doorKey will not be
@@ -2191,9 +2283,11 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     if (areaExit) {
                         doorBaseLine = QLineF(line.p2(), line.p1());
                     } else {
-                        doorBaseLine = QLineF(p2.toPointF(), p1.toPointF());
+                        doorBaseLine = QLineF(path.at(0), path.at(1));
                     }
-                    doorBaseLine.setLength(doorBaseLine.length() / 2.0);
+                    if (!leavesByStub) {
+                        doorBaseLine.setLength(doorBaseLine.length() / 2.0);
+                    }
                     drawDoor(painter, *room, doorKey, doorBaseLine);
                 }
             }
@@ -2280,6 +2374,10 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
         // all the previously generated pixmaps:
         flushSymbolPixmapCache();
         mCachedBubbleMode = mBubbleMode;
+    }
+    if (const qreal devicePixelRatio = painter.device()->devicePixelRatio(); devicePixelRatio != mSymbolPixmapDevicePixelRatio) {
+        flushSymbolPixmapCache();
+        mSymbolPixmapDevicePixelRatio = devicePixelRatio;
     }
 
     resetSymbolFontSize();
@@ -2638,8 +2736,9 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const QSize drawnSize = drawnLabelSize(mapLabel, mRoomWidth, mRoomHeight);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
         if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
             continue;
         }
@@ -2856,8 +2955,9 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
+        const QSize drawnSize = drawnLabelSize(mapLabel, mRoomWidth, mRoomHeight);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
             continue;
@@ -3502,6 +3602,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
     // Flush symbol cache to ensure symbols are regenerated with export dimensions
     flushSymbolPixmapCache();
+    mSymbolPixmapDevicePixelRatio = zoom;
 
     // Calculate if room IDs should be legible based on export room size
     // Similar to logic in paintEvent, but using export dimensions
@@ -3535,8 +3636,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
         labelPosition.setX(labelX);
         labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
+        const QSize drawnSize = drawnLabelSize(mapLabel, finalRoomSize, finalRoomSize);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
         }
@@ -3784,13 +3886,13 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
             }
 
             // Now draw regular exits - use exact same logic as paintRoomExits
-            QList<int> roomExitList;
-            QList<int> roomOneWayExits;
+            QList<std::pair<int, QString>> roomExitList;
+            QList<std::pair<int, QString>> roomOneWayExits;
 
             // Helper function to add exit and check for one-way
             auto addExitAndCheckOneWay = [&](const QString& dirKey, int exitRoomId) {
                 if (exitRoomId > 0) {
-                    roomExitList.push_back(exitRoomId);
+                    roomExitList.push_back({exitRoomId, dirKey});
                     TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
                     if (exitRoom) {
                         // Check if it's a one-way exit (return direction doesn't point back)
@@ -3813,7 +3915,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                             isOneWay = true;
 
                         if (isOneWay) {
-                            roomOneWayExits.push_back(exitRoomId);
+                            roomOneWayExits.push_back({exitRoomId, dirKey});
                         }
                     }
                 }
@@ -3859,7 +3961,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
             }
 
             // Draw regular exit lines to destination rooms, leaving out those a straight custom line already draws
-            for (const int exitRoomId : roomExitList) {
+            for (const auto& [exitRoomId, exitKey] : roomExitList) {
                 if (exitRoomId <= 0)
                     continue;
 
@@ -3872,46 +3974,57 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                 const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
 
                 QLineF exitLine;
+                QLineF doorLine;
+                bool leavesByStub = false;
                 QString doorKey;
+                int direction = 0;
 
                 // Determine door key and exit line based on direction
-                if (room->getNorth() == exitRoomId) {
-                    doorKey = "n";
+                if (exitKey == QLatin1String("n")) {
+                    doorKey = exitKey;
+                    direction = DIR_NORTH;
                     if (areaExit) {
                         exitLine = QLineF(rx, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getSouth() == exitRoomId) {
-                    doorKey = "s";
+                } else if (exitKey == QLatin1String("s")) {
+                    doorKey = exitKey;
+                    direction = DIR_SOUTH;
                     if (areaExit) {
                         exitLine = QLineF(rx, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getEast() == exitRoomId) {
-                    doorKey = "e";
+                } else if (exitKey == QLatin1String("e")) {
+                    doorKey = exitKey;
+                    direction = DIR_EAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry, rx, ry);
                     }
-                } else if (room->getWest() == exitRoomId) {
-                    doorKey = "w";
+                } else if (exitKey == QLatin1String("w")) {
+                    doorKey = exitKey;
+                    direction = DIR_WEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry, rx, ry);
                     }
-                } else if (room->getNortheast() == exitRoomId) {
-                    doorKey = "ne";
+                } else if (exitKey == QLatin1String("ne")) {
+                    doorKey = exitKey;
+                    direction = DIR_NORTHEAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getNorthwest() == exitRoomId) {
-                    doorKey = "nw";
+                } else if (exitKey == QLatin1String("nw")) {
+                    doorKey = exitKey;
+                    direction = DIR_NORTHWEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getSoutheast() == exitRoomId) {
-                    doorKey = "se";
+                } else if (exitKey == QLatin1String("se")) {
+                    doorKey = exitKey;
+                    direction = DIR_SOUTHEAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getSouthwest() == exitRoomId) {
-                    doorKey = "sw";
+                } else if (exitKey == QLatin1String("sw")) {
+                    doorKey = exitKey;
+                    direction = DIR_SOUTHWEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
@@ -3928,18 +4041,44 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                     }
 
                     exitLine = QLineF(rx, ry, exitRoomX, exitRoomY);
+                    ExitToPaint exit;
+                    exit.destination = exitRoom;
+                    exit.destinationId = exitRoomId;
+                    exit.direction = direction;
+                    const QVector<QPointF> path = exitLinePath(*room, exit, exitLine.p1(), exitLine.p2(), &leavesByStub);
+                    doorLine = QLineF(path.at(0), path.at(1));
 
-                    if (roomOneWayExits.contains(exitRoomId)) {
+                    // Straight exits to the same room overlap, so one being one-way dashes them all. A bent one is
+                    // drawn apart and keeps its own.
+                    bool oneWay = roomOneWayExits.contains({exitRoomId, exitKey});
+                    if (path.size() == 2) {
+                        for (const auto& [otherRoomId, otherKey] : roomOneWayExits) {
+                            ExitToPaint other = exit;
+                            for (int otherDirection = DIR_NORTH; otherDirection <= DIR_SOUTHWEST; ++otherDirection) {
+                                if (TRoom::dirCodeToShortString(otherDirection) == otherKey) {
+                                    other.direction = otherDirection;
+                                }
+                            }
+                            if (otherRoomId == exitRoomId && exitLinePath(*room, other, exitLine.p1(), exitLine.p2()).size() == 2) {
+                                oneWay = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (oneWay) {
                         // Draw one-way exit with dashed line
                         QPen oneWayPen = pen;
                         oneWayPen.setStyle(Qt::DashLine);
                         painter.setPen(oneWayPen);
-                        painter.drawLine(exitLine);
+                        drawExitPath(painter, path);
                     } else {
                         // Also for a line left out: the door drawn below takes its width from this pen
                         painter.setPen(pen);
-                        if (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room))) {
-                            painter.drawLine(exitLine);
+                        // A straight custom line covers only a straight exit line; a bent one only the custom line of its way back does
+                        const bool drawnByCustomLine = path.size() > 2 ? exitRoom->z() == exportZLevel && returnExitHasCustomLine(*room, exit)
+                                                                       : customLineRunsStraightTo(*room, *exitRoom) || (exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room));
+                        if (!drawnByCustomLine) {
+                            drawExitPath(painter, path);
                         }
                     }
 
@@ -4018,8 +4157,10 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                 // Draw door if exists on this exit (both area and same-area exits)
                 if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
                     // Apply half-length reduction like original paintRoomExits
-                    QLineF halfExitLine = exitLine;
-                    halfExitLine.setLength(halfExitLine.length() / 2.0);
+                    QLineF halfExitLine = areaExit ? exitLine : doorLine;
+                    if (!leavesByStub) {
+                        halfExitLine.setLength(halfExitLine.length() / 2.0);
+                    }
                     drawDoor(painter, *room, doorKey, halfExitLine);
                 }
             }
@@ -4087,8 +4228,9 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
         const int exportRY = padding - (pArea->min_y * finalRoomSize);
         const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
         const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
+        const QSize drawnSize = drawnLabelSize(mapLabel, finalRoomSize, finalRoomSize);
+        const int labelWidth = drawnSize.width();
+        const int labelHeight = drawnSize.height();
 
         if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
             continue;
@@ -4123,12 +4265,15 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
     // The symbols were drawn at the export's room size, which the view's next frame would otherwise reuse as its own
     flushSymbolPixmapCache();
 
+    // A QImage, as only the GUI thread may use a QPixmap
+    const TBackgroundResult save = TBackgroundTask::runForReason([image = pixmap.toImage(), filePath, format = TMap::exportImageFormat(filePath)]() {
+        return performImageSave(image, filePath, format);
+    });
     // Each export has a watcher of its own: several can be in flight at once,
     // from calls made back to back or one per z level
-    auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(saveOwner);
-    QObject::connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, saveOwner, [pWatcher, pHost = QPointer<Host>(mpHost), profileName = mpHost->getName()]() {
-        const auto [saved, errorMessage] = pWatcher->result();
-        if (!saved) {
+    save.whenFinished(saveOwner, QString(), [save, pHost = QPointer<Host>(mpHost), profileName = mpHost->getName()]() {
+        const QString errorMessage = save.reason();
+        if (!errorMessage.isEmpty()) {
             // This view can outlive its profile, which may have closed before the save reported back
             if (pHost) {
                 pHost->postMessage(QCoreApplication::translate("T2DMap", "[MAP]: %1").arg(errorMessage));
@@ -4136,20 +4281,16 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                 qWarning().noquote().nospace() << "TMapPainter::exportArea() WARNING - profile \"" << profileName << "\" closed before this export finished: " << errorMessage;
             }
         }
-        pWatcher->deleteLater();
     });
-
-    auto future = QtConcurrent::task(&TMapPainter::performImageSave).withArguments(pixmap, filePath, TMap::exportImageFormat(filePath)).spawn();
-    pWatcher->setFuture(future);
 
     return {true, {}};
 }
 
-std::pair<bool, QString> TMapPainter::performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format)
+QString TMapPainter::performImageSave(const QImage& image, const QString& filePath, const QString& format)
 {
-    if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
-        return {false, qsl("Failed to save image to %1").arg(filePath)};
+    if (!image.save(filePath, format.toLocal8Bit().data())) {
+        return qsl("Failed to save image to %1").arg(filePath);
     }
 
-    return {true, {}};
+    return {};
 }

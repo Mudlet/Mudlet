@@ -85,24 +85,6 @@ constexpr int footSeamHeight = 1;
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
 // setProfileStyleSheet() rules. Other styles draw the handle against their own groove, so it is visible
 // already, and keep hover/pressed feedback this painting lacks.
-bool consoleScrollBarStyleWanted()
-{
-    const QStyle* pStyle = QApplication::style();
-    if (!pStyle) {
-        return false;
-    }
-
-    // Mudlet's style is a proxy (MudletProxyStyle or DarkTheme) with no object name; use the base's.
-    QString styleName = pStyle->objectName();
-    if (styleName.isEmpty()) {
-        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
-            styleName = pProxy->baseStyle()->objectName();
-        }
-    }
-    // Not windows10: its opaque handle on a light track has the same contrast on any console.
-    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
-}
-
 class ConsoleScrollBarStyle : public QProxyStyle
 {
 public:
@@ -112,9 +94,7 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        // Checked here, not at install, so a style switch (the appearance setting) needs no console
-        // told, and a test can stand in a Windows 11 style on any platform.
-        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !baseIsWindows11()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
@@ -147,6 +127,16 @@ public:
         pPainter->setBrush(handleColor);
         pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
         pPainter->restore();
+    }
+
+private:
+    // The base, not the application style, draws the bar: QProxyStyle makes it from the -style override or
+    // the desktop's style, never the application's. Not windows10: its opaque handle on a light track has
+    // the same contrast on any console.
+    bool baseIsWindows11() const
+    {
+        const QStyle* pBase = baseStyle();
+        return pBase && !pBase->objectName().compare(qsl("windows11"), Qt::CaseInsensitive);
     }
 };
 
@@ -221,6 +211,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpOwnModel(handedModel ? std::move(handedModel) : ownConsoleModel(pH, name, type))
 , mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
+, mpGlyphCache(std::make_unique<TGlyphCache>())
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
 , mFgColor(mpModel->mFgColor)
@@ -290,6 +281,10 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mpModel->mShowTimeStamps = true;
     } else if (mType == MainConsole) {
         mBorders = mpHost->borders();
+        mpHiddenSyncTimer = new QTimer(this);
+        mpHiddenSyncTimer->setSingleShot(true);
+        mpHiddenSyncTimer->setInterval(100ms);
+        connect(mpHiddenSyncTimer, &QTimer::timeout, this, &TConsole::syncHiddenScreenDimensions);
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
     } else if (mType == Buffer) {
@@ -747,7 +742,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+    }
 
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
         // No command line here to take the key and copy for the panes, as the main console's does
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         mLowerPane->setFocusPolicy(Qt::ClickFocus);
@@ -766,6 +763,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
+        // Ctrl+F leads here from a command line, so Escape leads back to it without reaching for the mouse
+        auto* pShortcut_leaveSearch = new QShortcut(QKeySequence(Qt::Key_Escape), mpBufferSearchBox);
+        pShortcut_leaveSearch->setContext(Qt::WidgetShortcut);
+        connect(pShortcut_leaveSearch, &QShortcut::activated, this, [this]() {
+            static_cast<TMainConsole*>(this)->focusActiveCommandLine();
+        });
         layoutButtonLayer->addWidget(mpBufferSearchUp);
         layoutButtonLayer->addWidget(mpBufferSearchDown);
         layoutButtonLayer->addWidget(timeStampButton);
@@ -906,6 +909,14 @@ TConsole::~TConsole()
         }
     }
 
+    // Only the main console's layout (and the debug console's find bar) adopts these, and a
+    // parentless widget stays reachable through QApplication, so nothing would ever free them
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop}) {
+        if (pWidget && !pWidget->parent()) {
+            delete pWidget;
+        }
+    }
+
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:
@@ -1001,16 +1012,11 @@ void TConsole::resizeEvent(QResizeEvent* event)
     if (!upperPane.isEmpty()) {
         syncHostScreenDimensions(upperPane.width(), -1);
 
-        // Background-tab consoles share this container but get no resize event, so size them from here.
-        // A detached profile has its own window.
+        // Background-tab consoles get no resize event, so this one's is their cue to predict the size they come back
+        // to again. A detached profile has its own window.
         mudlet* const app = mudlet::self();
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
-            for (const auto& otherHostPtr : *HostManager::self()) {
-                Host* otherHost = otherHostPtr.data();
-                if (otherHost && otherHost != mpHost.data() && otherHost->mainConsoleView()) {
-                    otherHost->mainConsoleView()->syncHiddenScreenDimensions();
-                }
-            }
+            app->syncHiddenProfilesSoon();
         }
     }
 
@@ -1444,12 +1450,26 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
    47 bg white
    49 bg black     */
 
-void TConsole::scrollDown(int lines)
+bool TConsole::usesWheel(const bool up)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return;
+        return false;
+    }
+    // scrollUp() queues its scroll back, so a scrollDown() in between can hide the split and leave the pane scrolled back behind it
+    if (!mLowerPane->isHidden() || !mUpperPane->mIsTailMode) {
+        return true;
+    }
+    // At the bottom, only up can go anywhere; and with every line on screen a split would only show them twice
+    return up && mUpperPane->imageTopLine() != 0;
+}
+
+bool TConsole::scrollDown(int lines)
+{
+    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
+        return false;
     }
 
+    const bool scrolledBack = usesWheel(false);
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
@@ -1464,17 +1484,13 @@ void TConsole::scrollDown(int lines)
         mUpperPane->forceUpdate();
     }
     slot_adjustAccessibleNames();
+    return scrolledBack;
 }
 
-void TConsole::scrollUp(int lines)
+bool TConsole::scrollUp(int lines)
 {
-    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return;
-    }
-
-    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
-    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
-        return;
+    if (!usesWheel(true)) {
+        return false;
     }
 
     if (showLowerPane()) {
@@ -1485,6 +1501,7 @@ void TConsole::scrollUp(int lines)
         mUpperPane->scrollUp(lines);
     }
     slot_adjustAccessibleNames();
+    return true;
 }
 
 void TConsole::scrollTo(int line)
@@ -1511,7 +1528,8 @@ bool TConsole::showLowerPane()
     mLowerPane->updateScreenView();
     mLowerPane->forceUpdate();
 
-    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+    // Ctrl+Enter only clears the main console's split, so elsewhere the hint misleads and uses up a showing
+    if (lowerAppears && mType == MainConsole && mudlet::self()->showSplitscreenTutorial()) {
 #if defined(Q_OS_MACOS)
         const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
 #else
@@ -2228,11 +2246,11 @@ void TConsole::slot_searchBufferDown()
     print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
-// A background tab's console is resized to nothing with stale panes, so it can't be measured, but every
-// main-window console shares one container. Each term mirrors resizeEvent(), in order; keep them in step.
-int TConsole::upperPaneWidthFor(const int containerWidth) const
+// A background tab's console is resized to nothing with stale panes, so it can't be measured, and is sized from
+// sizeComingBackTo() instead. Each term mirrors resizeEvent(), in order; keep them in step.
+int TConsole::upperPaneWidthFor(const int consoleWidth) const
 {
-    int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
+    int paneWidth = consoleWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
     // Not mBorders: it is only refreshed on layout, so is stale for a background console.
     const QMargins borders = mpHost->borders();
     paneWidth -= borders.left() + borders.right();
@@ -2242,13 +2260,9 @@ int TConsole::upperPaneWidthFor(const int containerWidth) const
     return qMax(0, paneWidth);
 }
 
-int TConsole::upperPaneHeightFor(const int containerHeight) const
+int TConsole::upperPaneHeightFor(const int consoleHeight) const
 {
-    // A scrolled-back console also shows the lower pane, and the user-dragged split can't be predicted.
-    if (!mLowerPane->isHidden()) {
-        return -1;
-    }
-    int paneHeight = containerHeight - mpTopToolBar->height();
+    int paneHeight = consoleHeight - mpTopToolBar->height();
     const QMargins borders = mpHost->borders();
     paneHeight -= borders.top() + borders.bottom();
     if (mpCommandLine) {
@@ -2299,18 +2313,47 @@ void TConsole::syncHiddenScreenDimensions()
     if (!app || app->getDetachedWindows().contains(mpHost->getName())) {
         return;
     }
-    syncHostScreenDimensions(upperPaneWidthFor(container->width()), upperPaneHeightFor(container->height()));
+    const QSize comingBackTo = sizeComingBackTo();
+    syncHostScreenDimensions(upperPaneWidthFor(comingBackTo.width()), upperPaneHeightFor(comingBackTo.height()));
     // so that an MXP frame opened meanwhile is placed in the window it comes back to
     if (mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->mxpFrameWidgets().reportSize();
     }
+    // Text received while hidden wraps at whatever scripts last laid out, so tell them the size this console comes back to
+    const QSize size = getMainWindowSize();
+    if (size == mOldSize) {
+        return;
+    }
+    mOldSize = size;
+    mpHost->windowRegistry().setMainWindowSize(size);
+    mBorders = mpHost->borders();
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+    raiseMudletSysWindowResizeEvent(comingBackTo.width() - (mpLeftToolBar->width() + mpRightToolBar->width()), comingBackTo.height() - mpTopToolBar->height());
+}
+
+void TConsole::syncHiddenScreenDimensionsSoon()
+{
+    // Queued: it runs this profile's resize handlers, which could close whatever profile or dock asked for it
+    if (mpHiddenSyncTimer && !mpHiddenSyncTimer->isActive()) {
+        mpHiddenSyncTimer->start();
+    }
+}
+
+QSize TConsole::sizeComingBackTo() const
+{
+    const QWidget* container = parentWidget();
+    if (!container) {
+        return size();
+    }
+    mudlet* const app = mudlet::self();
+    return container->window() == app ? app->profileContainerSizeFor(mpHost->getName(), container->size()) : container->size();
 }
 
 QSize TConsole::getMainWindowSize() const
 {
-    // A console hidden by a tab switch can't be measured, but the container it returns to can.
+    // A console hidden by a tab switch can't be measured, but the size it comes back to can be predicted.
     const bool predicted = mType == MainConsole && isHidden() && parentWidget();
-    const QSize consoleSize = predicted ? parentWidget()->size() : size();
+    const QSize consoleSize = predicted ? sizeComingBackTo() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height() + footSeamHeightShown();
@@ -2441,105 +2484,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
         return;
     }
 
-    // Else if NOT the CentralDebugConsole or the ErrorConsole then bring the
-    // focus to the current profile in the main application window:
-    TEvent mudletEvent{};
-    mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
-    switch (event->button()) {
-    case Qt::LeftButton:
-        mudletEvent.mArgumentList.append(QString::number(1));
-        break;
-    case Qt::RightButton:
-        mudletEvent.mArgumentList.append(QString::number(2));
-        break;
-    case Qt::MiddleButton:
-        mudletEvent.mArgumentList.append(QString::number(3));
-        break;
-    case Qt::BackButton:
-        mudletEvent.mArgumentList.append(QString::number(4));
-        break;
-    case Qt::ForwardButton:
-        mudletEvent.mArgumentList.append(QString::number(5));
-        break;
-    case Qt::TaskButton:
-        mudletEvent.mArgumentList.append(QString::number(6));
-        break;
-    case Qt::ExtraButton4:
-        mudletEvent.mArgumentList.append(QString::number(7));
-        break;
-    case Qt::ExtraButton5:
-        mudletEvent.mArgumentList.append(QString::number(8));
-        break;
-    case Qt::ExtraButton6:
-        mudletEvent.mArgumentList.append(QString::number(9));
-        break;
-    case Qt::ExtraButton7:
-        mudletEvent.mArgumentList.append(QString::number(10));
-        break;
-    case Qt::ExtraButton8:
-        mudletEvent.mArgumentList.append(QString::number(11));
-        break;
-    case Qt::ExtraButton9:
-        mudletEvent.mArgumentList.append(QString::number(12));
-        break;
-    case Qt::ExtraButton10:
-        mudletEvent.mArgumentList.append(QString::number(13));
-        break;
-    case Qt::ExtraButton11:
-        mudletEvent.mArgumentList.append(QString::number(14));
-        break;
-    case Qt::ExtraButton12:
-        mudletEvent.mArgumentList.append(QString::number(15));
-        break;
-    case Qt::ExtraButton13:
-        mudletEvent.mArgumentList.append(QString::number(16));
-        break;
-    case Qt::ExtraButton14:
-        mudletEvent.mArgumentList.append(QString::number(17));
-        break;
-    case Qt::ExtraButton15:
-        mudletEvent.mArgumentList.append(QString::number(18));
-        break;
-    case Qt::ExtraButton16:
-        mudletEvent.mArgumentList.append(QString::number(19));
-        break;
-    case Qt::ExtraButton17:
-        mudletEvent.mArgumentList.append(QString::number(20));
-        break;
-    case Qt::ExtraButton18:
-        mudletEvent.mArgumentList.append(QString::number(21));
-        break;
-    case Qt::ExtraButton19:
-        mudletEvent.mArgumentList.append(QString::number(22));
-        break;
-    case Qt::ExtraButton20:
-        mudletEvent.mArgumentList.append(QString::number(23));
-        break;
-    case Qt::ExtraButton21:
-        mudletEvent.mArgumentList.append(QString::number(24));
-        break;
-    case Qt::ExtraButton22:
-        mudletEvent.mArgumentList.append(QString::number(25));
-        break;
-    case Qt::ExtraButton23:
-        mudletEvent.mArgumentList.append(QString::number(26));
-        break;
-    case Qt::ExtraButton24:
-        mudletEvent.mArgumentList.append(QString::number(27));
-        break;
-    default:
-        mudletEvent.mArgumentList.append(QString::number(0));
-    }
-    QPoint pos = event->position().toPoint();
-    mudletEvent.mArgumentList.append(QString::number(pos.x()));
-    mudletEvent.mArgumentList.append(QString::number(pos.y()));
-    mudletEvent.mArgumentList.append(mConsoleName);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(mudletEvent);
+    mpHost->raiseWindowMouseEvent(mConsoleName, *event, isPressEvent);
 
     // Focus this console's command line, not the "active" one
     // This ensures clicking on a console focuses its own command line
@@ -2818,6 +2763,8 @@ void TConsole::setCaretMode(bool enabled)
         Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         setProxyForFocus(mpCommandLine);
+        // Only the caret gives a link focus, so the link it was on stops showing it
+        buffer.setFocusedLink(0);
         // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
 }

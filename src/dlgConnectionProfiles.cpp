@@ -403,7 +403,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
         const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
-        offline_button->setIcon(QIcon(qsl(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
         remove_profile_button->setIcon(QIcon::fromTheme(qsl("edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))));
@@ -574,15 +573,11 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
 
     informationArea->setStyleSheet(uiDesign::inputStyleSheet(tokens, qsl("#informationArea")) + uiDesign::scrollBarStyleSheet(qsl("#informationArea QPlainTextEdit"), tokens, tokens.field));
 
-    const QString buttonSheet = uiDesign::buttonStyleSheet(tokens)
-                                // :enabled, or a Connect the validator switched off would stay lit
-                                + qsl("QPushButton:default:enabled { background-color: %1; color: %2; border: %3px solid transparent; }"
-                                      "QPushButton:default:enabled:hover { background-color: %4; }"
-                                      "QPushButton:default:enabled:focus { border: %3px solid %5; }")
-                                          .arg(tokens.accentSoft, tokens.accentText.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.hoverSoft, tokens.accent.name());
+    const QString buttonSheet = uiDesign::buttonStyleSheet(tokens);
     // The Copy menu is parented under this row, so the row's sheet reaches it
     profileAdminArea->setStyleSheet(buttonSheet + uiDesign::menuStyleSheet(tokens));
-    widget_bottom->setStyleSheet(buttonSheet);
+    // Marked by weight alone: an accent fill beside two plain buttons reads as a button held down
+    widget_bottom->setStyleSheet(buttonSheet + qsl("QPushButton#connectButton { font-weight: 600; }"));
     uiDesign::letPopupsTakeTheFieldsCorner(profileAdminArea);
 
     uiDesign::keepClickFocusOffControls(tabWidget_connectionInfo);
@@ -756,6 +751,8 @@ void dlgConnectionProfiles::showKeychainWait()
     // behind.
     // A disabled list gets no key events either, so the type-to-search stops with it.
     listWidget_profiles->setEnabled(false);
+    // so is switching the games tab, which picks a profile of its own when the new tab lacks this one
+    mpTabBar->setEnabled(false);
     // An edit would run validateProfile(), which hands Connect and Offline back and clears the
     // notice below, and what the queued load reads from these fields is what they held at Connect
     tabWidget_connectionInfo->setEnabled(false);
@@ -777,6 +774,7 @@ void dlgConnectionProfiles::clearKeychainWait()
     connect_button->setEnabled(profileIsUsable);
     offline_button->setEnabled(profileIsUsable);
     listWidget_profiles->setEnabled(true);
+    mpTabBar->setEnabled(true);
     tabWidget_connectionInfo->setEnabled(true);
     profileAdminArea->setEnabled(true);
 }
@@ -809,13 +807,50 @@ bool dlgConnectionProfiles::completePendingProfileLoad(const QString& profileNam
 }
 
 // Nothing is queued for the profile whose read answered: drop whatever is, rather than let a
-// later read connect out of nowhere, and hand the dialog its buttons back so Connect can be
-// pressed again
+// later read connect out of nowhere, and, unless a copy is still queued, hand the dialog its
+// buttons back so Connect can be pressed again
 void dlgConnectionProfiles::abandonPendingProfileLoad()
 {
     mPendingProfileLoad.clear();
     mPendingConnect = false;
+    // a queued copy keeps the form locked until runPendingCopy() or dropPendingCopy() lets it go
+    if (!mPendingCopy) {
+        clearKeychainWait();
+    }
+}
+
+bool dlgConnectionProfiles::queueCopyBehindPasswordRead(void (dlgConnectionProfiles::*copy)())
+{
+    const QString source = profile_name_entry->text().trimmed();
+    if (!hasPendingKeychainOperation(source)) {
+        return false;
+    }
+
+    mPendingCopy = copy;
+    mPendingCopyProfile = source;
+    showKeychainWait();
+    return true;
+}
+
+void dlgConnectionProfiles::runPendingCopy(const QString& profileName)
+{
+    const auto copy = mPendingCopy;
+    if (!dropPendingCopy(profileName)) {
+        return;
+    }
+
     clearKeychainWait();
+    (this->*copy)();
+}
+
+bool dlgConnectionProfiles::dropPendingCopy(const QString& profileName)
+{
+    if (!mPendingCopy || mPendingCopyProfile != profileName) {
+        return false;
+    }
+    mPendingCopy = nullptr;
+    mPendingCopyProfile.clear();
+    return true;
 }
 
 bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
@@ -877,6 +912,10 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 
     const QString profileName = pItem->data(csmNameRole).toString();
+    // An open profile read this when it loaded, and would otherwise sign in with the old password until reopened
+    if (Host* pHost = HostManager::self()->getHost(profileName)) {
+        pHost->setPass(pass);
+    }
 
     if (MudletApp::storingPasswordsSecurely()) {
         if (pass.trimmed().isEmpty()) {
@@ -957,8 +996,14 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile)
 void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
-    if (pItem) {
-        saveProfileDetail(pItem->data(csmNameRole).toString(), qsl("login"), login);
+    if (!pItem) {
+        return;
+    }
+    const QString profile = pItem->data(csmNameRole).toString();
+    saveProfileDetail(profile, qsl("login"), login);
+    // An open profile read this when it loaded, and would otherwise sign in with the old name until reopened
+    if (Host* pHost = HostManager::self()->getHost(profile)) {
+        pHost->setLogin(login.trimmed());
     }
 }
 
@@ -996,7 +1041,12 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
     if (!pItem) {
         return;
     }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
+    const QString profile = pItem->data(csmNameRole).toString();
+    writeProfileData(profile, qsl("autoreconnect"), QString::number(state));
+    // An open profile read this when it loaded, and the dialog is the only place to change it
+    if (Host* pHost = HostManager::self()->getHost(profile)) {
+        pHost->setAutoReconnect(state == Qt::Checked);
+    }
 }
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
@@ -1781,9 +1831,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    // if we're currently copying a profile, don't blank and re-load the password,
-    // because there isn't one in storage yet. It'll be copied over into the widget
-    // by the copy method
+    // While a copy fills in the new profile its password is not in storage yet, so the field keeps
+    // the one being copied
     if (!mCopyingProfile) {
         // Cancel any pending password save from the previous profile to prevent
         // cross-profile password corruption when rapidly switching profiles
@@ -2297,10 +2346,8 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
     const QPoint globalPos = listWidget_profiles->mapToGlobal(pos);
 
     QMenu menu;
-    if (hasCustomIcon(profileName)) {
-        //: Reset the custom picture for this profile in the connection dialog and show the default one instead
-        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
-    } else {
+    const bool customIconSet = hasCustomIcon(profileName);
+    if (!customIconSet) {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
                        //: Set a custom picture to show for the profile in the connection dialog
                        tr("Set custom icon"),
@@ -2311,6 +2358,10 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
                        tr("Set custom color"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
+    }
+    if (customIconSet || getCustomColor(profileName)) {
+        //: Reset the custom picture or color for this profile in the connection dialog and show the default one instead
+        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
     }
 
     // Built per call, out of the style pass's reach
@@ -2380,6 +2431,11 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
     if (!success) {
         return;
     }
+    const QString profileColorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
+    if (QFileInfo::exists(profileColorPath) && !QFile::remove(profileColorPath)) {
+        // no return: the picture is already gone, so the list still has to be redrawn
+        qWarning() << "dlgConnectionProfiles::slot_resetCustomIcon: couldn't remove custom color file" << profileColorPath;
+    }
 
     auto currentRow = listWidget_profiles->currentRow();
     fillout_form();
@@ -2407,6 +2463,10 @@ static void narrowCopiedSecrets(const QString& profile)
 
 void dlgConnectionProfiles::slot_copyProfile()
 {
+    if (queueCopyBehindPasswordRead(&dlgConnectionProfiles::slot_copyProfile)) {
+        return;
+    }
+
     mCopyingProfile = true;
 
     QString profile_name;
@@ -2602,23 +2662,43 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 {
+    if (queueCopyBehindPasswordRead(&dlgConnectionProfiles::slot_copyOnlySettingsOfProfile)) {
+        return;
+    }
+
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
     const CopiedProfileData data = captureProfileData();
+    // A full copy may still be running and owns the flag until it finishes
+    const bool fullCopyRunning = mCopyingProfile;
+    const bool securePasswords = MudletApp::storingPasswordsSecurely();
+    // With secure storage the copy's password slot is still empty, so selecting the copy must not blank the field and read it;
+    // without, the "password" file the copy takes is what should be read back
+    if (securePasswords) {
+        mCopyingProfile = true;
+    }
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = fullCopyRunning;
         return;
     }
     const QDir oldProfileDir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
     if (!oldProfileDir.exists()) {
         saveDefaultProfileCopy(profile_name, data, oldPassword);
+        mCopyingProfile = fullCopyRunning;
         return;
     }
 
     const QDir newProfileDir(MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
+        qWarning().nospace().noquote() << "dlgConnectionProfiles::slot_copyOnlySettingsOfProfile() ERROR - could not create \"" << newProfileDir.path() << "\".";
+        mCopyingProfile = fullCopyRunning;
+        // selects another profile, which shows its own details in place of the source's still in the form
+        delete pItem;
+        //: Shown in the connection dialog when "Copy settings only" could not create the folder for the new profile
+        showNotification(tr("Could not create the new profile folder on your computer."), notificationAreaIconLabelError);
         return;
     }
 
@@ -2635,6 +2715,14 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     mProfileList << profile_name;
     slot_itemClicked(pItem);
+
+    mCopyingProfile = fullCopyRunning;
+    // before the password is saved, as it clears the notification a failed save shows
+    validateProfile();
+    // the "password" file copied above only holds it when passwords are not stored securely
+    if (securePasswords && !oldPassword.trimmed().isEmpty()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
 }
 
 /*static*/ QString dlgConnectionProfiles::nameForCopy(const QString& name, const QStringList& takenNames)
@@ -3192,6 +3280,8 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
     bool iconLoaded = true;
     if (hasCustomIcon(mudServer)) {
         iconLoaded = setCustomIcon(mudServer, pItem);
+    } else if (const auto customColor = getCustomColor(mudServer)) {
+        pItem->setIcon(customIcon(mudServer, customColor));
     } else if (!iconFileName.isEmpty()) {
         if (const QPixmap pixmap(iconFileName); pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
@@ -3431,8 +3521,9 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     const QString currentProfileName = listWidget_profiles->currentItem() ? listWidget_profiles->currentItem()->data(csmNameRole).toString() : QString();
     if (currentProfileName != profile_name) {
         qDebug() << "dlgConnectionProfiles: Dropping the password load for" << profile_name << "as the selection has changed";
-        // A Connect waiting on this load would otherwise wait for good
-        if (mPendingProfileLoad == profile_name) {
+        // A Connect or a copy waiting on this load would otherwise wait for good
+        const bool copyWaiting = dropPendingCopy(profile_name);
+        if (mPendingProfileLoad == profile_name || copyWaiting) {
             abandonPendingProfileLoad();
         }
         return;
@@ -3445,8 +3536,14 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         credManager->retrievePassword(
                 profile_name,
                 "character",
-                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome) {
-                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
+                    bool readFailed = outcome == CredentialManager::ReadOutcome::TimedOut || outcome == CredentialManager::ReadOutcome::Unreadable;
+#if defined(Q_OS_ANDROID)
+                    // as in Host::lookUpSecuredPassword(): on Android Unavailable is a KeyStore error, on a desktop
+                    // only the missing keychain service it reports on every read
+                    readFailed = readFailed || outcome == CredentialManager::ReadOutcome::Unavailable;
+#endif
+                    passwordRetrieved(profile_name, success, retrievedPassword, errorMessage, readFailed);
 
                     credManager->deleteLater();
                 },
@@ -3462,10 +3559,11 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         if (!completePendingProfileLoad(profile_name)) {
             abandonPendingProfileLoad();
         }
+        runPendingCopy(profile_name);
     }
 }
 
-void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
+void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage, bool readFailed)
 {
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
     bool passwordUnreadable = false;
@@ -3516,6 +3614,15 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // A Connect waiting on this read stops here, so the warning stays up and the password can be typed.
     // Offline sends no password, so its load goes ahead.
     const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
+    // A copy waits only to take the password, so one whose read gave none it should have is not made
+    const bool noPasswordToCopy = passwordUnreadable || (readFailed && character_password_entry->text().isEmpty());
+    if (noPasswordToCopy && dropPendingCopy(profileName)) {
+        abandonPendingProfileLoad();
+        //: Shown in the connection dialog when a profile was to be copied but its saved password could not be read from the keychain or its file
+        showNotification(tr("The saved password for this profile could not be read, so the profile was not copied. Enter the password, then copy the profile again."),
+                         notificationAreaIconLabelWarning);
+        return;
+    }
     if (passwordUnreadable && !offlineLoadQueued) {
         abandonPendingProfileLoad();
         //: Shown in the connection dialog when a password was saved for the profile but its file could not be opened or decrypted, for example because it is damaged
@@ -3529,6 +3636,7 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     if (!completePendingProfileLoad(profileName) && (deferred.isEmpty() || mPendingProfileLoad != deferred)) {
         abandonPendingProfileLoad();
     }
+    runPendingCopy(profileName);
 }
 
 void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage)

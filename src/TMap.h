@@ -91,9 +91,8 @@ signals:
     // Reaches every 2D map showing this map, the mapper's and each secondary view's
     void signal_roomDeleted(int roomId);
 
-    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
-    // cache ones also reach every secondary map view, and with the 3D mapper
-    // built in so do the repaint and mapper-setting ones.
+    // Cues for the mapper drawing this map (mpMapper); the colour, symbol
+    // cache, repaint and mapper-setting ones also reach every secondary map view.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();
@@ -121,6 +120,9 @@ signals:
     void signal_mapProgressSetValue(int value);
     void signal_mapProgressDisableCancel();
     void signal_mapProgressClose();
+    // A long operation has a moment for a window showing its progress to repaint, and to take an Abort. Only a view
+    // that has one connects it; nothing else should run the event loop here, as the operation is still on the stack.
+    void signal_mapProgressRepaintWanted();
 
 private:
     QString mDefaultAreaName;
@@ -238,8 +240,8 @@ public:
     void disableTransferProgressCancel();
     void clearTransferProgress();
 
-    // True while a map import, export or download is on the stack. Those pump
-    // QCoreApplication::processEvents() to keep their progress display alive, so anything
+    // True while a map import, export or download is on the stack. The desktop GUI pumps
+    // the event loop from signal_mapProgressRepaintWanted() to keep its progress dialog alive, so anything
     // delivered from an event loop can find itself running nested inside one -
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.
@@ -279,6 +281,9 @@ public:
 
     void setMmpMapLocation(const QString& location);
     QString getMmpMapLocation() const;
+    // The URL downloadMap() fetches a game's MMP map location from, or an empty
+    // one where that would not be a web (http or https) URL with a host
+    static QUrl mmpMapUrl(const QString& location);
 
     // has setRoomNamesShown ever been called on this map?
     bool getRoomNamesPresent();
@@ -558,10 +563,10 @@ private:
     std::vector<quint8> mSearchState;
     std::vector<vertex> mSearchTouched;
 
-    // Held for the whole of a map operation that pumps the event loop, so that
-    // mapOperationInProgress() can tell anything re-entered from that pump that
-    // this map is on the stack. Nested operations are counted, not flagged: an
-    // XML import can start from inside a download's pump.
+    // Held for the whole of a map operation, under which the GUI pumps the event
+    // loop, so that mapOperationInProgress() can tell anything re-entered from
+    // that pump that this map is on the stack. Nested operations are counted, not
+    // flagged: restore() reads a JSON map from within its own operation.
     class MapOperationScope
     {
     public:

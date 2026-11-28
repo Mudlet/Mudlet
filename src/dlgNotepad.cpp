@@ -105,6 +105,17 @@ static int sendableLineCount(const QStringList& lines)
     return count;
 }
 
+// A tab bar reads a "&" as a mnemonic marker, so "Spells & Skills" would lose its ampersand
+static QString tabLabelFor(QString name)
+{
+    return name.replace(QLatin1Char('&'), QLatin1String("&&"));
+}
+
+QString dlgNotepad::noteName(const int index) const
+{
+    return tabWidget->tabText(index).replace(QLatin1String("&&"), QLatin1String("&"));
+}
+
 // QTextCursor::selectedText() separates lines with U+2029 rather than newlines
 static QStringList linesOf(QString text)
 {
@@ -285,6 +296,8 @@ void dlgNotepad::setupAddTabButton()
     mpAddTabButton = new QToolButton(this);
     mpAddTabButton->setObjectName(qsl("notepadAddTab"));
     mpAddTabButton->setToolTip(tr("Add new note tab (Ctrl+T)"));
+    //: Accessible name of the notepad's button that adds a note tab, announced by a screen reader
+    mpAddTabButton->setAccessibleName(tr("Add note tab"));
     mpAddTabButton->setAutoRaise(false);
     connect(mpAddTabButton, &QToolButton::clicked, this, &dlgNotepad::slot_addTabClicked);
     tabWidget->setCornerWidget(mpAddTabButton, Qt::TopRightCorner);
@@ -312,22 +325,30 @@ void dlgNotepad::setupFindBar()
     mpFindLineEdit->setObjectName(qsl("notepadFindField"));
     //: Placeholder text for the search field in notepad
     mpFindLineEdit->setPlaceholderText(tr("Find"));
+    //: Accessible name of the notepad's search field, announced by a screen reader
+    mpFindLineEdit->setAccessibleName(tr("Find in note"));
     mpFindLineEdit->setClearButtonEnabled(true);
     mpFindLineEdit->installEventFilter(this);
 
     mpFindPrevButton = new QToolButton(mpFindBar);
     mpFindPrevButton->setObjectName(qsl("notepadFindPrevious"));
+    //: Tooltip and screen reader name of the notepad's find bar button that jumps to the previous match
     mpFindPrevButton->setToolTip(tr("Find previous"));
+    mpFindPrevButton->setAccessibleName(mpFindPrevButton->toolTip());
     mpFindPrevButton->setAutoRaise(false);
 
     mpFindNextButton = new QToolButton(mpFindBar);
     mpFindNextButton->setObjectName(qsl("notepadFindNext"));
+    //: Tooltip and screen reader name of the notepad's find bar button that jumps to the next match
     mpFindNextButton->setToolTip(tr("Find next"));
+    mpFindNextButton->setAccessibleName(mpFindNextButton->toolTip());
     mpFindNextButton->setAutoRaise(false);
 
     mpFindCloseButton = new QToolButton(mpFindBar);
     mpFindCloseButton->setObjectName(qsl("notepadFindClose"));
+    //: Tooltip and screen reader name of the notepad's find bar button that closes the find bar
     mpFindCloseButton->setToolTip(tr("Close find bar"));
+    mpFindCloseButton->setAccessibleName(mpFindCloseButton->toolTip());
     mpFindCloseButton->setAutoRaise(false);
 
     layout->addWidget(mpFindLineEdit, 1);
@@ -479,7 +500,7 @@ int dlgNotepad::addTab(const QString& name, const QString& content)
 
     //: Default name for a new note tab
     const QString tabName = name.isEmpty() ? tr("New Note") : name;
-    const int index = tabWidget->addTab(textEdit, tabName);
+    const int index = tabWidget->addTab(textEdit, tabLabelFor(tabName));
     updateTabClosability();
     return index;
 }
@@ -507,7 +528,7 @@ bool dlgNotepad::okToDiscardNotes(const QList<int>& indices)
     QString destroy;
     if (indices.size() == 1) {
         //: Dialog asking the reader to confirm closing a note that has text in it. %1 is the note's name.
-        ask = tr("Close the note \"%1\"?").arg(tabWidget->tabText(indices.constFirst()));
+        ask = tr("Close the note \"%1\"?").arg(noteName(indices.constFirst()));
         //: Body of the dialog asking the reader to confirm closing a note that has text in it
         consequence = tr("Its text will be lost. Mudlet keeps no copy of a closed note.");
         //: Button on that dialog which goes ahead and closes the one note it asked about
@@ -598,7 +619,7 @@ void dlgNotepad::renameTab(int index)
         return;
     }
 
-    const QString currentName = tabWidget->tabText(index);
+    const QString currentName = noteName(index);
     bool ok = false;
     //: Dialog title for renaming a note tab
     const QString newName = QInputDialog::getText(this,
@@ -609,7 +630,7 @@ void dlgNotepad::renameTab(int index)
                                                   currentName,
                                                   &ok);
     if (ok && !newName.isEmpty() && newName != currentName) {
-        tabWidget->setTabText(index, newName);
+        tabWidget->setTabText(index, tabLabelFor(newName));
         mNeedToSave = true;
     }
 }
@@ -684,7 +705,7 @@ void dlgNotepad::save()
     QJsonArray tabsArray;
     for (int i = 0; i < tabWidget->count(); ++i) {
         QJsonObject tabObj;
-        tabObj.insert(qsl("name"), tabWidget->tabText(i));
+        tabObj.insert(qsl("name"), noteName(i));
 
         if (auto* textEdit = qobject_cast<QPlainTextEdit*>(tabWidget->widget(i))) {
             tabObj.insert(qsl("content"), textEdit->toPlainText());
@@ -833,12 +854,12 @@ void dlgNotepad::slot_sendLine()
         return;
     }
 
-    QTextCursor cursor = textEdit->textCursor();
-    cursor.select(QTextCursor::LineUnderCursor);
-    const QString line = cursor.selectedText();
+    // The block, not QTextCursor::LineUnderCursor: that is only the row a wrapped line shows on screen.
+    // A Shift+Enter break stays inside the block, and goes as its own line as it does in Send all.
+    const QStringList lines = textEdit->textCursor().block().text().split(QChar::LineSeparator);
 
-    if (!line.isEmpty()) {
-        startSendingLines(QStringList{line});
+    if (sendableLineCount(lines) > 0) {
+        startSendingLines(lines);
     }
 }
 
@@ -920,8 +941,8 @@ void dlgNotepad::finishSending(const bool stopped)
 
     if (mSending) {
         if (stopped) {
-            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %2 how many there were in all.
-            mudlet::self()->announce(tr("Stopped after %1 of %2 lines").arg(QString::number(mLinesSent), QString::number(mLinesToSendCount)));
+            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %n how many there were in all.
+            mudlet::self()->announce(tr("Stopped after %1 of %n lines", nullptr, mLinesToSendCount).arg(QString::number(mLinesSent)));
         } else {
             //: Announced when the notepad has sent a note to the game. %n is how many lines went.
             mudlet::self()->announce(mLinesSent == 1 ? tr("Sent 1 line") : tr("Sent %n lines", "", mLinesSent));
@@ -1296,10 +1317,12 @@ void dlgNotepad::scheduleRehighlight()
             Qt::QueuedConnection);
 }
 
+// Every note, not just the current one: a note searched before switching tabs keeps its marks
 void dlgNotepad::clearSearchHighlights()
 {
-    auto* textEdit = currentTextEdit();
-    if (textEdit) {
-        textEdit->setExtraSelections(QList<QTextEdit::ExtraSelection>());
+    for (int i = 0; i < tabWidget->count(); ++i) {
+        if (auto* textEdit = qobject_cast<QPlainTextEdit*>(tabWidget->widget(i))) {
+            textEdit->setExtraSelections({});
+        }
     }
 }
