@@ -10738,6 +10738,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         if (!color.isValid()) {
             return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
         }
+        // The refresh puts the game's current text colours back to the defaults, which a setConfig(getConfig()) restore must not
+        if (color.rgba() == (host.*member).rgba()) {
+            return success();
+        }
         host.*member = color;
         host.applyMainConsoleColors();
         host.updateAnsi16ColorsInTable();

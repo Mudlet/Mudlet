@@ -2411,6 +2411,37 @@ describe("Tests Other.lua functions", function()
       assert.same({ 255, 0, 0, 128 }, { getBackgroundColor("main") })
     end)
 
+    it("keeps the game's current text colour when setConfig() is given the console colours it has", function()
+      finally(function()
+        feedTriggers("\27[0m\n")
+      end)
+      local keys = {
+        "ansiBlack", "ansiRed", "ansiGreen", "ansiYellow", "ansiBlue", "ansiMagenta", "ansiCyan", "ansiWhite",
+        "ansiLightBlack", "ansiLightRed", "ansiLightGreen", "ansiLightYellow", "ansiLightBlue", "ansiLightMagenta",
+        "ansiLightCyan", "ansiLightWhite", "foregroundColor", "backgroundColor", "commandForegroundColor",
+        "commandBackgroundColor",
+      }
+      local function coloursOfLine(text)
+        for row = getLastLineNumber("main"), 0, -1 do
+          if getLines("main", row, row + 1)[1] == text then
+            moveCursor("main", 0, row)
+            selectSection("main", 0, 1)
+            local colours = { fg = { getFgColor("main") }, bg = { getBgColor("main") } }
+            deselect("main")
+            moveCursorEnd("main")
+            return colours
+          end
+        end
+      end
+      feedTriggers("\27[31;42mbefore the restore\n")
+      local before = coloursOfLine("before the restore")
+      assert.same(color_table.ansiRed, before.fg)
+      assert.same(color_table.ansiGreen, before.bg)
+      assert.is_true(setConfig(getConfig(keys)))
+      feedTriggers("after the restore\n")
+      assert.same(before, coloursOfLine("after the restore"))
+    end)
+
     it("keeps the main console's trimming batch when setConfig() is given the buffer size it has", function()
       local size, useMax = getConfig("consoleBufferSize"), getConfig("useMaxConsoleBufferSize")
       finally(function()
