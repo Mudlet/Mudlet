@@ -133,6 +133,20 @@ public:
         bool operator==(const TextRun&) const = default;
     };
 
+    // A line lineShown sent, as the main console now holds it, or deleted
+    struct LineUpdate
+    {
+        // One of the lineIds lineShown sent it with
+        qint64 lineId = 0;
+        QString text;
+        QList<TextRun> runs;
+        bool isPrompt = false;
+        // Whereupon text and runs are empty, and the id is not used again
+        bool deleted = false;
+
+        bool operator==(const LineUpdate&) const = default;
+    };
+
     // invalidName, invalidConnectionDetails: a profile was to be made under a name, or given a host, port or
     // TLS, that the connection dialog would not take; nothing is stored. poolClosing: the profiles of a
     // session, this one or another, are still closing, from its shutdown() or, once it is deleted, from the
@@ -327,6 +341,20 @@ public:
     // The same for a link of that window, shown or hidden, as only the app knows what its pointer can reach;
     // unknown too for a name windowLines() refuses. What it changes of the link is windowTextChanged's to tell.
     LinkResult followWindowLink(const QString& window, int link, std::optional<int> item = std::nullopt);
+    // Follows a link in a label's rich text as a click on it does in the GUI, with TLabel's own handling: the link
+    // is marked visited where the label has a visited colour, which restyles labelContent().text, for an anchor
+    // TLabelModel::styleLinks() styles, and so names the label in scriptWindowsChanged; then a send: link's text
+    // goes to the game through the aliases, a prompt: link's text replaces the main command line's, as
+    // commandLineTextRequested tells, an http: or https: link opens through QDesktopServices, a javascript: link, or
+    // one of any other scheme that is not a Lua method call, such as mailto:, runs nothing and is noted in the Errors
+    // console, and anything else runs as Lua, all before this returns. ran, or failed where the Lua raised an error,
+    // the link was not run or nothing opened it, which errorString() gives; failed too, followed and marked not at
+    // all, for a prompt: link while the game hides input, whose text the GUI puts in its hidden-input box. unknown,
+    // with errorString() saying why, for a name that is not a label's, for an href that is not one of the label's
+    // links as its text holds them now, read as QLabel reads them, and for any while the GUI's label takes no click
+    // on its links: TLabelModel::containsAnchorTag() finds no anchor in its text, or it is click-through. refused:
+    // where submit() is.
+    LinkResult followLabelLink(const QString& label, const QString& href);
     // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
     // no profile open. A getter, so it may be called from any handler.
     bool timeStampsShown() const;
@@ -397,6 +425,12 @@ public:
     // returns. False as setWindowCommandLineText() is, and when the profile begins to close part-way; a line a
     // script deletes part-way takes no more commands.
     bool submitWindowCommandLine(const QString& commandLine, const QString& line);
+    // The GUI's replay button: plays the replay file at that path, a relative one from the working directory, in the
+    // session's profile, saying so in
+    // localText as the GUI says it in the main console, with replayStarted following from the event loop. False,
+    // with errorString() saying why, if a replay plays already in any profile, if the file cannot be read or is
+    // not a replay, and where pauseReplay() is refused but for a replay playing.
+    bool playReplay(const QString& path);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
     // as the toolbar's Stop does, saying so in localText. False with no replay of this profile playing, though one
@@ -566,6 +600,10 @@ public:
     // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
     QSize mainConsoleGrid() const;
     QRect mainConsoleTextRect() const;
+    // The colour of the border around the main console, the room the borders leave, as setBorderColor() set it:
+    // black until a script sets one, as the GUI's. Invalid with no profile open: read it at profileLoaded, then
+    // follow mainBorderColorChanged.
+    QColor mainBorderColor() const;
     // The words scripts gave the main command line for Tab to complete, with addCmdLineSuggestion(), and those
     // it is never to complete, with addCmdLineBlacklist(), each once and sorted. Empty with no profile open.
     // Read from anywhere.
@@ -695,6 +733,10 @@ public:
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
+        // A command line's own Qt style sheet, as a script's setCmdLineStyleSheet() gave it, for the app to draw it
+        // with: the GUI's TCommandLine takes it as its QPlainTextEdit's. Empty until a script sets one, and for the
+        // other kinds. The main command line's, which is the app's own input line and no window here, is not one.
+        QString styleSheet;
 
         bool operator==(const ScriptWindow&) const = default;
     };
@@ -739,6 +781,18 @@ public:
         QPoint customCursorHotSpot;
         // The pointer passes through it to what is under it
         bool clickThrough = false;
+        // What a screen reader reads it as, as a progress bar, as setLabelAccessibleValue() gave it: value, from min
+        // to max. Geyser gives a gauge's back label the gauge's value. None for a label without one or read as a
+        // button
+        struct AccessibleValue
+        {
+            double value = 0.0;
+            double min = 0.0;
+            double max = 100.0;
+
+            bool operator==(const AccessibleValue&) const = default;
+        };
+        std::optional<AccessibleValue> accessibleValue;
         // What a screen reader says for it, and whether it is told it is a button
         QString accessibleName;
         bool accessibleButton = false;
@@ -930,8 +984,17 @@ signals:
     // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
     // of the console line it went into, which is when it was written for a line of its own. continuesLine is for
     // text the console draws on the end of the line sent before it, not as a line below: an echo() after
-    // deleteLine(). A handler that takes fewer arguments may be connected.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine);
+    // deleteLine(). lineIds has an id for each line of text, as its line feeds part it, which linesUpdated names
+    // the line by, and 0 for one it does not follow. A handler that takes fewer arguments may be connected.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine, const QList<qint64>& lineIds);
+    // Lines lineShown sent while this was connected that a script has since changed where they stand (replace(),
+    // setFgColor(), setLink(), insertText() on a line it moved the cursor to) or deleted, each named by its
+    // lineIds entry: those deleted first, then the others in the order they stand. From the event loop, once for
+    // all a turn changed; not for the line lineShown is still to send, for a line trimmed off the top as the
+    // console outgrows its limit, after mainConsoleCleared for the lines before it, nor for those before a line that
+    // came while this was not connected. A line a script's wrapLine() or insertText() of a line feed split keeps
+    // only the first of its parts, and the change of a link's state, which linksChanged tells of, is not one.
+    void linesUpdated(const QString& profile, const QList<THeadlessSession::LineUpdate>& updates);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -1103,12 +1166,15 @@ signals:
     // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
     // sends them once.
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // mainBorderColor() changed, by setBorderColor(). From the event loop, with it as it is then, and only when it
+    // differs from what was last sent or what it gave at profileLoaded.
+    void mainBorderColorChanged(const QString& profile, const QColor& color);
     // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
-    // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
-    // trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose labelContent() differs,
-    // a text box whose textBoxContent() does, by a script, and those whose place among their parent's windows moved
-    // with it.
+    // lowered or given another background, font or command line sheet, a console scrolled, by a script, pointer()'s
+    // wheel, a clear or a trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose
+    // labelContent() differs, a text box whose textBoxContent() does, by a script, and those whose place among their
+    // parent's windows moved with it.
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);
@@ -1169,6 +1235,14 @@ private:
     QList<ShownLine> takeTriggerWrites(bool taken);
     // False if a handler deleted the session
     bool sendShownLines(const QList<ShownLine>& lines);
+    qint64 shownLineId(const TBuffer& buffer, int line) const;
+    bool lineIdHeld(qint64 lineId) const;
+    bool lineIdsFollowed() const;
+    void keepLineIdsWhileFollowed();
+    void noteLinesEdited(int firstLine, int lastLine);
+    void noteLinesRemoved(int firstLine, int lastLine, bool trimmed);
+    void queueLineUpdates();
+    void sendLineUpdates();
     void closeDebugConsole();
     // The relays of how the main console is drawn, in THeadlessSessionOutput.cpp
     void connectOutputRelays(Host*, unsigned int run);
@@ -1291,6 +1365,12 @@ private:
     unsigned int mAddonCommandsQueuedRun = 0;
     // The same for buttonsChanged
     unsigned int mButtonsQueuedRun = 0;
+    // The same for linesUpdated
+    unsigned int mLineUpdatesQueuedRun = 0;
+    // The lineIds lineShown sent while linesUpdated was connected, of lines the main console still holds
+    QSet<qint64> mSentLineIds;
+    // Those of them a script changed or deleted since linesUpdated was last sent
+    QSet<qint64> mEditedLineIds;
     std::unique_ptr<HostManager> mpPool;
     struct ShownLine
     {
@@ -1299,6 +1379,7 @@ private:
         QList<TextRun> runs;
         qint64 arrivalMSecs = -1;
         bool continuesLine = false;
+        QList<qint64> lineIds;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;
@@ -1320,6 +1401,8 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    // The same for mainBorderColor()
+    std::optional<QColor> mDeliveredMainBorderColor;
     // What scriptWindows(), each label's labelContent() and each text box's textBoxContent() gave at profileLoaded,
     // then as each scriptWindowsChanged was sent, and a text box's text as setTextBoxText() set it
     struct WindowsTold

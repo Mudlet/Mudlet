@@ -27,6 +27,8 @@
 
 #include <QDir>
 #include <QFile>
+#include <QHash>
+#include <QSet>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -122,6 +124,30 @@ private:
             return qsl("runs cover %1 of \"%2\"").arg(covered).arg(text);
         }
         return parts.join(qsl(" + "));
+    }
+
+    // Each line lineShown sends, by its text, with the id it came with; and the updates linesUpdated sends since last asked
+    static void followLineIds(THeadlessSession& session, QHash<QString, qint64>& idOf)
+    {
+        connect(&session,
+                &THeadlessSession::lineShown,
+                &session,
+                [&idOf](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, bool, const QList<qint64>& lineIds) {
+                    const QStringList lines = text.split(QChar::LineFeed);
+                    for (int i = 0; i < lines.size() && i < lineIds.size(); ++i) {
+                        idOf.insert(lines.at(i), lineIds.at(i));
+                    }
+                });
+    }
+
+    static QList<THeadlessSession::LineUpdate> takeUpdates(QSignalSpy& updated)
+    {
+        QList<THeadlessSession::LineUpdate> all;
+        for (const QVariantList& arguments : std::as_const(updated)) {
+            all.append(arguments.at(1).value<QList<THeadlessSession::LineUpdate>>());
+        }
+        updated.clear();
+        return all;
     }
 
 private slots:
@@ -742,6 +768,364 @@ tempRegexTrigger("^current$", [[moveCursor("main", 3, getLineNumber("main") - 1)
                                    // The pass's own line is sent ahead of what it wrote onto the line above
                                    qsl("S:abc S:current S:X")};
         QCOMPARE(run(session), expected);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A line lineShown sent that a script then changes or deletes where it stands comes again, by its id
+    void test_aLineAScriptChangesAfterItWasShownIsSentAgain()
+    {
+        const QString name = qsl("Headless Lines Updated");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        connect(&session,
+                &THeadlessSession::lineShown,
+                &session,
+                [&idOf](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, bool, const QList<qint64>& lineIds) {
+                    const QStringList lines = text.split(QChar::LineFeed);
+                    for (int i = 0; i < lines.size() && i < lineIds.size(); ++i) {
+                        idOf.insert(lines.at(i), lineIds.at(i));
+                    }
+                });
+        // No line is followed while nothing listens for its updates
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("unfollowed\n"))")));
+        QVERIFY(idOf.contains(qsl("unfollowed")));
+        QCOMPARE(idOf.value(qsl("unfollowed")), qint64(0));
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        const auto updates = [&updated]() {
+            QList<THeadlessSession::LineUpdate> all;
+            for (const QVariantList& arguments : std::as_const(updated)) {
+                all.append(arguments.at(1).value<QList<THeadlessSession::LineUpdate>>());
+            }
+            updated.clear();
+            return all;
+        };
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessLineOf(text)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then return i end
+  end
+end
+feedTriggers("alpha\nbeta\ngamma\n")
+)lua")));
+        const qint64 alpha = idOf.value(qsl("alpha"));
+        const qint64 beta = idOf.value(qsl("beta"));
+        const qint64 gamma = idOf.value(qsl("gamma"));
+        QVERIFY(alpha > 0 && beta > 0 && gamma > 0);
+        QCOMPARE(QSet<qint64>({alpha, beta, gamma}).size(), 3);
+        QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("unfollowed")) selectCurrentLine() replace("UNFOLLOWED") moveCursorEnd())")));
+        QVERIFY(!updated.wait(200));
+
+        QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("beta")) selectCurrentLine() replace("BETA") moveCursorEnd())")));
+        QVERIFY(updated.wait(1000));
+        QList<THeadlessSession::LineUpdate> got = updates();
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, beta);
+        QCOMPARE(got.first().text, qsl("BETA"));
+        QVERIFY(!got.first().deleted);
+
+        // A restyle is a change, as are two lines a turn changed, sent once and in the order they stand
+        QVERIFY(session.runLua(qsl(R"lua(
+moveCursor("main", 0, headlessLineOf("gamma")) selectCurrentLine() setFgColor(255, 0, 0)
+moveCursor("main", 0, headlessLineOf("alpha")) selectCurrentLine() replace("ALPHA")
+moveCursorEnd()
+)lua")));
+        QVERIFY(updated.wait(1000));
+        QCOMPARE(updated.size(), 1);
+        got = updates();
+        QCOMPARE(got.size(), 2);
+        QCOMPARE(got.at(0).lineId, alpha);
+        QCOMPARE(got.at(0).text, qsl("ALPHA"));
+        QCOMPARE(got.at(1).lineId, gamma);
+        QCOMPARE(got.at(1).text, qsl("gamma"));
+        QVERIFY(!got.at(1).runs.isEmpty());
+        QCOMPARE(got.at(1).runs.first().foreground, QColor(255, 0, 0));
+
+        QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("BETA")) deleteLine() moveCursorEnd())")));
+        QVERIFY(updated.wait(1000));
+        got = updates();
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, beta);
+        QVERIFY(got.first().deleted);
+        QVERIFY(got.first().text.isEmpty());
+
+        // A line shown after them is not one of theirs, and a clear forgets them all
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("delta\n"))")));
+        QVERIFY(idOf.value(qsl("delta")) > 0);
+        QVERIFY(!QSet<qint64>({alpha, beta, gamma}).contains(idOf.value(qsl("delta"))));
+        QVERIFY(session.runLua(qsl(R"(clearWindow() feedTriggers("after\n") moveCursor("main", 0, headlessLineOf("after")) selectCurrentLine() replace("AFTER") moveCursorEnd())")));
+        QVERIFY(updated.wait(1000));
+        got = updates();
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, idOf.value(qsl("after")));
+        QCOMPARE(got.first().text, qsl("AFTER"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLineFedInsideATriggerIsUpdatedForWhatTheTriggerDidNext()
+    {
+        const QString name = qsl("Headless Nested Line Updates");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        // The lines it feeds are sent after its own, once it has ended, as they were when the feed ended
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessLineOf(text)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then return i end
+  end
+end
+tempRegexTrigger("^outer$", [[feedTriggers("gone\nkept\n") headlessLineOf("gone") deleteLine() headlessLineOf("kept") selectCurrentLine() replace("KEPT") moveCursorEnd()]])
+feedTriggers("outer\n")
+)lua")));
+        QVERIFY2(idOf.value(qsl("gone")) > 0 && idOf.value(qsl("kept")) > 0, qPrintable(QStringList(idOf.keys()).join(u',')));
+        QVERIFY(updated.wait(1000));
+        const QList<THeadlessSession::LineUpdate> got = takeUpdates(updated);
+        QCOMPARE(got.size(), 2);
+        QCOMPARE(got.at(0).lineId, idOf.value(qsl("gone")));
+        QVERIFY(got.at(0).deleted);
+        QCOMPARE(got.at(1).lineId, idOf.value(qsl("kept")));
+        QCOMPARE(got.at(1).text, qsl("KEPT"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_eachLineIdIsOfTheLineItsTextStandsOn()
+    {
+        const QString name = qsl("Headless Line Ids In Step");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        // A line feed a script writes into a line parts the text sent, into a line not followed, without moving the
+        // ids of the lines after it
+        QVERIFY(session.runLua(qsl(R"lua(
+tempRegexTrigger("^first$", [[echo("\nsecond") wrapLine("main", getLineNumber()) selectString("first", 1) replace("one\ntwo")]])
+feedTriggers("first\n")
+)lua")));
+        QStringList seen;
+        for (auto it = idOf.cbegin(); it != idOf.cend(); ++it) {
+            seen << qsl("%1=%2").arg(it.key()).arg(it.value());
+        }
+        QVERIFY2(idOf.value(qsl("one")) > 0, qPrintable(seen.join(u',')));
+        QVERIFY2(idOf.contains(qsl("two")) && idOf.value(qsl("two")) == 0, qPrintable(seen.join(u',')));
+        QVERIFY2(idOf.value(qsl("second")) > 0 && idOf.value(qsl("second")) != idOf.value(qsl("one")), qPrintable(seen.join(u',')));
+        QVERIFY(session.runLua(qsl(R"lua(
+for i = getLineCount(), 0, -1 do
+  moveCursor("main", 0, i)
+  if getCurrentLine() == "second" then break end
+end
+selectCurrentLine() replace("SECOND") moveCursorEnd()
+)lua")));
+        QVERIFY(updated.wait(1000));
+        const QList<THeadlessSession::LineUpdate> got = takeUpdates(updated);
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, idOf.value(qsl("second")));
+        QCOMPARE(got.first().text, qsl("SECOND"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_anEchoOntoALineShownBeforeUpdatesWereFollowedIsNotFollowed()
+    {
+        const QString name = qsl("Headless Line Ids Followed Late");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("before\n"))")));
+        QCOMPARE(idOf.value(qsl("before"), -1), qint64(0));
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        // Drawn on the end of a line the app was told it does not follow, so not followed either
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag$", [[deleteLine() echo(" tail")]]) feedTriggers("gag\n"))lua")));
+        QCOMPARE(idOf.value(qsl(" tail"), -1), qint64(0));
+        QVERIFY(session.runLua(qsl(R"lua(
+for i = getLineCount(), 0, -1 do
+  moveCursor("main", 0, i)
+  if getCurrentLine() == "before tail" then break end
+end
+selectCurrentLine() replace("BEFORE") moveCursorEnd()
+)lua")));
+        QVERIFY(!updated.wait(200));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_lineIdsAreKeptOnlyWhileLineUpdatesAreFollowed()
+    {
+        const QString name = qsl("Headless Line Ids Kept While Followed");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        const TBuffer& buffer = session.host()->mainConsoleModel().buffer;
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessReplaceLine(text, with)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then
+      selectCurrentLine() replace(with) moveCursorEnd()
+      return
+    end
+  end
+end
+feedTriggers("before\n")
+)lua")));
+        QCOMPARE(idOf.value(qsl("before"), -1), qint64(0));
+        QVERIFY(buffer.lineIdBuffer.isEmpty());
+
+        // The lines already held get ids once an app follows them, but only those sent since are followed
+        std::optional<QSignalSpy> updated(std::in_place, &session, &THeadlessSession::linesUpdated);
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("followed\n"))")));
+        QCOMPARE(buffer.lineIdBuffer.size(), buffer.lineBuffer.size());
+        const qint64 followed = idOf.value(qsl("followed"));
+        QVERIFY(followed > 0);
+        QCOMPARE(buffer.lineIdBuffer.at(buffer.lineBuffer.indexOf(qsl("followed"))), followed);
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("before", "BEFORE"))")));
+        QVERIFY(!updated->wait(200));
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("followed", "FOLLOWED"))")));
+        QVERIFY(updated->wait(1000));
+        QList<THeadlessSession::LineUpdate> got = takeUpdates(*updated);
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, followed);
+        QCOMPARE(got.first().text, qsl("FOLLOWED"));
+
+        // Let go of with the next line, so a line sent before is not followed when an app follows them again
+        updated.reset();
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("unfollowed\n"))")));
+        QCOMPARE(idOf.value(qsl("unfollowed"), -1), qint64(0));
+        QVERIFY(buffer.lineIdBuffer.isEmpty());
+        updated.emplace(&session, &THeadlessSession::linesUpdated);
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("again\n"))")));
+        const qint64 again = idOf.value(qsl("again"));
+        QVERIFY(again > followed);
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("FOLLOWED", "followed"))")));
+        QVERIFY(!updated->wait(200));
+        QVERIFY(session.runLua(qsl(R"(headlessReplaceLine("again", "AGAIN"))")));
+        QVERIFY(updated->wait(1000));
+        got = takeUpdates(*updated);
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, again);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_linesTrimmedOffTheTopLeaveTheRestFollowed()
+    {
+        const QString name = qsl("Headless Line Ids Trimmed");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        QVERIFY(session.runLua(qsl(R"lua(
+setConsoleBufferSize("main", 100, 50)
+local lines = {}
+for i = 1, 160 do lines[i] = "line " .. i end
+feedTriggers(table.concat(lines, "\n") .. "\n")
+)lua")));
+        QVERIFY(idOf.value(qsl("line 150")) > 0);
+        QVERIFY(session.runLua(qsl(R"(assert(getLineCount() < 160))")));
+        // Trimmed lines go without an update
+        QVERIFY(!updated.wait(200));
+        QVERIFY(session.runLua(qsl(R"lua(
+for i = getLineCount(), 0, -1 do
+  moveCursor("main", 0, i)
+  if getCurrentLine() == "line 150" then break end
+end
+selectCurrentLine() replace("LINE 150") moveCursorEnd()
+)lua")));
+        QVERIFY(updated.wait(1000));
+        const QList<THeadlessSession::LineUpdate> got = takeUpdates(updated);
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, idOf.value(qsl("line 150")));
+        QCOMPARE(got.first().text, qsl("LINE 150"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aHeldLineIsUpdatedOnlyOnceItWasShown()
+    {
+        const QString name = qsl("Headless Held Line Updates");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        QList<qint64> shownIds;
+        QList<qint64> updatedBeforeShown;
+        int updates = 0;
+        connect(&session,
+                &THeadlessSession::lineShown,
+                &session,
+                [&shownIds](const QString&, const QString&, bool, const QList<THeadlessSession::TextRun>&, qint64, bool, const QList<qint64>& lineIds) {
+                    shownIds.append(lineIds);
+                });
+        connect(&session, &THeadlessSession::linesUpdated, &session, [&](const QString&, const QList<THeadlessSession::LineUpdate>& lineUpdates) {
+            for (const THeadlessSession::LineUpdate& update : lineUpdates) {
+                ++updates;
+                if (!shownIds.contains(update.lineId)) {
+                    updatedBeforeShown.append(update.lineId);
+                }
+            }
+        });
+        // An app that runs the event loop while a pass still holds the lines it fed
+        connect(&session, &THeadlessSession::outputLine, &session, [](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64) {
+            if (text == qsl("last")) {
+                QCoreApplication::processEvents();
+            }
+        });
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessLineOf(text)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then return i end
+  end
+end
+tempRegexTrigger("^outer$", [[feedTriggers("gone\nkept\n") headlessLineOf("gone") deleteLine() headlessLineOf("kept") selectCurrentLine() replace("KEPT") moveCursorEnd() feedTriggers("last\n")]])
+feedTriggers("outer\n")
+)lua")));
+        QVERIFY(QTest::qWaitFor(
+                [&updates]() {
+                    return updates >= 2;
+                },
+                1000));
+        QVERIFY2(updatedBeforeShown.isEmpty(), qPrintable(QString::number(updatedBeforeShown.size())));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLineFeedInAMiddleRowLeavesTheRowsAfterItTheirIds()
+    {
+        const QString name = qsl("Headless Line Ids Middle Row");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        followLineIds(session, idOf);
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessLineOf(text)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then return i end
+  end
+end
+tempRegexTrigger("^first$", [[echo("\nsecond\nthird") wrapLine("main", getLineNumber()) headlessLineOf("second") selectString("second", 1) replace("2a\n2b") moveCursorEnd()]])
+feedTriggers("first\n")
+)lua")));
+        QStringList seen;
+        for (auto it = idOf.cbegin(); it != idOf.cend(); ++it) {
+            seen << qsl("%1=%2").arg(it.key()).arg(it.value());
+        }
+        QVERIFY2(idOf.value(qsl("first")) > 0 && idOf.value(qsl("2a")) > 0, qPrintable(seen.join(u',')));
+        QVERIFY2(idOf.contains(qsl("2b")) && idOf.value(qsl("2b")) == 0, qPrintable(seen.join(u',')));
+        QVERIFY2(idOf.value(qsl("third")) > 0 && idOf.value(qsl("third")) != idOf.value(qsl("2a")), qPrintable(seen.join(u',')));
         QVERIFY(session.shutdown(false));
     }
 };

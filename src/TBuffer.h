@@ -775,6 +775,16 @@ public:
     // many spaces the break dropped between the two - a copy puts them back;
     // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
+    // Each line's id, from 1, which no other line of the buffer is given while it lasts: a line keeps its id when lines
+    // around it are trimmed or deleted, but for a wrapped row that takes the id of its paragraph's deleted first row,
+    // and so does the first of the lines a rewrap splits it into. Empty except between keepLineIds() and
+    // dropLineIds(), as only a frontend with no window reads them, and only while an app follows its lines.
+    QList<qint64> lineIdBuffer;
+    // Gives every line an id from now on, those already held included
+    void keepLineIds();
+    // Ids given after keepLineIds() is called again are new ones
+    void dropLineIds();
+    bool lineIdsKept() const { return mLineIdsKept; }
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
     int mBatchDeleteSize = 1000;
@@ -790,6 +800,8 @@ private:
     int mLinesUntilLinkSweep = 0;
     QSet<int> mLinkIdsRemovedSinceSweep;
     qint64 mLinesRemovedTotal = 0;
+    qint64 mNextLineId = 1;
+    bool mLineIdsKept = false;
     qint64 mLinesTrimmedTotal = 0;
     QHash<int, qint64> mLinkIdIssuedAtLine;
     bool linkHoldsState(const int id) const;

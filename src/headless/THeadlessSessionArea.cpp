@@ -69,9 +69,15 @@ QRect THeadlessSession::mainConsoleTextRect() const
     return mpHost ? mpHost->mainTextRectWithNoView() : QRect();
 }
 
+QColor THeadlessSession::mainBorderColor() const
+{
+    return mpHost ? mpHost->borderColor().value_or(QColor()) : QColor();
+}
+
 void THeadlessSession::connectAreaRelays(Host* pHost, const unsigned int run)
 {
     mDeliveredMainConsoleArea.reset();
+    mDeliveredMainBorderColor.reset();
     // Read at delivery, not as sent, so what a turn changed more than once is sent once
     connect(
             pHost,
@@ -88,6 +94,23 @@ void THeadlessSession::connectAreaRelays(Host* pHost, const unsigned int run)
                 mDeliveredMainConsoleArea = area;
                 const QString profile = mProfileName;
                 emit mainConsoleAreaChanged(profile, area.first, area.second);
+            },
+            Qt::QueuedConnection);
+    connect(
+            pHost,
+            &Host::signal_borderColorChanged,
+            this,
+            [this, run]() {
+                if (run != mRun || !mpHost || !mDeliveredMainBorderColor) {
+                    return;
+                }
+                const QColor color = mainBorderColor();
+                if (color == *mDeliveredMainBorderColor) {
+                    return;
+                }
+                mDeliveredMainBorderColor = color;
+                const QString profile = mProfileName;
+                emit mainBorderColorChanged(profile, color);
             },
             Qt::QueuedConnection);
     connect(
@@ -118,4 +141,5 @@ void THeadlessSession::connectAreaRelays(Host* pHost, const unsigned int run)
 void THeadlessSession::noteAreaAtLoad()
 {
     mDeliveredMainConsoleArea = {mainConsoleGrid(), mainConsoleTextRect()};
+    mDeliveredMainBorderColor = mainBorderColor();
 }

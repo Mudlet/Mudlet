@@ -7682,6 +7682,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelAccessibleRole", TLuaInterpreter::getLabelAccessibleRole);
     lua_register(pGlobalLua, "setLabelLiveRegion", TLuaInterpreter::setLabelLiveRegion);
     lua_register(pGlobalLua, "getLabelLiveRegion", TLuaInterpreter::getLabelLiveRegion);
+    lua_register(pGlobalLua, "setLabelAccessibleValue", TLuaInterpreter::setLabelAccessibleValue);
+    lua_register(pGlobalLua, "getLabelAccessibleValue", TLuaInterpreter::getLabelAccessibleValue);
+    lua_register(pGlobalLua, "clearLabelAccessibleValue", TLuaInterpreter::clearLabelAccessibleValue);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);

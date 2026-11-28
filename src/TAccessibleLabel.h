@@ -23,24 +23,36 @@
 #include <QAccessibleWidget>
 
 class TLabel;
+struct TLabelAccessibleValue;
 
-// A script's label as assistive technology sees it: a button as TLabelModel decides, else a graphic, an
-// animation or static text by what it shows, and named as TLabelModel decides.
-class TAccessibleLabel : public QAccessibleWidget
+// A script's label as assistive technology sees it: a button as TLabelModel decides, else a progress bar while it
+// has an accessible value, else a graphic, an animation or static text by what it shows, and named as TLabelModel
+// decides.
+class TAccessibleLabel : public QAccessibleWidget, public QAccessibleValueInterface
 {
 public:
     explicit TAccessibleLabel(QWidget* widget);
 
+    void* interface_cast(QAccessible::InterfaceType t) override;
     QAccessible::Role role() const override;
     QString text(QAccessible::Text t) const override;
     QStringList actionNames() const override;
     void doAction(const QString& actionName) override;
+
+    // QAccessibleValueInterface, while it has an accessible value: a script sets it, not the screen reader
+    QVariant currentValue() const override;
+    void setCurrentValue(const QVariant&) override {}
+    QVariant maximumValue() const override;
+    QVariant minimumValue() const override;
+    QVariant minimumStepSize() const override;
 
     static QAccessibleInterface* labelFactory(const QString& classname, QObject* object);
 
 private:
     TLabel* label() const;
     bool actsAsButton() const;
+    // The label's accessible value, unless it is a button, which a value does not make a progress bar
+    const TLabelAccessibleValue* accessibleValue() const;
 };
 
 #endif // MUDLET_TACCESSIBLELABEL_H

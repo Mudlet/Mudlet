@@ -182,6 +182,8 @@ public:
         bool timeStamps = false;
         // What its parent is, as a scroll box may share its name with a user window or console
         Kind parentKind = Kind::userWindow;
+        // A command line's own sheet, as setCmdLineStyleSheet() gave it
+        QString styleSheet;
     };
 
     explicit TNullConsoleFrontend(Host* pHost);
@@ -236,6 +238,9 @@ public:
     bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline) override;
     bool resetLabelLinkStyle(const QString& name) override;
     bool clearLabelVisitedLinks(const QString& name) override;
+    // TLabel::slot_linkActivated()'s marking of the link visited, and the restyle where a visited colour is set;
+    // nothing where no label has the name
+    void visitLabelLink(const QString& name, const QString& link);
     bool showLabel(const QString& name) override { return setLabelShown(name, true); }
     bool hideLabel(const QString& name) override { return setLabelShown(name, false); }
     bool resizeLabel(const QString& name, int width, int height) override;

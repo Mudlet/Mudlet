@@ -35,10 +35,11 @@ class TConsoleModelNotifier : public QObject
 public:
     using QObject::QObject;
 
-    // isSignalConnected() is protected. The GUI never connects textPrinted or lineShown, so this spares it the work.
+    // isSignalConnected() is protected. The GUI never connects textPrinted, lineShown or linesRemoved, so this spares it the work.
     bool textPrintedConnected() const;
     bool lineShownConnected() const;
     bool linkChangedConnected() const;
+    bool linesRemovedConnected() const;
 
 signals:
     // The count is of every line in the buffer, not just the new ones.
@@ -83,6 +84,8 @@ signals:
     // The buffer's rows changed with none of the signals above sent, as the view showing it repaints only later:
     // a script's deleteLine() or wrapLine().
     void contentEdited();
+    // These lines are about to be deleted, or trimmed off the top as the buffer outgrows its limit; read them now.
+    void linesRemoved(int firstLine, int lastLine, bool trimmed);
 };
 
 #endif // MUDLET_TCONSOLEMODELNOTIFIER_H

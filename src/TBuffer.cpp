@@ -930,6 +930,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , timeBuffer(other.timeBuffer)
 , promptBuffer(other.promptBuffer)
 , wrapGapBuffer(other.wrapGapBuffer)
+, lineIdBuffer(other.lineIdBuffer)
 , mLinkStore(other.mLinkStore)
 , mLinesLimit(other.mLinesLimit)
 , mBatchDeleteSize(other.mBatchDeleteSize)
@@ -1025,6 +1026,8 @@ TBuffer::TBuffer(const TBuffer& other)
 , mLastFoundLine(other.mLastFoundLine)
 , mSelectionStylingFromLine(other.mSelectionStylingFromLine)
 {
+    mNextLineId = other.mNextLineId;
+    mLineIdsKept = other.mLineIdsKept;
     mTagWatchdog->setSingleShot(true);
     QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
         processMxpWatchdogCallback();
@@ -1041,6 +1044,9 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         timeBuffer = other.timeBuffer;
         promptBuffer = other.promptBuffer;
         wrapGapBuffer = other.wrapGapBuffer;
+        lineIdBuffer = other.lineIdBuffer;
+        mNextLineId = other.mNextLineId;
+        mLineIdsKept = other.mLineIdsKept;
         mLinkStore = other.mLinkStore;
         mLinesLimit = other.mLinesLimit;
         mBatchDeleteSize = other.mBatchDeleteSize;
@@ -3009,6 +3015,9 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
             promptBuffer.append(false);
         }
         wrapGapBuffer.append(0);
+        if (mLineIdsKept) {
+            lineIdBuffer.append(mNextLineId++);
+        }
     } else {
         if (!line.isEmpty()) {
             // The last line is empty, so this is the whole of it
@@ -3191,6 +3200,9 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         timeBuffer.push_back(csmNoTimeStamp);
         promptBuffer << false;
         wrapGapBuffer.append(0);
+        if (mLineIdsKept) {
+            lineIdBuffer.append(mNextLineId++);
+        }
     }
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -6768,6 +6780,24 @@ void TBuffer::appendLine(
     }
 }
 
+void TBuffer::keepLineIds()
+{
+    if (mLineIdsKept) {
+        return;
+    }
+    mLineIdsKept = true;
+    lineIdBuffer.reserve(lineBuffer.size());
+    for (qsizetype i = 0; i < lineBuffer.size(); ++i) {
+        lineIdBuffer.append(mNextLineId++);
+    }
+}
+
+void TBuffer::dropLineIds()
+{
+    mLineIdsKept = false;
+    lineIdBuffer = QList<qint64>();
+}
+
 void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
@@ -6775,6 +6805,9 @@ void TBuffer::appendEmptyLine()
     timeBuffer << lineArrivalTime();
     promptBuffer << false;
     wrapGapBuffer.append(0);
+    if (mLineIdsKept) {
+        lineIdBuffer.append(mNextLineId++);
+    }
 }
 
 // This was called "insert" but that is commonly used for built in methods and
@@ -7359,6 +7392,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         qint64 time;
         quint16 wrapGap;
         bool prompt;
+        // 0 for a line split off the source line, which is given an id of its own
+        qint64 id;
     };
     // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
     QVarLengthArray<RewrappedLine, 8> rewrapped;
@@ -7384,7 +7419,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // trivial case
         if (buffer[i].empty()) {
             keepWholeForHeld(i);
-            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false, mLineIdsKept ? lineIdBuffer.at(i) : 0});
             continue;
         }
 
@@ -7405,7 +7440,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
         if (lineBreaks.isEmpty()) {
             keepWholeForHeld(i);
-            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt, mLineIdsKept ? lineIdBuffer.at(i) : 0});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -7465,7 +7500,12 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (movesHeld) {
                 heldSpans.append({i, w.firstChar, w.lastChar, firstRewrappedLine + static_cast<int>(rewrapped.size()), addsIndent ? (w.isNewline ? indent : hangingIndent) : 0});
             }
-            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
+            rewrapped.append({std::move(newBufferLine),
+                              std::move(newLineText),
+                              segmentTime,
+                              static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())),
+                              isPrompt,
+                              previousSegmentEnd < 0 && mLineIdsKept ? lineIdBuffer.at(i) : 0});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -7478,6 +7518,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         timeBuffer.pop_back();
         promptBuffer.pop_back();
         wrapGapBuffer.pop_back();
+        if (mLineIdsKept) {
+            lineIdBuffer.pop_back();
+        }
     }
 
     const int rewrappedLines = static_cast<int>(rewrapped.size());
@@ -7490,12 +7533,18 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
                 wrapGapBuffer.back() = line.wrapGap;
             }
+            if (line.id) {
+                lineIdBuffer.back() = line.id;
+            }
         } else {
             buffer.push_back(std::move(line.chars));
             lineBuffer.append(std::move(line.text));
             timeBuffer.append(line.time);
             promptBuffer.push_back(line.prompt);
             wrapGapBuffer.append(line.wrapGap);
+            if (mLineIdsKept) {
+                lineIdBuffer.append(line.id ? line.id : mNextLineId++);
+            }
         }
     }
 
@@ -7945,6 +7994,9 @@ void TBuffer::clear()
     timeBuffer << csmNoTimeStamp;
     promptBuffer.push_back(false);
     wrapGapBuffer.append(0);
+    if (mLineIdsKept) {
+        lineIdBuffer.append(mNextLineId++);
+    }
 }
 
 void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
@@ -8128,6 +8180,9 @@ void TBuffer::shrinkBuffer()
     }
 
     triggerPassLinesRemoved(0, mBatchDeleteSize - 1);
+    if (mpModel && mpModel->mNotifier.linesRemovedConnected()) {
+        emit mpModel->mNotifier.linesRemoved(0, mBatchDeleteSize - 1, true);
+    }
     for (int i = 0; i < mBatchDeleteSize; ++i) {
         // The lines going away were written a whole buffer ago, so freeing each
         // one stalls on a cache miss for its allocator header. Asking for the
@@ -8146,6 +8201,9 @@ void TBuffer::shrinkBuffer()
         wrapGapBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
+    }
+    if (mLineIdsKept) {
+        lineIdBuffer.remove(0, mBatchDeleteSize);
     }
     // We need to adjust the search result line as some lines have now gone
     // away:
@@ -8255,16 +8313,25 @@ bool TBuffer::deleteLines(int from, int to)
             for (int i = to; i >= from; --i) {
                 if (!wrapsFromPreviousLine(i)) {
                     timeBuffer[to + 1] = timeBuffer.at(i);
+                    if (mLineIdsKept) {
+                        lineIdBuffer[to + 1] = lineIdBuffer.at(i);
+                    }
                     break;
                 }
             }
         }
 
         triggerPassLinesRemoved(from, to);
+        if (mpModel && mpModel->mNotifier.linesRemovedConnected()) {
+            emit mpModel->mNotifier.linesRemoved(from, to, false);
+        }
         lineBuffer.remove(from, delta);
         timeBuffer.remove(from, delta);
         promptBuffer.remove(from, delta);
         wrapGapBuffer.remove(from, delta);
+        if (mLineIdsKept) {
+            lineIdBuffer.remove(from, delta);
+        }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         if (mpModel) {

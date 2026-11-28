@@ -572,6 +572,17 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     resizeWindow(front.name, inPlaceSize(self, fill, front))
   end
 
+  -- screen readers read the gauge from its back label, which is the gauge's size; a reading it cannot give is
+  -- checked here, as setLabelAccessibleValue() would warn of it at every prompt
+  local maximum = maxValue or 100
+  if maximum > 0 and maximum < math.huge and currentValue == currentValue then
+    setLabelAccessibleValue(self.back.name, math.min(currentValue, maximum), 0, maximum)
+  else
+    clearLabelAccessibleValue(self.back.name)
+  end
+  -- kept for setStyleSheet(), which lays the gauge out again: self.value is a percentage, which would lose the maximum
+  self.valueSetWith = {current = currentValue, maximum = maxValue, value = self.value}
+
   if text then
     self.text:echo(text)
   end
@@ -706,8 +717,12 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
     self.text:setStyleSheet(cssText)
   end
   
-  -- Recalculate gauge positioning with the new stylesheet
-  if self.value then
+  -- Recalculate gauge positioning with the new stylesheet, from the value and maximum last given, unless a script
+  -- has written self.value itself since
+  local given = self.valueSetWith
+  if given and self.value == given.value then
+    self:setValue(given.current, given.maximum)
+  elseif self.value then
     self:setValue(self.value)
   end
 end

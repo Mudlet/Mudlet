@@ -1364,8 +1364,11 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
 {
     mWindowNotifier.note();
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
-    // A script changes a label's accessibility through Host, which tells only the model
+    // A script changes a label's accessibility and its value through Host, which tells only the model
     pLabel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange) {
+        mWindowNotifier.note();
+    };
+    pLabel->mAccessibleValueChanged = [this]() {
         mWindowNotifier.note();
     };
     pLabel->setClickThrough(clickThrough);
@@ -3764,6 +3767,14 @@ bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
     return true;
 }
 
+void TNullConsoleFrontend::visitLabelLink(const QString& name, const QString& link)
+{
+    const auto it = mLabels.find(name);
+    if (it != mLabels.end() && it->second.pModel->visitLink(link)) {
+        reapplyLabelLinkStyle(it->second);
+    }
+}
+
 // QWidget::resize() takes a negative size as nothing
 bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, const int height)
 {
@@ -4417,7 +4428,12 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString&
 
 void TNullConsoleFrontend::setBorderColor(const QColor& color)
 {
-    mpHost->mainConsoleModel().mBorderColor = color;
+    QColor& border = mpHost->mainConsoleModel().mBorderColor;
+    if (border == color) {
+        return;
+    }
+    border = color;
+    emit mpHost->signal_borderColorChanged();
 }
 
 void TNullConsoleFrontend::applyBorders()
@@ -4993,6 +5009,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         const bool shown = commandLineShown(name);
         records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
         records.back().parentKind = own ? consoleKind(name, console->second) : kindOfParent(line.box.get());
+        records.back().styleSheet = line.styleSheet;
     }
     for (const auto& [name, textBox] : mTextBoxes) {
         if (inRetiredWindow(textBox.userWindow, textBox.box.get())) {

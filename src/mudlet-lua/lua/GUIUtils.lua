@@ -276,6 +276,16 @@ color_table["yellow_green"]           = { 154, 205, 50 }
 color_table["YellowGreen"]            = { 154, 205, 50 }
 
 
+-- The value and maximum setGauge() was last given, unless a script has written the gauge's value itself since
+local function gaugeReading(gaugeName)
+  local info = gaugesTable[gaugeName]
+  local given = info.valueSetWith
+  if given and info.value == given.value then
+    return given.current, given.maximum
+  end
+  return info.value, 1
+end
+
 --- Move a custom gauge.
 ---
 --- @usage This would move the health bar gauge to the location 1200, 400.
@@ -292,7 +302,7 @@ function moveGauge(gaugeName, x, y)
   moveWindow(gaugeName .. "_text", x, y)
   -- save new values in table
   gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
-  setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
+  setGauge(gaugeName, gaugeReading(gaugeName))
 end
 
 
@@ -350,7 +360,7 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
   end
   -- save new values in table
   gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
-  setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
+  setGauge(gaugeName, gaugeReading(gaugeName))
 end
 
 local function namedColorError(message)
@@ -614,8 +624,9 @@ function setGauge(gaugeName, currentValue, maxValue, gaugeText)
   assert(tonumber(currentValue) ~= nil, 'setGauge: bad argument #2 type (unable to convert '..type(currentValue)..' to a number!)')
   assert(tonumber(maxValue) ~= nil, 'setGauge: bad argument #3 type (unable to convert '..type(maxValue)..' to a number!)')
   local value = currentValue / maxValue
-  -- save new values in table
+  -- save new values in table, and those given, which moving or resizing the gauge lays it out with again
   gaugesTable[gaugeName].value = value
+  gaugesTable[gaugeName].valueSetWith = {current = currentValue, maximum = maxValue, value = value}
   local info = gaugesTable[gaugeName]
   local x, y, w, h = info.x, info.y, info.width, info.height
 
@@ -631,6 +642,14 @@ function setGauge(gaugeName, currentValue, maxValue, gaugeText)
   elseif info.orientation == "batty" then
     resizeWindow(gaugeName .. "_front", w, h * value)
     moveWindow(gaugeName .. "_front", x, y)
+  end
+  -- screen readers read the gauge from its back label, as Geyser.Gauge:setValue() gives it; a reading it cannot
+  -- give is checked here, as setLabelAccessibleValue() would warn of it at every prompt
+  local current, maximum = tonumber(currentValue), tonumber(maxValue)
+  if maximum > 0 and maximum < math.huge and current > -math.huge then
+    setLabelAccessibleValue(gaugeName .. "_back", math.min(current, maximum), 0, maximum)
+  else
+    clearLabelAccessibleValue(gaugeName .. "_back")
   end
   if gaugeText then
     setGaugeText(gaugeName, gaugeText)
@@ -1171,7 +1190,7 @@ function resizeGauge(gaugeName, width, height)
   resizeWindow(gaugeName .. "_text", width, height)
   -- save new values in table
   gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
-  setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
+  setGauge(gaugeName, gaugeReading(gaugeName))
 end
 
 

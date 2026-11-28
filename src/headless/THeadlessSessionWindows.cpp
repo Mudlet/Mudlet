@@ -91,6 +91,7 @@ THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int st
     window.scrollBar = record.scrollBar;
     window.timeStamps = record.timeStamps;
     window.parentKind = kindOf(record.parentKind);
+    window.styleSheet = record.styleSheet;
     if (record.kind == Record::Kind::userWindow) {
         window.dock = THeadlessSession::ScriptWindow::Dock{record.autoDock, record.dockArea, record.floating, record.title};
     }
@@ -483,6 +484,10 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.cursor = record->cursor;
     content.customCursor = record->customCursor;
     content.customCursorHotSpot = record->customCursorHotSpot;
+    // As TAccessibleLabel reads it: a button has no value
+    if (const std::optional<TLabelAccessibleValue>& value = pModel->mAccessibleValue; value && !pModel->actsAsButton()) {
+        content.accessibleValue = LabelContent::AccessibleValue{.value = value->value, .min = value->min, .max = value->max};
+    }
     content.clickThrough = pModel->mClickThrough;
     content.accessibleName = pModel->effectiveAccessibleName();
     content.accessibleButton = pModel->actsAsButton();

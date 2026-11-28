@@ -25,11 +25,14 @@
  * Run with: ctest -R HeadlessSessionWindowsTest -V
  */
 
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QImage>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QUrl>
 #include <QtTest/QtTest>
 
 #include <optional>
@@ -44,6 +47,18 @@
 #include "GroupedTest.h"
 
 using Kind = THeadlessSession::ScriptWindow::Kind;
+
+// Takes the web pages QDesktopServices would open, so a test opens none
+class HeadlessLabelLinkUrlCatcher : public QObject
+{
+    Q_OBJECT
+
+public:
+    QList<QUrl> mUrls;
+
+public slots:
+    void slot_openUrl(const QUrl& url) { mUrls.append(url); }
+};
 
 class HeadlessSessionWindowsTest : public QObject
 {
@@ -870,6 +885,98 @@ createMiniConsole("again", 0, 0, 100, 100)
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aLabelsAccessibleValueIsItsContent()
+    {
+        using AccessibleValue = THeadlessSession::LabelContent::AccessibleValue;
+        const QString name = qsl("Headless Label Accessible Value");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("lbl", 0, 0, 100, 20, 1)
+hpGauge = Geyser.Gauge:new({name = "hp", x = 0, y = 300, width = 200, height = 20})
+hpGauge:setValue(30, 200)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<THeadlessSession::LabelContent> content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QVERIFY(!content->accessibleValue);
+        // A gauge's value is on its back label, out of the maximum it was given; the other two have none
+        content = session.labelContent(qsl("hp_back"));
+        QVERIFY(content);
+        QCOMPARE(content->accessibleValue, std::optional(AccessibleValue{.value = 30.0, .min = 0.0, .max = 200.0}));
+        QVERIFY(!session.labelContent(qsl("hp_front"))->accessibleValue);
+        QVERIFY(!session.labelContent(qsl("hp_text"))->accessibleValue);
+
+        // Nothing else about the label changes, so the value alone names it
+        const auto toldAs = [&](const QString& lua, const std::optional<AccessibleValue> expected) {
+            if (!session.runLua(lua) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("lbl")};
+            changes.clear();
+            const std::optional<THeadlessSession::LabelContent> now = session.labelContent(qsl("lbl"));
+            return named && now && now->accessibleValue == expected;
+        };
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleValue("lbl", 5, 0, 10))"), AccessibleValue{.value = 5.0, .min = 0.0, .max = 10.0}));
+        // As a progress bar shows it, a value past the end is at the end
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleValue("lbl", 15, 0, 10))"), AccessibleValue{.value = 10.0, .min = 0.0, .max = 10.0}));
+        // Out of 0 to 100 unless told otherwise
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleValue("lbl", 40))"), AccessibleValue{.value = 40.0, .min = 0.0, .max = 100.0}));
+        // The one it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setLabelAccessibleValue("lbl", 40, 0, 100))")));
+        QVERIFY(!changes.wait(200));
+        // Nor is one refused, with nil and a message as Mudlet's other label functions refuse
+        QVERIFY(session.runLua(qsl(R"lua(
+local ok, message = setLabelAccessibleValue("lbl", 5, 10, 10)
+assert(ok == nil and message:find("must be less than the maximum", 1, true), message)
+ok, message = setLabelAccessibleValue("lbl", 0 / 0)
+assert(ok == nil and message:find("finite", 1, true), message)
+ok, message = setLabelAccessibleValue("nonesuch", 5)
+assert(ok == nil and message == "label name 'nonesuch' not found", message)
+assert(not pcall(setLabelAccessibleValue, "lbl", "five"))
+local value, min, max = getLabelAccessibleValue("lbl")
+assert(value == 40 and min == 0 and max == 100)
+)lua")));
+        QVERIFY(!changes.wait(200));
+        // A label read as a button is read without it, as the GUI's screen reader reads it, until it is not one again
+        QVERIFY(session.runLua(qsl(R"(setLabelAccessibleRole("lbl", "button"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(session.labelContent(qsl("lbl"))->accessibleButton);
+        QVERIFY(!session.labelContent(qsl("lbl"))->accessibleValue);
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleRole("lbl", ""))"), AccessibleValue{.value = 40.0, .min = 0.0, .max = 100.0}));
+        QVERIFY(toldAs(qsl(R"(clearLabelAccessibleValue("lbl"))"), std::nullopt));
+        QVERIFY(session.runLua(qsl(R"(assert(getLabelAccessibleValue("lbl") == nil))")));
+
+        // A new value of the gauge names its back label
+        QVERIFY(session.runLua(qsl("hpGauge:setValue(50)")));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(changes.takeFirst().at(1).toStringList().contains(qsl("hp_back")));
+        QCOMPARE(session.labelContent(qsl("hp_back"))->accessibleValue, std::optional(AccessibleValue{.value = 50.0, .min = 0.0, .max = 100.0}));
+        // A new style sheet lays the gauge out again, out of the maximum it was given, not of 100
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"lua(hpGauge:setValue(30, 200); hpGauge:setStyleSheet("background-color: red", "background-color: black"))lua")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(session.labelContent(qsl("hp_back"))->accessibleValue, std::optional(AccessibleValue{.value = 30.0, .min = 0.0, .max = 200.0}));
+        // A reading it cannot give leaves it none, not the last, so a reader goes by what the gauge draws
+        changes.clear();
+        QVERIFY(session.runLua(qsl("hpGauge:setValue(5, math.huge)")));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(!session.labelContent(qsl("hp_back"))->accessibleValue);
+        // createGauge()'s gauges have it too, kept as they move
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"lua(createGauge("old", 100, 10, 0, 400); setGauge("old", 3, 12); moveGauge("old", 0, 420))lua")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(session.labelContent(qsl("old_back"))->accessibleValue, std::optional(AccessibleValue{.value = 3.0, .min = 0.0, .max = 12.0}));
+        QVERIFY(!session.labelContent(qsl("old_front"))->accessibleValue);
+
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_labelsRunTheirCallbacksAsTheGuisMouseDoes()
     {
         const QString name = qsl("Headless Label Pointer");
@@ -1541,6 +1648,148 @@ setLabelOnLeave("u", function() seen[#seen + 1] = "u.leave" end) setLabelWheelCa
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aLabelsLinkIsFollowedAsTheGuisClickFollowsIt()
+    {
+        using LinkResult = THeadlessSession::LinkResult;
+        const QString name = qsl("Headless Label Links");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        // Refused where runLua() is
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:n")), LinkResult::refused);
+        QVERIFY(!session.errorString().isEmpty());
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        HeadlessLabelLinkUrlCatcher catcher;
+        QDesktopServices::setUrlHandler(qsl("https"), &catcher, "slot_openUrl");
+        const auto unsetHandler = qScopeGuard([] {
+            QDesktopServices::unsetUrlHandler(qsl("https"));
+        });
+        QSignalSpy prompted(&session, &THeadlessSession::commandLineTextRequested);
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        // The web link is an argument: moc reads a // in a raw string that spans lines as a comment
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessSent, headlessRan = {}, 0
+registerAnonymousEventHandler("sysDataSendRequest", function(_, command) headlessSent[#headlessSent + 1] = command end)
+tempAlias("^n$", [[send("north", false)]])
+createLabel("lbl", 0, 0, 400, 40, 1)
+echo("lbl", [[<a href="send:n">go</a> <a href="PROMPT:tell Bob ">tell</a> <a href="%1">site</a> <a href="headlessRan = headlessRan + 1">count</a> <a href="error('headless link error')">bad</a> <a href="mailto:bob@example.org">mail</a>]])
+createLabel("plain", 0, 50, 100, 20, 1)
+echo("plain", "no links here")
+)lua")
+                                       .arg(qsl("https://example.org/a?b=1&amp;c=2"))));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        const auto sent = [&session]() {
+            return luaString(session, qsl("table.concat(headlessSent, '|')"));
+        };
+
+        // send: goes to the game through the aliases
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:n")), LinkResult::ran);
+        QCOMPARE(sent(), qsl("north"));
+        // prompt: is the main command line's, its trailing space kept, whatever the scheme's case
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("PROMPT:tell Bob ")), LinkResult::ran);
+        QCOMPARE(prompted.size(), 1);
+        QCOMPARE(prompted.first().at(1).toString(), qsl("tell Bob "));
+        // Not while the game hides what is typed: the GUI puts the text in its hidden-input box, which there is not
+        // here, so the link is not followed and says why
+        session.host()->setRemoteEchoingActive(true);
+        QVERIFY(session.host()->passwordEntryWanted());
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("PROMPT:tell Bob ")), LinkResult::failed);
+        QVERIFY2(session.errorString().contains(qsl("hiding input")), qPrintable(session.errorString()));
+        session.host()->setRemoteEchoingActive(false);
+        QCOMPARE(prompted.size(), 1);
+        // http: and https: open through QDesktopServices, with the href's entities decoded as Qt reads them
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("https://example.org/a?b=1&c=2")), LinkResult::ran);
+        QCOMPARE(catcher.mUrls, QList<QUrl>{QUrl(qsl("https://example.org/a?b=1&c=2"))});
+        // Anything else is Lua, which runs before it returns, or fails with its error
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("headlessRan = headlessRan + 1")), LinkResult::ran);
+        QCOMPARE(luaString(session, qsl("headlessRan")), qsl("1"));
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("error('headless link error')")), LinkResult::failed);
+        QVERIFY2(session.errorString().contains(qsl("headless link error")), qPrintable(session.errorString()));
+        // A scheme Mudlet does not handle that is no Lua method call runs nothing, and says so
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("mailto:bob@example.org")), LinkResult::failed);
+        QVERIFY2(session.errorString().contains(qsl("mailto: is not a scheme Mudlet handles")), qPrintable(session.errorString()));
+        QCOMPARE(sent(), qsl("north"));
+        QCOMPARE(prompted.size(), 1);
+        QCOMPARE(catcher.mUrls.size(), 1);
+
+        // Only a label's own links, as its text holds them now, are followed
+        QCOMPARE(session.followLabelLink(qsl("nonesuch"), qsl("send:n")), LinkResult::unknown);
+        QVERIFY2(session.errorString().contains(qsl("nonesuch")), qPrintable(session.errorString()));
+        QCOMPARE(session.followLabelLink(qsl("plain"), qsl("send:n")), LinkResult::unknown);
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:south")), LinkResult::unknown);
+        QVERIFY2(session.errorString().contains(qsl("send:south")), qPrintable(session.errorString()));
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:n ")), LinkResult::unknown);
+        QCOMPARE(sent(), qsl("north"));
+        // No label's links reach the main console's, nor a console's
+        QVERIFY(session.runLua(qsl(R"(createMiniConsole("mini", 0, 100, 200, 100))")));
+        QCOMPARE(session.followLabelLink(qsl("mini"), qsl("send:n")), LinkResult::unknown);
+        QCOMPARE(session.followLabelLink(qsl("main"), qsl("send:n")), LinkResult::unknown);
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"(echo("lbl", [[<a href="send:n">go</a>]]))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("mailto:bob@example.org")), LinkResult::unknown);
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:n")), LinkResult::ran);
+        QCOMPARE(sent(), qsl("north|north"));
+        // Followed with no visited colour, nothing about the label changed
+        QVERIFY(!changes.wait(200));
+        // As the GUI's: none of a label's links takes a click until an anchor tag is found in its text, which a raw <
+        // inside a quoted href or a space after the tag's < hides, and then every link Qt reads in it does
+        const QString oddLinks = qsl(R"html(<a href="headlessRan = headlessRan + (1 < 2 and 10 or 0)">lt</a> < a href="headlessRan = headlessRan + 100">spaced</a>)html");
+        QVERIFY(session.runLua(qsl(R"lua(createLabel("lt", 0, 80, 400, 20, 1) echo("lt", [[%1]]))lua").arg(oddLinks)));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + (1 < 2 and 10 or 0)")), LinkResult::unknown);
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 100")), LinkResult::unknown);
+        QCOMPARE(luaString(session, qsl("headlessRan")), qsl("1"));
+        QVERIFY(session.runLua(qsl(R"lua(echo("lt", [[%1 <a href="headlessRan = headlessRan + 1000">k</a>]]))lua").arg(oddLinks)));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + (1 < 2 and 10 or 0)")), LinkResult::ran);
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 100")), LinkResult::ran);
+        QCOMPARE(luaString(session, qsl("headlessRan")), qsl("111"));
+        // Nor while the label is click-through, passing the mouse on
+        QVERIFY(session.runLua(qsl(R"(enableClickthrough("lt"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 1000")), LinkResult::unknown);
+        QVERIFY(session.runLua(qsl(R"(disableClickthrough("lt"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 1000")), LinkResult::ran);
+        QCOMPARE(luaString(session, qsl("headlessRan")), qsl("1111"));
+
+        // The visited style restyles the text, which names the label
+        QVERIFY(session.runLua(qsl(R"(setLinkStyle("lbl", "#00ff00", "#ff00ff"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(session.labelContent(qsl("lbl"))->text.contains(qsl("#00ff00")));
+        QVERIFY(!session.labelContent(qsl("lbl"))->text.contains(qsl("#ff00ff")));
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:n")), LinkResult::ran);
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(changes.takeFirst().at(1).toStringList(), QStringList{qsl("lbl")});
+        changes.clear();
+        QVERIFY2(session.labelContent(qsl("lbl"))->text.contains(qsl("#ff00ff")), qPrintable(session.labelContent(qsl("lbl"))->text));
+        QVERIFY(!session.labelContent(qsl("lbl"))->text.contains(qsl("#00ff00")));
+        QCOMPARE(sent(), qsl("north|north|north"));
+        // A visited link followed again changes nothing more
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("send:n")), LinkResult::ran);
+        QVERIFY(!changes.wait(200));
+        // clearVisitedLinks() takes the visited style off again
+        QVERIFY(session.runLua(qsl(R"(clearVisitedLinks("lbl"))")));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(session.labelContent(qsl("lbl"))->text.contains(qsl("#00ff00")));
+
+        // A link whose Lua deletes its own label still answers
+        QVERIFY(session.runLua(qsl(R"lua(echo("lbl", [[<a href="deleteLabel('lbl')">close</a>]]))lua")));
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("deleteLabel('lbl')")), LinkResult::ran);
+        QVERIFY(!session.labelContent(qsl("lbl")));
+        QCOMPARE(session.followLabelLink(qsl("lbl"), qsl("deleteLabel('lbl')")), LinkResult::unknown);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aConsolesScrollIsReadAndTold()
     {
         const QString name = qsl("Headless Windows Scroll");
@@ -1839,6 +2088,41 @@ tempAlias([[^t (\w+)$]], [[printCmdLine("own", "tell " .. matches[2] .. " ")]])
         }
         QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("t bob")));
         QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aCommandLinesStyleSheetIsInItsWindow()
+    {
+        const QString name = qsl("Headless Command Line Sheet");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"(createMiniConsole("mc", 10, 20, 300, 200) enableCommandLine("mc"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<THeadlessSession::ScriptWindow> line = session.scriptWindow(qsl("mc"), Kind::commandLine);
+        QVERIFY(line);
+        QCOMPARE(line->styleSheet, QString());
+
+        const QString sheet = qsl("QPlainTextEdit { background-color: rgb(10, 20, 30); }");
+        QVERIFY(session.runLua(qsl(R"(setCmdLineStyleSheet("mc", [[%1]]))").arg(sheet)));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(changes.takeFirst().at(1).toStringList().contains(qsl("mc")));
+        changes.clear();
+        line = session.scriptWindow(qsl("mc"), Kind::commandLine);
+        QVERIFY(line);
+        QCOMPARE(line->styleSheet, sheet);
+        // The console it belongs to has none of its own
+        QCOMPARE(session.scriptWindow(qsl("mc"))->styleSheet, QString());
+
+        // The main command line is the app's own input line, so its sheet is in no window
+        QVERIFY(session.runLua(qsl(R"(setCmdLineStyleSheet("main", [[QPlainTextEdit { color: red; }]]))")));
+        QVERIFY(!changes.wait(200));
+        for (const THeadlessSession::ScriptWindow& window : session.scriptWindows()) {
+            QVERIFY2(window.styleSheet.isEmpty() || window.name == qsl("mc"), qPrintable(window.name));
+        }
         QVERIFY(session.shutdown(false));
     }
 };

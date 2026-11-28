@@ -28,6 +28,7 @@
 #include <QSet>
 #include <QSize>
 #include <QString>
+#include <QStringList>
 
 #include <functional>
 #include <optional>
@@ -38,6 +39,16 @@ class QSvgRenderer;
 
 // How a change of a label's text is announced to a screen reader, as ARIA's aria-live
 enum class TLabelLiveRegion : int { Off, Polite, Assertive };
+
+// What a screen reader reads a label as when it shows a value, as a progress bar: value, from min to max
+struct TLabelAccessibleValue
+{
+    double value = 0.0;
+    double min = 0.0;
+    double max = 100.0;
+
+    bool operator==(const TLabelAccessibleValue&) const = default;
+};
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
@@ -86,6 +97,12 @@ struct TLabelModel
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 
+    // std::nullopt for none. Gaining or losing one is a Role change, as a label that is not a button is a progress
+    // bar while it has one; any change at all is told to mAccessibleValueChanged, set by the widget or the headless
+    // front end, if there is one
+    void setAccessibleValue(std::optional<TLabelAccessibleValue> value);
+    std::function<void()> mAccessibleValueChanged;
+
     // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
     static bool svgCandidate(const QString& path);
     static bool loadSvg(QSvgRenderer& renderer, const QString& path);
@@ -117,6 +134,27 @@ struct TLabelModel
     QString linkStyledText(const QString& text);
     // What the label shows for its text once the link style or the visited links change
     QString restyledText();
+    // The href of each link in the text, in the order of the text, as QLabel reads them to draw them as links
+    static QStringList linkTargets(const QString& text);
+    // Marks the link visited, as following it does, where a visited colour is set: true then, as the view should show
+    // restyledText()
+    bool visitLink(const QString& link);
+    // What following a link did. A browser drops the whitespace around an href before reading its scheme, and so
+    // does this; the payload of a send: or prompt: link is kept untrimmed, as it can end in a space the player means.
+    enum class LinkFollowed {
+        sent,      // send: its text went to the game, through the aliases
+        prompted,  // prompt: its text is on the main command line, for the player to finish and send
+        opened,    // http: or https: the system opened it
+        notOpened, // http: or https: nothing opened it
+        notRun,    // javascript:, or another scheme and no Lua method call, as mailto: - noted in the Errors console
+        ran,       // anything else is Lua, which ran
+        failed     // the Lua did not compile or raised an error, as the Errors console says
+    };
+    // What a click on a link does, whichever frontend shows the label; marking it visited is visitLink()'s
+    LinkFollowed followLink(const QString& link) const;
+    // The scheme followLink() reads: in lower case, before the first colon of the href without the whitespace around
+    // it, and empty where there is no colon or nothing before it
+    static QString linkScheme(const QString& link);
 
     QPointer<Host> mpHost;
     QString mName;
@@ -153,6 +191,8 @@ struct TLabelModel
     // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
     std::optional<bool> mAccessibleButton;
     TLabelLiveRegion mLiveRegion = TLabelLiveRegion::Off;
+    // What setLabelAccessibleValue() gave it, as Geyser gives a gauge's back label its value; none until then
+    std::optional<TLabelAccessibleValue> mAccessibleValue;
     bool mClickThrough = false;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.

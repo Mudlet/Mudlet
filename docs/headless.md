@@ -223,14 +223,28 @@ as a line of its own: an `echo()` after `clearWindow()` or a `feedTriggers()`, a
 `send()`; an `echo()` after `deleteLine()` comes with `continuesLine`, as below. An app that draws the console as the GUI does draws `lineShown`, wrapping each
 line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
 it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
-trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
-inserts is sent as a line of its own.
+trigger makes to a line already sent, as by moving the cursor up to it, is not sent again by `lineShown`,
+though what it inserts is sent as a line of its own; `linesUpdated` tells of it, as below.
 
 Their fifth argument, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
 time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
 into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
-first three, four or five arguments may still be connected. `localText` carries no time of its own: it is sent as
+first three, four, five or six arguments may still be connected. `localText` carries no time of its own: it is sent as
 it is written, so the time its handler runs is when that text was written.
+
+`lineShown`'s last argument, `lineIds`, has an id for each line of its text, as its line feeds part it,
+which no other line of the main console has while that one lasts, and 0 for a line it does not follow, as it
+follows none while `linesUpdated` is not connected. Nor does it follow a line that a trigger's `echo()` or
+`replace()` began with a line feed: the console makes it a line of its own only after it was sent.
+While `linesUpdated` is connected, a script that later changes one of those lines where it stands
+(`replace()`, `setFgColor()`, `setLink()` or `insertText()` on a line it moved the cursor up to) or
+deletes it with `deleteLine()` has the line sent again in `linesUpdated`, as a `LineUpdate`: its id, and
+its text, runs and prompt flag as `lineShown` would send them now, or `deleted`. It comes from the event
+loop, once for all the lines a turn changed, those deleted first and then the rest in the order they
+stand. Lines trimmed off the top as the console outgrows its limit, and those before a `clearWindow()`,
+are dropped without one. A line split by `wrapLine()` or an `insertText()` of a line feed keeps its id on
+its first part only, which a later change updates, and the change of a link's state is told by
+`linksChanged`, not here.
 
 `timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
 timestamp button does, and `setTimeStampsShown()` presses that button: the choice is saved for the
@@ -566,6 +580,12 @@ What it guarantees about hidden input is narrow:
   `hiddenInputWanted` false; text set then is taken, and scripts can read it, as they can read the
   GUI's command line then.
 
+`playReplay()` is the GUI's replay button: it plays the replay file at a path, a relative one read from the
+app's working directory, in the session's profile as the player's replay, not a script's, so `localText` says it is loading and when it is over as
+the main console does, and `replayStarted` follows from the event loop. It is false, with the reason in
+`errorString()`, while a replay plays in any profile, for a file that cannot be read or is not a replay,
+and where `pauseReplay()` is refused for anything but a replay playing.
+
 `pauseReplay()`, `resumeReplay()` and `stopReplay()` are the GUI's replay toolbar for a replay of the
 session's profile. A paused replay plays nothing more until it is resumed, and then carries on with what
 was left of the wait it was paused in. `replayPaused()` says whether it is held, as the toolbar reads it;
@@ -835,7 +855,7 @@ naming what changed, for the app to read again: `scriptWindowsChanged`, `windowT
 `windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
 `mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
 from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
-`consoleColorsChanged`, `timeStampsShownChanged` and `mainConsoleAreaChanged`. So a change made and
+`consoleColorsChanged`, `timeStampsShownChanged`, `mainConsoleAreaChanged` and `mainBorderColorChanged`. So a change made and
 undone within a turn sends nothing, and nothing follows `profileLoaded` for what the load did. A map
 export or import runs the event loop as it goes, so these can arrive while the script that began it
 still runs.
@@ -951,6 +971,11 @@ font change, either call, or a script's own `setMainWindowSize()`. Read both at 
 signal comes from the event loop, with both as they are then, and only when they differ from what the
 app last had, so a script that sets a border twice in one turn sends one, and one that sets it and takes
 it back sends none.
+
+`mainBorderColor()` is the colour a script's `setBorderColor()` gives the room the borders leave around
+the main console, which the GUI paints there and `getBorderColor()` reads: black until a script sets one.
+Read it at `profileLoaded`; `mainBorderColorChanged` carries it when it changes, from the event loop and only when
+it differs from what the app last had, as `mainConsoleAreaChanged` does.
 
 A script's `setMainWindowSize(width, height)` sets its own profile's area in pixels, as the app's call
 would, and answers `true`, or `nil` and a message for a size the app's call refuses.
@@ -1155,6 +1180,11 @@ and the app draws what that says, as it draws the main console from `lineShown`.
   `getRowCount()` give them, so the whole console while it is not scrolled back and about three quarters
   of its height while it is. `scrollBar` is whether `enableScrollBar()` asked for one, and `timeStamps`
   whether `enableTimeStamps()` has each row's time shown beside it. The other kinds have none of these.
+- for a command line, its `styleSheet`, as a script's `setCmdLineStyleSheet()` gave it (Geyser's
+  `CommandLine` calls it from `setStyleSheet()`, and `MiniConsole` from `setCmdLineStyleSheet()`),
+  which the GUI's command line takes as its widget's sheet; empty until a script sets one, and for the
+  other kinds. The main command line's sheet, `setCmdLineStyleSheet()` with no name or `"main"`, is not
+  here: that line is the app's own input line.
 
 The list has parents before the windows they hold, and each parent's windows from the lowest up, the
 main window's area's before the docks, so an app that draws it in order draws each window over what it
@@ -1210,6 +1240,10 @@ trimmed under the row it is scrolled back to.
 - `toolTip` and `toolTipDuration`, in seconds, 0 for the platform's own;
 - `cursor`, unset for the parent's, or the shape `setLabelCursor()` gave it, or `Qt::BitmapCursor` with
   `customCursor` and `customCursorHotSpot` from `setLabelCustomCursor()`;
+- `accessibleValue`, as `setLabelAccessibleValue()` gave it: `value`, from `min` to `max`, which a screen
+  reader reads as a progress bar's, and none for a label without one or that `accessibleButton` says is a button. `Geyser.Gauge:setValue()` and `setGauge()`
+  give it to the gauge's back label, so an app that draws the gauge has its value without reading the front label's
+  width;
 - `clickThrough`, as `enableClickthrough()` sets it;
 - `accessibleName` and `accessibleButton`, what a screen reader says for it and whether it is told it is
   a button;
@@ -1380,6 +1414,28 @@ answers with the last point a `pointer()` or `mapPointer()` call took, in the ma
 than a `leave`'s, whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, from where the
 window was at the press if it has gone since, and with nil and
 "the profile has no main window" until the first.
+
+`pointer()` runs a label's callbacks, not the links in its text: Mudlet lays out no rich text for a label, so
+the app finds the link the player tapped and passes it to `followLabelLink(label, href)`, which follows it as
+the GUI's label follows a click on it. The link is marked visited where `setLinkStyle()` gave the label a
+visited colour, which restyles its `text` and so names it in `scriptWindowsChanged`, for an anchor the link
+style reaches: `<a href="...">` or `<a href='...'>`, with no entity in a double-quoted `href`, as the visited
+links are compared with the `href` as written, in a label where `containsAnchorTag()` finds a link. Then a
+`send:` link's text goes to the game through the aliases, a `prompt:` link's text replaces the main command
+line's, which `commandLineTextRequested` tells, an `http:` or `https:` link opens through `QDesktopServices`, a
+`javascript:` link, or one of any other scheme that is not a Lua method call, such as `mailto:` or `ftp://`,
+runs nothing and is noted in the error console, and anything else runs as Lua, all before it returns. The scheme is
+read as a browser reads it, in any case and without the whitespace around the `href`, and a `send:` or
+`prompt:` link's text keeps a trailing space. It returns `ran`, or `failed`, with `errorString()` saying why,
+for a Lua error, a link not run, a web link nothing opened and a `prompt:` link while the game hides input
+(`hiddenInputWanted`): the GUI then puts the text in its hidden-input box, which a frontend with no window
+does not have, so the link is not followed or marked visited. It is `unknown`, with `errorString()` saying
+why, for a name that is not a label's, for an `href` that is not one of the label's links as its `text`
+holds them now, read as Qt reads them, and for any while the GUI's label takes no
+click on its links: while `containsAnchorTag()` finds no anchor in its `text`, as a raw `<` in a quoted `href`
+or a space after a tag's `<` hides one, and while it is `clickThrough`. It is `refused` where `runLua()` is. An app
+that opens web links its own way, as one whose engine runs where it cannot start a browser, may keep them from
+it; they are then not marked visited.
 
 ## Embedding it: calls that do not wait
 

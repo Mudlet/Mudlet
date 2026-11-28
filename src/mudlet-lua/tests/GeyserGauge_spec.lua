@@ -141,6 +141,46 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.equal(200, geometry("ggsStrict_front").width)
     end)
 
+    it("gives its back label its value for screen readers, out of the maximum given", function()
+      gauge:setValue(50, 200)
+      assert.are.same({50, 0, 200}, {getLabelAccessibleValue("ggsValue_back")})
+      gauge:setValue(30)
+      assert.are.same({30, 0, 100}, {getLabelAccessibleValue("ggsValue_back")})
+      -- a gauge that is not strict overflows, but a progress bar stops at its end
+      gauge:setValue(150)
+      assert.are.same({100, 0, 100}, {getLabelAccessibleValue("ggsValue_back")})
+      assert.is_nil(getLabelAccessibleValue("ggsValue_front"))
+      assert.is_nil(getLabelAccessibleValue("ggsValue_text"))
+    end)
+
+    it("keeps its back label's value out of the maximum given through a new style sheet", function()
+      gauge:setValue(30, 200)
+      gauge:setStyleSheet("background-color: red;", "background-color: black;")
+      assert.are.same({30, 0, 200}, {getLabelAccessibleValue("ggsValue_back")})
+      assert.are.equal(30, geometry("ggsValue_front").width)
+    end)
+
+    it("lays out a value a script wrote into it itself through a new style sheet", function()
+      gauge:setValue(30, 200)
+      gauge.value = 50
+      gauge:setStyleSheet("background-color: red;", "background-color: black;")
+      assert.are.equal(100, geometry("ggsValue_front").width)
+    end)
+
+    it("leaves its back label no value for a reading it cannot give, so a reader goes by what it draws", function()
+      gauge:setValue(30, 200)
+      -- without asking setLabelAccessibleValue(), which would warn of it at every prompt
+      local setSpy = spy.on(_G, "setLabelAccessibleValue")
+      finally(function() _G.setLabelAccessibleValue:revert() end)
+      gauge:setValue(5, math.huge)
+      assert.is_nil(getLabelAccessibleValue("ggsValue_back"))
+      assert.spy(setSpy).was_not_called()
+      -- an infinite value is at the end, as a strict gauge draws it
+      local strict = track(Geyser.Gauge:new({name = "ggsStrictValue", x = 0, y = 0, width = 200, height = 40, strict = true}))
+      strict:setValue(math.huge)
+      assert.are.same({100, 0, 100}, {getLabelAccessibleValue("ggsStrictValue_back")})
+    end)
+
     it("writes the optional third argument onto the text label", function()
       gauge:setValue(40, 100, "40 of 100")
       assert.is_truthy(getLabelText("ggsValue_text"):find("40 of 100", 1, true))

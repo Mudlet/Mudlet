@@ -1871,6 +1871,63 @@ end))lua");
         QCOMPARE(speed.size(), 1);
     }
 
+    // As the GUI's replay button plays a file: as the player's replay, said in the main console as it loads and ends
+    void test_aReplayFileIsPlayedAsTheReplayButtonPlaysIt()
+    {
+        const QString name = qsl("Headless Replay Played");
+        QVERIFY(writeProfile(name, QString()));
+        QTemporaryDir elsewhere;
+        QVERIFY(elsewhere.isValid());
+        QVERIFY(writeReplay(elsewhere.filePath(qsl("played.dat")), {{0, QByteArrayLiteral("First played line.\r\n")}, {1000, QByteArrayLiteral("Second played line.\r\n")}}));
+        const QString corrupt = elsewhere.filePath(qsl("corrupt.dat"));
+        QVERIFY(writeFile(corrupt, QByteArrayLiteral("\0\0\0")));
+
+        THeadlessSession session;
+        QVERIFY(!session.playReplay(elsewhere.filePath(qsl("played.dat"))));
+        QVERIFY(!session.errorString().isEmpty());
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QSignalSpy started(&session, &THeadlessSession::replayStarted);
+        QSignalSpy finished(&session, &THeadlessSession::replayFinished);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const auto said = [&local]() {
+            QString text;
+            for (const QVariantList& arguments : std::as_const(local)) {
+                text += arguments.at(1).toString();
+            }
+            return text;
+        };
+
+        QVERIFY(!session.playReplay(elsewhere.filePath(qsl("missing.dat"))));
+        QVERIFY2(session.errorString().contains(qsl("cannot be read")), qPrintable(session.errorString()));
+        QVERIFY(!session.playReplay(corrupt));
+        QVERIFY2(session.errorString().contains(qsl("is not a replay")), qPrintable(session.errorString()));
+        QTRY_VERIFY(!MudletReplay::self()->running());
+        QTest::qWait(50);
+        QVERIFY(started.isEmpty());
+        local.clear();
+
+        // A path short of a whole one is the working directory's, as the check that it can be read takes it
+        const QString savedCurrent = QDir::currentPath();
+        auto restoreCurrent = qScopeGuard([&savedCurrent]() {
+            QDir::setCurrent(savedCurrent);
+        });
+        QVERIFY(QDir::setCurrent(elsewhere.path()));
+        QVERIFY2(session.playReplay(qsl("played.dat")), qPrintable(session.errorString()));
+        QTRY_VERIFY2(said().contains(qsl("Loading replay file")), qPrintable(said()));
+        QTRY_COMPARE(started.size(), 1);
+        // One at a time, as the GUI's button allows
+        QVERIFY(!session.playReplay(qsl("played.dat")));
+        QVERIFY2(session.errorString().contains(qsl("is playing already")), qPrintable(session.errorString()));
+        MudletReplay::self()->speedUp();
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("Second played line.")), 10000);
+        QTRY_COMPARE(finished.size(), 1);
+        QVERIFY(outputTexts(output).contains(qsl("First played line.")));
+        // Unlike a script's, the player's replay says when it is over
+        QTRY_VERIFY2(said().contains(qsl("The replay has ended.")), qPrintable(said()));
+        QVERIFY(session.shutdown(false));
+    }
+
     // The corrupt one played nothing, so only the one after it has a start and an end, and that end is its own
     void test_aReplayLoadedInPlaceOfACorruptOneIsTheOnlyOneFollowed()
     {
