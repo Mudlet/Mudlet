@@ -583,7 +583,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     clearLabelAccessibleValue(self.back.name)
   end
   -- kept for setStyleSheet(), which lays the gauge out again: self.value is a percentage, which would lose the maximum
-  self.currentValue, self.maxValue, self.valueGiven = currentValue, maxValue, self.value
+  self.valueSetWith = {current = currentValue, maximum = maxValue, value = self.value}
 
   if text then
     self.text:echo(text)
@@ -721,8 +721,9 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   
   -- Recalculate gauge positioning with the new stylesheet, from the value and maximum last given, unless a script
   -- has written self.value itself since
-  if self.value and self.value == self.valueGiven then
-    self:setValue(self.currentValue, self.maxValue)
+  local given = self.valueSetWith
+  if given and self.value == given.value then
+    self:setValue(given.current, given.maximum)
   elseif self.value then
     self:setValue(self.value)
   end
