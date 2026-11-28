@@ -100,6 +100,7 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QScreen>
+#include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -610,6 +611,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
+    // Named before applyEditorShellStyle() first runs: its rules reach the pattern list and its scroll bar by this
+    // name, and a later pass with the colours unchanged does nothing
+    mpTriggersMainArea->scrollArea->setObjectName(qsl("editorPatternScroll"));
     layoutColumn->addWidget(mpTriggersMainArea, 1);
     connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
     connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
@@ -1444,6 +1448,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
     connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_variableChanged);
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
     connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_itemSelectedInSearchResults);
+    connect(treeWidget_searchResults, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* pItem) {
+        if (pItem && pItem->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+            slot_itemSelectedInSearchResults(pItem);
+        }
+    });
 
     // triggers
     connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);
@@ -1697,7 +1706,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     // QAbstractScrollArea fills its viewport with QPalette::Base, which drew the pattern rows as a field-coloured box
-    mpScrollArea->setObjectName(qsl("editorPatternScroll"));
     mpScrollArea->setFrameShape(QFrame::NoFrame);
     mpScrollArea->viewport()->setAutoFillBackground(false);
     mpWidget_triggerItems = new QWidget;
@@ -3087,7 +3095,20 @@ void dlgTriggerEditor::writeSettings()
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 {
-    if (!pItem) {
+    if (!pItem || (mSearchVariablesOfferTaken.isValid() && mSearchVariablesOfferTaken.elapsed() < QApplication::doubleClickInterval())) {
+        return;
+    }
+
+    if (pItem->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+        mSearchVariablesOfferTaken.start();
+        mpAction_searchIncludeVariables->setChecked(true);
+        slot_toggleSearchIncludeVariables(true);
+        // Deferred: searching again clears the tree, and with it the row whose click is still being handled
+        QTimer::singleShot(0ms, this, [this]() {
+            slot_searchMudletItems(comboBox_searchTerms->findText(mSearchTerm, Qt::MatchFixedString | Qt::MatchCaseSensitive));
+            // Restarted: the second click waits behind a slow search, which must not use up the window
+            mSearchVariablesOfferTaken.start();
+        });
         return;
     }
 
@@ -3556,7 +3577,7 @@ void dlgTriggerEditor::addSearchResult(QTreeWidgetItem*& pParent, const SearchRe
     if (!pParent) {
         pParent = new SearchResultItem(QStringList{row.title});
         if (variable) {
-            setAllSearchData(pParent, row.name, row.variableId, row.what, row.matchStart, row.subInstance);
+            setAllSearchData(pParent, row.name, row.variableId, row.what, row.matchStart, row.instance, row.subInstance);
         } else {
             setAllSearchData(pParent, row.view, row.name, row.id, row.what, row.matchStart, row.instance, row.subInstance);
         }
@@ -3572,7 +3593,7 @@ void dlgTriggerEditor::addSearchResult(QTreeWidgetItem*& pParent, const SearchRe
 
     auto* pItem = new SearchResultItem(QStringList{qsl("%1 %2").arg(row.where, snippet)});
     if (variable) {
-        setAllSearchData(pItem, row.name, row.variableId, row.what, row.matchStart, row.subInstance);
+        setAllSearchData(pItem, row.name, row.variableId, row.what, row.matchStart, row.instance, row.subInstance);
     } else {
         setAllSearchData(pItem, row.view, row.name, row.id, row.what, row.matchStart, row.instance, row.subInstance);
     }
@@ -3626,7 +3647,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         }
     }
 
-    if (!treeWidget_searchResults->topLevelItemCount()) {
+    const bool noMatches = !treeWidget_searchResults->topLevelItemCount();
+    if (noMatches) {
         //: Shown in place of search results when a search found nothing: %1 is what was typed into the search field, in the quotation marks the locale uses
         auto* pNotice = new QTreeWidgetItem(QStringList{tr("No matches for %1").arg(QLocale().quoteString(s))});
         pNotice->setData(0, uiDesign::SearchResultDelegate::RowKindRole, static_cast<int>(uiDesign::SearchResultDelegate::NoticeRow));
@@ -3634,6 +3656,18 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         pNotice->setData(0, Qt::AccessibleTextRole, pNotice->text(0));
         pNotice->setFlags(Qt::ItemIsEnabled);
         treeWidget_searchResults->addTopLevelItem(pNotice);
+    }
+
+    // Variables are left out unless asked for, which reads as "not found" to someone looking for one
+    if (!(mSearchOptions & enums::EditorSearchOptionIncludeVariables) && (noMatches || mCurrentView == EditorViewType::cmVarsView)) {
+        //: Clickable last row of the editor's search results when variables were left out of the search; clicking it turns on "Include variables" and searches again
+        auto* pOffer = new QTreeWidgetItem(QStringList{tr("Search variables too")});
+        pOffer->setData(0, uiDesign::SearchResultDelegate::RowKindRole, static_cast<int>(uiDesign::SearchResultDelegate::ActionRow));
+        pOffer->setData(0, uiDesign::SearchResultDelegate::TitleRole, pOffer->text(0));
+        pOffer->setData(0, Qt::AccessibleTextRole, pOffer->text(0));
+        pOffer->setToolTip(0, mpAction_searchIncludeVariables->toolTip());
+        pOffer->setFlags(Qt::ItemIsEnabled);
+        treeWidget_searchResults->addTopLevelItem(pOffer);
     }
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
@@ -3761,9 +3795,12 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             // tree widget...
             if (value != QLatin1String("function") && (startPos = findSearchMatch(value, text)) != -1) {
                 // We do not (yet) worry about multiple search results in the "value"
+                const qsizetype lineStart = startPos ? value.lastIndexOf(QChar::LineFeed, startPos - 1) + 1 : 0;
+                const qsizetype lineEnd = value.indexOf(QChar::LineFeed, startPos);
                 row.where = tr("Value");
-                row.snippet = value;
-                row.matchStart = startPos;
+                row.snippet = value.mid(lineStart, lineEnd < 0 ? -1 : lineEnd - lineStart);
+                row.matchStart = startPos - lineStart;
+                row.instance = value.left(lineStart).count(QChar::LineFeed);
                 row.what = SearchResultIsValue;
                 addSearchResult(parent, row);
             }
@@ -7223,7 +7260,9 @@ void dlgTriggerEditor::saveTrigger()
         } else {
             pItem->setText(0, name);
             itemDescription = descError;
-            pT->setIsActive(false);
+            if (!mSavingForReset) {
+                pT->setIsActive(false);
+            }
             reportCompileError(pT->getError());
         }
         pItem->setData(0, Qt::AccessibleDescriptionRole, spokenRunState(itemDescription));
@@ -8848,6 +8887,42 @@ void dlgTriggerEditor::slot_lineSpacerChanged(int value)
     handlePatternChange();
 }
 
+// The buttons show what the row's pattern text says, which is what gets saved
+void dlgTriggerEditor::paintColorPatternButtons(dlgTriggerPatternEdit* pItem)
+{
+    int textAnsiFg = TTrigger::scmIgnored;
+    int textAnsiBg = TTrigger::scmIgnored;
+    TTrigger::decodeColorPatternText(pItem->singleLineTextEdit_pattern->toPlainText(), textAnsiFg, textAnsiBg);
+
+    if (textAnsiFg == TTrigger::scmIgnored) {
+        pItem->pushButton_fgColor->setStyleSheet(QString());
+        //: Color trigger ignored foreground color button
+        pItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
+    } else if (textAnsiFg == TTrigger::scmDefault) {
+        pItem->pushButton_fgColor->setStyleSheet(QString());
+        //: Color trigger default foreground color button
+        pItem->pushButton_fgColor->setText(tr("Default foreground color"));
+    } else {
+        pItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiFg, false)));
+        //: Color trigger ANSI foreground color button
+        pItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(textAnsiFg)));
+    }
+
+    if (textAnsiBg == TTrigger::scmIgnored) {
+        pItem->pushButton_bgColor->setStyleSheet(QString());
+        //: Color trigger ignored background color button
+        pItem->pushButton_bgColor->setText(tr("Background color ignored"));
+    } else if (textAnsiBg == TTrigger::scmDefault) {
+        pItem->pushButton_bgColor->setStyleSheet(QString());
+        //: Color trigger default background color button
+        pItem->pushButton_bgColor->setText(tr("Default background color"));
+    } else {
+        pItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiBg, true)));
+        //: Color trigger ANSI background color button
+        pItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(textAnsiBg)));
+    }
+}
+
 // This can get called after the lineEdit contents has changed and it is now a
 // color pattern - ought to update coloration if it has been edited by hand
 // but need to source the colors
@@ -8882,37 +8957,7 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             // It looks as though there IS a valid color pattern string in the
             // lineEdit, so, in case it has been edited by hand, regenerate the
             // colors that are used:
-            int textAnsiFg = TTrigger::scmIgnored;
-            int textAnsiBg = TTrigger::scmIgnored;
-            TTrigger::decodeColorPatternText(pPatternItem->singleLineTextEdit_pattern->toPlainText(), textAnsiFg, textAnsiBg);
-
-            if (textAnsiFg == TTrigger::scmIgnored) {
-                pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                //: Color trigger ignored foreground color button, ensure all three instances have the same text
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
-            } else if (textAnsiFg == TTrigger::scmDefault) {
-                pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                //: Color trigger default foreground color button, ensure all three instances have the same text
-                pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
-            } else {
-                pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiFg, false)));
-                //: Color trigger ANSI foreground color button, ensure all three instances have the same text
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(textAnsiFg)));
-            }
-
-            if (textAnsiBg == TTrigger::scmIgnored) {
-                pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                //: Color trigger ignored background color button, ensure all three instances have the same text
-                pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
-            } else if (textAnsiBg == TTrigger::scmDefault) {
-                pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                //: Color trigger default background color button, ensure all three instances have the same text
-                pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
-            } else {
-                pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiBg, true)));
-                //: Color trigger ANSI background color button, ensure all three instances have the same text
-                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(textAnsiBg)));
-            }
+            paintColorPatternButtons(pPatternItem);
         }
         // Commented-out debug code:
         // else {
@@ -9006,42 +9051,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
             } else if (pType == REGEX_COLOR_PATTERN) {
                 pPatternItem->singleLineTextEdit_pattern->setPlainText(patternList.at(i));
-                if (pT->mColorPatternList.at(i)) {
-                    if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
-                        pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                        //: Color trigger ignored foreground color button, ensure all three instances have the same text
-                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
-                    } else if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmDefault) {
-                        pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                        //: Color trigger default foreground color button, ensure all three instances have the same text
-                        pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
-                    } else {
-                        pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mFgColor));
-                        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
-                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
-                    }
-
-                    if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmIgnored) {
-                        pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                        //: Color trigger ignored background color button, ensure all three instances have the same text
-                        pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
-                    } else if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmDefault) {
-                        pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                        //: Color trigger default background color button, ensure all three instances have the same text
-                        pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
-                    } else {
-                        pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mBgColor));
-                        //: Color trigger ANSI background color button, ensure all three instances have the same text
-                        pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
-                    }
-                } else {
-                    qWarning() << "dlgTriggerEditor::slot_triggerSelected(...) ERROR: TTrigger instance has an mColorPattern of size:" << pT->mColorPatternList.size() << "but array element:" << i
-                               << "is a nullptr";
-                    pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                    pPatternItem->pushButton_fgColor->setText(tr("fault"));
-                    pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                    pPatternItem->pushButton_fgColor->setText(tr("fault"));
-                }
+                paintColorPatternButtons(pPatternItem);
             } else if (pType == REGEX_LINE_SPACER) {
                 pPatternItem->spinBox_lineSpacer->setValue(patternList.at(i).toInt());
             } else {
@@ -10620,6 +10630,8 @@ void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bo
 
 void dlgTriggerEditor::repopulateVars()
 {
+    // Read from another view - for a search - the row made current must not load the variables form over the item on show
+    const QSignalBlocker blocker(mCurrentView == EditorViewType::cmVarsView ? nullptr : treeWidget_variables);
     treeWidget_variables->setUpdatesEnabled(false);
     mpVarBaseItem = new QTreeWidgetItem(QStringList(tr("Variables")));
     mpVarBaseItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
@@ -10676,7 +10688,8 @@ void dlgTriggerEditor::updateHiddenVariablesCount()
             }
         }
     }
-    mpLabel_hiddenVariablesCount->setVisible(hiddenCount > 0);
+    // Beside the switch, which changeView() shows only in the Variables view
+    mpLabel_hiddenVariablesCount->setVisible(hiddenCount > 0 && !checkBox_displayAllVariables->isHidden());
     if (hiddenCount > 0) {
         //: Quiet reading beside the "Show hidden variables" switch over the editor's Variables tree, saying how many variables are hidden right now. %1 is that count.
         mpLabel_hiddenVariablesCount->setText(tr("%1 hidden").arg(hiddenCount));
@@ -11799,6 +11812,7 @@ void dlgTriggerEditor::show_vars()
     mpSourceEditorArea->show();
     checkBox_displayAllVariables->show();
     checkBox_displayAllVariables->setChecked(showHiddenVars);
+    updateHiddenVariablesCount();
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -14124,7 +14138,26 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::resetTrees()
 {
-    // Clear all current item pointers BEFORE attempting to save or clear tree widgets
+    // A package or module change or a recompile of every script resets the editor without warning, so keep what was being typed;
+    // an item it removed is looked up by id and skipped. Saving a script runs its body, so only when it was edited.
+    const TScript* pOpenScript = mCurrentView == EditorViewType::cmScriptView ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr;
+    bool openScriptUnchanged = false;
+    if (pOpenScript) {
+        // The chip row shows a handler a profile file names twice only once
+        QStringList storedHandlers = pOpenScript->getEventHandlerList();
+        storedHandlers.removeDuplicates();
+        openScriptUnchanged = pOpenScript->getScript() == mpSourceEditorEdbeeDocument->text() && pOpenScript->getName() == mpScriptsMainArea->lineEdit_script_name->text()
+                              && storedHandlers == mpChipRow_scriptEvents->items();
+    }
+    QString saveError;
+    if (!openScriptUnchanged) {
+        mEditorSaveErrorCaptured.clear();
+        const QScopedValueRollback savingForReset(mSavingForReset, true);
+        saveOpenChanges();
+        saveError = mEditorSaveErrorCaptured;
+    }
+
+    // Clear all current item pointers before clearing the tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
     mpCurrentTimerItem = nullptr;
@@ -14133,37 +14166,14 @@ void dlgTriggerEditor::resetTrees()
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
 
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView:
-        saveTrigger();
-        break;
-    case EditorViewType::cmTimerView:
-        saveTimer();
-        break;
-    case EditorViewType::cmAliasView:
-        saveAlias();
-        break;
-    case EditorViewType::cmScriptView:
-        saveScript();
-        break;
-    case EditorViewType::cmActionView:
-        saveAction();
-        break;
-    case EditorViewType::cmKeysView:
-        saveKey();
-        break;
-    case EditorViewType::cmVarsView:
-        // FIXME: The switch in here need to handle (or at least treat correctly) the
-        // EditorViewType:cmVarsView case but how is not clear:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
-        break;
-    case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
-    }
-
     clearTypeTrees();
     fillout_form();
     slot_showTriggers();
+    // The rebuild clears the heading the save put its error in
+    if (!saveError.isEmpty()) {
+        //: Editor banner after the editor reloaded (for a package or module change, or all scripts being recompiled) and saved the open, unsaved edit, which has an error. %1 is the error.
+        showError(tr("<p>Your unsaved edit was kept when the editor reloaded, but it has an error: %1</p>").arg(saveError));
+    }
 }
 
 // A notice posted since the build was put off has to outlive it, as populating a tree clears the message
@@ -14725,27 +14735,8 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     pD->exec();
     delete pD;
 
-    const QColor color = pT->mColorTriggerFgColor;
-    // The above will be an invalid colour if the colour has been reset/ignored
-    // The dialogue should have changed pT->mColorTriggerFgAnsi
-    QString styleSheet;
-    if (color.isValid()) {
-        styleSheet = generateButtonStyleSheet(color);
-    }
-    pB->setStyleSheet(styleSheet);
-
     pPatternItem->singleLineTextEdit_pattern->setPlainText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
-
-    if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
-        //: Color trigger ignored foreground color button, ensure all three instances have the same text
-        pB->setText(tr("Foreground color ignored"));
-    } else if (pT->mColorTriggerFgAnsi == TTrigger::scmDefault) {
-        //: Color trigger default foreground color button, ensure all three instances have the same text
-        pB->setText(tr("Default foreground color"));
-    } else {
-        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
-        pB->setText(tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorTriggerFgAnsi)));
-    }
+    paintColorPatternButtons(pPatternItem);
 }
 
 // Get the color from the user to use as that to look for as the background in
@@ -14789,26 +14780,8 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     pD->exec();
     delete pD;
 
-    const QColor color = pT->mColorTriggerBgColor;
-    // The above will be an invalid colour if the colour has been reset/ignored
-    QString styleSheet;
-    if (color.isValid()) {
-        styleSheet = generateButtonStyleSheet(color);
-    }
-    pB->setStyleSheet(styleSheet);
-
     pPatternItem->singleLineTextEdit_pattern->setPlainText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
-
-    if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
-        //: Color trigger ignored background color button, ensure all three instances have the same text
-        pB->setText(tr("Background color ignored"));
-    } else if (pT->mColorTriggerBgAnsi == TTrigger::scmDefault) {
-        //: Color trigger default background color button, ensure all three instances have the same text
-        pB->setText(tr("Default background color"));
-    } else {
-        //: Color trigger ANSI background color button, ensure all three instances have the same text
-        pB->setText(tr("Background color [ANSI %1]").arg(QString::number(pT->mColorTriggerBgAnsi)));
-    }
+    paintColorPatternButtons(pPatternItem);
 }
 
 void dlgTriggerEditor::slot_updateCaretPosition(const QString& statusText)
@@ -15103,13 +15076,24 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
     }
 
     if (mSearchOptions & enums::EditorSearchOptionWholeWord) {
-        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        QRegularExpression::PatternOptions options = QRegularExpression::UseUnicodePropertiesOption;
         if (!(mSearchOptions & enums::EditorSearchOptionCaseSensitive)) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
         if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
-            mWholeWordSearchRegex = QRegularExpression(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
+            // Not \b: beside punctuation it demands a word character, so "^You" could not match at a line start,
+            // and \w leaves out some combining marks, such as the spacing vowel signs of Indic scripts
+            static const QString wordChar = qsl("[\\w\\p{M}]");
+            static const QRegularExpression startsWithWordChar(qsl("^%1").arg(wordChar), QRegularExpression::UseUnicodePropertiesOption);
+            static const QRegularExpression endsWithWordChar(qsl("%1$").arg(wordChar), QRegularExpression::UseUnicodePropertiesOption);
+            const QString leading = startsWithWordChar.match(needle).hasMatch() ? qsl("(?<!%1)").arg(wordChar) : QString();
+            const QString trailing = endsWithWordChar.match(needle).hasMatch() ? qsl("(?!%1)").arg(wordChar) : QString();
+            mWholeWordSearchRegex = QRegularExpression(leading + QRegularExpression::escape(needle) + trailing, options);
             mWholeWordSearchNeedle = needle;
+        }
+        // Callers resume one code unit on, which can land inside a surrogate pair where PCRE2 finds nothing
+        if (from > 0 && from < haystack.size() && haystack.at(from).isLowSurrogate()) {
+            ++from;
         }
         const QRegularExpressionMatch match = mWholeWordSearchRegex.match(haystack, from);
         if (match.hasMatch()) {
@@ -16927,10 +16911,12 @@ void dlgTriggerEditor::setupEditorPanel()
     // With allColumnsShowFocus, QTreeView::drawRow() asks the style for the focus rect with no widget, so the trees'
     // "outline: none" cannot reach it and a square hairline is drawn round the rounded pill; per item, the delegate
     // asks with the widget in hand. The .ui sets it on all but the results tree, listed so all nine are settled here.
-    const QList<QTreeWidget*> focusMarkedTrees{
+    const QList<QTreeWidget*> everyTree{
             treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree, treeWidget_searchResults};
-    for (QTreeWidget* pTreeWidget : focusMarkedTrees) {
+    for (QTreeWidget* pTreeWidget : everyTree) {
         pTreeWidget->setAllColumnsShowFocus(false);
+        // Or a bar coming in narrows every row: the trailing counts move left and names are cut sooner
+        uiDesign::keepRoomForVerticalScrollBar(pTreeWidget);
     }
 
     treeWidget_searchResults->setObjectName(qsl("editorSearchResults"));
@@ -16947,6 +16933,15 @@ void dlgTriggerEditor::setupEditorPanel()
     treeWidget_searchResults->setSortingEnabled(false);
     mpSearchResultDelegate = new uiDesign::SearchResultDelegate(treeWidget_searchResults);
     treeWidget_searchResults->setItemDelegate(mpSearchResultDelegate);
+
+    // QHeaderView stretches the last column no narrower than its size on becoming the last, the style's 100 pixel
+    // default, and at the item pane's narrowest the viewport less the bar's room is narrower than that. After every
+    // setColumnCount() and hideColumn() above, as each picks that size again; column 0 is the one every tree shows.
+    for (QTreeWidget* pTreeWidget : everyTree) {
+        QHeaderView* pHeader = pTreeWidget->header();
+        pHeader->setMinimumSectionSize(0);
+        pHeader->resizeSection(0, 0);
+    }
 
     // The shell stylesheet selects on this name
     widget_searchTerm->setObjectName(qsl("editorSearchRow"));

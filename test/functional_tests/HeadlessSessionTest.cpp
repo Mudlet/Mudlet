@@ -4184,7 +4184,8 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QVERIFY(session.shutdown(false));
     }
 
-    // As the GUI's command line holds what it sends while its aliases run, then empties if the profile says so
+    // As the GUI's command line holds what it sends while its aliases run, then empties if the profile says so,
+    // unless an alias wrote to it
     void test_aSubmittedLineIsClearedAsTheProfileSays_data()
     {
         QTest::addColumn<bool>("autoClear");
@@ -4215,12 +4216,14 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QCOMPARE(luaGlobalString(session.host(), "headlessHeld"), qsl("headless alias"));
         QVERIFY(session.runLua(qsl("headlessAfter = '[' .. getCmdLine() .. ']'")));
         if (autoClear) {
-            QCOMPARE(texts(), (QStringList{qsl("a"), QString(), qsl("b"), qsl("set by the alias"), QString()}));
-            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[]"));
+            QCOMPARE(texts(), (QStringList{qsl("a"), QString(), qsl("b"), qsl("set by the alias")}));
         } else {
             QCOMPARE(texts(), (QStringList{qsl("a"), qsl("xb"), qsl("set by the alias")}));
-            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[set by the alias]"));
+            // Not selected, so the up arrow completes it as typed rather than recalling whole lines
+            session.host()->mHighlightHistory = true;
+            QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("set by the alias")));
         }
+        QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[set by the alias]"));
         QVERIFY(session.shutdown(false));
     }
 
@@ -4336,6 +4339,86 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QTRY_VERIFY_WITH_TIMEOUT(heardNow.contains(qsl("hidden off")), 10000);
         QTest::qWait(100);
         QCOMPARE(heardNow, (QStringList{qsl("hidden on"), qsl("hidden off"), qsl("text ")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A line an inner send's alias wrote stays for the outer send to leave too, as TCommandLine::enterCommand() does
+    void test_anOuterSendLeavesTheLineAnInnerSendsAliasWrote()
+    {
+        const QString name = qsl("Headless Command Line Written By A Nested Send");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        static bool innerSent;
+        innerSent = false;
+        lua_register(session.host()->getLuaInterpreter()->getLuaGlobalState(), "headlessAwaitInnerSend", [](lua_State*) -> int {
+            QDeadlineTimer deadline(10000);
+            while (!innerSent && !deadline.hasExpired()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            }
+            return 0;
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^outer$", [[headlessAwaitInnerSend()]]) tempAlias("^inner$", [[printCmdLine("tell bob ")]]))lua")));
+        QTimer::singleShot(0, &session, [&session]() {
+            QVERIFY(session.submit(qsl("inner")));
+            innerSent = true;
+        });
+        QVERIFY(session.submit(qsl("outer")));
+        QVERIFY(innerSent);
+        QVERIFY(session.runLua(qsl("headlessAfter = '[' .. getCmdLine() .. ']'")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[tell bob ]"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A send the game hides, made while an alias that wrote to the line runs the event loop, leaves that line too
+    void test_anOuterSendLeavesItsAliasLinePastAHiddenSend()
+    {
+        const QString name = qsl("Headless Command Line Written Past A Hidden Send");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+        THeadlessSession session;
+        QStringList heardNow;
+        connect(&session, &THeadlessSession::commandLineTextRequested, this, [&heardNow](const QString&, const QString& text) {
+            heardNow << qsl("text %1").arg(text);
+        });
+        connect(&session, &THeadlessSession::hiddenInputWanted, this, [&heardNow](const QString&, bool wanted) {
+            heardNow << qsl("hidden %1").arg(wanted ? qsl("on") : qsl("off"));
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        static bool innerSent;
+        innerSent = false;
+        lua_register(session.host()->getLuaInterpreter()->getLuaGlobalState(), "headlessAwaitInnerSend", [](lua_State*) -> int {
+            QDeadlineTimer deadline(10000);
+            while (!innerSent && !deadline.hasExpired()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            }
+            return 0;
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^outer$", [[printCmdLine("tell bob ") headlessAwaitInnerSend()]]))lua")));
+        QTimer::singleShot(0, &session, [&session, &game]() {
+            game->write("\xff\xfb\x01Password:\r\n");
+            QDeadlineTimer deadline(10000);
+            while (!session.host()->passwordEntryWanted() && !deadline.hasExpired()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            }
+            QVERIFY(session.submit(qsl("secret")));
+            innerSent = true;
+        });
+        QVERIFY(session.submit(qsl("outer")));
+        QVERIFY(innerSent);
+        game->write("\xff\xfc\x01Welcome.\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(heardNow.contains(qsl("hidden off")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(heardNow, (QStringList{qsl("text tell bob "), qsl("hidden on"), qsl("hidden off")}));
+        QVERIFY(session.runLua(qsl("headlessAfter = '[' .. getCmdLine() .. ']'")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[tell bob ]"));
         QVERIFY(session.shutdown(false));
     }
 
@@ -4932,6 +5015,59 @@ end))lua")));
 
         for (const auto& [columns, rows] : {std::pair(0, 40), std::pair(60, 0), std::pair(65536, 40), std::pair(60, 65536), std::pair(-1, -1)}) {
             QVERIFY(!session.setScreenSize(columns, rows));
+            QVERIFY2(session.errorString().contains(qsl("from 1 to 65535")), qPrintable(session.errorString()));
+        }
+        QTest::qWait(500);
+        QVERIFY(server.nawsUpdates().isEmpty());
+        session.shutdown(false);
+    }
+
+    // A frontend that draws the main console in a font of its own tells the game its own columns and rows, and the
+    // main window it gave in pixels keeps that size
+    void test_aGameScreenSizeReachesTheGameAndLeavesTheMainWindow()
+    {
+        const QString name = qsl("Headless Game Screen Size");
+        QVERIFY(writeProfile(name, QString()));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QVERIFY(!session.setGameScreenSize(60, 40));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        const QSize grid = session.mainConsoleGrid();
+        // Before the game asks, so it is told when it does
+        QVERIFY(session.setGameScreenSize(70, 30));
+        QTRY_VERIFY_WITH_TIMEOUT(server.clientConnected(), 10000);
+        server.sendRaw(QByteArray::fromHex("fffd1f"));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(70, 30)}), 10000);
+        server.clearNawsUpdates();
+        QCOMPARE(session.mainConsoleGrid(), grid);
+        QVERIFY(session.runLua(qsl("local w, h = getMainWindowSize(); headlessMainWindow = w .. 'x' .. h")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessMainWindow"), qsl("800x600"));
+
+        // The main window's grid follows its size, and the game is still told the frontend's
+        QVERIFY(session.setMainWindowSize(QSize(600, 600)));
+        QVERIFY(session.mainConsoleGrid() != grid);
+        QTest::qWait(1000);
+        QVERIFY(server.nawsUpdates().isEmpty());
+
+        QVERIFY(session.setGameScreenSize(72, 20));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(72, 20)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.runLua(qsl("local w, h = getMainWindowSize(); headlessMainWindow = w .. 'x' .. h")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessMainWindow"), qsl("600x600"));
+        // As setScreenSize() tells it
+        QVERIFY(session.setGameScreenSize(20, 20));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(40, 20)}), 10000);
+        server.clearNawsUpdates();
+
+        for (const auto& [columns, rows] : {std::pair(0, 40), std::pair(60, 0), std::pair(65536, 40), std::pair(60, 65536)}) {
+            QVERIFY(!session.setGameScreenSize(columns, rows));
             QVERIFY2(session.errorString().contains(qsl("from 1 to 65535")), qPrintable(session.errorString()));
         }
         QTest::qWait(500);
@@ -7372,7 +7508,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QCOMPARE(session.start({.profile = qsl("Headless No Pass"), .connect = false}), THeadlessSession::StartResult::started);
         QSignalSpy output(&session, &THeadlessSession::outputLine);
         QVERIFY(session.runLua(qsl(R"lua(echo("!osc8-" .. "docs"))lua")));
-        QVERIFY2(outputTexts(output).contains(qsl("Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol")), qPrintable(outputTexts(output).join(QLatin1Char('\n'))));
+        QVERIFY2(outputTexts(output).contains(qsl("Docs: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8:_Hyperlink_Protocol")), qPrintable(outputTexts(output).join(QLatin1Char('\n'))));
     }
 
     // A load that runs the event loop, as a script of its own can, lets a frontend's timer run a script before the

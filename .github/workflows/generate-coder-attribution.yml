@@ -41,17 +41,20 @@ jobs:
         luarocks install lunajson
 
     - name: Calculate from and to releases
+      env:
+        INPUT_FROM: ${{ github.event.inputs.from }}
+        INPUT_TO: ${{ github.event.inputs.to }}
       run: |
-        if [[ -z "${{ github.event.inputs.from }}" ]] ; then
+        if [[ -z "${INPUT_FROM}" ]] ; then
             FROM_RELEASE=$(git tag --sort=committerdate | tail -1)
         else
-            FROM_RELEASE=${{ github.event.inputs.from }}
+            FROM_RELEASE=${INPUT_FROM}
         fi
 
-        if [[ -z "${{ github.event.inputs.to }}" ]] ; then
+        if [[ -z "${INPUT_TO}" ]] ; then
             TO_RELEASE="HEAD"
         else
-            TO_RELEASE=${{ github.event.inputs.to }}
+            TO_RELEASE=${INPUT_TO}
         fi
 
         echo "Generating attributions from $FROM_RELEASE until $TO_RELEASE"
