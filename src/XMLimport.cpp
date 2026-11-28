@@ -871,6 +871,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
     setBoolAttribute(qsl("mMapperShowGrid"), pHost->mMapperShowGrid);
     setBoolAttributeWithDefault(qsl("mMapperStitchAreas"), pHost->mMapperStitchAreas, true);
+    setBoolAttributeWithDefault(qsl("mMapperDeletedRoomExitsAsStubs"), pHost->mMapperDeletedRoomExitsAsStubs, false);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
     setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
@@ -1362,6 +1363,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QAnyStringView elementName)
             {qsl("mLightWhite"), &Host::mLightWhite},
             {qsl("mFgColor2"), &Host::mFgColor_2},
             {qsl("mRoomBorderColor"), &Host::mRoomBorderColor},
+            {qsl("mMapperDefaultRoomColor"), &Host::mMapperDefaultRoomColor},
             {qsl("mRoomCollisionBorderColor"), &Host::mRoomCollisionBorderColor},
             {qsl("mBlack2"), &Host::mBlack_2},
             {qsl("mLightBlack2"), &Host::mLightBlack_2},

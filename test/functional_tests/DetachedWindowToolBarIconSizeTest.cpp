@@ -154,14 +154,15 @@ private slots:
         QCOMPARE(pDetachedToolBar->iconSize(), mudlet::self()->mpMainToolBar->iconSize());
     }
 
-    // Settings > Advanced > Experiments > Colored icons reaches every bar, not only the main window's
+    // Settings > Advanced > Experiments > Grayscale icons reaches every bar, not only the main window's
     void test_colouredIconsReachAnOpenDetachedWindow()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         TDetachedWindow* pDetachedWindow = detachSecondProfile();
         QVERIFY(pDetachedWindow);
-        const auto restore = qScopeGuard([]() {
-            mudlet::self()->setColouredIcons(false);
-        });
         const auto mostSaturated = [pDetachedWindow]() {
             const QAction* pMap = pDetachedWindow->findChild<QAction*>(qsl("map_action"));
             const QImage image = pMap ? pMap->icon().pixmap(QSize(64, 64)).toImage().convertToFormat(QImage::Format_ARGB32) : QImage();
@@ -174,10 +175,13 @@ private slots:
             }
             return most;
         };
-        QVERIFY2(mostSaturated() < 0.1, "the detached window's Map is in color with the switch off");
+        QVERIFY2(mostSaturated() < 0.1, "the detached window's Map is in color with the icons set to grayscale");
 
         mudlet::self()->setColouredIcons(true);
-        QVERIFY2(mostSaturated() > 0.3, qPrintable(qsl("the detached window's Map stays grey with Colored icons on (saturation %1)").arg(QString::number(mostSaturated()))));
+        QVERIFY2(mostSaturated() > 0.3, qPrintable(qsl("the detached window's Map stays grey with the icons back in color (saturation %1)").arg(QString::number(mostSaturated()))));
+
+        mudlet::self()->setColouredIcons(false);
+        QVERIFY2(mostSaturated() < 0.1, qPrintable(qsl("the detached window's Map kept its color after the icons were set to grayscale (saturation %1)").arg(QString::number(mostSaturated()))));
     }
 
     // A window detached after the setting changed is a separate failure from a

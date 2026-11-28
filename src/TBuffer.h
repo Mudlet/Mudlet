@@ -1297,6 +1297,10 @@ public:
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }
     int getLinkIndexAt(int line, int column) const; // Get link index at specific position
 
+    // A local: link with a menu opens it when activated, rather than running its first item
+    bool linkOpensItsMenu(int linkIndex) const;
+    // A local: link with nothing for a click to do: not a Tab stop, and read when the caret reaches it
+    bool linkIsNote(int linkIndex) const;
     // Accessibility: find next/previous link from a given position for Tab navigation
     // Returns true if found, and sets outLine/outColumn to the start of the link
     // If wrapped is non-null, it is set to true when the search wrapped around the buffer

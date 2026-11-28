@@ -91,9 +91,8 @@ signals:
     // Reaches every 2D map showing this map, the mapper's and each secondary view's
     void signal_roomDeleted(int roomId);
 
-    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
-    // cache ones also reach every secondary map view, and with the 3D mapper
-    // built in so do the repaint and mapper-setting ones.
+    // Cues for the mapper drawing this map (mpMapper); the colour, symbol
+    // cache, repaint and mapper-setting ones also reach every secondary map view.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();
@@ -282,6 +281,9 @@ public:
 
     void setMmpMapLocation(const QString& location);
     QString getMmpMapLocation() const;
+    // The URL downloadMap() fetches a game's MMP map location from, or an empty
+    // one where that would not be a web (http or https) URL with a host
+    static QUrl mmpMapUrl(const QString& location);
 
     // has setRoomNamesShown ever been called on this map?
     bool getRoomNamesPresent();
