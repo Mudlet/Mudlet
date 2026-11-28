@@ -1466,7 +1466,7 @@ enableMapInfo("HeadlessEcho")
         QVERIFY(session.shutdown(false));
     }
 
-    void test_aLoadedMapFileIsAuditedOnce()
+    void test_aLoadedMapFileShowsOneAudit()
     {
         const QString name = qsl("Headless Map File Audit");
         QVERIFY(writeProfile(name));
@@ -1543,6 +1543,44 @@ end)
         QVERIFY(session.runLua(qsl("headlessSelected = headlessSelection()")));
         QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl(" centre nil"));
         QCOMPARE(luaGlobalString(session.host(), "headlessAreaChanges"), QString());
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The map centred on room 8, or shown in another area, before the app draws it: a press and a double-click on
+    // room 8 as drawn still act on it, and the press's selection is then pruned to the area the next draw shows
+    void test_thePointerActsOnWhatTheAppDrewBeforeItDrawsACentring()
+    {
+        using Pointer = THeadlessSession::MapPointerEvent;
+        const QString name = qsl("Headless Map Undrawn Centring");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()") + twoRoomsLua(qsl("Headless Undrawn Centring")) + qsl(R"lua(
+headlessOther = addAreaName("Headless Undrawn Elsewhere")
+addRoom(9)
+setRoomArea(9, headlessOther)
+setRoomCoordinates(9, 50, 50, 0)
+)lua")));
+        QTest::qWait(50);
+        QVERIFY(rendered(session));
+        const QPointF onRoom8(scmWidth / 2 + 60, scmHeight / 2);
+
+        QVERIFY(session.centreMapOnRoom(8));
+        QVERIFY(session.mapPointer({.position = onRoom8}));
+        QVERIFY(session.runLua(qsl("headlessSelected = headlessSelection()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl("8 centre 8"));
+        QVERIFY(session.mapPointer({.type = Pointer::Type::doubleClick, .position = onRoom8}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), qsl("e to 8"));
+
+        QVERIFY(session.runLua(qsl(R"(headlessWalk = "")")));
+        QVERIFY(rendered(session));
+        QVERIFY(session.showMapArea(THeadlessSession::MapTarget::script, luaGlobalString(session.host(), "headlessOther").toInt()));
+        const QPointF onRoom8Centred(scmWidth / 2, scmHeight / 2);
+        QVERIFY(session.mapPointer({.position = onRoom8Centred}));
+        QVERIFY(session.runLua(qsl("headlessSelected = headlessSelection()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl(" centre nil"));
+        QVERIFY(session.mapPointer({.type = Pointer::Type::doubleClick, .position = onRoom8Centred}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), qsl("e to 8"));
         QVERIFY(session.shutdown(false));
     }
 };

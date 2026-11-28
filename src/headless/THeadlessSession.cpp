@@ -1697,7 +1697,8 @@ bool THeadlessSession::loadMapFile(const QString& fileName)
         mErrorString = tr("Could not load map from %1.").arg(*name);
         return false;
     }
-    // TMap::audit() is what says "[  OK  ]" in the console for a binary map's load; importMapFile() audits an XML one
+    // Host::loadMapFile()'s audit ends by condensing the load's lines out of the console, so this one leaves an
+    // "[  OK  ]" there; importMapFile()'s audit of an XML map is not condensed
     if (!xml && !json) {
         mpHost->mpMap->audit();
     }

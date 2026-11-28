@@ -103,12 +103,12 @@ public:
     const QList<DrawnRoom>& drawnRooms() const { return mDrawnRooms; }
     // What the last render() laid out: the area, the level, the zoom (rooms across the narrow side) and a room's
     // cell in the frame's pixels
-    int drawnAreaId() const { return mDrawnAreaId; }
-    int drawnLevel() const { return mDrawnLevel; }
+    int drawnAreaId() const { return mDrawnView.mAreaID; }
+    int drawnLevel() const { return mDrawnView.mMapCenterZ; }
     // The levels of the area the last render() laid out that have rooms, lowest first
     QList<int> drawnLevels() const;
-    qreal drawnZoom() const { return mDrawnZoom; }
-    qreal drawnRoomSize() const { return mView.mRoomWidth / mLayoutScale; }
+    qreal drawnZoom() const { return mDrawnView.xyzoom; }
+    qreal drawnRoomSize() const { return mDrawnView.mRoomWidth / mLayoutScale; }
     // The room the map takes as the player's: paint() and TMapPainter take the first room where the player's is gone
     int playerRoomId() const;
     // As T2DMap::slot_toggleMapViewOnly(), which raises mapModeChangeEvent
@@ -181,10 +181,8 @@ private:
     QList<TMapPainter::MapInfoLine> mMapInfo;
     bool mFollowing = true;
     QList<DrawnRoom> mDrawnRooms;
-    // Of the last render(), as showArea() and the like change mView before the next
-    int mDrawnAreaId = 0;
-    int mDrawnLevel = 0;
-    qreal mDrawnZoom = 0.0;
+    // The last render()'s, which the pointer acts on, as showArea() and the like change mView before the next
+    TMapPainter::View mDrawnView;
     // TMap::mNewMoves as this view last followed or left the player
     quint64 mNewMovesTaken = 0;
     // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn

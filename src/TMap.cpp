@@ -3239,6 +3239,7 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
     if (error != QNetworkReply::OperationCanceledError) {
         // No point in reporting Cancel as that is handled elsewhere
+        //: %1 is the network's description of the error, naming no more of the map's URL than its scheme and host
         const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1").arg(withShownUrl(mpNetworkReply->errorString(), *mpNetworkReply));
         postMessage(errMsg);
         mDownloadFailure = errMsg;
@@ -3347,6 +3348,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         pHost->raiseEvent(mapDownloadEvent);
     } else {
         // Failure in parse file...
+        //: %1 is the path of the file the downloaded map was saved to
         failure = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
         postMessage(failure);
     }

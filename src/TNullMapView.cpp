@@ -374,9 +374,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size, const qreal layo
     });
     painter.restore();
     mView = result.view;
-    mDrawnAreaId = mView.mAreaID;
-    mDrawnLevel = mView.mMapCenterZ;
-    mDrawnZoom = mView.xyzoom;
+    mDrawnView = mView;
     mRenderedSize = size;
     mLayoutScale = scale;
     mMapInfo = result.mapInfo;
@@ -508,7 +506,7 @@ bool TNullMapView::showArea(const int areaId)
 
 QList<int> TNullMapView::drawnLevels() const
 {
-    const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mDrawnAreaId);
+    const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mDrawnView.mAreaID);
     return pArea && mLaidOut ? pArea->zLevels : QList<int>();
 }
 
@@ -543,13 +541,17 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
 {
     TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
     if (button == Qt::LeftButton && !modifiers.testFlag(Qt::AltModifier) && mLaidOut && pRoomDB->getRoom(mView.mRoomID)) {
-        if (const TArea* pArea = pRoomDB->getArea(mView.mAreaID)) {
+        if (const TArea* pArea = pRoomDB->getArea(mDrawnView.mAreaID)) {
             if (!modifiers.testFlag(Qt::ControlModifier) && !modifiers.testFlag(Qt::ShiftModifier)) {
                 mView.mMultiSelectionSet.clear();
             }
             bool multiSelection = false;
-            const QList<int> rooms = TMapPainter::roomsAtPoint(mView, *pArea, laidOut(position).toPoint());
+            const QList<int> rooms = TMapPainter::roomsAtPoint(mDrawnView, *pArea, laidOut(position).toPoint());
             TMapPainter::addRoomsToSelection(mpHost->mpMap.data(), mView.mMultiSelectionSet, multiSelection, mView.mMultiSelectionHighlightRoomId, rooms, modifiers);
+            // As a press on that frame, then the change of area not yet drawn
+            if (mView.mAreaID != mDrawnView.mAreaID) {
+                TMapPainter::pruneSelectionToArea(mpHost->mpMap.data(), mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, mView.mAreaID);
+            }
         }
     }
     if (mRaisesEvents) {
@@ -562,7 +564,7 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
 // one last drawn, not one that has followed the player since
 void TNullMapView::doubleClick(const QPoint& position)
 {
-    TMapPainter::View view = mView;
+    TMapPainter::View view = mDrawnView;
     view.mIsSecondaryView = true;
     view.mPHighlight = laidOut(position).toPoint();
     view.mPick = true;
@@ -573,8 +575,8 @@ void TNullMapView::doubleClick(const QPoint& position)
     TMapPainter::PaintResult result;
     mPainter.paintView(painter, view, result);
     // The painter's symbol pixmaps are now at this frame's room size, so the next draw must know to remake them
-    mView.mPrevRoomWidth = result.view.mPrevRoomWidth;
-    mView.mPrevRoomHeight = result.view.mPrevRoomHeight;
+    mView.mPrevRoomWidth = mDrawnView.mPrevRoomWidth = result.view.mPrevRoomWidth;
+    mView.mPrevRoomHeight = mDrawnView.mPrevRoomHeight = result.view.mPrevRoomHeight;
     if (result.pendingSpeedWalk) {
         TMapPainter::startSpeedWalk(mpHost, mpHost->mpMap.data(), result.pendingSpeedWalk->first, result.pendingSpeedWalk->second);
     }
