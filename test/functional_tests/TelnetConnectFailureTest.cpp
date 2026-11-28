@@ -27,6 +27,11 @@
 #include <QtTest/QtTest>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
+#if !defined(QT_NO_SSL)
+#include <QtNetwork/QSslCertificate>
+#include <QtNetwork/QSslKey>
+#include <QtNetwork/QSslSocket>
+#endif
 #include <chrono>
 
 #include "MudletApp.h"
@@ -42,8 +47,44 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+#if !defined(QT_NO_SSL)
+#include "LoopbackTlsCertificate.h"
+#endif
 
 using namespace std::chrono_literals;
+
+// Answers with TLS when asked to, presenting the self-signed loopback certificate.
+class LoopbackServer : public QTcpServer
+{
+    Q_OBJECT
+
+public:
+    using QTcpServer::QTcpServer;
+    void setTls(bool tls) { mTls = tls; }
+
+protected:
+    void incomingConnection(qintptr socketDescriptor) override
+    {
+#if !defined(QT_NO_SSL)
+        if (mTls) {
+            auto* socket = new QSslSocket(this);
+            if (!socket->setSocketDescriptor(socketDescriptor)) {
+                delete socket;
+                return;
+            }
+            socket->setLocalCertificate(QSslCertificate(QByteArray(csmLoopbackCertificatePem)));
+            socket->setPrivateKey(QSslKey(QByteArray(csmLoopbackPrivateKeyPem), QSsl::Rsa));
+            socket->startServerEncryption();
+            addPendingConnection(socket);
+            return;
+        }
+#endif
+        QTcpServer::incomingConnection(socketDescriptor);
+    }
+
+private:
+    bool mTls = false;
+};
 
 // A game that says nothing and only counts who arrives. It can be taken off the air and put back
 // on the same port, which is how a game that is down and then comes back is played out here.
@@ -89,6 +130,7 @@ public:
     // Bytes to answer the next connection with. Plain text where TLS is expected is what fails a
     // secure handshake outright, rather than leaving it waiting.
     void setGreeting(const QByteArray& greeting) { mGreeting = greeting; }
+    void setTls(bool tls) { mServer.setTls(tls); }
 
     // Plain text sent after the client has already started its handshake, so a test can act before it fails.
     void sendToClient(const QByteArray& bytes)
@@ -124,7 +166,7 @@ private slots:
     }
 
 private:
-    QTcpServer mServer;
+    LoopbackServer mServer;
     QPointer<QTcpSocket> mClient;
     QByteArray mGreeting;
     quint16 mPort = 0;
@@ -524,6 +566,41 @@ private slots:
         QCOMPARE(countLines(host, qsl("Attempting a secure connection")), 1);
     }
 
+    // Mudlet, not the game, ended a connection whose certificate it would not accept
+    void test_aRefusedCertificateIsNotReportedAsTheGameRejectingTheLogin()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setTls(true);
+        host->mSslTsl = true;
+        host->mSslIgnoreSelfSigned = false;
+        host->mSslIgnoreExpired = false;
+        host->mSslIgnoreAll = false;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the refused certificate was not reported by the disconnection path");
+        // The control: without a certificate error there was nothing for Mudlet to refuse
+        const QList<QSslError> sslErrors = host->mTelnet.getSslErrors();
+        QVERIFY2(!sslErrors.isEmpty(), "the stub's certificate raised no error, so nothing was refused");
+        for (const auto& sslError : sslErrors) {
+            QVERIFY2(bufferContains(host, sslError.errorString()), qPrintable(qsl("the player was not told \"%1\"").arg(sslError.errorString())));
+        }
+        QVERIFY2(!bufferContains(host, qsl("rejected by server")), "a certificate Mudlet refused was reported as the game rejecting the login");
+    }
+
+    void test_aQuickDropAfterAcceptingASelfSignedCertificateIsStillReportedAsARejection() { checkQuickDropAfterAnAcceptedCertificateIsReportedAsARejection(false); }
+
+    // "Ignore all" accepts a certificate whose errors are still on record
+    void test_aQuickDropAfterIgnoringAllCertificateErrorsIsStillReportedAsARejection() { checkQuickDropAfterAnAcceptedCertificateIsReportedAsARejection(true); }
+
     // A handshake one address family fails, the other, to the same game and certificate, would
     // fail too, so it is called off and the failure is reported once, straight away
     void test_aFailedSecureHandshakeCallsOffTheOtherAddressFamily()
@@ -734,6 +811,59 @@ private:
         host->mTelnet.connectIt(qsl("127.0.0.1"), deadPort);
         return deadPort;
     }
+
+#if !defined(QT_NO_SSL)
+    void checkQuickDropAfterAnAcceptedCertificateIsReportedAsARejection(const bool ignoreAll)
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int connectionsBefore = countLines(host, qsl("Secure connection made"));
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setTls(true);
+        host->mSslTsl = true;
+        host->mSslIgnoreSelfSigned = !ignoreAll;
+        host->mSslIgnoreExpired = false;
+        host->mSslIgnoreAll = ignoreAll;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+        QTest::qWaitFor(
+                [&]() {
+                    return countLines(host, qsl("Secure connection made")) > connectionsBefore || countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                },
+                20s);
+        if (countLines(host, qsl("Secure connection made")) == connectionsBefore) {
+            // macOS's TLS backend can object to the stub's 100-year, CA-flagged certificate on more than its being
+            // self-signed; OpenSSL raises only that, so anything more there is a regression rather than the stub
+            if (!ignoreAll && QSslSocket::activeBackend() != qsl("openssl")) {
+                QStringList otherErrors;
+                for (const auto& sslError : host->mTelnet.getSslErrors()) {
+                    if (sslError.error() != QSslError::SelfSignedCertificate) {
+                        otherErrors << sslError.errorString();
+                    }
+                }
+                if (!otherErrors.isEmpty()) {
+                    QSKIP(qPrintable(qsl("this TLS backend raises more than a self-signed error for the stub's certificate: %1").arg(otherErrors.join(qsl("; ")))));
+                }
+            }
+            QFAIL("the stub's certificate was not accepted");
+        }
+        // The control: with no certificate error there was nothing accepted that could be mistaken for a refusal
+        QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "the stub's certificate raised no error to accept");
+
+        mpServer->dropClient();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the profile never noticed the game dropping the connection");
+        QVERIFY2(bufferContains(host, qsl("rejected by server")), "a game dropping the player straight after an accepted certificate was not reported as a rejection");
+        for (const auto& sslError : host->mTelnet.getSslErrors()) {
+            QVERIFY2(!bufferContains(host, sslError.errorString()), qPrintable(qsl("an accepted certificate error was reported: \"%1\"").arg(sslError.errorString())));
+        }
+    }
+#endif
 
     [[nodiscard]] bool disconnectAndWait(Host* host)
     {
