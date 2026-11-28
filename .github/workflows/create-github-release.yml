@@ -1,18 +1,20 @@
 name: 📦 Create GitHub Release
 on:
-  workflow_run:
+  # Runs the default branch's copy of this file, and the first step skips pull request builds
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: ["🔨 Build Mudlet", "🔨 Build Mudlet (windows)"]
     types: [completed]
     branches: [master, development, release-*, Mudlet-*]
 
-# actions: write is for starting the Linux package build once a release is out
-permissions:
-  contents: write
-  actions: write
+permissions: {}
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    # actions: read is for downloading the build workflows' artifacts
+    permissions:
+      contents: write
+      actions: read
     if: >
       github.repository_owner == 'Mudlet' &&
       github.event.workflow_run.conclusion == 'success'
@@ -629,6 +631,9 @@ jobs:
   linux-packages:
     name: Build the Linux packages
     needs: create-release
+    # for starting the package build and following its run
+    permissions:
+      actions: write
     # once the release is verified, even if a later step such as the appcast upload then fails
     if: >
       needs.create-release.outputs.published == 'true' &&
