@@ -1659,15 +1659,17 @@ setLabelOnLeave("u", function() seen[#seen + 1] = "u.leave" end) setLabelWheelCa
         });
         QSignalSpy prompted(&session, &THeadlessSession::commandLineTextRequested);
         QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        // The web link is an argument: moc reads a // in a raw string that spans lines as a comment
         QVERIFY(session.runLua(qsl(R"lua(
 headlessSent, headlessRan = {}, 0
 registerAnonymousEventHandler("sysDataSendRequest", function(_, command) headlessSent[#headlessSent + 1] = command end)
 tempAlias("^n$", [[send("north", false)]])
 createLabel("lbl", 0, 0, 400, 40, 1)
-echo("lbl", [[<a href="send:n">go</a> <a href="PROMPT:tell Bob ">tell</a> <a href="https://example.org/a?b=1&amp;c=2">site</a> <a href="headlessRan = headlessRan + 1">count</a> <a href="error('headless link error')">bad</a> <a href="mailto:bob@example.org">mail</a>]])
+echo("lbl", [[<a href="send:n">go</a> <a href="PROMPT:tell Bob ">tell</a> <a href="%1">site</a> <a href="headlessRan = headlessRan + 1">count</a> <a href="error('headless link error')">bad</a> <a href="mailto:bob@example.org">mail</a>]])
 createLabel("plain", 0, 50, 100, 20, 1)
 echo("plain", "no links here")
-)lua")));
+)lua")
+                                       .arg(qsl("https://example.org/a?b=1&amp;c=2"))));
         QVERIFY(changes.wait(1000));
         changes.clear();
         const auto sent = [&session]() {
