@@ -2056,10 +2056,9 @@ end))lua");
             QVERIFY(session.settings({qsl("serverEncoding")}, values));
             QCOMPARE(values.value(qsl("serverEncoding")), QVariant(qsl("ASCII")));
 
-            // Mudlet's own codec, which getConfig() names without its "M_"
-            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("M_CP437")}}, refused));
+            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("CP437")}}, refused));
             QVERIFY(refused.isEmpty());
-            QCOMPARE(session.host()->mTelnet.getEncoding(), QByteArray("M_CP437"));
+            QCOMPARE(session.host()->mTelnet.getEncoding(), QByteArray("CP437"));
             QVERIFY(session.settings({qsl("serverEncoding")}, values));
             QCOMPARE(values.value(qsl("serverEncoding")), QVariant(qsl("CP437")));
 
@@ -2304,6 +2303,34 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 Ctrl+Alt+S Ctrl+Alt+S "));
         QTest::qWait(100);
         QVERIFY(!game->readAll().contains("north"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // connectToServer() dials elsewhere without changing the profile's address, so naming that address is still a change
+    void test_settingTheProfilesOwnAddressTakesReconnectBackToIt()
+    {
+        const QString name = qsl("Headless Own Address");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer profileServer;
+        QTcpServer otherServer;
+        QVERIFY(profileServer.listen(QHostAddress::LocalHost));
+        QVERIFY(otherServer.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(profileServer.serverPort())).first);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(profileServer.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> first(profileServer.nextPendingConnection());
+
+        QVERIFY(session.runLua(qsl("connectToServer('127.0.0.1', %1)").arg(otherServer.serverPort())));
+        QTRY_VERIFY_WITH_TIMEOUT(otherServer.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> elsewhere(otherServer.nextPendingConnection());
+
+        QVERIFY(session.setAddress(qsl("127.0.0.1"), profileServer.serverPort(), false));
+        QVERIFY(session.runLua(qsl("reconnect()")));
+        QTRY_VERIFY_WITH_TIMEOUT(profileServer.hasPendingConnections() || otherServer.hasPendingConnections(), 10000);
+        QVERIFY2(profileServer.hasPendingConnections(), "reconnect() went back to the server connectToServer() named");
         QVERIFY(session.shutdown(false));
     }
 

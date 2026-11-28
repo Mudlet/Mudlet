@@ -6637,13 +6637,10 @@ void Host::loadStoredPassword()
 
 void Host::changeAddress(const QString& url, const int port, const bool tls)
 {
-    if (url == mUrl && port == mPort && tls == mSslTsl) {
-        return;
-    }
     mUrl = url;
     mPort = port;
     mSslTsl = tls;
-    // A telnets:// link asked for the server it named
+    // Even when it is the profile's address: connectToServer() and a telnets:// link dial elsewhere without changing it
     mUseTlsThisSession = false;
     mTelnet.mHostAddressChanged = true;
 }
