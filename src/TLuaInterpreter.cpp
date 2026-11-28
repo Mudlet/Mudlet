@@ -10806,6 +10806,21 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
+    if (key == qsl("consoleBufferSize")) {
+        const auto value = getVerifiedInt(L, __func__, 2, "value");
+        // The preferences' least; the most is what the machine can hold, to which the buffer clips a bigger one
+        if (value < 100) {
+            return warnArgumentValue(L, __func__, qsl("consoleBufferSize %1 is below the least of 100 lines").arg(value));
+        }
+        host.setConsoleBufferSize(value);
+        host.applyConsoleBufferSize();
+        return success();
+    }
+    if (key == qsl("useMaxConsoleBufferSize")) {
+        host.setUseMaxConsoleBufferSize(getVerifiedBool(L, __func__, 2, "value"));
+        host.applyConsoleBufferSize();
+        return success();
+    }
     if (key == qsl("controlCharacterHandling")) {
         static const QStringList values{"asis", "oem", "picture"};
         const auto value = getVerifiedString(L, __func__, 2, "value");
@@ -11342,6 +11357,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("commandLineHistorySaveSize"),
              [&]() {
                  lua_pushnumber(L, host.getCommandLineHistorySaveSize());
+             }},
+            {qsl("consoleBufferSize"),
+             [&]() {
+                 lua_pushnumber(L, host.getConsoleBufferSize());
+             }},
+            {qsl("useMaxConsoleBufferSize"),
+             [&]() {
+                 lua_pushboolean(L, host.getUseMaxConsoleBufferSize());
              }},
             {qsl("controlCharacterHandling"),
              [&]() {

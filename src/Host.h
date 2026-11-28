@@ -437,6 +437,9 @@ public:
     // The main console's scrollback limit is also the profile's setting. With
     // useMaximum the most this machine can hold stands in for the limit given.
     void setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum);
+    // The main console's limit from the profile's buffer size and its use of the maximum, as the preferences apply
+    // them, with a batch of a fifth of it (at least 100)
+    void applyConsoleBufferSize();
     // Paint the named console's selection, and write what follows in the same
     // format. Each answers whether it found the console.
     bool setWindowFgColor(const QString& name, const QColor& color);

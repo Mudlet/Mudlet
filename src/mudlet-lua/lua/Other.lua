@@ -1724,6 +1724,7 @@ local configOptions = {
   "commandLineHistorySaveSize",
   "commandSeparator",
   "compactInputLine",
+  "consoleBufferSize",
   "controlCharacterHandling",
   "disablePasswordMasking",
   "echoLuaErrors",
@@ -1796,6 +1797,7 @@ local configOptions = {
   "sslIgnoreSelfSigned",
   "undoServerWrap",
   "undoServerWrapWidth",
+  "useMaxConsoleBufferSize",
   "versionInTTYPE",
 }
 local isConfigOption = {}

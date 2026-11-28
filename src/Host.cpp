@@ -3347,6 +3347,13 @@ void Host::setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool us
     mConsoleBufferSize = linesLimit;
 }
 
+void Host::applyConsoleBufferSize()
+{
+    TBuffer& buffer = mpMainConsoleModel->buffer;
+    const int linesLimit = mUseMaxConsoleBufferSize ? buffer.getMaxBufferSize() : mConsoleBufferSize;
+    buffer.setBufferSize(linesLimit, std::max(100, linesLimit / 5));
+}
+
 // Hot: the trigger engine reads the model for every character of a colour
 // pattern, so this hands back a reference rather than a shared_ptr copy - the
 // latter costs an atomic increment and decrement per call.
