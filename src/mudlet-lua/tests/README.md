@@ -56,7 +56,9 @@ runTests <full path>/src/mudlet-lua/tests/StringUtils_spec.lua
 
 ## Running tests headlessly (and in parallel)
 
-The suite can also be run without touching the GUI, which is how CI runs it:
+`.agents/skills/verify-mudlet/scripts/verify-mudlet.sh specs` does all of the below, with CI's
+fixtures, on Linux, macOS and Windows. By hand, the suite can be run without touching the GUI,
+which is how CI runs it:
 
 ```sh
 AUTORUN_BUSTED_TESTS=true \

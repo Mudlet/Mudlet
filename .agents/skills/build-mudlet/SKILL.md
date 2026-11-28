@@ -14,30 +14,31 @@ per platform, and the wrong one is not merely slower — see Pitfalls.
 
 ## First: does this need a build at all?
 
-On Linux, a change confined to `src/mudlet-lua/lua/` or `src/mudlet-lua/tests/` needs none. Those
-are read from disk at startup, so a Mudlet binary built anywhere on the machine can run *this*
-worktree's Lua and specs:
+A change confined to `src/mudlet-lua/lua/` or `src/mudlet-lua/tests/` needs none. Those are read
+from disk at startup, so a Mudlet binary built anywhere on the machine can run *this* worktree's
+Lua and specs through the `verify-mudlet` skill:
 
 ```bash
-.claude/scripts/run-lua-tests.sh ../otherworktree/build-linux-debug-nosan/src/mudlet
+.agents/skills/verify-mudlet/scripts/verify-mudlet.sh specs --binary ../otherworktree/build-linux-debug-nosan/src/mudlet
 ```
 
-The script detects a binary from another build tree, shims around it with a `note:` line, and
-fails loudly if this worktree's Lua is not what ended up loading.
+The script stages a binary from another build tree so it runs this worktree's Lua (on macOS, a
+cloned `.app` with this worktree's Lua in place of the bundled copy), and fails loudly if this
+worktree's Lua is not what ended up loading.
 
 These look Lua-only but still need a build:
 
 - `src/packages/` and `src/mudlet-lua/lua/utf8_filenames.lua` are compiled into the binary as Qt
   resources (`src/mudlet.qrc`), so editing them cannot affect a borrowed binary.
 - On macOS the build copies mudlet-lua into the `.app` bundle and that copy is preferred over
-  `src/`, so a Lua change does need a rebuild there. The script is Linux-only regardless - it
-  drives Mudlet under `xvfb-run`.
+  `src/`, so running the bundle directly needs a rebuild after a Lua change; `verify-mudlet.sh`
+  works around that itself.
 - Anything under `src/*.cpp` or `src/*.h`.
 
 Choose a donor whose branch already contains the C++ the specs rely on - one missing it fails
 specs in a way that reads exactly like a regression in the change under test. Prefer a `-nosan`
-tree: the plain `build/` preset is an AddressSanitizer build, and this script does not pass it
-the `ASAN_OPTIONS` CI uses, so a leak surfaces as a bare non-zero exit with every spec green.
+tree: the plain `build/` preset is an AddressSanitizer build, slower to run, and a leak it finds
+surfaces as a failed run with every spec green.
 
 ## Use a preset — every platform, one command
 
@@ -204,11 +205,11 @@ successes):
   tests load `LuaGlobal.lua`, which needs the `--local` Lua rocks on `LUA_PATH`/`LUA_CPATH` —
   the hook exports both; without them ~12 tests fail with `attempt to index global 'yajl'` or
   `'rex'` errors.
-- **Lua specs (busted)**: `.claude/scripts/run-lua-tests.sh` — starts the HTTP/Discord/MMCP
-  fixtures from `CI/` and runs the self-test profile under xvfb exactly like the
-  "(Linux) Run Lua tests" CI step. Concurrent runs are safe (one per worktree, or even the
+- **Lua specs (busted)**: the `verify-mudlet` skill (`.claude/scripts/run-lua-tests.sh` is a
+  wrapper for it) — starts the HTTP/Discord/MMCP fixtures from `CI/` and runs the self-test
+  profile under xvfb like the "(Linux) Run Lua tests" CI step. Concurrent runs are safe (one per worktree, or even the
   same tree): fixtures bind ephemeral ports handed over via a per-run temp directory, cleanup
-  kills only that run's fixture PIDs, and each run gets a private HOME so no two Mudlets — nor
+  kills only that run's fixture PIDs, and each run gets a private config directory (and HOME, on Linux) so no two Mudlets — nor
   leftovers of an aborted run — share the self-test profile's saved state. Sharing a profile
   tree is not survivable: stale state fails ~38 Networking specs with "Expected objects to be
   the same" at the `ensurePeer` assertion. The run is capped at 900s (set
