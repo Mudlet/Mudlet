@@ -34,9 +34,9 @@ This directory contains GitHub-specific configuration files and templates that h
 
 ### Developer Tools
 
-- **`copilot-instructions.md`** - GitHub Copilot AI assistant instructions (symlinked from centralized source)
+- **`copilot-instructions.md`** - symlink to the root `AGENTS.md`, for the Copilot surfaces that don't read `AGENTS.md` yet
 - **`codeql/`** - CodeQL security analysis configuration
 
 ## AI Assistant Integration
 
-This directory includes `copilot-instructions.md` which is part of Mudlet's centralized AI assistant system. For complete information about AI assistant setup, supported tools, and Windows symlink configuration, see **[AI-ASSISTANTS.md](AI-ASSISTANTS.md)**.
+For which AI assistants read which files, and Windows symlink setup, see **[AI-ASSISTANTS.md](AI-ASSISTANTS.md)**.

@@ -1235,7 +1235,7 @@ private slots:
     // macOS backend, which needs neither a library nor a model on disk.
     // *When* to prefer it over a model-based engine is a decision inside
     // TLuaInterpreter::sttInit() with no entry point below Lua, so it is
-    // proven where CLAUDE.md says a Lua-reachable behaviour belongs: in
+    // proven where AGENTS.md says a Lua-reachable behaviour belongs: in
     // STT_spec.lua's "names where a model belongs when none is installed, or
     // succeeds via a model-less backend" case, not duplicated here. What this
     // pins is the primitive that decision depends on - that the backend it

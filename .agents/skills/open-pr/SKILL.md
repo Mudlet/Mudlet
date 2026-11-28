@@ -133,7 +133,7 @@ committed - because every push after the PR opens re-runs the automated reviewer
 
 9. **Report the result** — the PR URL on success, the error output on failure. AI-assisted work is
    not done there: ask the human to build and manually test the branch, then to supply the name and
-   email for the `Signed-off-by` trailer that `docs/ai-instructions.md` requires. Never fabricate
+   email for the `Signed-off-by` trailer that `AGENTS.md` requires. Never fabricate
    one, and never imply the change is finished without it.
 
 ## Notes

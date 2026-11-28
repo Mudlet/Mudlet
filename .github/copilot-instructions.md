@@ -1,1 +1,1 @@
-../docs/ai-instructions.md
+../AGENTS.md

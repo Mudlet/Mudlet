@@ -46,7 +46,7 @@ using namespace std::chrono_literals;
 // takes the process down with SIGSEGV.
 //
 // Only the two crash cases live here. Everything else about multiline state is
-// specced in Trigger_spec.lua, per docs/ai-instructions.md; what keeps these two
+// specced in Trigger_spec.lua, per AGENTS.md; what keeps these two
 // out of it is crash isolation, not sanitiser coverage - a SIGSEGV takes the
 // whole shared spec run down with it, where a functional test loses only itself.
 //

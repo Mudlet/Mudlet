@@ -193,7 +193,7 @@ private slots:
     // profile the user dragged out is left behind the window they dragged it from.
     // Note this only fails without the fix while that timer actually runs: it
     // early-returns when one is already in flight (Host::mFocusHandOffPending), so
-    // the A/B that CLAUDE.md asks for is what proves the assertion has teeth.
+    // the A/B that AGENTS.md asks for is what proves the assertion has teeth.
     void test_theDetachedWindowIsTheOneLeftActive()
     {
         QVERIFY(mpDetachedWindow);

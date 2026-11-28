@@ -49,7 +49,6 @@ project(mudlet)
 file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
   .clang-tidy
   .crowdin.yml
-  .cursorrules
   .gitignore
   .gitmodules
   .imgbotconfig
