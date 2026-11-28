@@ -1564,6 +1564,12 @@ setRoomCoordinates(9, 50, 50, 0)
         QTest::qWait(50);
         QVERIFY(rendered(session));
         const QPointF onRoom8(scmWidth / 2 + 60, scmHeight / 2);
+        QVERIFY(session.mapPointer({.position = onRoom8}));
+        QVERIFY(rendered(session));
+        // A press off the rooms leaves nothing selected for a double-click there to take as picked
+        QVERIFY(session.mapPointer({.position = QPointF(10, 10)}));
+        QVERIFY(session.mapPointer({.type = Pointer::Type::doubleClick, .position = QPointF(10, 10)}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), QString());
 
         QVERIFY(session.centreMapOnRoom(8));
         QVERIFY(session.mapPointer({.position = onRoom8}));

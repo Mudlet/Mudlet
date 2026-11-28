@@ -549,8 +549,8 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
             const QList<int> rooms = TMapPainter::roomsAtPoint(mDrawnView, *pArea, laidOut(position).toPoint());
             TMapPainter::addRoomsToSelection(mpHost->mpMap.data(), mView.mMultiSelectionSet, multiSelection, mView.mMultiSelectionHighlightRoomId, rooms, modifiers);
             // As a press on that frame, then the change of area not yet drawn
-            if (mView.mAreaID != mDrawnView.mAreaID) {
-                TMapPainter::pruneSelectionToArea(mpHost->mpMap.data(), mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, mView.mAreaID);
+            if (const int nextAreaId = shownAreaId(); nextAreaId != mDrawnView.mAreaID) {
+                TMapPainter::pruneSelectionToArea(mpHost->mpMap.data(), mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, nextAreaId);
             }
         }
     }
@@ -565,6 +565,9 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
 void TNullMapView::doubleClick(const QPoint& position)
 {
     TMapPainter::View view = mDrawnView;
+    // The painter takes a selected room as picked too, so it must be the selection the presses since have left
+    view.mMultiSelectionSet = mView.mMultiSelectionSet;
+    view.mMultiSelectionHighlightRoomId = mView.mMultiSelectionHighlightRoomId;
     view.mIsSecondaryView = true;
     view.mPHighlight = laidOut(position).toPoint();
     view.mPick = true;
