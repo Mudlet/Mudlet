@@ -1729,6 +1729,21 @@ bool THeadlessSession::saveMapFile(const QString& fileName)
     return true;
 }
 
+bool THeadlessSession::deleteMap()
+{
+    if (!usable()) {
+        return false;
+    }
+    if (mpHost->mpMap->importRunning() || mpHost->mpMap->hasActiveTransferProgress()) {
+        //: Error from a frontend with no window that was asked to delete the map while a map download, import or export runs
+        mErrorString = tr("A map download, import or export is running; wait for it to end.");
+        return false;
+    }
+    mpHost->mpMap->mapClear();
+    mpHost->mpMap->updateArea(-1);
+    return true;
+}
+
 namespace {
 
 // The combinations TCommandLine::event() acts on without offering them to a binding, or for a keypad key, once

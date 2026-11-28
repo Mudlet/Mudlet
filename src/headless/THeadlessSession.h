@@ -373,6 +373,11 @@ public:
     // with its progress as above, and anything else as its binary map in the format the profile saves its maps in.
     // False, with errorString() saying why, as for loadMapFile(), and for a file that could not be written.
     bool saveMapFile(const QString& fileName);
+    // Empties the profile's map, as the Mapper tab's "Delete map" does: no rooms or areas but the default one, the
+    // default colours, and no custom data, while the map files saved before stay. The map is drawn again as after a
+    // load. False, with errorString() saying why, while a map download, import or export runs, and where submit() is
+    // refused.
+    bool deleteMap();
     // A key pressed as on the GUI's input line, which offers it to the profile's key bindings where that line
     // would: the first that matches runs, or each one when the profile runs them all. The key and modifiers are
     // those of Qt's key event, which a binding must match exactly, so a key on the keypad carries

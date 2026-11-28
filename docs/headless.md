@@ -377,6 +377,7 @@ a binary map is saved in the format the profile saves its maps in, and the main 
 the GUI. They run within their call, as a script's `loadMap()` does, so a JSON or XML map's progress arrives as
 for a script's import, and `cancelMapOperation()` from a handler of it aborts a JSON one, leaving the profile's map
 as it was. They take only a whole path, and refuse while a map download, import or export runs.
+`deleteMap()` is that tab's "Delete map": the map is emptied, and the files saved before stay, as in the GUI.
 
 A map operation or package download still open when its profile closes, or when `shutdown()` or a later
 `start()` lets the profile go, gets its end there, so every start an app is sent is followed by one end.
