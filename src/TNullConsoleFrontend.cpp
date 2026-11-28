@@ -4429,7 +4429,12 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString&
 
 void TNullConsoleFrontend::setBorderColor(const QColor& color)
 {
-    mpHost->mainConsoleModel().mBorderColor = color;
+    QColor& border = mpHost->mainConsoleModel().mBorderColor;
+    if (border == color) {
+        return;
+    }
+    border = color;
+    emit mpHost->signal_borderColorChanged();
 }
 
 void TNullConsoleFrontend::applyBorders()

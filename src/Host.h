@@ -1496,6 +1496,8 @@ signals:
     void signal_consoleFontChanged(const QFont& font);
     // With no view: the main console's grid, or where its text goes, may have changed
     void signal_mainAreaLaidOut();
+    // With no view: setBorderColor() gave the border around the main console another colour
+    void signal_borderColorChanged();
     // request counts the requests made, so an answer to one a newer one has replaced is known
     void signal_mainWindowResizeRequested(const QSize& pixels, quint64 request);
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);

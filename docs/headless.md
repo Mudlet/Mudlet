@@ -852,7 +852,7 @@ naming what changed, for the app to read again: `scriptWindowsChanged`, `windowT
 `windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
 `mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
 from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
-`consoleColorsChanged`, `timeStampsShownChanged` and `mainConsoleAreaChanged`. So a change made and
+`consoleColorsChanged`, `timeStampsShownChanged`, `mainConsoleAreaChanged` and `mainBorderColorChanged`. So a change made and
 undone within a turn sends nothing, and nothing follows `profileLoaded` for what the load did. A map
 export or import runs the event loop as it goes, so these can arrive while the script that began it
 still runs.
@@ -968,6 +968,12 @@ font change, either call, or a script's own `setMainWindowSize()`. Read both at 
 signal comes from the event loop, with both as they are then, and only when they differ from what the
 app last had, so a script that sets a border twice in one turn sends one, and one that sets it and takes
 it back sends none.
+
+`mainBorderColor()` is the colour a script's `setBorderColor()` gives the room the borders leave around
+the main console, which the GUI paints there and `getBorderColor()` reads: black until a script sets one,
+and invalid after a `setBorderColor()` out of range, which Qt makes no colour of. Read it at
+`profileLoaded`; `mainBorderColorChanged` carries it when it changes, from the event loop and only when
+it differs from what the app last had, as `mainConsoleAreaChanged` does.
 
 A script's `setMainWindowSize(width, height)` sets its own profile's area in pixels, as the app's call
 would, and answers `true`, or `nil` and a message for a size the app's call refuses.

@@ -597,6 +597,10 @@ public:
     // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
     QSize mainConsoleGrid() const;
     QRect mainConsoleTextRect() const;
+    // The colour of the border around the main console, the room the borders leave, as setBorderColor() set it:
+    // black until a script sets one, as the GUI's, and invalid after a setBorderColor() out of range, which Qt makes
+    // no colour of. Invalid with no profile open: read it at profileLoaded, then follow mainBorderColorChanged.
+    QColor mainBorderColor() const;
     // The words scripts gave the main command line for Tab to complete, with addCmdLineSuggestion(), and those
     // it is never to complete, with addCmdLineBlacklist(), each once and sorted. Empty with no profile open.
     // Read from anywhere.
@@ -1154,6 +1158,9 @@ signals:
     // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
     // sends them once.
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // mainBorderColor() changed, by setBorderColor(). From the event loop, with it as it is then, and only when it
+    // differs from what was last sent or what it gave at profileLoaded.
+    void mainBorderColorChanged(const QString& profile, const QColor& color);
     // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
     // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
@@ -1383,6 +1390,8 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    // The same for mainBorderColor()
+    std::optional<QColor> mDeliveredMainBorderColor;
     // What scriptWindows(), each label's labelContent() and each text box's textBoxContent() gave at profileLoaded,
     // then as each scriptWindowsChanged was sent, and a text box's text as setTextBoxText() set it
     struct WindowsTold
