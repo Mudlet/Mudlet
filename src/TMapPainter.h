@@ -209,8 +209,8 @@ public:
     {
         const TRoom* destination = nullptr;
         int destinationId = 0;
-        // The destination's reverse exit doesn't lead back. Not the sole arrow test: an exit also gets
-        // an arrow when a sibling exit to the same room is one-way.
+        // The destination's reverse exit doesn't lead back - with mDirectionalExitLines, no exit back pairs with it (wayBack()).
+        // Not the sole arrow test: an exit also gets an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
         // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
         bool drawnByCustomLine = false;
@@ -230,9 +230,15 @@ public:
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
     static int customLineDestination(const TRoom& room, const QString& key);
     static bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other);
-    // Whether exit's destination leads back through the opposite exit and draws that one as a custom line reaching room,
-    // which then shows the two-way connection a bent plain line would draw again beside it
+    // The compass exit of exit's destination that pairs with exit, the same pair seen from either room: a reverse exit
+    // first, then the others in direction order, each exit back pairing once; 0 if none is left for it
+    static int wayBack(const TRoom& room, const ExitToPaint& exit);
+    // Whether exit's destination draws its way back as a custom line reaching room, which then shows the two-way
+    // connection a bent plain line would draw again beside it
     static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
+    // Whether exit is drawn as one-way: its destination's reverse exit does not lead back, nor, with directional lines,
+    // an exit that pairs with it. The map and its exported image decide alike
+    static bool exitIsOneWay(const TRoom& room, const ExitToPaint& exit, bool directionalExitLines);
     // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
     static bool directionalExitLinesEnabled();
 
@@ -336,6 +342,9 @@ public:
     // From the room's center to the destination's: straight, or, with mDirectionalExitLines, leaving each end in its
     // exit's direction when the other room does not lie that way
     QVector<QPointF> exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub = nullptr) const;
+    // An exit back into its own room has no line to draw, so it is a hollow ring just outside the room in its direction -
+    // hollow, unlike a stub's dot. Returns the line from the room's centre to the ring's, for a door to sit on.
+    QLineF drawLoopExit(QPainter&, const QPointF& centre, int direction, qreal cellWidth, qreal cellHeight, qreal borderWidth) const;
 
     // Draws an area at a size of its own into an image file, written on a pool thread; how that goes is reported to
     // the profile. The returned pair says whether the export started, or why not.
