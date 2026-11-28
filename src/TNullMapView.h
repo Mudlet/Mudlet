@@ -43,8 +43,11 @@ public:
     explicit TNullMapView(Host* pHost, QObject* parent = nullptr, bool raisesEvents = true);
     // A hidden mapper does not paint
     void setShown(bool shown);
-    // What T2DMap would draw at that size, whether or not the mapper is shown, raising sysMapAreaChanged as it does
-    void render(QPainter&, const QSize&);
+    // What T2DMap would draw at that size, whether or not the mapper is shown, raising sysMapAreaChanged as it does.
+    // T2DMap's line weights, outlines and the room size below which it fades or leaves out borders are in pixels, so
+    // a window shown enlarged is laid out at size times layoutScale, from 1 to 16, and drawn scaled down to size; the
+    // positions given to and taken from this view stay in size's pixels
+    void render(QPainter&, const QSize&, qreal layoutScale = 1.0);
     // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
     // to T2DMap, menus and dragging aside
     // Cleared for an app that shows the map info box itself: render() then leaves the box out and mapInfo() holds
@@ -53,7 +56,7 @@ public:
     // The map info box the last render() left out, a contributor's part each; empty where it painted the box
     const QList<TMapPainter::MapInfoLine>& mapInfo() const { return mMapInfo; }
     bool rendered() const { return !mView.mSize.isEmpty(); }
-    QSize renderedSize() const { return mView.mSize; }
+    QSize renderedSize() const { return mRenderedSize; }
     // Whether the last render() laid out an area's rooms, which a press and a wheel turn act on
     bool showsArea() const;
     void press(const QPoint&, Qt::MouseButton, Qt::KeyboardModifiers);
@@ -103,7 +106,7 @@ public:
     // The levels of the area the last render() laid out that have rooms, lowest first
     QList<int> drawnLevels() const;
     qreal drawnZoom() const { return mView.xyzoom; }
-    qreal drawnRoomSize() const { return mView.mRoomWidth; }
+    qreal drawnRoomSize() const { return mView.mRoomWidth / mLayoutScale; }
     // The room the map takes as the player's: paint() and TMapPainter take the first room where the player's is gone
     int playerRoomId() const;
     // As T2DMap::slot_toggleMapViewOnly(), which raises mapModeChangeEvent
@@ -150,6 +153,8 @@ private:
     // What paint() does once the player is in another room, or follow() asks: the next render() centres on it
     void followRoom(int roomId, int areaId);
     void collectDrawnRooms();
+    // A point of the last render(), in its size's pixels, where its layout has it
+    QPointF laidOut(const QPointF& point) const { return point * mLayoutScale; }
     int centredRoomId() const { return mRecentre ? mFollowedRoomId : mView.mRoomID; }
 
     Host* mpHost = nullptr;
@@ -159,6 +164,9 @@ private:
     // What T2DMap keeps between frames: the view last drawn, as the pointer and the selection have changed it since,
     // and the area last raised for
     TMapPainter::View mView;
+    // What the last render() was given: mView.mSize is that size times the layout scale
+    QSize mRenderedSize;
+    qreal mLayoutScale = 1.0;
     // paint() followed the player to this room and area, which the next render() centres on as T2DMap would, and
     // for a small area may centre on the area
     bool mRecentre = false;

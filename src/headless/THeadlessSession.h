@@ -627,7 +627,10 @@ public:
     // a draw that moves to another area raises sysMapAreaChanged. A script opens the map first, as with
     // openMapWidget(). The map info box runs the profile's Lua, so this is refused where submit() is. False, with
     // errorString() saying why, with no map open, a painter that is not active or a size under 10 by 10 pixels.
-    bool renderMap(QPainter& painter, const QSize& size);
+    // A layoutScale above 1 lays it out at size times that, drawn scaled down to size, for a window shown enlarged, as
+    // the outlines, line weights and border fading are in pixels; mapPointer(), moveMapView() and mapView() keep to
+    // size's pixels.
+    bool renderMap(QPainter& painter, const QSize& size, qreal layoutScale = 1.0);
     // The pointer, at a position in what renderMap() last drew
     struct MapPointerEvent
     {

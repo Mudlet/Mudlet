@@ -82,7 +82,7 @@ QHash<int, int> stepsFrom(TRoomDB* pRoomDB, const int fromId)
 
 } // namespace
 
-bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
+bool THeadlessSession::renderMap(QPainter& painter, const QSize& size, const qreal layoutScale)
 {
     if (!usable()) {
         return false;
@@ -105,7 +105,7 @@ bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
         return false;
     }
     pView->setMapInfoPainted(mMapInfoPainted);
-    pView->render(painter, size);
+    pView->render(painter, size, layoutScale);
     return true;
 }
 

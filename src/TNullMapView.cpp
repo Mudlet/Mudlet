@@ -227,10 +227,10 @@ bool TNullMapView::move(const QPointF& pan, const qreal zoom, const QPointF& abo
     const qreal side = qMin(mView.mSize.width(), mView.mSize.height());
     PendingZoom pending = mPendingZoom.value_or(PendingZoom{mView.xyzoom, mView.mMapCenterX, mView.mMapCenterY});
     const qreal roomSize = side / pending.xyzoom;
-    pending.centreX -= pan.x() / roomSize;
-    pending.centreY -= pan.y() / roomSize;
+    pending.centreX -= laidOut(pan).x() / roomSize;
+    pending.centreY -= laidOut(pan).y() / roomSize;
     const qreal newZoom = qBound(TMap::scmMinXYZoom, pending.xyzoom / zoom, maxZoom());
-    const QPointF fromMiddle = about - QPointF(mView.mSize.width() / 2.0, mView.mSize.height() / 2.0);
+    const QPointF fromMiddle = laidOut(about - QPointF(mRenderedSize.width() / 2.0, mRenderedSize.height() / 2.0));
     const bool zoomed = !qFuzzyCompare(newZoom, pending.xyzoom);
     if (zoomed) {
         const qreal newRoomSize = side / newZoom;
@@ -274,13 +274,13 @@ void TNullMapView::collectDrawnRooms()
         }
         const QPointF position(pRoom->x() * mView.mRoomWidth + fx, -pRoom->y() * mView.mRoomHeight + fy);
         if (frame.contains(position)) {
-            mDrawnRooms.append(DrawnRoom{.id = roomId, .position = position, .name = pRoom->name});
+            mDrawnRooms.append(DrawnRoom{.id = roomId, .position = position / mLayoutScale, .name = pRoom->name});
         }
     }
     if (mDrawnRooms.size() <= maxDrawnRooms) {
         return;
     }
-    const QPointF middle(mView.mSize.width() / 2.0, mView.mSize.height() / 2.0);
+    const QPointF middle(mRenderedSize.width() / 2.0, mRenderedSize.height() / 2.0);
     const auto fromMiddle = [&middle](const DrawnRoom& room) {
         const QPointF offset = room.position - middle;
         return QPointF::dotProduct(offset, offset);
@@ -307,16 +307,17 @@ void TNullMapView::raiseAreaChanged(const int areaId, const int lastViewedAreaId
 }
 
 // With the settings T2DMap::init() and dlgMapper take from the profile and the main window
-void TNullMapView::render(QPainter& painter, const QSize& size)
+void TNullMapView::render(QPainter& painter, const QSize& size, const qreal layoutScale)
 {
     // The repaint a player's move asks for can come before the paint() it schedules, and TMapPainter would then
     // centre on the player itself, leaving paint() nothing to follow
     paint();
     TMap* pMap = mpHost->mpMap.data();
+    const qreal scale = qIsFinite(layoutScale) ? qBound(1.0, layoutScale, 16.0) : 1.0;
     TMapPainter::View view = mView;
     view.mpMap = pMap;
     view.mpHost = mpHost;
-    view.mSize = size;
+    view.mSize = (QSizeF(size) * scale).toSize();
     view.eSize = mpHost->mLineSize;
     view.mBSize = mpHost->mRoomBorderSize;
     view.rSize = mpHost->mRoomSize;
@@ -341,11 +342,16 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     // Set again only by a frame that lays the rooms out
     view.mRoomWidth = 0.0f;
     TMapPainter::PaintResult result;
+    painter.save();
+    painter.scale(1.0 / scale, 1.0 / scale);
     // A map info contributor's Lua reads the area shown, as getMapZoom() does, so finds the one this frame shows
     mPainter.paintView(painter, view, result, [this](const TMapPainter::View& frame) {
         mView = frame;
     });
+    painter.restore();
     mView = result.view;
+    mRenderedSize = size;
+    mLayoutScale = scale;
     mMapInfo = result.mapInfo;
     mLaidOut = mView.mRoomWidth > 0.0f;
     collectDrawnRooms();
@@ -501,8 +507,8 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
                 mView.mMultiSelectionSet.clear();
             }
             bool multiSelection = false;
-            TMapPainter::addRoomsToSelection(
-                    mpHost->mpMap.data(), mView.mMultiSelectionSet, multiSelection, mView.mMultiSelectionHighlightRoomId, TMapPainter::roomsAtPoint(mView, *pArea, position), modifiers);
+            const QList<int> rooms = TMapPainter::roomsAtPoint(mView, *pArea, laidOut(position).toPoint());
+            TMapPainter::addRoomsToSelection(mpHost->mpMap.data(), mView.mMultiSelectionSet, multiSelection, mView.mMultiSelectionHighlightRoomId, rooms, modifiers);
         }
     }
     if (mRaisesEvents) {
@@ -517,7 +523,7 @@ void TNullMapView::doubleClick(const QPoint& position)
 {
     TMapPainter::View view = mView;
     view.mIsSecondaryView = true;
-    view.mPHighlight = position;
+    view.mPHighlight = laidOut(position).toPoint();
     view.mPick = true;
     view.mStartSpeedWalk = true;
     view.mKeepZoom = mLaidOut;
@@ -543,7 +549,7 @@ bool TNullMapView::wheel(const QPointF& position, const QPoint& angleDelta, cons
     // The main window reads this once at its start; with none, it is read where it is used
     const bool invertZoom = MudletApp::getQSettings()->value(qsl("invertMapZoom"), false).toBool();
     PendingZoom pending = mPendingZoom.value_or(PendingZoom{mView.xyzoom, mView.mMapCenterX, mView.mMapCenterY});
-    const std::optional<bool> zoomed = TMapPainter::zoomAtPoint(*pArea, pending.xyzoom, pending.centreX, pending.centreY, mView.mSize, position, angleDelta, modifiers, invertZoom);
+    const std::optional<bool> zoomed = TMapPainter::zoomAtPoint(*pArea, pending.xyzoom, pending.centreX, pending.centreY, mView.mSize, laidOut(position), angleDelta, modifiers, invertZoom);
     if (!zoomed) {
         return false;
     }
@@ -551,7 +557,7 @@ bool TNullMapView::wheel(const QPointF& position, const QPoint& angleDelta, cons
     if (*zoomed) {
         // zoomAtPoint() keeps the point under the pointer, so a turn off the middle leaves the player, unless the
         // player's move has asked for a centring the next render() does
-        if (!mRecentre && position != QPointF(mView.mSize.width() / 2.0, mView.mSize.height() / 2.0)) {
+        if (!mRecentre && position != QPointF(mRenderedSize.width() / 2.0, mRenderedSize.height() / 2.0)) {
             mFollowing = false;
         }
         mPendingZoom = pending;

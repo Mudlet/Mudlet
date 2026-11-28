@@ -1070,6 +1070,15 @@ As the GUI's does, a draw that moves to another area raises `sysMapAreaChanged`.
 the profile's Lua, so the call is refused where `submit()` is, from a handler of `outputLine` and the
 other signals sent in the middle of a write.
 
+The map's outlines, line weights and the room size below which a room's border fades and then goes are
+in pixels, so a small window an app shows enlarged would have its rooms drawn as tiny rooms magnified:
+filled dots for the levels above and below, rooms without borders, thinner exits. Such an app passes
+`renderMap()` a `layoutScale`, how many of the units it lays its own maps out in make one of the
+window's pixels, from 1 to 16: the map is laid out at the size times that and drawn scaled down to the
+size, so its rooms look as on a map laid out at that larger size. The zoom, the rooms across the narrow
+side, is the area's as before, and `mapPointer()`, `moveMapView()` and `mapView()` keep to the size's
+pixels.
+
 `mapRepaintRequested` says when the GUI would draw the map again: a script opened the map, showed it
 again or replaced it with an embedded mapper, the player moved or a script centred the map, the map
 loaded or changed, or its zoom, colours, settings or info box did. It comes once a turn
