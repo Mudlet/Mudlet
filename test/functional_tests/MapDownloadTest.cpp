@@ -958,6 +958,54 @@ private slots:
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a canceled one was refused, so the import flag was left set");
     }
 
+    // A frontend with no console of its own, such as an app over libmudlet, learns
+    // from signal_mapDownloadFinished() how each download it began ended, and from
+    // downloadMap()'s answer whether one began at all.
+    void test_eachDownloadEndsWithItsResult()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
+        QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
+
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the map download never finished");
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), true);
+        QCOMPARE(finishedSpy.at(0).at(1).toString(), QString());
+
+        finishedSpy.clear();
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/nosuchmap.xml"))), "the failed map download never finished");
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("Map download encountered an error")), qPrintable(finishedSpy.at(0).at(1).toString()));
+        // Of the URL, which a game can fill with secrets, only its scheme and host
+        QVERIFY2(!finishedSpy.at(0).at(1).toString().contains(qsl("/nosuchmap.xml")), qPrintable(finishedSpy.at(0).at(1).toString()));
+
+        finishedSpy.clear();
+        pMap->downloadMap(qsl("%zz"));
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("invalid URL")), qPrintable(finishedSpy.at(0).at(1).toString()));
+
+        finishedSpy.clear();
+        closeSpy.clear();
+        QVERIFY(pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml"))));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpMapServer->requestedPaths().contains(qsl("/stalled.xml"));
+                         },
+                         10s),
+                 "the download never reached the server");
+        // Refused, so no result of its own follows
+        QVERIFY(!pMap->downloadMap(mpMapServer->url(qsl("/map.xml"))));
+        QCOMPARE(finishedSpy.count(), 0);
+        pMap->slot_downloadCancel();
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("canceled, on user's request")), qPrintable(finishedSpy.at(0).at(1).toString()));
+        // After the progress closed, so a frontend has taken the progress down by then
+        QCOMPARE(closeSpy.count(), 1);
+    }
+
     // Taking that exit is what leaves the profile's map where it was - in
     // memory and on disk. Writing the aborted reply's nothing over the
     // destination file and handing that to the reader, which clears the map

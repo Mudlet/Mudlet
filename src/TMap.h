@@ -99,6 +99,12 @@ signals:
     void signal_mapLoaded(bool showPlayerArea);
     void signal_mapperShowRequested();
     void signal_mapDownloadEnded();
+    // A download that downloadMap() began has ended, once for each: loaded, or
+    // not, with the message the console was given saying why, which can be empty;
+    // after its progress has closed, where it had started. For a URL that is not
+    // valid, or a map folder that cannot be made, it comes before downloadMap()
+    // returns.
+    void signal_mapDownloadFinished(bool loaded, const QString& reason);
     void signal_symbolCachesStale();
     void signal_playerRoomStyleChanged();
     void signal_areaListChanged();
@@ -211,8 +217,10 @@ public:
     void pushErrorMessagesToFile(QString, bool isACleanup = false);
 
     // Downloads a map, then installs it via readXmlMapFile().
-    // Protected from running twice by 'mImportRunning' flag
-    void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
+    // Protected from running twice by 'mImportRunning' flag: false where it
+    // refused for that, or for an import or export running, which it says in the
+    // console; otherwise signal_mapDownloadFinished() follows.
+    bool downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
     // like 'downloadMap' but for local files:
     bool importMap(QFile&, QString* errMsg = nullptr);
@@ -640,6 +648,9 @@ private:
     QString mLocalMapFileName;
     int mExpectedFileSize = 0;
     bool mImportRunning = false;
+    // Why the download running failed, as slot_downloadError() or
+    // slot_downloadCancel() said, for signal_mapDownloadFinished()
+    QString mDownloadFailure;
 
     // Engine-side mirror of the frontend-owned dialog, which the engine can't
     // read back. mMapProgressStandalone also serves as the "import/export already

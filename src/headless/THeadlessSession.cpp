@@ -951,6 +951,30 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                             }
                         },
                         Qt::QueuedConnection);
+                // After the close's own relay, so it follows mapProgressFinished
+                connect(
+                        pMap,
+                        &TMap::signal_mapDownloadFinished,
+                        &mMapProgressRelay,
+                        [this, run](const bool loaded, const QString& error) {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit mapDownloadFinished(profile, loaded, error);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // Queued, as the game's message that offers it is being read
+                connect(
+                        pMap,
+                        &TMap::signal_mmpMapLocationChanged,
+                        this,
+                        [this, run]() {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit offeredMapChanged(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
                 // After the start's own relay, so it follows mapProgressStarted
                 connect(
                         pMap,
@@ -1597,6 +1621,29 @@ bool THeadlessSession::cancelMapOperation()
         return false;
     }
     mpHost->mpMap->slot_mapProgressDialogCancelled();
+    return true;
+}
+
+QString THeadlessSession::offeredMapUrl() const
+{
+    return mpHost ? mpHost->getMmpMapLocation() : QString();
+}
+
+bool THeadlessSession::downloadOfferedMap()
+{
+    if (!usable()) {
+        return false;
+    }
+    if (mpHost->getMmpMapLocation().isEmpty()) {
+        //: Error from a frontend with no window that was asked to download the map the game offers when the game has offered none
+        mErrorString = tr("The game has offered no map to download.");
+        return false;
+    }
+    if (!mpHost->mpMap->downloadMap()) {
+        //: Error from a frontend with no window that was asked to download the map the game offers while a map download, import or export runs
+        mErrorString = tr("A map download, import or export is running; wait for it to end.");
+        return false;
+    }
     return true;
 }
 

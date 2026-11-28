@@ -73,6 +73,28 @@
 using namespace std::chrono_literals;
 
 namespace {
+// A map's URL as the console and the debug log show it: its scheme and host. A game can put a user name and
+// password in the rest, or a token in its path or query.
+QString shownUrl(const QUrl& url)
+{
+    return url.adjusted(QUrl::RemoveUserInfo | QUrl::RemovePath | QUrl::RemoveQuery | QUrl::RemoveFragment).toString();
+}
+
+// A reply's error text names its URL, which it shows as shownUrl() does
+QString withShownUrl(QString text, const QNetworkReply& reply)
+{
+    for (const QUrl& url : {reply.request().url(), reply.url()}) {
+        const QString shown = shownUrl(url);
+        for (const QString& form : {url.toString(), url.toString(QUrl::FullyEncoded), url.toDisplayString()}) {
+            // An empty one would be replaced between every character
+            if (!form.isEmpty() && form != shown) {
+                text.replace(form, shown);
+            }
+        }
+    }
+    return text;
+}
+
 // An image label is painted scaled from its pixmap, so past this many pixels a
 // bigger one only costs memory: at 30000 pixels square it is gigabytes.
 constexpr qreal cMaxImageLabelPixels = 4096.0 * 4096.0;
@@ -2915,12 +2937,12 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     mIsFileViewingRecommended = false;
 }
 
-void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
+bool TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
     const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     if (!pHost) {
-        return;
+        return false;
     }
 
     // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
@@ -2929,7 +2951,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                    "requested or is being imported from a local file - wait for that\n"
                                    "operation to complete (if it cannot be canceled) before retrying!");
         postMessage(warnMsg);
-        return;
+        return false;
     }
 
     if (mMapProgressStandalone) {
@@ -2938,10 +2960,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                    "export is already in progress - wait for that operation to complete\n"
                                    "before retrying!");
         postMessage(warnMsg);
-        return;
+        return false;
     }
     mImportRunning = true;
     // MUST clear this flag when done under ALL circumstances
+    mDownloadFailure.clear();
 
     QUrl url;
     if (remoteUrl.isEmpty()) {
@@ -2965,10 +2988,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                   "%1\n"
                                   "and the error message (may contain technical details) was:"
                                   "\"%2\".")
-                                       .arg(url.toString(), url.errorString());
+                                       .arg(shownUrl(url), url.errorString());
         postMessage(errMsg);
         mImportRunning = false;
-        return;
+        emit signal_mapDownloadFinished(false, errMsg);
+        return true;
     }
 
     // Check to ensure we have a map directory to save the map files to.
@@ -2982,7 +3006,8 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
                                        .arg(toProfileDirPathString);
         pHost->postMessage(errMsg);
         mImportRunning = false;
-        return;
+        emit signal_mapDownloadFinished(false, errMsg);
+        return true;
     }
 
     if (localFileName.isEmpty()) {
@@ -3012,6 +3037,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
     connect(mpNetworkReply, &QNetworkReply::errorOccurred, this, &TMap::slot_downloadError);
+    return true;
 }
 
 // Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
@@ -3188,6 +3214,7 @@ void TMap::slot_downloadCancel()
 {
     const QString alertMsg = tr("[ ALERT ] - Map download was canceled, on user's request.");
     postMessage(alertMsg);
+    mDownloadFailure = alertMsg;
     clearTransferProgress();
     if (mpNetworkReply) {
         mpNetworkReply->abort(); // Will indirectly cause error() AND replyFinished signals to be sent
@@ -3202,14 +3229,15 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
     if (error != QNetworkReply::OperationCanceledError) {
         // No point in reporting Cancel as that is handled elsewhere
-        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1").arg(mpNetworkReply->errorString());
+        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1").arg(withShownUrl(mpNetworkReply->errorString(), *mpNetworkReply));
         postMessage(errMsg);
+        mDownloadFailure = errMsg;
     }
 }
 
 void TMap::slot_replyFinished(QNetworkReply* reply)
 {
-    auto cleanup = [this, reply]() {
+    auto finish = [this, reply](const bool loaded, const QString& reason) {
         reply->deleteLater();
         mpNetworkReply = nullptr;
 
@@ -3221,6 +3249,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         mExpectedFileSize = 0;
         // We have finished with the XMLimporter so must clear the flag
         mImportRunning = false;
+        mDownloadFailure.clear();
+        emit signal_mapDownloadFinished(loaded, reason);
     };
 
 
@@ -3233,7 +3263,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // for a failure, and slot_downloadCancel() for a cancel. Either way the
         // reply has nothing to give, and writing that over the destination file
         // and handing it to the map reader would cost the loaded map.
-        cleanup();
+        finish(false, mDownloadFailure.isEmpty() ? withShownUrl(reply->errorString(), *reply) : mDownloadFailure);
         return;
     }
     if (mpHost) {
@@ -3245,7 +3275,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     if (!writeFile.open(QFile::WriteOnly)) {
         const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
-        cleanup();
+        finish(false, alertMsg);
         return;
     }
     // The QNetworkReply is Ok here:
@@ -3253,20 +3283,20 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     if (const QByteArray downloaded = reply->readAll(); writeFile.write(downloaded) != downloaded.size()) {
         const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
-        cleanup();
+        finish(false, alertMsg);
         return;
     }
     if (!writeFile.commit()) {
         const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to save destination file:\n%1\nreason: %2").arg(mLocalMapFileName, writeFile.errorString());
         postMessage(alertMsg);
-        cleanup();
+        finish(false, alertMsg);
         return;
     }
 
     Host* pHost = mpHost;
     if (!pHost) {
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
-        cleanup();
+        finish(false, QString());
         return;
     }
 
@@ -3288,7 +3318,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
             const QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(parsingFileName);
             postMessage(alertMsg);
-            cleanup();
+            finish(false, alertMsg);
             return;
         }
 
@@ -3299,6 +3329,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         readFile.close();
     }
 
+    QString failure;
     if (parsingWasSuccessful) {
         TEvent mapDownloadEvent{};
         mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
@@ -3306,11 +3337,11 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         pHost->raiseEvent(mapDownloadEvent);
     } else {
         // Failure in parse file...
-        const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
-        postMessage(alertMsg);
+        failure = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
+        postMessage(failure);
     }
     emit signal_mapDownloadEnded();
-    cleanup();
+    finish(parsingWasSuccessful, failure);
 }
 
 void TMap::reportStringToProgressDialog(const QString text)
@@ -3484,7 +3515,7 @@ void TMap::setMmpMapLocation(const QString& location)
     }
     mMmpMapLocation = location;
 
-    qDebug() << "MMP map registered at" << mMmpMapLocation;
+    qDebug() << "MMP map registered at" << shownUrl(QUrl(mMmpMapLocation));
     emit signal_mmpMapLocationChanged();
 }
 

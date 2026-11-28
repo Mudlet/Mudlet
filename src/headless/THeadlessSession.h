@@ -351,6 +351,14 @@ public:
     // mapProgressCancelDisabled, and where submit() is refused, save that a JSON map that start() loads can be
     // aborted from a handler of its mapProgressStarted.
     bool cancelMapOperation();
+    // The map the game offers for download, as GMCP's Client.Map gives its URL, which may hold a user name and
+    // password; empty while it offers none, or with no profile open. offeredMapChanged follows each change.
+    QString offeredMapUrl() const;
+    // Downloads the map the game offers and loads it in place of the profile's, as the GUI's "Download from game"
+    // does: mapProgressStarted, mapProgressChanged and mapProgressFinished show it, cancelMapOperation() aborts it,
+    // and mapDownloadFinished says how it ended. False, with errorString() saying why, with no map offered, while a
+    // map download, import or export runs, and where submit() is refused.
+    bool downloadOfferedMap();
     // A key pressed as on the GUI's input line, which offers it to the profile's key bindings where that line
     // would: the first that matches runs, or each one when the profile runs them all. The key and modifiers are
     // those of Qt's key event, which a binding must match exactly, so a key on the keypad carries
@@ -1060,6 +1068,13 @@ signals:
     // The map operation can no longer be aborted, as the GUI's dialog then drops its Abort: at once for an XML
     // import, and for an export writing its file or a download that has arrived
     void mapProgressCancelDisabled(const QString& profile);
+    // offeredMapUrl() changed, as the game offered a map; from the event loop
+    void offeredMapChanged(const QString& profile);
+    // A map download, whichever began it, ended: loaded, its rooms now the profile's map, or not, with error being
+    // the message the console was given, which can be empty and names no more of the map's URL than its scheme and
+    // host. From the event loop, after its mapProgressFinished where its progress had started, so long as shutdown()
+    // or a later start() has not let the profile go.
+    void mapDownloadFinished(const QString& profile, bool loaded, const QString& error);
     // The map opened with no mapping script installed, where the GUI suggests one: the first time it opens
     // once the profile has loaded, as the GUI asks. The profile marks it asked then, whether or not anything
     // listens, and a save keeps that, so it never comes again for that profile. From the event loop, even once
