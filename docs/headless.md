@@ -934,6 +934,14 @@ There are two ways to give the area, and the later of the two holds:
 - `setMainWindowSize(QSize(width, height))` gives it in pixels, for an app that draws the main console
   itself. A font change keeps the area and fits the new font's characters into it, so the grid changes.
 
+An app that knows the size before it opens the profile gives it to `start()` as well, in
+`options.mainWindowSize` (pixels) or else `options.screenSize` (characters): the area is laid out with
+the font and borders the save left before the first script runs, so a script that fits its windows to
+the main window as it loads reads the size the app shows, and is sent no `sysWindowResizeEvent` for it.
+Given again once the profile has loaded, the same size changes nothing. A screen size of more than 65535
+either way is refused; a main window that holds no character of the profile's font, or more than 65535,
+is not taken, and `setMainWindowSize()` refuses it once the profile has loaded.
+
 Either raises `sysWindowResizeEvent` with the text's width and height in pixels, as a resize of the main
 window does in the GUI, and nothing when the size is the one already given; a border change raises it
 too. Both are refused where `submit()` is, and for a size of no character, or more than 65535, either

@@ -93,6 +93,13 @@ public:
         // asks for it with transportDialRequested, and never uses its own. Only for the session's profile, not
         // ones its scripts open. See "The game connection" in docs/headless.md
         bool supplyTransport = false;
+        // The main window's area as setMainWindowSize() gives it in pixels, or else as setScreenSize() gives it in
+        // characters, taken once the save has loaded and laid out with its font and borders before the first script
+        // runs, which then reads that size and is sent no sysWindowResizeEvent for it. Empty for none. A screen
+        // size of more than 65535 either way is refused; a main window that holds no character of the profile's
+        // font, or more than 65535, is not taken, and setMainWindowSize() refuses it once the profile has loaded.
+        QSize mainWindowSize;
+        QSize screenSize;
     };
 
     // How the game asked for a run of a line to be shown. Reverse is not applied to the colours: the GUI

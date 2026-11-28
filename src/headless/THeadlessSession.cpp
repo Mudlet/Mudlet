@@ -43,6 +43,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QKeyEvent>
 #include <QMetaMethod>
 #include <QScopeGuard>
@@ -535,6 +536,11 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
         //: Error from a frontend with no window that was asked to open a profile while those it closed were still closing
         mErrorString = tr("The profiles closed earlier are still closing; try again once they have.");
         return StartResult::poolClosing;
+    }
+    if (options.screenSize.width() > 65535 || options.screenSize.height() > 65535) {
+        //: Error from a frontend with no window given a screen size that cannot be sent to the game; %1 is the number of columns asked for, %2 the number of rows
+        mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(options.screenSize.width()).arg(options.screenSize.height());
+        return StartResult::notOpened;
     }
     // Before the pool is made, as a handler of that end may call shutdown() or start()
     if (!mpPool && !finishOpenProgress()) {
@@ -1063,6 +1069,18 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 }
                 if (options.port > 0) {
                     pNewHost->setPort(options.port);
+                }
+                // Laid out by startProfileScripts(), with the font and borders the save left
+                if (const QSize pixels = options.mainWindowSize; !pixels.isEmpty()) {
+                    const QFontMetrics metrics(pNewHost->displayFontWithNoView());
+                    const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
+                    const qint64 rows = pixels.height() / std::max(1, metrics.height());
+                    if (columns >= 1 && columns <= 65535 && rows >= 1 && rows <= 65535) {
+                        pNewHost->setMainAreaPixels(pixels);
+                    }
+                } else if (const QSize cells = options.screenSize; !cells.isEmpty()) {
+                    // The GUI's main console never reports itself narrower
+                    pNewHost->setMainAreaCells(QSize(std::max(40, cells.width()), cells.height()));
                 }
             });
     // The GUI connects a profile whose save failed too, but there the player sees why it has no scripts. Unless
