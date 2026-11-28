@@ -43,6 +43,7 @@
 #include <QSaveFile>
 #include <QtConcurrentRun>
 #include <QAbstractItemModel>
+#include <QCheckBox>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
@@ -176,6 +177,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
     buildShell();
+    connect(mpCheckBox_mobile, &QCheckBox::toggled, this, &dlgPackageExporter::refreshStartOverButton);
 
     populateDependencies();
     syncDependencyChips();
@@ -462,6 +464,15 @@ void dlgPackageExporter::buildDetailsColumn()
     ui->pushButton_removeDependency->hide();
     ui->comboBox_dependencies->hide();
     pColumn->addLayout(stackedField(ui->label_requiredPackages, mpChipRow_dependencies));
+
+    mpCheckBox_mobile = new QCheckBox(mpDetailsColumn);
+    mpCheckBox_mobile->setObjectName(qsl("exporterMobile"));
+    //: Package exporter - check box saying the package's windows, labels and other interface also work on a phone's small screen
+    mpCheckBox_mobile->setText(tr("Its interface fits a phone screen (Mudlet for Android, Mudlet Web)"));
+    //: Package exporter - tooltip on the check box saying the package's interface suits a phone
+    mpCheckBox_mobile->setToolTip(tr("Leave this off if its windows, labels or gauges need a large screen: on a phone they can then be left out unless the player asks for them. "
+                                     "Its commands, buttons and maps are shown either way."));
+    pColumn->addWidget(mpCheckBox_mobile);
 
     //: Package exporter - word over the package's full description
     ui->label_detailedDescription->setText(tr("Description"));
@@ -1476,6 +1487,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
     ui->lineEdit_helpUrl->setText(packageInfo.value(qsl("helpURL")));
+    mpCheckBox_mobile->setChecked(mpHost->packageDeclaresMobile(packageName));
     populateDependencies(); // available dependencies, as opposed to required ones which is next
     const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
@@ -1516,7 +1528,7 @@ bool dlgPackageExporter::formIsFresh() const
     // <= 0: in module mode the picker is emptied, which leaves it at -1
     return ui->lineEdit_packageName->text().isEmpty() && ui->packageList->currentIndex() <= 0 && ui->lineEdit_author->text() == mFreshAuthor && ui->lineEdit_title->text().isEmpty()
            && ui->lineEdit_helpUrl->text().isEmpty() && ui->lineEdit_version->text() == mFreshVersion && ui->textEdit_description->toPlainText() == mFreshDescription && mDescriptionImages.isEmpty()
-           && ui->comboBox_dependencies->count() == 0 && mPackageIconPath.isEmpty() && ui->listWidget_addedFiles->count() == 0 && countCheckedItems() == 0;
+           && ui->comboBox_dependencies->count() == 0 && !mpCheckBox_mobile->isChecked() && mPackageIconPath.isEmpty() && ui->listWidget_addedFiles->count() == 0 && countCheckedItems() == 0;
 }
 
 bool dlgPackageExporter::formHasTypedWords() const
@@ -1540,6 +1552,7 @@ void dlgPackageExporter::startOver()
     ui->lineEdit_author->setText(mFreshAuthor);
     ui->lineEdit_title->clear();
     ui->lineEdit_helpUrl->clear();
+    mpCheckBox_mobile->setChecked(false);
     ui->lineEdit_version->setText(mFreshVersion);
     ui->textEdit_description->setPlainText(mFreshDescription);
     mPlainDescription = mFreshDescription;
@@ -2470,6 +2483,9 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
     appendToDetails(qsl("helpURL"), normalizedHelpUrl());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
+    if (mpCheckBox_mobile && mpCheckBox_mobile->isChecked()) {
+        appendToDetails(qsl("mobile"), qsl("yes"));
+    }
     const auto iso8601timestamp = utils::dateStamp();
     mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp));
     mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp));

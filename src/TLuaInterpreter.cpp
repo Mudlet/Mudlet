@@ -3716,6 +3716,7 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name module '%1' is installed under and cannot be changed").arg(moduleName));
     }
     host.mModuleInfo[moduleName][info] = value;
+    emit host.signal_packageUiChanged();
     lua_pushboolean(L, true);
     return 1;
 }

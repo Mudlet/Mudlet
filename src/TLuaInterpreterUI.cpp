@@ -52,6 +52,7 @@
 #include "TTimer.h"
 #include "mapInfoContributorManager.h"
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <limits>
@@ -100,6 +101,104 @@ static bool validBorderSize(const double size)
 static QString badBorderSizeMessage(const double size, const int argument = 1)
 {
     return qsl("border size %1 (argument #%2) is out of range, it must be between %3 and %4").arg(size, 0, 'g', 14).arg(argument).arg(-Host::scmMaxBorderSize).arg(Host::scmMaxBorderSize);
+}
+
+// Of same-named items, the running script owns its body and what that body calls
+// directly - not what it reaches through a C function such as raiseEvent()
+static QSet<QString> ownersOfFrame(lua_State* L, Host& host, const int level, const lua_Debug& frame)
+{
+    const QString source = QString::fromUtf8(frame.source);
+    const bool fromRunningScript = source == host.mRunningScript.chunkName;
+    if (fromRunningScript && !std::strcmp(frame.what, "main")) {
+        return {host.mRunningScript.package};
+    }
+    const QSet<QString> owners = host.packagesOwningChunk(source);
+    if (owners.size() > 1 && fromRunningScript && owners.contains(host.mRunningScript.package)) {
+        lua_Debug caller;
+        for (int below = level + 1; lua_getstack(L, below, &caller) && lua_getinfo(L, "S", &caller); ++below) {
+            if (!caller.what || !caller.source || source != QString::fromUtf8(caller.source)) {
+                break;
+            }
+            if (!std::strcmp(caller.what, "main")) {
+                return {host.mRunningScript.package};
+            }
+        }
+    }
+    return owners;
+}
+
+// A file, or one of Mudlet's items, rather than a string compiled with loadstring()
+static bool namesAFileOrItem(const char* source)
+{
+    static const QStringList itemKinds{qsl("Script: "), qsl("Trigger: "), qsl("Alias: "), qsl("Timer: "), qsl("Key: "), qsl("Button: ")};
+    const QString name = QString::fromUtf8(source);
+    return name.startsWith(QLatin1Char('@')) || std::any_of(itemKinds.cbegin(), itemKinds.cend(), [&name](const QString& kind) {
+               return name.startsWith(kind);
+           });
+}
+
+// Passes over code no package owns, such as Geyser's, so what Geyser makes for a package is the package's; and over a
+// library, to the package that lists it in its dependencies. Code compiled from a string counts as the profile's, as
+// that is how a "lua" alias runs what the player types.
+static QStringList packagesOfCaller(lua_State* L, Host& host)
+{
+    QSet<QString> callers;
+    lua_Debug frame;
+    for (int level = 1; lua_getstack(L, level, &frame); ++level) {
+        if (!lua_getinfo(L, "S", &frame) || !frame.what || !frame.source || !std::strcmp(frame.what, "C") || !std::strcmp(frame.what, "tail")) {
+            continue;
+        }
+        const QSet<QString> owners = ownersOfFrame(L, host, level, frame);
+        if (owners.isEmpty()) {
+            if (namesAFileOrItem(frame.source)) {
+                continue;
+            }
+            break;
+        }
+        if (owners.contains(QString())) {
+            break;
+        }
+        if (callers.isEmpty()) {
+            callers = owners;
+            continue;
+        }
+        if (callers.intersects(owners)) {
+            continue;
+        }
+        const bool aLibraryOfEach = std::all_of(owners.cbegin(), owners.cend(), [&host, &callers](const QString& owner) {
+            const QStringList dependencies = host.packageDependencies(owner);
+            return std::all_of(callers.cbegin(), callers.cend(), [&dependencies](const QString& caller) {
+                return dependencies.contains(caller);
+            });
+        });
+        if (!aLibraryOfEach) {
+            break;
+        }
+        callers = owners;
+    }
+    QStringList packages(callers.cbegin(), callers.cend());
+    packages.sort();
+    return packages;
+}
+
+// A window there before the call keeps the makers it had
+static void noteMakers(lua_State* L, Host& host, const TWindowRegistry::MadeKind kind, const QString& name, const bool existed)
+{
+    if (!existed && host.windowRegistry().hasWindow(kind, name)) {
+        host.windowRegistry().setMakers(kind, name, packagesOfCaller(L, host));
+    }
+}
+
+static void noteLookSetters(lua_State* L, Host& host, const QList<TWindowRegistry::Look>& looks)
+{
+    const QStringList packages = packagesOfCaller(L, host);
+    bool changed = false;
+    for (const TWindowRegistry::Look look : looks) {
+        changed = host.windowRegistry().setLookSetters(look, packages) || changed;
+    }
+    if (changed) {
+        emit host.signal_packageUiChanged();
+    }
 }
 
 // Only sub-consoles and labels have a background colour of their own; these widgets take theirs from a stylesheet.
@@ -558,10 +657,12 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
     }
     const QString commandLineName{lua_tostring(L, commandLineNamePos)};
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
+    const bool existed = host.windowRegistry().hasCommandLine(commandLineName);
     if (auto [success, message] = host.consoleFrontend()->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
         return warnArgumentValue(L, __func__, message, true);
     }
+    noteMakers(L, host, TWindowRegistry::MadeKind::CommandLine, commandLineName, existed);
 
     lua_pushboolean(L, true);
     return 1;
@@ -574,11 +675,19 @@ int TLuaInterpreter::createLabel(lua_State* L)
         lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
+    // No QString may live in this frame across the calls, which can raise a Lua error
+    Host& host = getHostFromLua(L);
+    const int nameIndex = lua_type(L, 2) == LUA_TSTRING ? 2 : 1;
+    const bool existed = host.windowRegistry().hasLabel(QString::fromUtf8(lua_tostring(L, nameIndex)));
     if (lua_type(L, 2) == LUA_TSTRING) {
-        return createLabelUserWindow(L, lua_tostring(L, 1), lua_tostring(L, 2));
+        const int results = createLabelUserWindow(L, lua_tostring(L, 1), lua_tostring(L, 2));
+        noteMakers(L, host, TWindowRegistry::MadeKind::Label, QString::fromUtf8(lua_tostring(L, nameIndex)), existed);
+        return results;
     }
     if (lua_type(L, 2) == LUA_TNUMBER) {
-        return createLabelMainWindow(L, lua_tostring(L, 1));
+        const int results = createLabelMainWindow(L, lua_tostring(L, 1));
+        noteMakers(L, host, TWindowRegistry::MadeKind::Label, QString::fromUtf8(lua_tostring(L, nameIndex)), existed);
+        return results;
     }
 
     lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
@@ -626,9 +735,11 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
+    const bool existed = host.windowRegistry().hasSubConsole(name);
     if (auto [success, message] = host.createMiniConsole(windowName, name, x, y, width, height); !success) {
         return warnArgumentValue(L, __func__, message, true);
     }
+    noteMakers(L, host, TWindowRegistry::MadeKind::SubConsole, name, existed);
 
     lua_pushboolean(L, true);
     return 1;
@@ -674,10 +785,12 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
         name = lua_tostring(L, 1);
     }
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
+    const bool existed = host.windowRegistry().hasScrollBox(name);
     if (auto [success, message] = host.createScrollBox(windowName, name, x, y, width, height); !success) {
         return warnArgumentValue(L, __func__, message, true);
     }
+    noteMakers(L, host, TWindowRegistry::MadeKind::ScrollBox, name, existed);
 
     lua_pushboolean(L, true);
     return 1;
@@ -775,10 +888,12 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
     }
     const QString textEditName{lua_tostring(L, textEditNamePos)};
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
+    const bool existed = host.windowRegistry().hasTextBox(textEditName);
     if (auto [success, message] = host.consoleFrontend()->createTextBox(windowName, textEditName, x, y, width, height); !success) {
         return warnArgumentValue(L, __func__, message, true);
     }
+    noteMakers(L, host, TWindowRegistry::MadeKind::TextBox, textEditName, existed);
 
     lua_pushboolean(L, true);
     return 1;
@@ -2594,9 +2709,11 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
     Host& host = getHostFromLua(L);
     //Don't create Userwindow if there is a Label with the same name already. It breaks the UserWindow
 
+    const bool existed = host.windowRegistry().hasSubConsole(name);
     if (auto [success, message] = host.openWindow(name, loadLayout, autoDock, area.toLower()); !success) {
         return warnArgumentValue(L, __func__, message);
     }
+    noteMakers(L, host, TWindowRegistry::MadeKind::SubConsole, name, existed);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2767,6 +2884,9 @@ int TLuaInterpreter::resetBackgroundImage(lua_State* L)
     Host* host = &getHostFromLua(L);
     if (!host->resetBackgroundImage(windowName, fullWindow)) {
         return warnArgumentValue(L, __func__, qsl("console '%1' not found").arg(windowName));
+    }
+    if (isMain(windowName)) {
+        noteLookSetters(L, *host, {TWindowRegistry::Look::BackgroundImage});
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3007,6 +3127,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     TAppFrontend::instance()->setAppStyleSheet(styleSheet);
+    noteLookSetters(L, host, {TWindowRegistry::Look::AppStyleSheet});
     HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
@@ -3131,6 +3252,9 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
         }
         return warnArgumentValue(L, __func__, qsl("console or label '%1' not found, or '%2' could not be loaded as an image").arg(windowName, imgPath));
     }
+    if (isMain(windowName)) {
+        noteLookSetters(L, *host, {TWindowRegistry::Look::BackgroundImage});
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -3225,6 +3349,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
     auto sizes = host.userBorders();
     sizes.setBottom(static_cast<int>(size));
     host.setUserBorders(sizes);
+    noteLookSetters(L, host, {TWindowRegistry::Look::BorderBottom});
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3265,6 +3390,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     auto sizes = host.userBorders();
     sizes.setLeft(static_cast<int>(size));
     host.setUserBorders(sizes);
+    noteLookSetters(L, host, {TWindowRegistry::Look::BorderLeft});
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3280,6 +3406,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     auto sizes = host.userBorders();
     sizes.setRight(static_cast<int>(size));
     host.setUserBorders(sizes);
+    noteLookSetters(L, host, {TWindowRegistry::Look::BorderRight});
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3321,7 +3448,9 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         borders = {sizes[3], sizes[0], sizes[1], sizes[2]};
         break;
     }
-    getHostFromLua(L).setUserBorders(borders);
+    Host& host = getHostFromLua(L);
+    host.setUserBorders(borders);
+    noteLookSetters(L, host, {TWindowRegistry::Look::BorderTop, TWindowRegistry::Look::BorderRight, TWindowRegistry::Look::BorderBottom, TWindowRegistry::Look::BorderLeft});
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3337,6 +3466,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     auto sizes = host.userBorders();
     sizes.setTop(static_cast<int>(size));
     host.setUserBorders(sizes);
+    noteLookSetters(L, host, {TWindowRegistry::Look::BorderTop});
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4290,7 +4420,11 @@ int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
 {
     const QString styleSheet = getVerifiedString(L, __func__, 1, "style sheet");
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.setProfileStyleSheet(styleSheet));
+    const bool applied = host.setProfileStyleSheet(styleSheet);
+    if (applied) {
+        noteLookSetters(L, host, {TWindowRegistry::Look::ProfileStyleSheet});
+    }
+    lua_pushboolean(L, applied);
     return 1;
 }
 
@@ -5109,29 +5243,11 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     return 1;
 }
 
-// Of same-named items, the running script owns its body and what that body calls
-// directly - not what it reaches through a C function such as raiseEvent()
 static QString packageOfFrame(lua_State* L, Host& host, const int level, const lua_Debug& frame)
 {
-    const QString source = QString::fromUtf8(frame.source);
-    const bool fromRunningScript = source == host.mRunningScript.chunkName;
-    if (fromRunningScript && !std::strcmp(frame.what, "main")) {
-        return host.mRunningScript.package;
-    }
-    const QSet<QString> owners = host.packagesOwningChunk(source);
+    const QSet<QString> owners = ownersOfFrame(L, host, level, frame);
     if (owners.size() == 1) {
         return *owners.constBegin();
-    }
-    if (fromRunningScript && owners.contains(host.mRunningScript.package)) {
-        lua_Debug caller;
-        for (int below = level + 1; lua_getstack(L, below, &caller) && lua_getinfo(L, "S", &caller); ++below) {
-            if (!caller.what || !caller.source || source != QString::fromUtf8(caller.source)) {
-                break;
-            }
-            if (!std::strcmp(caller.what, "main")) {
-                return host.mRunningScript.package;
-            }
-        }
     }
     if (owners.size() > 1 && TDebug::wants(TDebug::Category::LuaWarning)) {
         TDebug(Qt::black, Qt::yellow, TDebug::Category::LuaWarning) << "addCommand: the code that called it could belong to any of " << QStringList(owners.cbegin(), owners.cend()).join(qsl(", "))

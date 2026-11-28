@@ -34,3 +34,24 @@ package. Change them upstream: the next sync PR reverts any edit made only here.
 
 Which games get which package is decided in `HostManager::defaultPackages()`,
 and every archive needs an entry in `src/mudlet.qrc` to be compiled into Mudlet.
+
+## Declaring a phone-sized interface
+
+A package whose windows fit a phone's screen says so in `config.lua`:
+
+```lua
+mobile = [[yes]]
+```
+
+`mobile = true` works too, as does any case of "yes" or "true". The package
+exporter writes the line when its "Its interface fits a phone screen" box is
+ticked. Mudlet for Android and Mudlet Web can then leave out, on a small
+screen, the labels, gauges, mini consoles, user windows, command lines, text
+and scroll boxes, borders, main background image and style sheets that come
+from packages without it, unless the player asks for them. A package's mappers,
+buttons and `addCommand()` entries stay either way, and so does everything the
+profile's own scripts make. Desktop Mudlet shows everything as before.
+
+What a library package makes counts as the package that calls it, when that
+package lists the library in its `dependencies`, so a library needs no line of
+its own. What Geyser makes counts as the package whose code asked for it.

@@ -52,6 +52,7 @@ public:
     {
         if (mLabels.value(name) == pModel) {
             mLabels.remove(name);
+            mMakers[MadeKind::Label].remove(name);
         }
     }
 
@@ -67,6 +68,7 @@ public:
     {
         if (mSubConsoles.value(name).pModel == pModel) {
             mSubConsoles.remove(name);
+            mMakers[MadeKind::SubConsole].remove(name);
         }
     }
 
@@ -200,6 +202,7 @@ public:
     void deregisterScrollBox(const QString& name)
     {
         mScrollBoxes.remove(name);
+        mMakers[MadeKind::ScrollBox].remove(name);
         forgetPlainWindowState(name);
     }
     bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
@@ -211,6 +214,7 @@ public:
     void deregisterCommandLine(const QString& name)
     {
         mCommandLines.remove(name);
+        mMakers[MadeKind::CommandLine].remove(name);
         forgetPlainWindowState(name);
     }
     bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
@@ -273,6 +277,7 @@ public:
     void deregisterTextBox(const QString& name)
     {
         mTextBoxes.remove(name);
+        mMakers[MadeKind::TextBox].remove(name);
         forgetPlainWindowState(name);
     }
     bool hasTextBox(const QString& name) const { return mTextBoxes.contains(name); }
@@ -337,6 +342,53 @@ public:
         return {mPlainWindowStates.value(name).visible};
     }
 
+    // A scroll box, command line or text box may share a console's name, so a maker is kept per kind
+    enum class MadeKind { Label, SubConsole, ScrollBox, CommandLine, TextBox };
+
+    bool hasWindow(const MadeKind kind, const QString& name) const
+    {
+        switch (kind) {
+        case MadeKind::Label:
+            return hasLabel(name);
+        case MadeKind::SubConsole:
+            return hasSubConsole(name);
+        case MadeKind::ScrollBox:
+            return hasScrollBox(name);
+        case MadeKind::CommandLine:
+            return hasCommandLine(name);
+        case MadeKind::TextBox:
+            return hasTextBox(name);
+        }
+        return false;
+    }
+
+    // The packages whose code made a window: one, or each package with an item of the chunk name that code ran
+    // under; none for the profile's own. Set as the window is made, so moving or resizing it by name keeps it, and
+    // dropped as it is deregistered.
+    void setMakers(const MadeKind kind, const QString& name, const QStringList& packages)
+    {
+        if (packages.isEmpty()) {
+            mMakers[kind].remove(name);
+        } else {
+            mMakers[kind].insert(name, packages);
+        }
+    }
+    QStringList makers(const MadeKind kind, const QString& name) const { return mMakers.value(kind).value(name); }
+
+    // What a script sets for the whole profile rather than on one of its windows
+    enum class Look { BorderTop, BorderRight, BorderBottom, BorderLeft, BackgroundImage, AppStyleSheet, ProfileStyleSheet };
+
+    // The packages whose code set it last, as for makers(). True when that differs from who set it before.
+    bool setLookSetters(const Look look, const QStringList& packages)
+    {
+        if (mLookSetters.value(look) == packages) {
+            return false;
+        }
+        mLookSetters.insert(look, packages);
+        return true;
+    }
+    QStringList lookSetters(const Look look) const { return mLookSetters.value(look); }
+
 private:
     struct SubConsoleEntry
     {
@@ -400,6 +452,8 @@ private:
     QSize mMainWindowSize;
     CommandLineEntry mMainCommandLine;
     QMap<QString, PlainWindowState> mPlainWindowStates;
+    QMap<MadeKind, QMap<QString, QStringList>> mMakers;
+    QMap<Look, QStringList> mLookSetters;
 };
 
 #endif // MUDLET_TWINDOWREGISTRY_H
