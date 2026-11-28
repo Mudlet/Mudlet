@@ -2050,7 +2050,7 @@ void CredentialManagerKeychainTest::testAnEntryAnotherBuildSavedIsEmptiedWhenItW
 {
 #if !defined(Q_OS_MACOS)
     QSKIP("Only the macOS login keychain refuses a delete it lets another build from the same signer rewrite");
-#endif
+#else
     QFETCH(QKeychain::Error, deleteAnswer);
     QFETCH(bool, overwrites);
     QFETCH(QKeychain::Error, overwriteAnswer);
@@ -2099,6 +2099,7 @@ void CredentialManagerKeychainTest::testAnEntryAnotherBuildSavedIsEmptiedWhenItW
         QVERIFY2(answer->error.contains(QStringLiteral("synthetic: Invalid attempt to change the owner of this item.")),
                  qPrintable(QStringLiteral("the keychain's reason for keeping the entry was dropped: %1").arg(answer->error)));
     }
+#endif
 }
 
 // With no Secret Service on D-Bus, libsecret answers every job with OtherError. A store that fails
