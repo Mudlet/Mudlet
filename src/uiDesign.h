@@ -276,12 +276,13 @@ QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& to
 bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder);
 
 // Answers whether the design draws the strip; false while a script's sheet takes the tabs, and the bar is then put
-// back as it was. Safe before or after the bar holds tabs, and to repeat. The bar's QTabWidget then has what its
-// pages, strip and pane need as its size hints.
+// back as it was. Qt carries a sheet into a window from every widget above it, so that sheet is looked for on the
+// bar's window and all its ancestors: Mudlet's own tab rules go inside the window, never on it or above it.
+// Safe to repeat, with or without tabs. The bar's QTabWidget then hints the size its pages, strip and pane need.
 bool prepareTabStrip(QTabBar* pTabBar);
 
-// True once a script's sheet has come or gone since prepareTabStrip() last ran: ask on the window's StyleChange and
-// restyle then. The restyle sets sheets only under the window, which sends the window no StyleChange back.
+// True once a script's sheet has come or gone since prepareTabStrip() last ran: ask on the window's StyleChange, which
+// a sheet set above the window sends too, and restyle then. The restyle sends the window no StyleChange back.
 bool tabStripOutOfDate(const QTabBar* pTabBar);
 
 // Along the bottom row of base, the row a chosen tab's underline is drawn over

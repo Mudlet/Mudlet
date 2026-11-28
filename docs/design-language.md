@@ -618,11 +618,14 @@ before it is asked for.
 
 A script's sheet that names `QTabBar` takes a strip's tabs whole, on these
 strips as on the profile strip below: `scriptSheetTakesTheTabs()` answers for
-both, from the application's sheet or the one on the widget a profile's sheet is
-set on, which for a dialog is its own window. Mudlet's sheets go on the widgets
-under the window, so their `QTabBar` rules never count. Left to Qt the two sheets
-would merge property by property - the design's colours and padding winning, the
-script's widths and corners laid over them - which is neither look. While a
+both. For a strip on the recipe the sheet may be the application's, the one on
+the strip's window, or one on any widget above that window, as Qt carries a
+parent's sheet into a window made under it: a dialog made under the mapper takes
+the profile's sheet `setProfileStyleSheet()` sets there. Mudlet's sheets go on
+the widgets under the window, never on the window or an ancestor of it, so their
+`QTabBar` rules never count. Left to Qt the two sheets would merge property by
+property - the design's colours and padding winning, the script's widths and
+corners laid over them - which is neither look. While a
 script's sheet holds, `prepareTabStrip()` puts back what it changed (the strip's
 style, the base, document mode, `expanding`, the crosses' size and place) and
 answers false, and the window leaves `tabBarStyleSheet()` out of every sheet that
@@ -630,8 +633,8 @@ reaches the bar; the connection window also gives its pages their own margins
 back, as the pane is Qt's framed one again. A new strip calls `prepareTabStrip()`
 where its window builds its sheets and includes `tabBarStyleSheet()` only when it
 answers true; on the window's `StyleChange`, which comes with every sheet set on
-the application or the window, it builds them again when `tabStripOutOfDate()`
-answers true.
+the application, the window or a widget above it, it builds them again when
+`tabStripOutOfDate()` answers true.
 
 #### The profile strip
 

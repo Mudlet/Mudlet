@@ -1810,6 +1810,18 @@ void releaseTabStrip(QTabBar* pTabBar)
     QEvent styleChanged(QEvent::StyleChange);
     QApplication::sendEvent(pTabBar, &styleChanged);
 }
+
+// Qt carries a sheet into a window from every widget above it, across window edges too: a dialog made under the mapper
+// takes the profile's sheet set there
+bool scriptSheetReachesTheStrip(const QTabBar* pTabBar)
+{
+    for (const QWidget* pHolder = pTabBar->window(); pHolder; pHolder = pHolder->parentWidget()) {
+        if (scriptSheetTakesTheTabs(pHolder)) {
+            return true;
+        }
+    }
+    return false;
+}
 } // namespace
 
 void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens)
@@ -1830,7 +1842,7 @@ bool prepareTabStrip(QTabBar* pTabBar)
     if (!pTabBar) {
         return false;
     }
-    if (scriptSheetTakesTheTabs(pTabBar->window())) {
+    if (scriptSheetReachesTheStrip(pTabBar)) {
         releaseTabStrip(pTabBar);
         return false;
     }
@@ -1840,7 +1852,7 @@ bool prepareTabStrip(QTabBar* pTabBar)
 
 bool tabStripOutOfDate(const QTabBar* pTabBar)
 {
-    return pTabBar && (keeperOf(pTabBar) != nullptr) == scriptSheetTakesTheTabs(pTabBar->window());
+    return pTabBar && (keeperOf(pTabBar) != nullptr) == scriptSheetReachesTheStrip(pTabBar);
 }
 
 void keepClickFocusOffControls(QWidget* pRoot)
