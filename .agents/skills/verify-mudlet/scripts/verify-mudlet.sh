@@ -177,9 +177,15 @@ for i in ${REPLAY_PACKAGES[@]+"${!REPLAY_PACKAGES[@]}"}; do
   REPLAY_PACKAGES[i]="$(absolute "${REPLAY_PACKAGES[i]}")"
 done
 RESOLVED_SPECS=()
+TESTS_IN_WS="$(resolve "$WS")/src/mudlet-lua/tests/"
 for spec in ${SPECS[@]+"${SPECS[@]}"}; do
   if [ -e "$spec" ]; then
-    RESOLVED_SPECS+=("$(resolve "$spec")")
+    spec="$(resolve "$spec")"
+    # one inside this checkout's tests directory is looked up per side too, so --specs-from applies
+    case "$spec" in
+      "$TESTS_IN_WS"*) RESOLVED_SPECS+=("@${spec#"$TESTS_IN_WS"}") ;;
+      *) RESOLVED_SPECS+=("$spec") ;;
+    esac
   else
     # a name inside the tests directory, looked up per side later
     RESOLVED_SPECS+=("@$spec")
@@ -486,6 +492,14 @@ run_mudlet() { # label binary stage-root [extra env...]
   if [ -f "$(dirname "$binary")/portable.txt" ]; then
     die "$(dirname "$binary")/portable.txt redirects that Mudlet's config away from the throwaway profile; move it aside"
   fi
+  # only Linux runs get a private HOME, and this marker outranks XDG_CONFIG_HOME
+  if [ "$OS" != linux ]; then
+    local real_home="$HOME"
+    [ "$OS" != windows ] || [ -z "${USERPROFILE:-}" ] || real_home="$(cygpath -u "$USERPROFILE")"
+    if [ -f "$real_home/.config/mudlet/portable.txt" ]; then
+      die "$real_home/.config/mudlet/portable.txt redirects Mudlet's config away from the throwaway profile; move it aside"
+    fi
+  fi
 
   start_fixtures "$run"
   local envs=(
@@ -601,9 +615,10 @@ run_mudlet() { # label binary stage-root [extra env...]
 }
 
 # Windows may capture no stdout from a GUI Mudlet, so the streamed results are the fallback evidence
-# that the suite finished: some tests ran and none was left mid-flight
+# that the suite finished: busted reported the suite's end, some tests ran and none was left mid-flight
 all_tests_ended() { # results.tsv
   [ "$OS" = windows ] || return 1
+  [ -s "$1.finished" ] || return 1
   awk -F'\t' '$1 == "start" { open++ } $1 != "start" && NF == 3 { open-- } END { exit !(NR > 0 && open <= 0) }' "$1"
 }
 
@@ -631,7 +646,7 @@ report_run() { # label [brief: skip the failure list, for diff sides whose diffe
   esac
   if [ -s "$results.details" ] && [ -z "${2:-}" ]; then
     echo "  failures (full text in $results.details):"
-    awk '/^=== / { print "    " substr($0, 5); getline; print "      " $0 }' "$results.details" | head -n 60
+    awk '/^=== / { if (++shown > 30) exit; print "    " substr($0, 5); getline; print "      " $0 }' "$results.details"
   fi
   if [ "$VERBOSE" = true ]; then
     cat "$dir/log.txt"
@@ -757,7 +772,8 @@ build_base() { # head binary
   local preset="${BASE_PRESET:-$(default_preset)}" tree lock
   tree="${MUDLET_VERIFY_BASE_TREE:-$(git -C "$WS" rev-parse --path-format=absolute --git-common-dir)/mudlet-verify-base}"
   lock="$tree.lock"
-  mkdir "$lock" 2> /dev/null || die "another verify-mudlet is building the base in $tree (remove $lock if not)"
+  # held until exit, not just the build: the comparison reads the tree's Lua and runs its binary
+  mkdir "$lock" 2> /dev/null || die "another verify-mudlet is using the base in $tree (remove $lock if not)"
   # expanded now: lock is local, and a set -e exit runs the trap outside this function
   # shellcheck disable=SC2064
   trap "rmdir $(printf %q "$lock") 2> /dev/null; cleanup" EXIT
@@ -777,8 +793,6 @@ build_base() { # head binary
     (cd "$tree" && cmake --preset "$preset" ${args[@]+"${args[@]}"}) &&
       (cd "$tree" && ${gate[@]+"${gate[@]}"} cmake --build --preset "$preset" --target mudlet_executable -j "$jobs")
   } > "$OUT/base-build.log" 2>&1 || { tail -n 30 "$OUT/base-build.log" >&2; die "the base build failed"; }
-  rmdir "$lock"
-  trap cleanup EXIT
   BASE_ROOT="$tree"
   BASE_BINARY="$(preset_binary "$tree" "$preset")"
   [ -x "$BASE_BINARY" ] || die "the base build produced no $BASE_BINARY"
@@ -882,7 +896,7 @@ cmd_diff_specs() {
   fi
   if [ -s "$OUT/differences.tsv" ]; then
     echo "$(wc -l < "$OUT/differences.tsv" | tr -d ' ') test(s) behave differently on this checkout (base -> head):"
-    awk -F'\t' '{ printf "  %s -> %s  %s: %s\n", $4, $5, $1, $2 }' "$OUT/differences.tsv" | head -n 100
+    awk -F'\t' 'NR > 100 { exit } { printf "  %s -> %s  %s: %s\n", $4, $5, $1, $2 }' "$OUT/differences.tsv"
   else
     echo "no test behaves differently between the base and this checkout"
   fi

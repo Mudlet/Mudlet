@@ -78,3 +78,9 @@ for _, kind in ipairs({"failure", "error"}) do
     details:flush()
   end)
 end
+-- What tells a run that stopped between tests or in an after_all hook from one that finished
+subscribe({"suite", "end"}, function()
+  local finished = assert(io.open(path .. ".finished", "w"))
+  finished:write("1\n")
+  finished:close()
+end)

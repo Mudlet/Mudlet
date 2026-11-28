@@ -96,9 +96,10 @@ describe("verify-mudlet replay", function()
     local last = getLineCount("main")
     local console = {}
     if cfg.plain then
-      console = getLines("main", first, last)
+      -- getLineCount() is the last line's index, and getLines() stops before its end line
+      console = getLines("main", first, last + 1)
     else
-      for line = first, last - 1 do
+      for line = first, last do
         moveCursor("main", 0, line)
         console[#console + 1] = copy2decho("main")
       end
