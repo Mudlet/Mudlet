@@ -2946,7 +2946,13 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     QUrl url;
     if (remoteUrl.isEmpty()) {
         if (!getMmpMapLocation().isEmpty()) {
-            url = QUrl::fromUserInput(getMmpMapLocation());
+            url = mmpMapUrl(getMmpMapLocation());
+            if (url.isEmpty()) {
+                //: Shown in the main console when the map the game offered is not downloaded
+                postMessage(tr("[ WARN ]  - The map the game offered is not at a web (http or https) address, so it was not downloaded."));
+                mImportRunning = false;
+                return;
+            }
         } else {
             url = QUrl::fromUserInput(qsl("https://www.%1/maps/map.xml").arg(pHost->mUrl));
         }
@@ -3485,6 +3491,18 @@ void TMap::setMmpMapLocation(const QString& location)
 QString TMap::getMmpMapLocation() const
 {
     return mMmpMapLocation;
+}
+
+// A file: or qrc: location would have the game pick a file on the player's computer, or in Mudlet, to be read as the
+// profile's map. QUrl::fromUserInput(), as downloadMap() reads it, turns a bare path into a file: URL.
+/*static*/ QUrl TMap::mmpMapUrl(const QString& location)
+{
+    const QUrl url = QUrl::fromUserInput(location);
+    // QUrl gives the scheme in lower case
+    if ((url.scheme() != qsl("http") && url.scheme() != qsl("https")) || url.host().isEmpty()) {
+        return {};
+    }
+    return url;
 }
 
 bool TMap::getRoomNamesPresent()

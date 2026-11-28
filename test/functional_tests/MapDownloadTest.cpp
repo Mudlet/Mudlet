@@ -60,6 +60,8 @@
 #include <QFrame>
 #include <QHash>
 #include <QHostAddress>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLineEdit>
 #include <QPointer>
 #include <QProgressDialog>
@@ -1064,6 +1066,59 @@ private slots:
         QVERIFY2(runDownload(QString()), "the map download never finished");
 
         QCOMPARE(mpMapServer->requestedPaths(), QStringList{qsl("/mmp.xml")});
+    }
+
+    // Client.Map can name a file on the player's computer, or something else
+    // that is not on the web, for Mudlet to read as the profile's map. Such a
+    // location is never kept, so there is nothing to offer, and the console says
+    // so without repeating it.
+    void test_aGameCanOfferOnlyAMapOnTheWeb()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        const QString localMap = mConfigDir.filePath(qsl("offered-local.xml"));
+        QFile file(localMap);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write(scmMapXml), scmMapXml.size());
+        file.close();
+        const auto offer = [this](const QString& location) {
+            mpHost->setMmpMapLocation(QString::fromUtf8(QJsonDocument(QJsonObject{{qsl("url"), location}}).toJson()));
+        };
+
+        const QStringList refused{QUrl::fromLocalFile(localMap).toString(), localMap, qsl("data:text/xml,<map/>"), qsl("qrc:/map.xml"), qsl("ftp://example.com/map.xml"), qsl("https:///map.xml")};
+        for (const QString& location : refused) {
+            mConsoleMark = mpHost->mainConsoleView()->buffer.getLastLineNumber();
+            offer(location);
+            QVERIFY2(pMap->getMmpMapLocation().isEmpty(), qPrintable(qsl("%1 was kept as the game's map").arg(location)));
+            QVERIFY2(consoleShows(qsl("not at a web (http or https) address")), qPrintable(consoleTextSinceMark()));
+            QVERIFY2(!consoleShows(location), qPrintable(consoleTextSinceMark()));
+        }
+
+        // Read as downloadMap() reads it: the scheme in any case, or none, which is http
+        for (const QString& location : {qsl("HTTPS://example.com/map.xml"), qsl("example.com/map.xml")}) {
+            offer(location);
+            QCOMPARE(pMap->getMmpMapLocation(), location);
+        }
+    }
+
+    // A location TMap was given directly, past Host's check, is still not fetched
+    void test_aStoredMapLocationNotOnTheWebIsNotDownloaded()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        const QString localMap = mConfigDir.filePath(qsl("stored-local.xml"));
+        QFile file(localMap);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write(scmMapXml), scmMapXml.size());
+        file.close();
+        pMap->setMmpMapLocation(QUrl::fromLocalFile(localMap).toString());
+        QSignalSpy startSpy(pMap, &TMap::signal_mapTransferProgressStart);
+
+        pMap->downloadMap();
+
+        QVERIFY2(consoleShows(qsl("not at a web (http or https) address")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(!consoleShows(localMap), qPrintable(consoleTextSinceMark()));
+        QCOMPARE(startSpy.count(), 0);
+        QVERIFY(!pMap->hasActiveTransferProgress());
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a refused location was refused, so the import flag was left set");
     }
 
     // The game answers, but with a document that stops part way through - the

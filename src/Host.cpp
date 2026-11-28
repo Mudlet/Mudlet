@@ -2227,6 +2227,11 @@ void Host::setMmpMapLocation(const QString& data)
     if (!url.isValid()) {
         return;
     }
+    if (TMap::mmpMapUrl(urlValue.toString()).isEmpty()) {
+        //: Shown in the main console when a game offers its map at an address that is not a web one, such as a file on the player's computer
+        postMessage(tr("[ WARN ]  - The game offered a map that is not at a web (http or https) address, so it is not offered for download."));
+        return;
+    }
 
     mpMap->setMmpMapLocation(urlValue.toString());
 }
