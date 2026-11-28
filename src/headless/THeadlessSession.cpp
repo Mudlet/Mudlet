@@ -1370,7 +1370,7 @@ bool THeadlessSession::setProxy(const Proxy& proxy)
     const QString address = proxy.address.trimmed();
     if (proxy.port < 0 || proxy.port > 65535) {
         //: Error from a frontend with no window that was given a proxy's port; %1 is that port number
-        mErrorString = tr("The port %1 is not one a proxy can be reached on; it must be from 1 to 65535.").arg(proxy.port);
+        mErrorString = tr("The port %1 is not one a proxy can be reached on; it must be from 0 to 65535.").arg(proxy.port);
         return false;
     }
     if (!address.isEmpty()) {

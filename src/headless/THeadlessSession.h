@@ -154,10 +154,9 @@ public:
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
     // Hunspell cannot read; empty forgets it.
     static bool setDictionaryFolder(const QString& folder);
-    // The most lines a console in any session may keep, which "use maximum lines possible" gives and to which a
-    // bigger buffer size is clipped, as the desktop does with what it estimates the machine's memory can hold; for a
-    // platform that stops a process long before that is used up (Android). Below 100 it is 100; 0 or less goes back
-    // to the estimate. Taken by every buffer size set afterwards.
+    // What "use maximum lines possible" gives, and what a bigger buffer size set afterwards is clipped to, in place of
+    // the estimate from the machine's memory, for a platform that stops a process long before that is used up
+    // (Android). Below 100 it is 100; 0 or less goes back to the estimate.
     static void setMaxConsoleBufferSize(int lines);
 
     // Names mudlet_core's own Qt resources (":/" images, translations and fonts), so a program linking it statically
@@ -219,12 +218,11 @@ public:
     // dismissing it then lasts until the game stops hiding input. False while the box would not be open, and
     // where submit() is refused.
     bool dismissHiddenInput();
-    // The automatic login's name and password, changed in the running profile, which the connection dialog's
-    // boxes do not reach: the next connection logs in with them, and this one too if its login is still to come.
-    // setLogin() trims the name and stores it with the profile, as Options::login is, but an empty one clears it.
-    // setPassword() is for this run only, as Options::password is: an empty one withdraws the one given, and the
-    // profile's stored one, if any, is read again. False where submit() is refused, and from setLogin() when the
-    // name could not be stored, which leaves the profile's as it was.
+    // The automatic login's name and password, changed in the running profile: the next connection logs in with
+    // them, and this one too if its login is still to come. setLogin() trims the name and stores it with the
+    // profile, as Options::login is; an empty one clears it. setPassword() is for this run only, as
+    // Options::password is: an empty one withdraws it, and the profile's stored one, if any, is read again.
+    // False where submit() is refused, and from setLogin() when the name could not be stored.
     bool setLogin(const QString& login);
     bool setPassword(const QString& password);
     // The server, its port and whether it is reached securely, changed in the running profile and stored with it
@@ -232,7 +230,7 @@ public:
     // the retry after a failed connection and the automatic reconnect go there from then on, and every later
     // connection takes the TLS choice; a connection that is open stays as it is. setAutoReconnect() is the
     // connection dialog's "Reconnect automatically", stored too: it counts from the next time the connection is
-    // lost or fails, and a retry already waiting is still made. Both are false where submit() is refused, and
+    // lost or fails, and turning it off calls off a retry that is waiting. Both are false where submit() is refused, and
     // when a detail could not be stored; setAddress() also where start() would refuse the details.
     bool setAddress(const QString& host, int port, bool tls);
     bool setAutoReconnect(bool reconnect);

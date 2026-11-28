@@ -742,8 +742,8 @@ public:
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
-    // The most lines any console may keep, in place of what getMaxBufferSize() estimates from the machine's memory,
-    // for a platform that stops a process long before that is used up (Android); 0 goes back to the estimate
+    // Replaces what getMaxBufferSize() estimates from the machine's memory, for a platform that stops a process long
+    // before that is used up (Android); 0 goes back to the estimate
     static void setPlatformMaxBufferSize(int lines);
     int getLastClickedLinkIndex() const { return mLastClickedLinkIndex; }
     void setLastClickedLinkIndex(int index) { mLastClickedLinkIndex = index; }

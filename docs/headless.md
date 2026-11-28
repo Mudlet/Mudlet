@@ -206,23 +206,23 @@ load Qt Core through `System.loadLibrary` - the KeyStore cannot be reached, so t
 under `credentials/`, and the log says so.
 
 `setLogin()` and `setPassword()` change the automatic login's name and password in the profile that is
-running, which reads both only as it loads: the next connection logs in with them, with no close and load
-of the profile, and so does the one that is open if its login is still to come. The name is trimmed and
+running: the next connection logs in with them, with no close and load of the profile, and so does the
+one that is open if its login is still to come. The name is trimmed and
 stored with the profile, as `options.login` is, and an empty one clears it. The password is for this run
 only, as `options.password` is, and nothing stores it; an empty one withdraws the one given, and the
 password stored for the profile, if any, is read again. Both are false, with `errorString()` saying why,
 where `submit()` is refused, and `setLogin()` also when the name could not be stored.
 
-`setAddress()` and `setAutoReconnect()` do the same for the rest of what the connection dialog holds, which a
-running profile also reads only as it loads. `setAddress()` takes the server, its port and whether it is
+`setAddress()` and `setAutoReconnect()` change the running profile's server and automatic reconnect.
+`setAddress()` takes the server, its port and whether it is
 reached securely, and stores them as `options.host`, `options.port` and `options.tls` are stored, so an empty
 host or a port of 0 leaves the profile's. Lua's `reconnect()`, the retry after a failed connection and the
 automatic reconnect go to the new address from then on, where they would have gone to the one last connected
 to, and every later connection takes the TLS choice, `connectToServer()`'s included. A connection that is open
 stays as it is, and one still looking its server up takes the TLS choice as it is when the lookup ends, as it
 does a change made in the profile preferences. `setAutoReconnect()` is the dialog's "Reconnect automatically",
-stored with the profile: it counts from the next time the connection is lost or fails, so a retry that is
-already waiting is still made, and disconnecting calls that off. Both are false where `submit()` is refused
+stored with the profile: it counts from the next time the connection is lost or fails, and turning it off
+also calls off a retry that is waiting. Both are false where `submit()` is refused
 and when a detail could not be stored, and `setAddress()` also for details `start()` would refuse.
 
 `proxy()` and `setProxy()` read and change the proxy of the profile preferences, which the connection dialog
@@ -1581,8 +1581,7 @@ app copies its dictionaries into from its package; a `:/` or `assets:/` path is 
 ## Embedding it: the most lines a console keeps
 
 The profile preferences' "Use maximum lines possible" gives the main console as many lines as
-`TBuffer::getMaxBufferSize()` estimates four fifths of the machine's memory holds, and a bigger
-buffer size, the profile's or one `setConsoleBufferSize()` asks for, is clipped to that. A phone
+`TBuffer::getMaxBufferSize()` estimates the machine's memory can hold, and a bigger buffer size, the profile's or one `setConsoleBufferSize()` asks for, is clipped to that. A phone
 stops a process long before its memory is used up, so an app there names its own most before it
 starts a session:
 
@@ -1688,7 +1687,8 @@ The input line's are `commandSeparator`, `highlightHistory`, `disablePasswordMas
 preferences' Input line tab has them.
 The console's colours are text in `#rrggbb` form: the sixteen ANSI ones by the names `color_table` gives them
 (`ansiBlack` to `ansiLightWhite`), then `foregroundColor`, `backgroundColor`, `commandForegroundColor` and
-`commandBackgroundColor`, with `serverMayRedefineColors` beside them; a change reaches text decoded after it.
+`commandBackgroundColor`, with `serverMayRedefineColors` beside them; a change keeps the colour's alpha and
+reaches text decoded after it.
 `enableOSC8Hyperlinks` and `alertOnNewData` turn OSC 8 links and the new text alert on and off.
 
 `settings()` fills a `QVariantMap` with the value of each key it is given, as `getConfig()` gives it
