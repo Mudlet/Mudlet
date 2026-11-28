@@ -506,18 +506,6 @@ jobs:
         run: |
           mkdir -p appcast
 
-          # sparkle:version must match CFBundleVersion in the built app, so take the
-          # value the macOS build read from that app. This workflow always runs as it
-          # is on the default branch, also for a build of a commit whose build does
-          # not record it: there the app's version is the tag's, as it always was
-          BUNDLE_VERSION=$(find metadata/ -name 'release-metadata.json' -type f -exec jq -r '.bundle_version // empty' {} + | grep -m1 . || true)
-          if [[ -z "${BUNDLE_VERSION}" ]]; then
-            BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
-          elif [[ ! "${BUNDLE_VERSION}" =~ ^[0-9A-Za-z.-]+$ ]]; then
-            echo "::error::Release metadata carries an unusable bundle version"
-            exit 1
-          fi
-          export BUNDLE_VERSION
           export RELEASE_VERSION
 
           # From the built commit at the workspace root, not release-scripts/, so the
@@ -558,6 +546,26 @@ jobs:
 
             export FILE_SIZE=$(stat --printf="%s" "${DMG_FILE}")
             DMG_NAME=$(basename "${DMG_FILE}")
+
+            # sparkle:version must be the CFBundleVersion of the app in this dmg, so
+            # take what the build that named the dmg read from its app. The two
+            # macOS builds can differ - one re-run on a later day carries a later
+            # version - and this workflow always runs as it is on the default
+            # branch, also for a build of a commit that records no bundle version:
+            # there the app's version is the tag's, as it always was
+            BUNDLE_VERSION=$(find metadata/ -name 'release-metadata.json' -type f -exec jq -r --arg dmg "${DMG_NAME}" --arg arch "${ARCH}" '
+              select((.bundle_version // "") != "")
+              | select("Mudlet-\(.version)\(.build_suffix)-\(.commit)-\($arch).dmg" == $dmg
+                    or "Mudlet-\(.version)-\($arch).dmg" == $dmg)
+              | .bundle_version' {} + | grep -m1 . || true)
+            if [[ -z "${BUNDLE_VERSION}" ]]; then
+              BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
+            elif [[ ! "${BUNDLE_VERSION}" =~ ^[0-9A-Za-z.-]+$ ]]; then
+              echo "::error::Release metadata carries an unusable bundle version"
+              exit 1
+            fi
+            export BUNDLE_VERSION
+
             export DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | jq -r --arg name "${DMG_NAME}" '.assets[] | select(.name == $name) | .url')
 
             if [[ -z "${DOWNLOAD_URL}" || "${DOWNLOAD_URL}" == "null" ]]; then
