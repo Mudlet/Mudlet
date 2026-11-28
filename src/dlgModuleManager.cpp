@@ -26,13 +26,19 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "dlgSystemMessageArea.h"
+#include "uiDesign.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
-#include <QTimer>
+#include <QToolButton>
+#include <QVBoxLayout>
 
-using namespace std::chrono_literals;
+static constexpr int scmModulesInset = uiDesign::scmTabPaneInset * 2;
+// The .ui's grid gave the explanation this much; the table stretches and would take it all
+static constexpr int scmExplanationMinimumHeight = 230;
+static constexpr int scmModulesButtonGlyphSize = 16;
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -40,6 +46,9 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
+    buildShell();
+    applyModuleManagerShellStyle();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgModuleManager::slot_applyAppearance);
 
     // nothing is selected yet, so there is no help to show
     helpButton->setDisabled(true);
@@ -173,6 +182,15 @@ void dlgModuleManager::slot_installModule()
 
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
+
+    installModules(fileNames);
+}
+
+// Split from the slot so it can be tested: the file dialog there blocks
+void dlgModuleManager::installModules(const QStringList& fileNames)
+{
+    // An earlier failure says nothing about this attempt
+    mpNotice->hide();
 
     const QString failures = installModuleFiles(fileNames);
     layoutModules();
@@ -363,13 +381,91 @@ void dlgModuleManager::slot_helpModule()
     }
 }
 
+// Sheets go on the shell, not the dialog, as in every window that has adopted the design: a sheet
+// on the dialog would be lost to any profile stylesheet given to it
+void dlgModuleManager::buildShell()
+{
+    mpShell = new QWidget(this);
+    mpShell->setObjectName(qsl("modulesShell"));
+    uiDesign::markAsShellSurface(mpShell);
+    auto* pShellLayout = new QVBoxLayout(mpShell);
+    pShellLayout->setContentsMargins(scmModulesInset, scmModulesInset, scmModulesInset, scmModulesInset);
+    pShellLayout->setSpacing(scmModulesInset);
+
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{moduleTable, textEdit, label_importStatus, widget_2}) {
+        uiDesign::removeFromLayoutTree(gridLayout, pWidget);
+    }
+    delete gridLayout;
+    gridLayout = nullptr;
+    auto* pDialogLayout = new QVBoxLayout(this);
+    pDialogLayout->setContentsMargins(0, 0, 0, 0);
+    pDialogLayout->addWidget(mpShell);
+
+    pShellLayout->addWidget(moduleTable, 1);
+
+    // An explanation to read, not a field to type in, so it loses the sunken box
+    textEdit->setFrameShape(QFrame::NoFrame);
+    textEdit->setMinimumHeight(scmExplanationMinimumHeight);
+    pShellLayout->addWidget(textEdit);
+
+    label_importStatus->hide();
+    mpNotice = new dlgSystemMessageArea(mpShell);
+    mpNotice->setObjectName(qsl("modulesNotice"));
+    mpNotice->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Maximum);
+    if (QLayout* pNoticeLayout = mpNotice->layout()) {
+        pNoticeLayout->setContentsMargins(0, 0, 0, 0);
+    }
+    mpNotice->notificationAreaIconLabelError->hide();
+    mpNotice->notificationAreaIconLabelInformation->hide();
+    mpNotice->notificationAreaIconLabelWarning->show();
+    // It reports file names, and a '<' in one would otherwise be taken for markup
+    mpNotice->notificationAreaMessageBox->setTextFormat(Qt::PlainText);
+    mpNotice->hide();
+    pShellLayout->addWidget(mpNotice);
+    connect(mpNotice->messageAreaCloseButton, &QAbstractButton::clicked, mpNotice, &QWidget::hide);
+
+    // The .ui file orders the row by drawing it right to left, which also puts every button's glyph after its words
+    widget_2->unsetLayoutDirection();
+    for (QPushButton* pButton : {helpButton, installButton, uninstallButton}) {
+        horizontalLayout->removeWidget(pButton);
+        horizontalLayout->addWidget(pButton);
+    }
+    pShellLayout->addWidget(widget_2, 0, Qt::AlignTrailing);
+}
+
+void dlgModuleManager::slot_applyAppearance()
+{
+    applyModuleManagerShellStyle();
+}
+
+void dlgModuleManager::applyModuleManagerShellStyle()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    const QString table = qsl("QTableWidget#moduleTable");
+
+    mpShell->setStyleSheet(qsl("#modulesShell { background-color: %1; }").arg(tokens.page.name()) + uiDesign::buttonStyleSheet(tokens, qsl("#modulesShell"))
+                           + qsl("#modulesShell QTextEdit#textEdit { background: transparent; border: none; color: %1; }").arg(tokens.mutedText.name())
+                           + uiDesign::itemCheckMarkStyleSheet(table, tokens) + uiDesign::scrollBarStyleSheet(table, tokens, tokens.field)
+                           + uiDesign::scrollBarStyleSheet(qsl("#modulesShell QTextEdit#textEdit"), tokens, tokens.page));
+
+    // Tinted pixmaps keep the old appearance's ink until taken again here
+    installButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/packages-install-file.svg"), tokens));
+    uninstallButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-delete.svg"), tokens));
+    helpButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/about-docs.svg"), tokens));
+    for (QPushButton* pButton : {installButton, uninstallButton, helpButton}) {
+        pButton->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
+    }
+    mpNotice->messageAreaCloseButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
+    mpNotice->messageAreaCloseButton->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
+
+    uiDesign::keepClickFocusOffControls(mpShell);
+}
+
+// No timeout: a failure that hides itself can go unread. The next install clears it too.
 void dlgModuleManager::showImportStatus(const QString& message)
 {
-    label_importStatus->setTextFormat(Qt::PlainText);
-    label_importStatus->setText(message);
-    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
-    label_importStatus->show();
-    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+    mpNotice->notificationAreaMessageBox->setText(message);
+    mpNotice->show();
 }
 
 void dlgModuleManager::closeEvent(QCloseEvent* event)
