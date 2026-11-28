@@ -2625,6 +2625,7 @@ function map.show_help(cmd)
         cmd = cmd:lower():gsub(" ","_")
         if not map.help[cmd] then
             map.echo("No help file on that command.")
+            return
         end
     else
         cmd = 1
