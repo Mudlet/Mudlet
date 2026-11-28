@@ -484,7 +484,8 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.cursor = record->cursor;
     content.customCursor = record->customCursor;
     content.customCursorHotSpot = record->customCursorHotSpot;
-    if (const std::optional<TLabelAccessibleValue>& value = pModel->mAccessibleValue) {
+    // As TAccessibleLabel reads it: a button has no value
+    if (const std::optional<TLabelAccessibleValue>& value = pModel->mAccessibleValue; value && !pModel->actsAsButton()) {
         content.accessibleValue = LabelContent::AccessibleValue{.value = value->value, .min = value->min, .max = value->max};
     }
     content.clickThrough = pModel->mClickThrough;

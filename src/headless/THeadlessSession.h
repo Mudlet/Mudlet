@@ -781,7 +781,8 @@ public:
         // The pointer passes through it to what is under it
         bool clickThrough = false;
         // What a screen reader reads it as, as a progress bar, as setLabelAccessibleValue() gave it: value, from min
-        // to max. Geyser gives a gauge's back label the gauge's value. None for a label without one
+        // to max. Geyser gives a gauge's back label the gauge's value. None for a label without one or read as a
+        // button
         struct AccessibleValue
         {
             double value = 0.0;

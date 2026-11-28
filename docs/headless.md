@@ -1238,7 +1238,7 @@ trimmed under the row it is scrolled back to.
 - `cursor`, unset for the parent's, or the shape `setLabelCursor()` gave it, or `Qt::BitmapCursor` with
   `customCursor` and `customCursorHotSpot` from `setLabelCustomCursor()`;
 - `accessibleValue`, as `setLabelAccessibleValue()` gave it: `value`, from `min` to `max`, which a screen
-  reader reads as a progress bar's, and none for a label without one. `Geyser.Gauge:setValue()` and `setGauge()`
+  reader reads as a progress bar's, and none for a label without one or that `accessibleButton` says is a button. `Geyser.Gauge:setValue()` and `setGauge()`
   give it to the gauge's back label, so an app that draws the gauge has its value without reading the front label's
   width;
 - `clickThrough`, as `enableClickthrough()` sets it;

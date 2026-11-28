@@ -942,6 +942,13 @@ local value, min, max = getLabelAccessibleValue("lbl")
 assert(value == 40 and min == 0 and max == 100)
 )lua")));
         QVERIFY(!changes.wait(200));
+        // A label read as a button is read without it, as the GUI's screen reader reads it, until it is not one again
+        QVERIFY(session.runLua(qsl(R"(setLabelAccessibleRole("lbl", "button"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QVERIFY(session.labelContent(qsl("lbl"))->accessibleButton);
+        QVERIFY(!session.labelContent(qsl("lbl"))->accessibleValue);
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleRole("lbl", ""))"), AccessibleValue{.value = 40.0, .min = 0.0, .max = 100.0}));
         QVERIFY(toldAs(qsl(R"(clearLabelAccessibleValue("lbl"))"), std::nullopt));
         QVERIFY(session.runLua(qsl(R"(assert(getLabelAccessibleValue("lbl") == nil))")));
 
