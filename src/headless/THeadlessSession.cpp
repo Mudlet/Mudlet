@@ -1673,13 +1673,15 @@ bool THeadlessSession::loadMapFile(const QString& fileName)
         return false;
     }
     bool loaded = false;
+    const bool xml = fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive);
     const bool json = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
-    if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+    if (xml) {
         loaded = mpHost->importMapFile(fileName);
     } else if (json) {
         auto [jsonLoaded, reason] = mpHost->mpMap->importJsonMapFile(fileName);
         loaded = jsonLoaded;
         if (!loaded) {
+            //: %1 is the file the map was being loaded from, %2 why it could not be
             mpHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
                                    "reason: %2.")
                                         .arg(fileName, reason));
@@ -1695,8 +1697,8 @@ bool THeadlessSession::loadMapFile(const QString& fileName)
         mErrorString = tr("Could not load map from %1.").arg(*name);
         return false;
     }
-    // TMap::audit() is what says "[  OK  ]" in the console for the map's load
-    if (!json) {
+    // TMap::audit() is what says "[  OK  ]" in the console for a binary map's load; importMapFile() audits an XML one
+    if (!xml && !json) {
         mpHost->mpMap->audit();
     }
     return true;

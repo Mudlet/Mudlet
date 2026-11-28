@@ -973,19 +973,35 @@ private slots:
         TMap* pMap = mpHost->mpMap.data();
         QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
         QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
+        // After the progress closed, so a frontend has taken the progress down by then
+        QStringList order;
+        QObject orderContext;
+        connect(pMap, &TMap::signal_mapProgressClose, &orderContext, [&order]() {
+            order << qsl("close");
+        });
+        connect(pMap, &TMap::signal_mapDownloadFinished, &orderContext, [&order]() {
+            order << qsl("finished");
+        });
+        const auto closedFirst = [&order]() {
+            return order.size() >= 2 && order.last() == qsl("finished") && order.at(order.size() - 2) == qsl("close");
+        };
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the map download never finished");
         QCOMPARE(finishedSpy.count(), 1);
         QCOMPARE(finishedSpy.at(0).at(0).toBool(), true);
         QCOMPARE(finishedSpy.at(0).at(1).toString(), QString());
+        QVERIFY2(closedFirst(), qPrintable(order.join(qsl(", "))));
 
         finishedSpy.clear();
+        order.clear();
         QVERIFY2(runDownload(mpMapServer->url(qsl("/nosuchmap.xml"))), "the failed map download never finished");
         QCOMPARE(finishedSpy.count(), 1);
         QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
         QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("Map download encountered an error")), qPrintable(finishedSpy.at(0).at(1).toString()));
         // Of the URL, which a game can fill with secrets, only its scheme and host
         QVERIFY2(!finishedSpy.at(0).at(1).toString().contains(qsl("/nosuchmap.xml")), qPrintable(finishedSpy.at(0).at(1).toString()));
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(mpMapServer->url(QString())), qPrintable(finishedSpy.at(0).at(1).toString()));
+        QVERIFY2(closedFirst(), qPrintable(order.join(qsl(", "))));
 
         finishedSpy.clear();
         pMap->downloadMap(qsl("%zz"));
@@ -995,6 +1011,7 @@ private slots:
 
         finishedSpy.clear();
         closeSpy.clear();
+        order.clear();
         QVERIFY(pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml"))));
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
@@ -1009,8 +1026,8 @@ private slots:
         QCOMPARE(finishedSpy.count(), 1);
         QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
         QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("canceled, on user's request")), qPrintable(finishedSpy.at(0).at(1).toString()));
-        // After the progress closed, so a frontend has taken the progress down by then
         QCOMPARE(closeSpy.count(), 1);
+        QVERIFY2(closedFirst(), qPrintable(order.join(qsl(", "))));
     }
 
     // Taking that exit is what leaves the profile's map where it was - in
@@ -1167,6 +1184,7 @@ private slots:
         const QString reason = finishedSpy.at(0).at(1).toString();
         QVERIFY2(reason.contains(qsl("Map download encountered an error")), qPrintable(reason));
         QVERIFY2(!reason.contains(qsl("SECRET")) && !reason.contains(qsl(".gone")), qPrintable(reason));
+        QVERIFY2(reason.contains(mpMapServer->url(QString())), qPrintable(reason));
         QVERIFY2(!consoleShows(qsl("SECRET")), qPrintable(consoleTextSinceMark()));
     }
 

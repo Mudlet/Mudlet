@@ -1465,6 +1465,86 @@ enableMapInfo("HeadlessEcho")
         QVERIFY(session.mapView(THeadlessSession::MapTarget::app));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_aLoadedMapFileIsAuditedOnce()
+    {
+        const QString name = qsl("Headless Map File Audit");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(twoRoomsLua(qsl("Headless File Audit"))));
+        QTemporaryDir dir;
+        const QString dat = dir.filePath(qsl("audit.dat"));
+        QVERIFY2(session.saveMapFile(dat), qPrintable(session.errorString()));
+        const QString xml = dir.filePath(qsl("audit.xml"));
+        QFile file(xml);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(R"(<?xml version="1.0" encoding="UTF-8"?>
+<map>
+ <areas>
+  <area id="1" name="Headless Xml Area"/>
+ </areas>
+ <rooms>
+  <room id="1" area="1" title="Entrance" environment="2">
+   <coord x="0" y="0" z="0"/>
+  </room>
+ </rooms>
+</map>
+)");
+        file.close();
+        const auto audits = [&session]() {
+            session.runLua(qsl(R"lua(
+headlessAudits = 0
+for _, line in ipairs(getLines(0, getLastLineNumber("main") + 1)) do
+  if line:find("Map audit starting", 1, true) then headlessAudits = headlessAudits + 1 end
+end
+headlessAudits = tostring(headlessAudits)
+)lua"));
+            return luaGlobalString(session.host(), "headlessAudits").toInt();
+        };
+        int before = audits();
+        QVERIFY2(session.loadMapFile(xml), qPrintable(session.errorString()));
+        QCOMPARE(audits() - before, 1);
+        before = audits();
+        QVERIFY2(session.loadMapFile(dat), qPrintable(session.errorString()));
+        QCOMPARE(audits() - before, 1);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI's map search, which flies there with the selection pruned and only the area list following
+    void test_centringOnARoomOfAnotherAreaKeepsOnlyItsSelection()
+    {
+        const QString name = qsl("Headless Map Centre Other Area");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()") + twoRoomsLua(qsl("Headless Centre Other")) + qsl(R"lua(
+headlessOther = addAreaName("Headless Centre Elsewhere")
+addRoom(9)
+setRoomArea(9, headlessOther)
+setRoomCoordinates(9, 50, 50, 0)
+headlessAreaChanges = ""
+registerAnonymousEventHandler("sysMapAreaChanged", function(_, areaId, lastAreaId)
+  headlessAreaChanges = headlessAreaChanges .. areaId .. ":" .. lastAreaId .. " "
+end)
+)lua")));
+        QTest::qWait(50);
+        QVERIFY(rendered(session));
+        QVERIFY(session.mapPointer({.position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
+        QVERIFY(session.centreMapOnRoom(7));
+        QVERIFY(session.runLua(qsl("headlessSelected = headlessSelection()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl("8 centre 8"));
+        QVERIFY(session.runLua(qsl(R"(headlessAreaChanges = "")")));
+
+        QVERIFY(session.centreMapOnRoom(9));
+        QTest::qWait(50);
+        QVERIFY(rendered(session));
+        QCOMPARE(session.mapView(THeadlessSession::MapTarget::script)->areaId, luaGlobalString(session.host(), "headlessOther").toInt());
+        QVERIFY(session.runLua(qsl("headlessSelected = headlessSelection()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl(" centre nil"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessAreaChanges"), QString());
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionMapTest.moc"

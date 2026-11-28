@@ -412,6 +412,10 @@ bool TNullMapView::centreOnRoom(const int roomId)
     if (!pRoomDB->getRoom(playerRoomId)) {
         playerRoomId = pRoomDB->getRoomMap().constBegin().key();
     }
+    // As the GUI's map search flying to another area
+    if (mView.mAreaID != pRoom->getArea()) {
+        TMapPainter::pruneSelectionToArea(pMap, mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, pRoom->getArea());
+    }
     leavePlayer();
     mPendingZoom.reset();
     mView.mAreaID = pRoom->getArea();
