@@ -2214,10 +2214,31 @@ private slots:
         QCOMPARE(widget.portalAt(card.rect.center().toPoint()), card.portal);
         QCOMPARE(widget.portalAt(QPoint(card.rect.left() - 5, card.rect.top() - 5)), -1);
         QVERIFY(widget.portalToolTip(card.portal).contains(qsl("Eastvale")));
+        // Only its name, so that it hides little of the map, until pointed at
+        QVERIFY(!card.open);
+        QVERIFY(card.rect.height() < 44.0);
+        const auto moveTo = [&widget](const QPoint& position) {
+            QMouseEvent move(QEvent::MouseMove, QPointF(position), widget.mapToGlobal(QPointF(position)), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            widget.mouseMoveEvent(&move);
+        };
+        moveTo(card.rect.center().toPoint());
+        QCOMPARE(widget.mOpenPortal, card.portal);
         // Pointing at it does not raise the room under it
-        widget.mPointerInView = true;
-        widget.mPointerPosition = card.rect.center().toPoint();
         QCOMPARE(widget.roomUnderPointer(), 0);
+        const QList<ModernGLWidget::PortalCard> open = widget.portalCards();
+        QCOMPARE(open.size(), 1);
+        QVERIFY(open.first().open);
+        QVERIFY(open.first().rect.height() > 44.0);
+        QVERIFY(open.first().rect.contains(card.rect.center()));
+        // It stays open while the pointer moves onto the rooms it shows, and closes once it leaves
+        const QPoint onTheRooms = QPointF(card.rect.center().x(), open.first().rect.top() + 2.0).toPoint();
+        QVERIFY(!card.rect.contains(onTheRooms));
+        moveTo(onTheRooms);
+        QCOMPARE(widget.mOpenPortal, card.portal);
+        QVERIFY(widget.portalCards().first().open);
+        moveTo(QPoint(card.rect.left() - 20, open.first().rect.top() - 20));
+        QCOMPARE(widget.mOpenPortal, -1);
+        QVERIFY(!widget.portalCards().first().open);
         widget.mPointerInView = false;
 
         // Not drawn while the rooms are too small to read it by

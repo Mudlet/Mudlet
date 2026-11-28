@@ -6205,6 +6205,10 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     mPointerPosition = event->position().toPoint();
     mPointerInView = true;
     mPointerButtons = event->buttons();
+    if (const qsizetype portal = portalAt(mPointerPosition); portal != mOpenPortal) {
+        mOpenPortal = portal;
+        update();
+    }
     setHoveredRoom(roomUnderPointer());
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
@@ -6450,6 +6454,9 @@ void ModernGLWidget::leaveEvent(QEvent* event)
     }
     mPointerInView = false;
     mPointerButtons = Qt::NoButton;
+    if (std::exchange(mOpenPortal, -1) >= 0) {
+        update();
+    }
     setHoveredRoom(0);
     QOpenGLWidget::leaveEvent(event);
 }
@@ -8529,6 +8536,7 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
     const float arrowScale = mpHost->getLargeAreaExitArrows() ? 2.0f : 1.0f;
     const QRectF viewRect = rect().toRectF();
     QList<QRectF> rects;
+    QList<QRectF> openRects;
     for (qsizetype i = 0; i < mStitch.portals().size(); ++i) {
         const MapStitch::Portal& portal = mStitch.portals().at(i);
         const std::optional<QPointF> room = mCameraController.pixelForPoint(portal.from);
@@ -8544,35 +8552,57 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
         } else {
             away /= length;
         }
+        const auto placed = [&](const qreal width, const qreal height) {
+            const qreal reach = scmPortalGapPixels + std::abs(away.x()) * width / 2.0 + std::abs(away.y()) * height / 2.0;
+            const QPointF center = *tip + away * reach;
+            return QRectF(center - QPointF(width / 2.0, height / 2.0), QSizeF(width, height));
+        };
         const QString name = metrics.elidedText(areaName(portal.toAreaId), Qt::ElideRight, scmPortalNamePixels);
-        const qreal width = qMax(scmPortalThumbnailPixels, metrics.horizontalAdvance(name)) + 2.0 * scmPortalPadding;
-        const qreal height = scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding;
-        const qreal reach = scmPortalGapPixels + std::abs(away.x()) * width / 2.0 + std::abs(away.y()) * height / 2.0;
-        const QPointF center = *tip + away * reach;
-        const QRectF rect(center - QPointF(width / 2.0, height / 2.0), QSizeF(width, height));
-        if (!viewRect.intersects(rect)) {
+        const qreal nameWidth = metrics.horizontalAdvance(name) + 2.0 * scmPortalPadding;
+        const QRectF nameRect = placed(nameWidth, metrics.height() + 2.0 * scmPortalPadding);
+        if (!viewRect.intersects(nameRect)) {
             continue;
         }
-        cards.append({rect, *tip, i, name});
-        rects.append(rect);
+        PortalCard card;
+        card.rect = nameRect;
+        card.nameRect = nameRect;
+        card.anchor = *tip;
+        card.portal = i;
+        card.name = name;
+        cards.append(card);
+        rects.append(nameRect);
+        openRects.append(placed(qMax(scmPortalThumbnailPixels + 2.0 * scmPortalPadding, nameWidth), scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding));
     }
     QList<PortalCard> kept;
     for (const qsizetype index : GeometryManager::declutteredRects(rects, 0.0)) {
         kept.append(cards.at(index));
+        if (!mPointerInView) {
+            continue;
+        }
+        // Kept open while the pointer moves from the name onto the rooms it opened
+        PortalCard& card = kept.last();
+        const QRectF& openRect = openRects.at(index);
+        if (card.nameRect.contains(mPointerPosition) || (card.portal == mOpenPortal && openRect.contains(mPointerPosition))) {
+            card.open = true;
+            card.rect = openRect;
+        }
     }
     return kept;
 }
 
 void ModernGLWidget::paintPortals(QPainter& painter)
 {
-    const QList<PortalCard> cards = portalCards();
+    QList<PortalCard> cards = portalCards();
     if (cards.isEmpty()) {
         return;
     }
+    // The open one over the names it may cover
+    std::stable_partition(cards.begin(), cards.end(), [](const PortalCard& card) {
+        return !card.open;
+    });
     const QColor background = mpHost->mBgColor_2;
     const QColor contrast = ExitAppearance::contrastColor(background);
     QColor fill = background;
-    fill.setAlpha(230);
     const QFontMetricsF metrics(font());
     const qreal cell = scmPortalThumbnailPixels / (2 * MapStitch::scmPreviewSteps + 1);
     painter.save();
@@ -8581,8 +8611,15 @@ void ModernGLWidget::paintPortals(QPainter& painter)
         const QPointF edge(std::clamp(card.anchor.x(), card.rect.left(), card.rect.right()), std::clamp(card.anchor.y(), card.rect.top(), card.rect.bottom()));
         painter.setPen(QPen(contrast, 1.0));
         painter.drawLine(card.anchor, edge);
+        // Closed, the rooms under the name still show through
+        fill.setAlpha(card.open ? 230 : 160);
         painter.setBrush(fill);
         painter.drawRoundedRect(card.rect, 4.0, 4.0);
+        if (!card.open) {
+            painter.setPen(contrast);
+            painter.drawText(card.rect, Qt::AlignCenter, card.name);
+            continue;
+        }
         // North up, whichever way the view faces, as the area's name reads across it
         const QRectF thumbnail(card.rect.center().x() - scmPortalThumbnailPixels / 2.0, card.rect.top() + scmPortalPadding, scmPortalThumbnailPixels, scmPortalThumbnailPixels);
         for (const MapStitch::PreviewRoom& room : mStitch.portals().at(card.portal).preview) {
@@ -8600,12 +8637,19 @@ void ModernGLWidget::paintPortals(QPainter& painter)
 
 qsizetype ModernGLWidget::portalAt(const QPoint& position)
 {
-    for (const PortalCard& card : portalCards()) {
-        if (card.rect.contains(QPointF(position))) {
-            return card.portal;
-        }
+    const QList<PortalCard> cards = portalCards();
+    const auto under = [&position](const PortalCard& card) {
+        return card.rect.contains(QPointF(position)) || card.nameRect.contains(QPointF(position));
+    };
+    // The open one first, as it is drawn over the others
+    const auto open = std::find_if(cards.cbegin(), cards.cend(), [&under](const PortalCard& card) {
+        return card.open && under(card);
+    });
+    if (open != cards.cend()) {
+        return open->portal;
     }
-    return -1;
+    const auto found = std::find_if(cards.cbegin(), cards.cend(), under);
+    return found != cards.cend() ? found->portal : -1;
 }
 
 QString ModernGLWidget::portalToolTip(const qsizetype portal) const
