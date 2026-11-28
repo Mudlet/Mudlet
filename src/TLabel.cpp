@@ -475,21 +475,19 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-// The console builds its context menu in its text pane, which the label covers but is not
-// inside, so an ignored right-click, offered only to the label's ancestors, never reaches it
-bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
+// The console's text pane sits under one of the label's siblings, not under the label, so an event the label passes on never reaches it;
+// the labels that would pass it on are made click-through just for the hit test, to find what they cover
+TTextEdit* TLabel::consolePaneUnder(const QPoint& globalPosition, bool (*passesOn)(const TLabel&))
 {
     QWidget* pParent = parentWidget();
     if (!pParent) {
-        return false;
+        return nullptr;
     }
-    // This label, and any other without a click or release callback stacked under it, is left
-    // out of the hit test for a moment, so that it finds what they cover
-    const QPoint where = pParent->mapFromGlobal(event->globalPosition().toPoint());
+    const QPoint where = pParent->mapFromGlobal(globalPosition);
     QList<TLabel*> skipped;
     QWidget* pHit = nullptr;
     for (TLabel* pLabel = this; pLabel; pLabel = qobject_cast<TLabel*>(pHit)) {
-        if (pLabel->mClickFunction || pLabel->mReleaseFunction) {
+        if (!passesOn(*pLabel)) {
             break;
         }
         pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
@@ -499,13 +497,41 @@ bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
     for (auto* pLabel : skipped) {
         pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, false);
     }
-    auto* pPane = qobject_cast<TTextEdit*>(pHit);
+    return qobject_cast<TTextEdit*>(pHit);
+}
+
+bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
+{
+    auto* pPane = consolePaneUnder(event->globalPosition().toPoint(), [](const TLabel& label) {
+        return !label.mClickFunction && !label.mReleaseFunction;
+    });
     if (!pPane) {
         return false;
     }
     // Not the pane's own right-click handling: that acts on a link the label hides
     pPane->showContextMenu(event->globalPosition().toPoint());
     return true;
+}
+
+bool TLabel::forwardWheelToConsole(QWheelEvent* event)
+{
+    auto* pPane = consolePaneUnder(event->globalPosition().toPoint(), [](const TLabel& label) {
+        return !label.mWheelFunction;
+    });
+    if (!pPane) {
+        return false;
+    }
+    QWheelEvent forwarded(pPane->mapFromGlobal(event->globalPosition()),
+                          event->globalPosition(),
+                          event->pixelDelta(),
+                          event->angleDelta(),
+                          event->buttons(),
+                          event->modifiers(),
+                          event->phase(),
+                          event->inverted(),
+                          event->source());
+    QApplication::sendEvent(pPane, &forwarded);
+    return forwarded.isAccepted();
 }
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
@@ -527,7 +553,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (model().runCallback(TLabelModel::Callback::wheel, *event)) {
+    if (model().runCallback(TLabelModel::Callback::wheel, *event) || forwardWheelToConsole(event)) {
         event->accept();
     } else {
         QWidget::wheelEvent(event);
