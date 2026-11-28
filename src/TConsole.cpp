@@ -1552,10 +1552,11 @@ void TConsole::showEvent(QShowEvent* event)
 void TConsole::hideEvent(QHideEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
-        if (mudlet::self()->mWindowMinimized) {
-            if (mpHost->mAlertOnNewData) {
-                mAlertOnNewData = true;
-            }
+        mudlet* pMudlet = mudlet::self();
+        QWidget* pWindow = window();
+        const bool windowMinimized = (pWindow == pMudlet) ? pMudlet->mWindowMinimized : pWindow->isMinimized();
+        if (windowMinimized && mpHost->mAlertOnNewData) {
+            mAlertOnNewData = true;
         }
     }
     QWidget::hideEvent(event); //FIXME-refac: might cause problems

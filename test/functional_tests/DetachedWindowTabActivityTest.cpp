@@ -266,6 +266,41 @@ private slots:
         QVERIFY2(marked, "with multiview on, text for a profile hidden in a detached window went unmarked");
     }
 
+    // Flagging the main window for a detached profile points the player at the wrong
+    // game, and does nothing at all while the main window is the active one
+    void test_aDetachedProfileAsksForAttentionFromItsOwnWindow()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+
+        QCOMPARE(mudlet::self()->profileWindow(mpSecondHost), pWindow);
+        QCOMPARE(mudlet::self()->profileWindow(mpThirdHost), pWindow);
+        QCOMPARE(mudlet::self()->profileWindow(mpFirstHost), mudlet::self());
+    }
+
+    // The new data alert is armed when the profile's console is hidden by its
+    // window being minimised, which for a detached profile is not the main window
+    void test_minimisingADetachedWindowArmsItsNewDataAlert()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+        pWindow->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pWindow));
+        TMainConsole* pConsole = mpThirdHost->mainConsoleView();
+        QVERIFY(pConsole);
+        QVERIFY(mpThirdHost->mAlertOnNewData);
+        QVERIFY2(!pConsole->startIncomingText(), "the alert was armed while the window was on screen");
+
+        pWindow->showMinimized();
+        QTRY_VERIFY(pWindow->isMinimized());
+        const bool armed = pConsole->startIncomingText();
+        pWindow->showNormal();
+
+        QVERIFY2(armed, "minimising the detached window left its profile's new data alert unarmed");
+        QTRY_VERIFY(pConsole->isVisible());
+        QVERIFY2(!pConsole->startIncomingText(), "the alert stayed armed after the window came back");
+    }
+
     // Multiview puts every main window profile on show, so a tab marked before it
     // was switched on must not go on claiming text the player has not seen
     void test_multiviewClearsTheMainWindowsMarks()
