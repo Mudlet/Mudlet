@@ -218,7 +218,7 @@ describe("Markdown from the game", function()
     feed(ON:gsub("1", "1;id=specMarkB:mark=info", 1) .. "SpecMarkB\n" .. OFF)
     local b = lastLine()
     local fired = 0
-    local id = tempTrigger("SpecMark", function() fired = fired + 1 end)
+    local id = tempRegexTrigger("^", function() fired = fired + 1 end)
     finally(function() killTrigger(id) end)
     feed(ESC .. "]67;2;id=specMarkA:mark=ok" .. ESC .. "\\")
     assert.are.equal("ok", getMarkdownBlock("main", a).mark)
@@ -345,6 +345,11 @@ describe("Markdown from the game", function()
   local function osc8(uri, text)
     return ESC .. "]8;;" .. uri .. ESC .. "\\" .. text .. ESC .. "]8;;" .. ESC .. "\\"
   end
+
+  it("shows the markup of a Markdown link an OSC 8 link covers as typed", function()
+    feed(ON .. "[**SpecCovered** " .. osc8("send:x", "y") .. "](send:z)\n" .. OFF)
+    assert.are.equal("[**SpecCovered** y](send:z)", getMarkdownBlock("main", lastLine()).text)
+  end)
 
   it("hides an OSC 8 spoiler at the end of a Markdown line without losing its place", function()
     feed(ON .. "SpecKiller is " .. osc8('local:?config={"spoiler":true}', "Bob") .. "\n" .. OFF)
@@ -531,6 +536,16 @@ describe("Markdown from the game", function()
       line = line - 1
     end
     assert.are.equal("warn", getMarkdownBlock("main", line).mark)
+    local row = line
+    while row > 0 do
+      local block = getMarkdownBlock("main", row)
+      if block and block.kind == "tableRow" and block.cells[1].text == "r" then
+        break
+      end
+      row = row - 1
+    end
+    assert.is_true(row > 0, "the table's row did not survive the gag")
+    assert.are.equal("warn", getMarkdownBlock("main", row).mark)
   end)
 
   -- MXP is off on a Markdown line, so <details> and <https://…> are Markdown's, and back on for the game's next line
@@ -610,6 +625,46 @@ describe("Markdown from the game", function()
     feed(ON .. "# SpecSplitHead [a link](send:x)\n" .. OFF)
     assert.are.equal("SpecSplitTail", lineText(lastLine()))
     assert.is_nil(getMarkdownBlock("main", lastLine(2)), "the line kept offsets made for the text before it was split")
+  end)
+
+  it("shows a line quoted deeper than the eight levels it places as a paragraph, markers and all", function()
+    feed(ON .. "> > > > > > > > SpecEightQuotes\n> > > > > > > > > SpecNineQuotes\n" .. OFF)
+    local eight = getMarkdownBlock("main", lastLine(2))
+    assert.are.equal(8, eight.quote)
+    assert.are.equal("SpecEightQuotes", eight.text)
+    local nine = getMarkdownBlock("main", lastLine())
+    assert.are.equal("paragraph", nine.kind)
+    assert.are.equal(0, nine.quote)
+    assert.are.equal("> > > > > > > > > SpecNineQuotes", nine.text)
+  end)
+
+  it("shows a list item deeper than the eight levels it places as a paragraph, marker and all", function()
+    local items = {}
+    for level = 1, 9 do
+      items[level] = string.rep("  ", level - 1) .. "- SpecDeep" .. level
+    end
+    feed(ON .. table.concat(items, "\n") .. "\n" .. OFF)
+    local eighth = getMarkdownBlock("main", lastLine(2))
+    assert.are.equal("item", eighth.kind)
+    assert.are.equal(8, eighth.list)
+    local ninth = getMarkdownBlock("main", lastLine())
+    assert.are.equal("paragraph", ninth.kind)
+    assert.are.equal("- SpecDeep9", ninth.text)
+  end)
+
+  it("moves a paragraph's later links by the spaces an insert past a row's end puts in", function()
+    local savedWrap = getWindowWrap("main")
+    setWindowWrap("main", 20)
+    finally(function() setWindowWrap("main", savedWrap) end)
+    local first = getLastLineNumber("main")
+    feed(ON .. "SpecExpand one two three [a link](send:x) four\n" .. OFF)
+    assert.is_true(lastLine() > first, "the paragraph did not wrap, so this proves nothing")
+    moveCursor("main", utf8.len(lineText(first)) + 3, first)
+    insertText("main", "X")
+    local block = getMarkdownBlock("main", first)
+    local link = block.links[1]
+    local offset = link.start - block.contentStart
+    assert.are.equal("a link", block.text:sub(offset + 1, offset + link.length))
   end)
 
   -- Last: the GA it sends changes how Mudlet waits for the rest of a line for every test after it

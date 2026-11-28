@@ -407,8 +407,13 @@ int Line::closeLink(const int at)
         literalRange(opener.pos, close + 1);
         return close + 1;
     }
-    // A link cannot hold another, whether an autolink or an OSC 8 link
-    bool covered = osc8Covers(textFrom, at);
+    // Where an OSC 8 link covers its text, the standard has the markup shown as typed
+    if (osc8Covers(textFrom, at)) {
+        literalRange(opener.pos, close + 1);
+        return close + 1;
+    }
+    // Nor can a link hold an autolink
+    bool covered = false;
     for (int j = textFrom; j < at; ++j) {
         covered = covered || mLink[static_cast<size_t>(j)] >= 0;
     }
@@ -512,6 +517,13 @@ void Line::emphasis(const int from, const int to)
     // same kind need not look again, which keeps a line of many unmatched markers from taking quadratic time
     std::array<int, 18> bottom;
     bottom.fill(-1);
+    struct Styled
+    {
+        int from = 0;
+        int to = 0;
+        TChar::AttributeFlag flag = TChar::None;
+    };
+    QList<Styled> styled;
     const auto kind = [](const Delimiter& delimiter) {
         const int marker = delimiter.marker == u'*' ? 0 : delimiter.marker == u'_' ? 1 : 2;
         return marker * 6 + (delimiter.canOpen ? 3 : 0) + delimiter.originalLength % 3;
@@ -544,9 +556,7 @@ void Line::emphasis(const int from, const int to)
         const int openEnd = open.pos + open.length;
         removeRange(openEnd - used, openEnd);
         removeRange(close.pos, close.pos + used);
-        for (int j = openEnd; j < close.pos; ++j) {
-            mFlags[static_cast<size_t>(j)] |= flag;
-        }
+        styled.append({openEnd, close.pos, flag});
         open.length -= used;
         close.pos += used;
         close.length -= used;
@@ -556,6 +566,25 @@ void Line::emphasis(const int from, const int to)
     }
     for (const Delimiter& delimiter : delimiters) {
         literalRange(delimiter.pos, delimiter.pos + delimiter.length);
+    }
+    // Set in one pass per style: nested emphasis would otherwise set the same characters again for every level
+    for (const TChar::AttributeFlag flag : {TChar::Bold, TChar::Italic, TChar::StrikeOut}) {
+        std::vector<int> opened(static_cast<size_t>(to - from) + 1, 0);
+        bool any = false;
+        for (const Styled& range : std::as_const(styled)) {
+            if (range.flag == flag) {
+                ++opened[static_cast<size_t>(range.from - from)];
+                --opened[static_cast<size_t>(range.to - from)];
+                any = true;
+            }
+        }
+        int depth = 0;
+        for (int j = from; any && j < to; ++j) {
+            depth += opened[static_cast<size_t>(j - from)];
+            if (depth > 0) {
+                mFlags[static_cast<size_t>(j)] |= flag;
+            }
+        }
     }
 }
 

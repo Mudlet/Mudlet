@@ -365,6 +365,7 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
     int pos = 0;
     int indent = skipIndent(line.text, pos);
     const int end = trimmedEnd(line.text, pos);
+    const int lineStart = pos;
     quint8 quote = 0;
     while (pos < end && line.text.at(pos) == u'>' && quote < csmMaxQuoteLevels) {
         ++quote;
@@ -373,6 +374,14 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
             ++pos;
         }
         indent = skipIndent(line.text, pos);
+    }
+    // Quoted deeper than the client places quotes: the standard has such a line shown as a paragraph, markers and all
+    if (quote == csmMaxQuoteLevels && pos < end && line.text.at(pos) == u'>') {
+        out << endTable();
+        mItems.clear();
+        mItemsQuote = 0;
+        out << make(TMarkdownBlock::Kind::Paragraph, 0, {}, line.mid(lineStart, end));
+        return out;
     }
     if (pos >= end) {
         out << endTable();
@@ -537,7 +546,12 @@ QList<TMarkdownParser::Output> TMarkdownParser::addLine(const QString& sourceTex
             }
             const int textColumn = indent + (markerEnd - pos) + 1;
             closeItemsBeyond(indent);
-            if (from < end && mItems.size() < csmMaxListLevels) {
+            // Listed deeper than the client places lists: shown as a paragraph, marker and all, as the standard has it
+            if (from < end && mItems.size() >= csmMaxListLevels) {
+                out << make(TMarkdownBlock::Kind::Paragraph, quote, prefix, line.mid(pos, end));
+                return out;
+            }
+            if (from < end) {
                 TMarkdownBlock::Task task = TMarkdownBlock::Task::None;
                 if (end - from >= 4 && text.at(from) == u'[' && text.at(from + 2) == u']' && spaceOrTab(text.at(from + 3))) {
                     const QChar box = text.at(from + 1);

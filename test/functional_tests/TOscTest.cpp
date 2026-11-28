@@ -4656,6 +4656,49 @@ private slots:
     QCOMPARE(committed, qsl("Seen     "));
   }
 
+  // Hidden before triggers and apps see the line, where the wrap the line is
+  // about to get leaves the link whole on one row
+  void test_ALinkThatStartsHiddenOnALineThatWrapsIsHiddenAsItIsCommitted() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    QString committed;
+    TConsoleModel &model = mpHost->mainConsoleModel();
+    const auto watch = connect(&model.mNotifier, &TConsoleModelNotifier::lineCommitted, this,
+                               [&committed, &model](const int line) {
+                                 committed = model.buffer.line(line);
+                               });
+    const auto forget = qScopeGuard([watch] { disconnect(watch); });
+    injectData(qsl("\x1b]67;1\x1b\\Seen ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl(" one two three four\x1b]67;0\x1b\\"));
+    QCOMPARE(committed, qsl("Seen      one two three four"));
+  }
+
+  // A trigger's nested commit places only the links it makes, so the outer
+  // line's are placed once that line has wrapped
+  void test_ALinkOnAMarkdownLineIsPlacedAfterItWrapsWhenATriggerFeedsALine() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        qsl("SpecFeederTrigger = tempTrigger('Seen one', function() feedTriggers('SpecFed\\n') end)"));
+    const auto kill = qScopeGuard([this] {
+      mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(SpecFeederTrigger)"));
+    });
+    injectData(qsl("\x1b]67;1\x1b\\Seen one two three four ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    QVERIFY2(!console->buffer.lineBuffer.join(QString()).contains(qsl("Hint")), "the hidden link showed");
+    console->getHyperlinkVisibilityManager().onUserInput();
+    QVERIFY2(console->buffer.lineBuffer.join(QString()).contains(qsl("Hint")),
+             "the link was not shown again where it wrapped to");
+  }
+
   // Shown again where it was hidden: the columns are counted after the
   // heading's markers came out
   void test_Osc8VisibilityOnAMarkdownLineHidesAndShowsItsOwnText() {
@@ -4700,11 +4743,12 @@ private slots:
         [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
     injectData(qsl("\x1b]67;1\x1b\\Seen one two \x1b]8;;send:look?config={\"visibility\":"
                    "{\"action\":\"reveal\",\"delay\":60000,\"expire\":{\"input\":true}}}"
-                   "\x1b\\Hint text here\x1b]8;;\x1b\\\x1b]67;0\x1b\\"));
+                   "\x1b\\Hint text here\x1b]8;;\x1b\\ and the rest\x1b]67;0\x1b\\"));
     const int last = console->buffer.getLastLineNumber() - 1;
-    QVERIFY2(console->buffer.wrapsFromPreviousLine(last),
+    QVERIFY2(console->buffer.wrapsFromPreviousLine(last) && console->buffer.wrapsFromPreviousLine(last - 1),
              "the line did not wrap, so this proves nothing");
-    const QString shown = console->buffer.line(last - 1) + qsl(" ") + console->buffer.line(last);
+    const QString shown = console->buffer.line(last - 2) + qsl(" ") + console->buffer.line(last - 1) +
+                          qsl(" ") + console->buffer.line(last);
     QVERIFY2(shown.contains(qsl("Hint")) && shown.contains(qsl("here")),
              qPrintable(qsl("the split link's text was lost: %1").arg(shown)));
   }

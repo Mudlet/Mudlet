@@ -2979,6 +2979,10 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         } else {
             carryActiveHyperlinkPastFlush(mMudLine, mMudBuffer);
         }
+        // Only whether a carried link has text yet is read, and one carried from line to line would gather all of it
+        if (mHyperlinkActive && mHyperlinkEnteredMarkdown && mCurrentHyperlinkText.size() > 1) {
+            mCurrentHyperlinkText.truncate(1);
+        }
     }
 
     // Copy out and clear rather than swap: the accumulators keep their allocation (regrowing costs more than
@@ -3004,12 +3008,15 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     }
     // A prompt, or a line Markdown was turned off under, is committed as sent: links whose looks waited for the line to
     // be read as Markdown take them here
+    QList<PlacedLink> placements;
     if (Q_UNLIKELY(!mMarkdownLinkLooks.isEmpty())) {
         applyWaitingLinkLooks(line, chars);
+        placements = std::exchange(mMarkdownLinksToPlace, {});
+        hideLinksKeptWhole(line, placements);
     }
     commitLineData(std::move(line), std::move(chars), ch);
-    if (Q_UNLIKELY(!mMarkdownLinksToPlace.isEmpty())) {
-        placeMarkdownLinks();
+    if (Q_UNLIKELY(!placements.isEmpty())) {
+        placeMarkdownLinks(std::move(placements));
     }
     ++localBufferPosition;
     return true;
@@ -6639,6 +6646,10 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             return false;
         }
         materialisePreTriggerPassLine(y);
+        // Before the text changes, as the indent wrapping put in front of the row is counted from it; an insert past
+        // the row's end puts the spaces that reach it in too
+        const int rowEnd = static_cast<int>(buffer.at(y).size());
+        markdownLineEdited(y, std::min(x, rowEnd), 0, std::max(0, x - rowEnd) + static_cast<int>(insertedText.size()));
         if (x >= static_cast<int>(buffer.at(y).size())) {
             TChar c = currentFormat();
             expandLine(y, x - buffer.at(y).size(), c);
@@ -6646,8 +6657,6 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // Insert the whole run in one operation. Inserting one character at a
         // time into the middle of the QString/std::vector is O(n) per character,
         // which is quadratic for large inserts.
-        // Before the text changes, as the indent wrapping put in front of the row is counted from it
-        markdownLineEdited(y, x, 0, static_cast<int>(insertedText.size()));
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(x, static_cast<std::size_t>(insertedText.size()), format);
         spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
@@ -11565,20 +11574,13 @@ void TBuffer::commitMarkdownLines(QList<TMarkdownLine>&& lines)
             continue;
         }
         linkMarkdownLine(line);
-        // A link that starts hidden is hidden before triggers and apps see its line, where nothing will wrap the line;
-        // one that may wrap waits for placeMarkdownLinks(), as a wrap could drop the hidden label's spaces at a break
-        if (!mMarkdownLinksToPlace.isEmpty() && fitsUnwrapped(line.text, mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt), mpHost)) {
-            for (PlacedLink& link : mMarkdownLinksToPlace) {
-                if (link.concealed) {
-                    line.text.replace(link.column, link.length, QString(link.length, QChar::Space));
-                    link.hiddenEarly = true;
-                }
-            }
-        }
+        // This line's own: a trigger's nested commit places only those it makes
+        QList<PlacedLink> placements = std::exchange(mMarkdownLinksToPlace, {});
+        hideLinksKeptWhole(line.text, placements);
         const quint32 id = mpMarkdown->store(std::move(line.block));
         commitLineData(std::move(line.text), TLineFormat(std::move(line.format)), '\n', id);
-        if (!mMarkdownLinksToPlace.isEmpty()) {
-            placeMarkdownLinks();
+        if (!placements.isEmpty()) {
+            placeMarkdownLinks(std::move(placements));
         }
     }
 }
@@ -11823,9 +11825,35 @@ void TBuffer::showMarkdownLinkText(const int head, const PlacedLink& link)
 
 // After commitLineData(): a link that wrapping left whole on one row is moved onto it, and hidden there if it starts
 // hidden; one wrapping split across rows is no longer hidden or shown, as an OSC 8 link over more than one line is not
-void TBuffer::placeMarkdownLinks()
+// A link that starts hidden is hidden before triggers and apps see its line, where the wrap the line is about to get
+// leaves it whole on one row; one the wrap would split stays shown, as a wrap could drop a hidden label's spaces
+void TBuffer::hideLinksKeptWhole(QString& text, QList<PlacedLink>& links)
 {
-    const QList<PlacedLink> links = std::exchange(mMarkdownLinksToPlace, {});
+    QString hidden = text;
+    bool any = false;
+    for (const PlacedLink& link : std::as_const(links)) {
+        if (link.concealed) {
+            hidden.replace(link.column, link.length, QString(link.length, QChar::Space));
+            any = true;
+        }
+    }
+    if (!any) {
+        return;
+    }
+    const QList<WrapInfo> rows = getWrapInfo(hidden, true, false, mWrapAt, clampedWrapIndent(mWrapIndent, mWrapAt), clampedWrapIndent(mWrapHangingIndent, mWrapAt));
+    for (PlacedLink& link : links) {
+        const bool whole = rows.isEmpty() || std::any_of(rows.cbegin(), rows.cend(), [&link](const WrapInfo& row) {
+                               return link.column >= row.firstChar && link.column + link.length <= row.lastChar;
+                           });
+        if (link.concealed && whole) {
+            text.replace(link.column, link.length, QString(link.length, QChar::Space));
+            link.hiddenEarly = true;
+        }
+    }
+}
+
+void TBuffer::placeMarkdownLinks(const QList<PlacedLink>& links)
+{
     THyperlinkVisibilityManager* pManager = hyperlinkVisibilityManagerOrNull();
     if (!pManager) {
         return;
@@ -11864,6 +11892,11 @@ void TBuffer::placeMarkdownLinks()
             if (link.hiddenEarly) {
                 showMarkdownLinkText(head, link);
             }
+            continue;
+        }
+        // One left shown as its line was committed stays shown, as triggers and apps have its text
+        if (link.concealed && !link.hiddenEarly) {
+            pManager->takeLinks({link.id});
             continue;
         }
         pManager->moveLink(link.id, runRow, runColumn);

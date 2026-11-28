@@ -5260,7 +5260,7 @@
    "rule": "Color works inside a code block, and colored tildes do not close a backtick block",
    "stock": "n/a",
    "input": [
-    "\u001b]67;1\u001b\\```\n\u001b[34m~~~\u001b[0m water\n```\n\u001b]67;0\u001b\\"
+    "\u001b]67;1\u001b\\```\n\u001b[34m~~~\u001b[0m\nwater\n```\n\u001b]67;0\u001b\\"
    ],
    "messages": [
     {}
@@ -5268,7 +5268,7 @@
    "lines": [
     {
      "kind": "code",
-     "text": "~~~ water",
+     "text": "~~~",
      "spans": [
       {
        "start": 0,
@@ -5276,6 +5276,11 @@
        "fg": "34"
       }
      ],
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "water",
      "message": 0
     }
    ]

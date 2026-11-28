@@ -904,7 +904,6 @@ private:
     void endOpenMarkdownMessage();
     int markdownHeadIndent(int head) const;
     void editMarkdownRanges(TMarkdownBlock& block, int cutFrom, int cutTo, int delta);
-    void placeMarkdownLinks();
     void applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& format, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
     void applyWaitingLinkLooks(QString& text, const TLineFormat& chars);
     int markdownHandOnDelta(int head, int next) const;
@@ -1030,6 +1029,8 @@ private:
         bool hiddenEarly = false;
     };
     void showMarkdownLinkText(int head, const PlacedLink& link);
+    void hideLinksKeptWhole(QString& text, QList<PlacedLink>& links);
+    void placeMarkdownLinks(const QList<PlacedLink>& links);
     QList<PlacedLink> mMarkdownLinksToPlace;
     // What translateToPlainText() is reading came from the game
     bool mParsingServerText = false;
