@@ -57,7 +57,6 @@ public:
     // The member variable is the source for this bit of information:
     bool isIn3DMode() const { return mIs3DMode; }
     bool isFloatAndDockable() const;
-    int getCurrentShownAreaIndex();
     void setFont(const QFont&);
     void refreshColours();
     // Redraws whichever of the 2D and 3D views exist, for settings both of them read

@@ -1224,8 +1224,10 @@ void dlgProfilePreferences::retranslateShell()
 {
     //: Wordmark at the top of the settings dialog's category sidebar, beside the Mudlet icon
     mpLabel_wordmark->setText(tr("Settings"));
-    //: Placeholder text of the search field at the top of the settings dialog
-    mpLineEdit_search->setPlaceholderText(tr("Find in settings"));
+    //: Placeholder text and accessible name of the search field at the top of the settings dialog
+    const QString findInSettings = tr("Find in settings");
+    mpLineEdit_search->setPlaceholderText(findInSettings);
+    mpLineEdit_search->setAccessibleName(findInSettings);
     //: Accessible name of the list that switches between the settings dialog's categories
     mpListWidget_categories->setAccessibleName(tr("Settings categories"));
     //: Button at the left of the "Search results" heading, leading back to the settings category the search was started from
@@ -1623,8 +1625,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the unfinished features that can be switched on for a profile.
     synonyms.append({mpCard_experiments.data(), tr("experiment, experimental, beta, preview, unsupported, 3D map, renderer")});
-    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the toolbar's and the script editor's icons in color.
-    synonyms.append({mpCheckBox_colouredIcons.data(), tr("colour, color, coloured, colored, icons, toolbar, script editor, old icons")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the toolbar's and the script editor's icons in gray instead of in color.
+    synonyms.append({mpCheckBox_greyscaleIcons.data(), tr("colour, color, coloured, colored, gray, grey, grayscale, greyscale, monochrome, icons, toolbar, script editor, old icons")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -2042,14 +2044,14 @@ void dlgProfilePreferences::buildExperimentsCard()
     auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_experiments->layout());
     pCardLayout->setSpacing(4);
 
-    mpCheckBox_colouredIcons = new QCheckBox(mpCard_experiments);
-    mpCheckBox_colouredIcons->setObjectName(qsl("checkBox_colouredIcons"));
-    pCardLayout->addWidget(mpCheckBox_colouredIcons);
-    auto* pColouredDescription = new QLabel(mpCard_experiments);
-    pColouredDescription->setObjectName(qsl("checkBox_colouredIcons_description"));
-    pColouredDescription->setProperty("settingsControlDescription", true);
-    pColouredDescription->setWordWrap(true);
-    pCardLayout->addWidget(pColouredDescription);
+    mpCheckBox_greyscaleIcons = new QCheckBox(mpCard_experiments);
+    mpCheckBox_greyscaleIcons->setObjectName(qsl("checkBox_greyscaleIcons"));
+    pCardLayout->addWidget(mpCheckBox_greyscaleIcons);
+    auto* pGreyscaleDescription = new QLabel(mpCard_experiments);
+    pGreyscaleDescription->setObjectName(qsl("checkBox_greyscaleIcons_description"));
+    pGreyscaleDescription->setProperty("settingsControlDescription", true);
+    pGreyscaleDescription->setWordWrap(true);
+    pCardLayout->addWidget(pGreyscaleDescription);
 
     for (const auto& key : Host::getValidExperiments()) {
         auto* pCheckBox = new QCheckBox(mpCard_experiments);
@@ -2095,11 +2097,10 @@ void dlgProfilePreferences::buildExperimentsCard()
 void dlgProfilePreferences::retranslateExperiments()
 {
     //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
-    mpCheckBox_colouredIcons->setText(tr("Colored icons"));
-    if (auto* pDescription = mpCard_experiments->findChild<QLabel*>(qsl("checkBox_colouredIcons_description")); pDescription) {
-        //: Description under the "Colored icons" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
-        pDescription->setText(tr("Gives the icons on Mudlet's toolbar and in the script editor the colors of the pictures they replaced, so a blue map or a red delete is where you remember it. "
-                                 "Applies to every profile."));
+    mpCheckBox_greyscaleIcons->setText(tr("Grayscale icons"));
+    if (auto* pDescription = mpCard_experiments->findChild<QLabel*>(qsl("checkBox_greyscaleIcons_description")); pDescription) {
+        //: Description under the "Grayscale icons" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+        pDescription->setText(tr("Draws the icons on Mudlet's toolbar and in the script editor in gray only, without the colors of the pictures they replaced. Applies to every profile."));
     }
 
     QHash<QString, QString> labels;
@@ -2641,7 +2642,8 @@ void dlgProfilePreferences::reflowColourCards()
                                        {label_lowerLevelColor, pushButton_lowerLevelColor},
                                        {label_upperLevelColor, pushButton_upperLevelColor},
                                        {label_pushButton_roomCollisionBorderColor, pushButton_roomCollisionBorderColor},
-                                       {label_mapGridColor, pushButton_mapGridColor}},
+                                       {label_mapGridColor, pushButton_mapGridColor},
+                                       {label_defaultRoomColor, pushButton_defaultRoomColor}},
                       .divider = {line_mapperColorsSeparator},
                       .ansiColours = {{label_17, pushButton_black_2},
                                       {label_49, pushButton_Lblack_2},
@@ -3525,8 +3527,8 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
     }
 }
 
-// With the colored icons on, a page's colour: what a toolbar button also opens takes that button's, and the input
-// line and accessibility have their own. The rest stay grey.
+// Unless the icons are set to grayscale, a page's colour: what a toolbar button also opens takes that button's, and
+// the input line and accessibility have their own. The rest stay grey.
 static uiDesign::IdentityColour settingsPageIdentity(const QString& iconFile)
 {
     static const QHash<QString, uiDesign::IdentityColour> identities{{qsl("settings-input.svg"), uiDesign::scmIdentity_input},
@@ -4305,7 +4307,7 @@ void dlgProfilePreferences::populateApplicationSettings()
 
     checkBox_reportMapIssuesOnScreen->setChecked(TMap::smShowMapAuditErrors);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
-    mpCheckBox_colouredIcons->setChecked(pMudlet->colouredIcons());
+    mpCheckBox_greyscaleIcons->setChecked(!pMudlet->colouredIcons());
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
     TEFolderIconSize->setValue(pMudlet->mEditorTreeWidgetIconSize);
@@ -5252,6 +5254,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor, Qt::UniqueConnection);
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor, Qt::UniqueConnection);
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor, Qt::UniqueConnection);
+    connect(pushButton_defaultRoomColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapDefaultRoomColor, Qt::UniqueConnection);
 
     connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn, Qt::UniqueConnection);
 
@@ -5474,6 +5477,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_lowerLevelColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_upperLevelColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_defaultRoomColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
@@ -5833,6 +5837,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
         setButtonColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
+        setButtonColor(pushButton_defaultRoomColor, pHost->mapperDefaultRoomColor());
     } else {
         // Using QColor() gives an "invalid" color:
         setButtonColor(pushButton_black_2, QColor());
@@ -5860,6 +5865,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_mapInfoBg, QColor());
         setButtonColor(pushButton_roomCollisionBorderColor, QColor());
         setButtonColor(pushButton_mapGridColor, QColor());
+        setButtonColor(pushButton_defaultRoomColor, QColor());
     }
 }
 
@@ -6011,6 +6017,8 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mLightWhite_2 = QColorConstants::White;
     pHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
     pHost->mMapGridColor = QColor(211, 211, 211, 64);
+    // Unset again, so it follows the map's red
+    pHost->mMapperDefaultRoomColor = QColor();
 
     // This aplies the above colors to the buttons on display:
     setColors2();
@@ -6022,11 +6030,11 @@ void dlgProfilePreferences::slot_resetMapColors()
     }
 }
 
-void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
+bool dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
 {
     Host* pHost = mpHost;
     if (!pHost) {
-        return;
+        return false;
     }
 
     // The dialog runs an event loop of its own, in which the button or the whole window can go
@@ -6035,7 +6043,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     //: Generic pick color dialog title
     auto color = QColorDialog::getColor(presentColor, this, tr("Pick color"), allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
     if (!pSelf) {
-        return;
+        return false;
     }
     returnFromColourDialog(pClicked);
     if (color.isValid()) {
@@ -6065,8 +6073,14 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                                      || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2 || button == pushButton_cyan_2 || button == pushButton_Lcyan_2 || button == pushButton_white_2
                                      || button == pushButton_Lwhite_2);
 
+        // Unset, the default room color is the map's red, so its well shows that red too
+        if (button == pushButton_red_2) {
+            setButtonColor(pushButton_defaultRoomColor, pHost->mapperDefaultRoomColor());
+        }
+
         if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
+            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor
+            || button == pushButton_defaultRoomColor) {
             if (pHost->mpMap) {
                 // Update the custom environment (room colors)
                 if (isAMapEnvColor) {
@@ -6081,6 +6095,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
         // visible:
         setButtonColor(button, color, allowAlpha);
     }
+    return color.isValid();
 }
 
 void dlgProfilePreferences::slot_setFgColor()
@@ -6318,6 +6333,23 @@ void dlgProfilePreferences::slot_setMapGridColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
+    }
+}
+
+void dlgProfilePreferences::slot_setMapDefaultRoomColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    // The picker starts from the color in effect, which unset is the map's red. Cancelled, it stays unset;
+    // accepting that same red sets it, so a later change to red leaves these rooms alone.
+    QColor picked = pHost->mapperDefaultRoomColor();
+    if (setButtonAndProfileColor(pushButton_defaultRoomColor, picked)) {
+        pHost->mMapperDefaultRoomColor = picked;
+        if (pHost->mpMap) {
+            pHost->mpMap->updateArea(-1);
+        }
     }
 }
 
@@ -6679,10 +6711,6 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     }
 
     if (success) {
-        // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
-        if (!isJson) {
-            pHost->mpMap->audit();
-        }
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
@@ -6932,7 +6960,7 @@ void dlgProfilePreferences::slot_copyMap()
         qsizetype otherProfileRoomCount;
         qsizetype otherProfileAreaCount;
         int otherProfileVersion;
-        int otherProfileCurrentRoomId; // What we are looking for!
+        int otherProfileCurrentRoomId = 0; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(), &otherProfileFileUsed, &otherProfileVersion, &otherProfileCurrentRoomId, &otherProfileAreaCount, &otherProfileRoomCount)) {
             qDebug() << "dlgProfilePreference::slot_copyMap() in other INACTIVE profile:" << itOtherProfile.key() << "\n    the file examined was:" << otherProfileFileUsed
                      << "\n    it was of version:" << otherProfileVersion << "\n    it had an area count of:" << otherProfileAreaCount << "\n    it had a room count of:" << otherProfileRoomCount
@@ -6981,7 +7009,8 @@ void dlgProfilePreferences::slot_copyMap()
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
     const QString sourceMapFolder(MudletApp::getMudletPath(enums::profileMapsPath, pHost->getName()));
-    const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    // A JSON export or another file of the player's can be newer than the save just made
+    const QStringList mProfileList = QDir(sourceMapFolder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
         if (thisProfileLatestMapPathFileName.isEmpty()) {
@@ -7073,8 +7102,8 @@ void dlgProfilePreferences::slot_setLogDir()
         return;
     }
 
-    QSettings& settings = *MudletApp::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    const QString defaultLogDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName());
+    const QString startDir = mLogDirPath.isEmpty() ? defaultLogDir : mLogDirPath;
 
     /*
      * To show the files even though we are looking for a directory so that the
@@ -7096,14 +7125,13 @@ void dlgProfilePreferences::slot_setLogDir()
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
-    const QString currentLogDir = QFileDialog::getExistingDirectory(this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lastDir : mLogDirPath), QFileDialog::DontUseNativeDialog);
+    const QString currentLogDir = QFileDialog::getExistingDirectory(this, tr("Where should Mudlet save log files?"), startDir, QFileDialog::DontUseNativeDialog);
 
     if (!currentLogDir.isEmpty() && currentLogDir != nullptr) {
-        settings.setValue("lastFileDialogLocation", currentLogDir);
         // Disable pushButton_resetLogDir and clear
         // lineEdit_logFileFolder if the directory is set to the
         // default path
-        if (currentLogDir == MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName())) {
+        if (currentLogDir == defaultLogDir) {
             // clear mLogDirPath, which sets the directory where logs are saved
             // to Mudlet's default log path.
             mLogDirPath.clear();
@@ -7402,7 +7430,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mProxyUsername = lineEdit_proxyUsername->text();
         }
         if (mSnapshot.dirty(lineEdit_proxyPassword)) {
-            pHost->mProxyPassword = lineEdit_proxyPassword->text();
+            pHost->setProxyPassword(lineEdit_proxyPassword->text());
         }
 
         //tab security
@@ -7747,8 +7775,8 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(checkBox_showIconsOnMenus)) {
         pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
     }
-    if (mSnapshot.dirty(mpCheckBox_colouredIcons)) {
-        pMudlet->setColouredIcons(mpCheckBox_colouredIcons->isChecked());
+    if (mSnapshot.dirty(mpCheckBox_greyscaleIcons)) {
+        pMudlet->setColouredIcons(!mpCheckBox_greyscaleIcons->isChecked());
     }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
@@ -9009,8 +9037,8 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
 
 void dlgProfilePreferences::slot_changeColouredIcons(const bool state)
 {
-    if (mpCheckBox_colouredIcons && mpCheckBox_colouredIcons->isChecked() != state) {
-        mpCheckBox_colouredIcons->setChecked(state);
+    if (mpCheckBox_greyscaleIcons && mpCheckBox_greyscaleIcons->isChecked() == state) {
+        mpCheckBox_greyscaleIcons->setChecked(!state);
     }
     // The sidebar's icons, and the search headers and page title copied from them
     applyShellStyle();
@@ -9836,9 +9864,11 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mapper()->mp2dMap->update();
+    if (pHost->mpMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+            pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+        }
+        pHost->mpMap->requestMapRepaint();
     }
 }
 
@@ -10151,9 +10181,8 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
         mpHost->mRoomSize = size / 10.0;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
-            mpHost->mpMap->mapper()->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
         }
     }
 }
@@ -10169,8 +10198,8 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
+        if (mpHost->mpMap) {
+            mpHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
         }
     }
 }
@@ -10180,9 +10209,11 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
-            mpHost->mpMap->mapper()->update3DView();
+        if (mpHost->mpMap) {
+            if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+                mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+            }
+            mpHost->mpMap->requestMapRepaint();
         }
     }
 }
