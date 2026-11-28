@@ -16551,7 +16551,7 @@ void dlgTriggerEditor::updateEditorSidebarToggle()
         return;
     }
     const bool namesShowing = mEditorSidebarLabelsShown && mEditorSidebarNamesFit;
-    mpToggle_editorSidebar->setPointingLeft(namesShowing);
+    mpToggle_editorSidebar->setPointingAtPane(namesShowing);
 
     //: Tooltip and accessible name of the chevron on the line down the right of the script editor's sidebar while the section names are showing. Pressing it leaves the sidebar in place as a rail of icons - it closes nothing - so the wording is about the labels rather than the sidebar.
     const QString minimise = tr("Minimise the sidebar to icons");

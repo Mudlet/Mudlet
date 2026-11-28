@@ -1574,7 +1574,7 @@ is braces everywhere, the sidebar included), `editor-type-string.png` (quote),
 an index key is drawn as `[n]` - comes `editor-hidden.png` on a row that is
 hidden while hidden variables are shown, and at the trailing edge as much of the
 value as the panel leaves room for, in `chipFont()`: the string in quotes, the
-number, `true` or `false`, `{ n keys }` or `{ n items }`. Everything a row is
+number, `true` or `false`, or for a table that holds anything the number of members as `(n)`. Everything a row is
 drawn from is written into the row's data roles when it is built or written back
 (`setVariableRowData()`, `refreshVariableRow()`), so painting never reaches into
 Lua or counts a table. A click on the square asks the editor for the toggle
