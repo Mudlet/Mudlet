@@ -203,6 +203,39 @@ private slots:
         QVERIFY(session.shutdown(false));
     }
 
+    void test_theBorderColourIsReadAndTold()
+    {
+        const QString name = qsl("Headless Area Border Colour");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.mainBorderColor(), QColor());
+        QSignalSpy colors(&session, &THeadlessSession::mainBorderColorChanged);
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(session.mainBorderColor(), QColor(Qt::black));
+        QVERIFY(session.runLua(qsl("setBorderColor(10, 20, 30)")));
+        QCOMPARE(session.mainBorderColor(), QColor(10, 20, 30));
+        QTRY_COMPARE(colors.size(), 1);
+        QCOMPARE(colors.first().at(0).toString(), name);
+        QCOMPARE(colors.first().at(1).value<QColor>(), QColor(10, 20, 30));
+
+        // Set and taken back within a turn, or set to the colour it has, sends nothing; nor does one refused
+        QVERIFY(session.runLua(qsl("setBorderColor(1, 2, 3) setBorderColor(10, 20, 30)")));
+        QVERIFY(session.runLua(qsl("setBorderColor(10, 20, 30)")));
+        QVERIFY(session.runLua(qsl("assert(setBorderColor(300, 0, 0) == nil)")));
+        QTest::qWait(100);
+        QCOMPARE(colors.size(), 1);
+        QCOMPARE(session.mainBorderColor(), QColor(10, 20, 30));
+
+        // Twice in a turn sends the last
+        QVERIFY(session.runLua(qsl("setBorderColor(1, 2, 3) setBorderColor(4, 5, 6)")));
+        QTRY_COMPARE(colors.size(), 2);
+        QCOMPARE(colors.at(1).at(1).value<QColor>(), QColor(4, 5, 6));
+        QTest::qWait(100);
+        QCOMPARE(colors.size(), 2);
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(session.mainBorderColor(), QColor());
+    }
+
     void test_aFontChangeKeepsWhatTheAppGave()
     {
         const QString name = qsl("Headless Area Font");

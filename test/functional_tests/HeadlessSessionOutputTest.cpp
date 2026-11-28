@@ -27,6 +27,8 @@
 
 #include <QDir>
 #include <QFile>
+#include <QHash>
+#include <QSet>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -742,6 +744,93 @@ tempRegexTrigger("^current$", [[moveCursor("main", 3, getLineNumber("main") - 1)
                                    // The pass's own line is sent ahead of what it wrote onto the line above
                                    qsl("S:abc S:current S:X")};
         QCOMPARE(run(session), expected);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A line lineShown sent that a script then changes or deletes where it stands comes again, by its id
+    void test_aLineAScriptChangesAfterItWasShownIsSentAgain()
+    {
+        const QString name = qsl("Headless Lines Updated");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QHash<QString, qint64> idOf;
+        connect(&session,
+                &THeadlessSession::lineShown,
+                &session,
+                [&idOf](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, bool, const QList<qint64>& lineIds) {
+                    const QStringList lines = text.split(QChar::LineFeed);
+                    for (int i = 0; i < lines.size() && i < lineIds.size(); ++i) {
+                        idOf.insert(lines.at(i), lineIds.at(i));
+                    }
+                });
+        QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
+        const auto updates = [&updated]() {
+            QList<THeadlessSession::LineUpdate> all;
+            for (const QVariantList& arguments : std::as_const(updated)) {
+                all.append(arguments.at(1).value<QList<THeadlessSession::LineUpdate>>());
+            }
+            updated.clear();
+            return all;
+        };
+        QVERIFY(session.runLua(qsl(R"lua(
+function headlessLineOf(text)
+  for i = getLineCount(), 0, -1 do
+    moveCursor("main", 0, i)
+    if getCurrentLine() == text then return i end
+  end
+end
+feedTriggers("alpha\nbeta\ngamma\n")
+)lua")));
+        const qint64 alpha = idOf.value(qsl("alpha"));
+        const qint64 beta = idOf.value(qsl("beta"));
+        const qint64 gamma = idOf.value(qsl("gamma"));
+        QVERIFY(alpha > 0 && beta > 0 && gamma > 0);
+        QCOMPARE(QSet<qint64>({alpha, beta, gamma}).size(), 3);
+        QVERIFY(!updated.wait(200));
+
+        QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("beta")) selectCurrentLine() replace("BETA") moveCursorEnd())")));
+        QVERIFY(updated.wait(1000));
+        QList<THeadlessSession::LineUpdate> got = updates();
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, beta);
+        QCOMPARE(got.first().text, qsl("BETA"));
+        QVERIFY(!got.first().deleted);
+
+        // A restyle is a change, as are two lines a turn changed, sent once and in the order they stand
+        QVERIFY(session.runLua(qsl(R"lua(
+moveCursor("main", 0, headlessLineOf("gamma")) selectCurrentLine() setFgColor(255, 0, 0)
+moveCursor("main", 0, headlessLineOf("alpha")) selectCurrentLine() replace("ALPHA")
+moveCursorEnd()
+)lua")));
+        QVERIFY(updated.wait(1000));
+        QCOMPARE(updated.size(), 1);
+        got = updates();
+        QCOMPARE(got.size(), 2);
+        QCOMPARE(got.at(0).lineId, alpha);
+        QCOMPARE(got.at(0).text, qsl("ALPHA"));
+        QCOMPARE(got.at(1).lineId, gamma);
+        QCOMPARE(got.at(1).text, qsl("gamma"));
+        QVERIFY(!got.at(1).runs.isEmpty());
+        QCOMPARE(got.at(1).runs.first().foreground, QColor(255, 0, 0));
+
+        QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("BETA")) deleteLine() moveCursorEnd())")));
+        QVERIFY(updated.wait(1000));
+        got = updates();
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, beta);
+        QVERIFY(got.first().deleted);
+        QVERIFY(got.first().text.isEmpty());
+
+        // A line shown after them is not one of theirs, and a clear forgets them all
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("delta\n"))")));
+        QVERIFY(!QSet<qint64>({alpha, beta, gamma}).contains(idOf.value(qsl("delta"))));
+        QVERIFY(session.runLua(qsl(R"(clearWindow() feedTriggers("after\n") moveCursor("main", 0, headlessLineOf("after")) selectCurrentLine() replace("AFTER") moveCursorEnd())")));
+        QVERIFY(updated.wait(1000));
+        got = updates();
+        QCOMPARE(got.size(), 1);
+        QCOMPARE(got.first().lineId, idOf.value(qsl("after")));
+        QCOMPARE(got.first().text, qsl("AFTER"));
         QVERIFY(session.shutdown(false));
     }
 };

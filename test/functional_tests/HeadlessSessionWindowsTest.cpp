@@ -2068,6 +2068,41 @@ tempAlias([[^t (\w+)$]], [[printCmdLine("own", "tell " .. matches[2] .. " ")]])
         QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("tell bob ")));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_aCommandLinesStyleSheetIsInItsWindow()
+    {
+        const QString name = qsl("Headless Command Line Sheet");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"(createMiniConsole("mc", 10, 20, 300, 200) enableCommandLine("mc"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<THeadlessSession::ScriptWindow> line = session.scriptWindow(qsl("mc"), Kind::commandLine);
+        QVERIFY(line);
+        QCOMPARE(line->styleSheet, QString());
+
+        const QString sheet = qsl("QPlainTextEdit { background-color: rgb(10, 20, 30); }");
+        QVERIFY(session.runLua(qsl(R"(setCmdLineStyleSheet("mc", [[%1]]))").arg(sheet)));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(changes.takeFirst().at(1).toStringList().contains(qsl("mc")));
+        changes.clear();
+        line = session.scriptWindow(qsl("mc"), Kind::commandLine);
+        QVERIFY(line);
+        QCOMPARE(line->styleSheet, sheet);
+        // The console it belongs to has none of its own
+        QCOMPARE(session.scriptWindow(qsl("mc"))->styleSheet, QString());
+
+        // The main command line is the app's own input line, so its sheet is in no window
+        QVERIFY(session.runLua(qsl(R"(setCmdLineStyleSheet("main", [[QPlainTextEdit { color: red; }]]))")));
+        QVERIFY(!changes.wait(200));
+        for (const THeadlessSession::ScriptWindow& window : session.scriptWindows()) {
+            QVERIFY2(window.styleSheet.isEmpty() || window.name == qsl("mc"), qPrintable(window.name));
+        }
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"
