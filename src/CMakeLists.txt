@@ -296,6 +296,7 @@ set(mudlet_app_SRCS
     TAccessibleLabel.cpp
     TAccessibleTextEdit.cpp
     TCommandLine.cpp
+    TPaintPacer.cpp
     TPasswordEntry.cpp
     TConsole.cpp
     TDebugFilterBar.cpp
@@ -648,6 +649,7 @@ set(mudlet_app_HDRS
     TAccessibleLabel.h
     TAccessibleTextEdit.h
     TCommandLine.h
+    TPaintPacer.h
     TPasswordEntry.h
     TConsole.h
     TDebugFilterBar.h

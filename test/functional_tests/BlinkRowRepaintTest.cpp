@@ -28,6 +28,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
+#include "TPaintPacer.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -122,15 +123,15 @@ private slots:
         // Settles any pending paint, so all that follows is the tick's own doing
         pane->repaint();
         // Holds the update back in mPendingPaintRegion, where it can be read
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         pane->slot_blinkStateChanged();
         QVERIFY2(!pane->mForceUpdate, "a blink tick asked for the whole pane");
         QCOMPARE(pane->mDirtyFirstLine, blinkingLine);
         QCOMPARE(pane->mDirtyLastLine, blinkingLine);
         const int rowHeight = pane->mFontHeight;
         const QRect rowsAround(0, (blinkingRow - 1) * rowHeight, pane->width(), 3 * rowHeight);
-        QVERIFY2((QRegion(rowsAround) - pane->mPendingPaintRegion).isEmpty(), "a blink tick left the rows either side of the blinking one, which its glyphs ink, showing a stale opacity");
-        QVERIFY2(!pane->mPendingPaintRegion.intersects(QRect(0, 0, pane->width(), rowHeight)), "a blink tick repainted rows far from any blinking text");
+        QVERIFY2((QRegion(rowsAround) - pane->mpPacer->mPendingPaintRegion).isEmpty(), "a blink tick left the rows either side of the blinking one, which its glyphs ink, showing a stale opacity");
+        QVERIFY2(!pane->mpPacer->mPendingPaintRegion.intersects(QRect(0, 0, pane->width(), rowHeight)), "a blink tick repainted rows far from any blinking text");
 
         // The blink phase moves on undrawn, so the cache holds a stale opacity
         PaintSwallower swallower;
@@ -190,11 +191,11 @@ private slots:
         QTest::qWait(300ms);
         pane->removeEventFilter(&swallower);
 
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         pane->slot_blinkStateChanged();
         QVERIFY2(!pane->mForceUpdate, "a blink tick asked for the whole pane");
-        const QRegion tickRegion = pane->mPendingPaintRegion;
-        pane->mPendingPaintRegion = QRegion();
+        const QRegion tickRegion = pane->mpPacer->mPendingPaintRegion;
+        pane->mpPacer->mPendingPaintRegion = QRegion();
         {
             QPainter painter(&onScreen);
             pane->render(&painter, tickRegion.boundingRect().topLeft(), tickRegion);

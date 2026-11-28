@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TPaintPacer.h"
 #include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
@@ -131,23 +132,14 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
-    mpPaintPacer = new QTimer(this);
-    mpPaintPacer->setSingleShot(true);
-    connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
-        // Armed at the normal pace by the line that began a flood, so stretched to the flood pace -
-        // once and by no more than the paces differ, as a paint under an overlay restarts mSincePaint.
-        const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : csmFloodPaintPaceMs;
-        if (!mPaintPacerStretched && !mPendingPaintRegion.isEmpty() && sincePaint < csmFloodPaintPaceMs && paintPaceMs() == csmFloodPaintPaceMs) {
-            mPaintPacerStretched = true;
-            mpPaintPacer->start(std::min(csmFloodPaintPaceMs - csmPaintPaceMs, csmFloodPaintPaceMs - static_cast<int>(sincePaint)));
-            return;
-        }
-        applyPendingScrollBarUpdate();
-        if (!mPendingPaintRegion.isEmpty()) {
-            update(mPendingPaintRegion);
-            mPendingPaintRegion = QRegion();
-        }
+    mpPacer = new TPaintPacer(*mpBuffer, this);
+    mpPacer->setScreenRows([this]() {
+        return mScreenHeight;
     });
+    connect(mpPacer, &TPaintPacer::paintWanted, this, [this](const QRegion& region) {
+        update(region);
+    });
+    connect(mpPacer, &TPaintPacer::scrollBarWanted, this, &TTextEdit::applyPendingScrollBarUpdate);
 
     showNewLines();
     setMouseTracking(true); // test fix for MAC
@@ -176,46 +168,7 @@ void TTextEdit::forceUpdate()
 
 void TTextEdit::scheduleUpdate(const QRect& rect)
 {
-    if (mWholePaneRequested) {
-        // A script echoing in a loop lands here on every line; the scrollbar
-        // catches up once the event loop runs, as the paint itself will.
-        if (mScrollBarUpdatePending && !mpPaintPacer->isActive()) {
-            mpPaintPacer->start(0);
-        }
-        return;
-    }
-    const QRect area = rect.isValid() ? rect : QWidget::rect();
-    const bool nothingHeldBack = mPendingPaintRegion.isEmpty();
-    mPendingPaintRegion += area;
-    const int pace = paintPaceMs();
-    const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : pace;
-
-    // Nothing painted recently, so this frame's window is open: Qt still merges
-    // whatever else arrives before the event loop gets around to painting.
-    if (sincePaint >= pace) {
-        applyPendingScrollBarUpdate();
-        update(mPendingPaintRegion);
-        mWholePaneRequested = area.contains(QWidget::rect());
-        mPendingPaintRegion = QRegion();
-        mPaintPacerMoved = false;
-        return;
-    }
-
-    // A timer still running with nothing held back is due on the last frame's clock. Moved once a
-    // frame, as paints covering the pane can outpace it and only its firing moves the scrollbar.
-    const bool leftRunning = mpPaintPacer->isActive();
-    if (!leftRunning || (nothingHeldBack && !mPaintPacerMoved)) {
-        mPaintPacerMoved = leftRunning;
-        mPaintPacerStretched = pace == csmFloodPaintPaceMs;
-        mpPaintPacer->start(pace - static_cast<int>(sincePaint));
-    }
-}
-
-// Nobody reads lines that scroll past between two frames, and a frame costs as much as
-// taking in hundreds of them, so a flood gets fewer frames and finishes sooner.
-int TTextEdit::paintPaceMs() const
-{
-    return mpBuffer->linesAddedTotal() - mLinesAddedAtPaint > mScreenHeight ? csmFloodPaintPaceMs : csmPaintPaceMs;
+    mpPacer->schedule(rect.isValid() ? rect : QWidget::rect(), QWidget::rect());
 }
 
 void TTextEdit::markLinesDirty(const int firstLine, const int lastLine)
@@ -343,7 +296,7 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::updateScrollBar(int line)
 {
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
-    mScrollBarUpdatePending = false;
+    mpPacer->setScrollBarUpdatePending(false);
     int screenHeight{mScreenHeight};
     // The upper pane is built first, and shows the lines a model already holds
     // before the lower pane exists
@@ -362,7 +315,7 @@ void TTextEdit::updateScrollBar(int line)
 
 void TTextEdit::applyPendingScrollBarUpdate()
 {
-    if (mScrollBarUpdatePending) {
+    if (mpPacer->scrollBarUpdatePending()) {
         updateScrollBar(mpBuffer->mCursorY);
     }
 }
@@ -529,7 +482,7 @@ void TTextEdit::showNewLines()
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            mScrollBarUpdatePending = true;
+            mpPacer->setScrollBarUpdatePending(true);
         }
     }
     scheduleUpdate();
@@ -1784,18 +1737,7 @@ void TTextEdit::paintNothing(const QRect& r)
 
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
-    mSincePaint.restart();
-    mLinesAddedAtPaint = mpBuffer->linesAddedTotal();
-    mWholePaneRequested = false;
-    if (!mPendingPaintRegion.isEmpty()) {
-        // Whatever this paint covers is current now, so a deferred repaint of it
-        // would be redundant. Only the remainder - if a partial expose left one -
-        // and a pending scrollbar update still need the pacer.
-        mPendingPaintRegion -= e->region();
-        if (mPendingPaintRegion.isEmpty() && !mScrollBarUpdatePending) {
-            mpPaintPacer->stop();
-        }
-    }
+    mpPacer->paintStarted(e->region());
     const QRect& rect = e->rect();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {

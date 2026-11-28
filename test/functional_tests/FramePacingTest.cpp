@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TPaintPacer.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -147,7 +148,7 @@ private slots:
         pane->repaint();
         QVERIFY2(mPaintCount > 0, "repaint() delivered no paint event, so the pacer's cooldown never started and nothing below is inside a pacing window");
 
-        QSignalSpy pacerFired(pane->mpPaintPacer, &QTimer::timeout);
+        QSignalSpy pacerFired(pane->mpPacer->mpPaintPacer, &QTimer::timeout);
         mPaintCount = 0;
 
         // The pane's clock starts at paintEvent() entry, so the paint's own duration
@@ -156,7 +157,7 @@ private slots:
         // print outside the very cooldown it is here to test. Restarting the clock
         // immediately before the print opens the window by construction, so deferral
         // is exercised every run rather than whenever the runner happened to be quick.
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(qsl("trailing line\n"));
 
         // The same clock scheduleUpdate() just consulted, so it cannot disagree with
@@ -165,14 +166,14 @@ private slots:
         // below already rests on - so the window closing inside it means the process
         // lost the CPU for a whole frame mid-print, and nothing below would be
         // measuring the pacer any more.
-        const qint64 paneCooldownMs = pane->mSincePaint.elapsed();
-        if (paneCooldownMs >= TTextEdit::csmPaintPaceMs) {
+        const qint64 paneCooldownMs = pane->mpPacer->mSincePaint.elapsed();
+        if (paneCooldownMs >= TPaintPacer::csmPaintPaceMs) {
             QSKIP(qPrintable(qsl("the print itself took %1ms, past the %2ms cooldown it had to land inside - the runner stalled mid-print, so deferral was not exercised")
                                      .arg(paneCooldownMs)
-                                     .arg(TTextEdit::csmPaintPaceMs)));
+                                     .arg(TPaintPacer::csmPaintPaceMs)));
         }
 
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the print inside the cooldown did not hold a frame back, so frames are not being deferred at all");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "the print inside the cooldown did not hold a frame back, so frames are not being deferred at all");
 
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
@@ -214,7 +215,7 @@ private slots:
 
         // A script echoing in a loop never returns to the event loop between lines,
         // so the frame the first line opens is still unpainted when the rest arrive.
-        pane->mSincePaint.invalidate();
+        pane->mpPacer->mSincePaint.invalidate();
         mPaintCount = 0;
         console->print(qsl("burst 0\n"));
         const int maximumAfterFirstLine = scrollBar->maximum();
@@ -260,7 +261,7 @@ private slots:
         // A script recolouring a line already on screen asks for that row alone;
         // the echo after it asks for the whole pane, which must not be taken as
         // already asked for because it overlaps the row.
-        pane->mSincePaint.invalidate();
+        pane->mpPacer->mSincePaint.invalidate();
         mPaintCount = 0;
         const int lastLine = console->buffer.getLastLineNumber();
         pane->markLinesDirty(lastLine, lastLine);
@@ -296,23 +297,23 @@ private slots:
         QVERIFY(pane->mScreenHeight > 0);
 
         // Scrollback longer than the screen does not count, only what came after the paint.
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(qsl("one line\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "one line did not hold a frame back");
-        QVERIFY2(pane->mpPaintPacer->remainingTime() <= TTextEdit::csmPaintPaceMs,
-                 qPrintable(qsl("one line armed a frame %1ms away, past the %2ms normal pace").arg(pane->mpPaintPacer->remainingTime()).arg(TTextEdit::csmPaintPaceMs)));
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "one line did not hold a frame back");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->remainingTime() <= TPaintPacer::csmPaintPaceMs,
+                 qPrintable(qsl("one line armed a frame %1ms away, past the %2ms normal pace").arg(pane->mpPacer->mpPaintPacer->remainingTime()).arg(TPaintPacer::csmPaintPaceMs)));
 
         QVERIFY(pacerWentIdle(pane));
         pane->repaint();
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(screenful(pane));
-        const qint64 printMs = pane->mSincePaint.elapsed();
-        if (printMs >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
+        const qint64 printMs = pane->mpPacer->mSincePaint.elapsed();
+        if (printMs >= TPaintPacer::csmFloodPaintPaceMs - TPaintPacer::csmPaintPaceMs) {
             QSKIP(qPrintable(qsl("the print itself took %1ms, so even the flood pace had no more than the normal pace left to arm - the runner stalled").arg(printMs)));
         }
-        QVERIFY2(pane->mpPaintPacer->isActive(), "a screen of lines did not hold a frame back");
-        QVERIFY2(pane->mpPaintPacer->remainingTime() > TTextEdit::csmPaintPaceMs,
-                 qPrintable(qsl("a screen of lines armed a frame %1ms away, no later than the %2ms normal pace").arg(pane->mpPaintPacer->remainingTime()).arg(TTextEdit::csmPaintPaceMs)));
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "a screen of lines did not hold a frame back");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->remainingTime() > TPaintPacer::csmPaintPaceMs,
+                 qPrintable(qsl("a screen of lines armed a frame %1ms away, no later than the %2ms normal pace").arg(pane->mpPacer->mpPaintPacer->remainingTime()).arg(TPaintPacer::csmPaintPaceMs)));
     }
 
     // A flood can start as a trickle, so its first line arms the pacer at the normal pace;
@@ -331,13 +332,13 @@ private slots:
         QVERIFY(pane->mScreenHeight > 0);
 
         mPaintCount = 0;
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(qsl("first line of a flood\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the first line did not hold a frame back");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "the first line did not hold a frame back");
         // Each line as though the frame had only just been painted: once prints on a slow runner
         // outlast the pace, scheduleUpdate() hands the frame to update() and nothing is held back.
         for (int i = 0; i <= pane->mScreenHeight; ++i) {
-            pane->mSincePaint.restart();
+            pane->mpPacer->mSincePaint.restart();
             console->print(qsl("line %1\n").arg(i));
         }
 
@@ -349,14 +350,14 @@ private slots:
         bool settled = false;
         QObject listener;
         // Connected after the pane's own handler, so this sees what that handler left.
-        connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
+        connect(pane->mpPacer->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
             if (++fires == 1) {
                 paintsBeforeFirstFire = mPaintCount;
-                firstFireMs = pane->mSincePaint.elapsed();
-                heldBack = pane->mpPaintPacer->isActive() && !pane->mPendingPaintRegion.isEmpty();
+                firstFireMs = pane->mpPacer->mSincePaint.elapsed();
+                heldBack = pane->mpPacer->mpPaintPacer->isActive() && !pane->mpPacer->mPendingPaintRegion.isEmpty();
             }
-            if (!pane->mpPaintPacer->isActive()) {
-                handedOver = pane->mPendingPaintRegion.isEmpty();
+            if (!pane->mpPacer->mpPaintPacer->isActive()) {
+                handedOver = pane->mpPacer->mPendingPaintRegion.isEmpty();
                 settled = true;
             }
         });
@@ -369,10 +370,10 @@ private slots:
         if (paintsBeforeFirstFire > 0) {
             QSKIP("the pane painted before the pacer fired, so the runner stalled past the flood pace and the stretch was not exercised");
         }
-        if (firstFireMs >= TTextEdit::csmFloodPaintPaceMs) {
+        if (firstFireMs >= TPaintPacer::csmFloodPaintPaceMs) {
             QSKIP(qPrintable(qsl("the pacer fired %1ms after the paint, already past the %2ms flood pace, so the frame was due and the stretch was not exercised - the runner stalled")
                                      .arg(firstFireMs)
-                                     .arg(TTextEdit::csmFloodPaintPaceMs)));
+                                     .arg(TPaintPacer::csmFloodPaintPaceMs)));
         }
         QVERIFY2(heldBack, "the pacer let the frame paint at the normal pace although more than a screen of lines had arrived since the last one");
         QVERIFY2(handedOver, "the stretched frame was never handed to update(), so the end of the flood stays unpainted");
@@ -391,12 +392,12 @@ private slots:
         pane->repaint();
         QVERIFY(pane->mScreenHeight > 0);
 
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(qsl("first line of a flood\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the first line did not hold a frame back");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "the first line did not hold a frame back");
         printLines(console, pane->mScreenHeight + 1);
-        const qint64 printMs = pane->mSincePaint.elapsed();
-        while (pane->mSincePaint.elapsed() < TTextEdit::csmPaintPaceMs + 6) {
+        const qint64 printMs = pane->mpPacer->mSincePaint.elapsed();
+        while (pane->mpPacer->mSincePaint.elapsed() < TPaintPacer::csmPaintPaceMs + 6) {
         }
 
         bool fired = false;
@@ -404,14 +405,14 @@ private slots:
         qint64 firedAt = 0;
         qint64 dueAt = 0;
         QObject listener;
-        connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
+        connect(pane->mpPacer->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
             if (fired) {
                 return;
             }
             fired = true;
-            firedAt = pane->mSincePaint.elapsed();
-            stretched = pane->mpPaintPacer->isActive();
-            dueAt = firedAt + pane->mpPaintPacer->remainingTime();
+            firedAt = pane->mpPacer->mSincePaint.elapsed();
+            stretched = pane->mpPacer->mpPaintPacer->isActive();
+            dueAt = firedAt + pane->mpPacer->mpPaintPacer->remainingTime();
         });
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
@@ -419,12 +420,12 @@ private slots:
                          },
                          2s),
                  "the overdue pacer never fired");
-        if (printMs >= TTextEdit::csmPaintPaceMs || firedAt >= TTextEdit::csmFloodPaintPaceMs) {
+        if (printMs >= TPaintPacer::csmPaintPaceMs || firedAt >= TPaintPacer::csmFloodPaintPaceMs) {
             QSKIP(qPrintable(qsl("the prints took %1ms and the pacer fired %2ms after the paint, so the runner stalled past a pace").arg(printMs).arg(firedAt)));
         }
         QVERIFY2(stretched, "a flood's frame armed at the normal pace was not stretched");
-        QVERIFY2(dueAt <= TTextEdit::csmFloodPaintPaceMs + 1,
-                 qPrintable(qsl("a pacer that fired %1ms after the paint was stretched to %2ms, past the %3ms flood pace").arg(firedAt).arg(dueAt).arg(TTextEdit::csmFloodPaintPaceMs)));
+        QVERIFY2(dueAt <= TPaintPacer::csmFloodPaintPaceMs + 1,
+                 qPrintable(qsl("a pacer that fired %1ms after the paint was stretched to %2ms, past the %3ms flood pace").arg(firedAt).arg(dueAt).arg(TPaintPacer::csmFloodPaintPaceMs)));
     }
 
     // A label over the pane repaints the strip of text beneath it, and those small paints
@@ -448,9 +449,9 @@ private slots:
         int firesToHandOver = 0;
         qint64 handOverGap = -1;
         QObject listener;
-        connect(pane->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
+        connect(pane->mpPacer->mpPaintPacer, &QTimer::timeout, &listener, [&]() {
             ++fires;
-            if (!firesToHandOver && !pane->mpPaintPacer->isActive() && pane->mPendingPaintRegion.isEmpty()) {
+            if (!firesToHandOver && !pane->mpPacer->mpPaintPacer->isActive() && pane->mpPacer->mPendingPaintRegion.isEmpty()) {
                 firesToHandOver = fires;
                 handOverGap = sinceStrip.elapsed();
             }
@@ -467,7 +468,7 @@ private slots:
             longestPrint = std::max(longestPrint, sinceStrip.elapsed());
             QTest::qWait(5ms);
         }
-        if (longestPrint >= TTextEdit::csmPaintPaceMs || handOverGap >= TTextEdit::csmFloodPaintPaceMs) {
+        if (longestPrint >= TPaintPacer::csmPaintPaceMs || handOverGap >= TPaintPacer::csmFloodPaintPaceMs) {
             QSKIP(qPrintable(qsl("a print took %1ms and the frame went %2ms after a strip paint, so the runner stalled past a pace and the frame could go through without being held")
                                      .arg(longestPrint)
                                      .arg(handOverGap)));
@@ -492,14 +493,14 @@ private slots:
         QVERIFY(pane->mScreenHeight > 0);
         const QString lines = screenful(pane);
 
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(lines);
-        const qint64 printMs = pane->mSincePaint.elapsed();
-        if (printMs >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
+        const qint64 printMs = pane->mpPacer->mSincePaint.elapsed();
+        if (printMs >= TPaintPacer::csmFloodPaintPaceMs - TPaintPacer::csmPaintPaceMs) {
             QSKIP(qPrintable(qsl("the print itself took %1ms, so the frame window was gone before the pacer could be left running - the runner stalled").arg(printMs)));
         }
-        QVERIFY2(pane->mpPaintPacer->isActive(), "a screen of lines did not hold a frame back");
-        while (pane->mSincePaint.elapsed() < TTextEdit::csmPaintPaceMs) {
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "a screen of lines did not hold a frame back");
+        while (pane->mpPacer->mSincePaint.elapsed() < TPaintPacer::csmPaintPaceMs) {
         }
         checkTheFrameAfterAPaintKeepsItsPace(console, pane, lines);
     }
@@ -518,11 +519,11 @@ private slots:
         pane->repaint();
         QVERIFY(pane->mScreenHeight > 0);
 
-        pane->mSincePaint.invalidate();
+        pane->mpPacer->mSincePaint.invalidate();
         console->print(qsl("asks for the whole pane\n"));
-        QVERIFY2(!pane->mpPaintPacer->isActive(), "the first line of the burst armed the pacer rather than asking for the whole pane");
+        QVERIFY2(!pane->mpPacer->mpPaintPacer->isActive(), "the first line of the burst armed the pacer rather than asking for the whole pane");
         console->print(qsl("leaves the scrollbar owing\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the scrollbar's update was left with no timer to run it");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive(), "the scrollbar's update was left with no timer to run it");
         checkTheFrameAfterAPaintKeepsItsPace(console, pane, screenful(pane));
     }
 
@@ -541,17 +542,17 @@ private slots:
         QVERIFY(pane->mScreenHeight > 0);
         const QString lines = screenful(pane);
 
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(lines);
         pane->repaint();
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(lines);
-        while (pane->mSincePaint.elapsed() < TTextEdit::csmPaintPaceMs) {
+        while (pane->mpPacer->mSincePaint.elapsed() < TPaintPacer::csmPaintPaceMs) {
         }
 
-        pane->mSincePaint.invalidate();
+        pane->mpPacer->mSincePaint.invalidate();
         console->print(lines);
-        QVERIFY2(pane->mWholePaneRequested && pane->mpPaintPacer->isActive(), "the frame was not asked for straight away with the old timer still running");
+        QVERIFY2(pane->mpPacer->mWholePaneRequested && pane->mpPacer->mpPaintPacer->isActive(), "the frame was not asked for straight away with the old timer still running");
         console->print(qsl("leaves the scrollbar owing\n"));
         checkTheFrameAfterAPaintKeepsItsPace(console, pane, lines);
     }
@@ -588,30 +589,30 @@ private:
     void checkTheFrameAfterAPaintKeepsItsPace(TMainConsole* console, TTextEdit* pane, const QString& lines)
     {
         pane->repaint();
-        QVERIFY2(pane->mpPaintPacer->isActive() && pane->mScrollBarUpdatePending, "the pacer did not outlive the paint for the scrollbar, so no old timer is left to test");
+        QVERIFY2(pane->mpPacer->mpPaintPacer->isActive() && pane->mpPacer->mScrollBarUpdatePending, "the pacer did not outlive the paint for the scrollbar, so no old timer is left to test");
 
         // A full-pane paint can use up the window by itself on a loaded runner
-        pane->mSincePaint.restart();
+        pane->mpPacer->mSincePaint.restart();
         console->print(lines);
         // In this order, as a stall between the two reads then only makes the frame look later
-        const qint64 remaining = pane->mpPaintPacer->remainingTime();
-        const qint64 sincePaint = pane->mSincePaint.elapsed();
+        const qint64 remaining = pane->mpPacer->mpPaintPacer->remainingTime();
+        const qint64 sincePaint = pane->mpPacer->mSincePaint.elapsed();
         const qint64 dueAfterPaint = sincePaint + remaining;
-        if (sincePaint >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
+        if (sincePaint >= TPaintPacer::csmFloodPaintPaceMs - TPaintPacer::csmPaintPaceMs) {
             QSKIP(qPrintable(qsl("the print itself took %1ms, so an old timer and a new one could not be told apart - the runner stalled").arg(sincePaint)));
         }
         // The old timer is due at most csmFloodPaintPaceMs - csmPaintPaceMs after the paint; 2ms allows for rounding
-        QVERIFY2(dueAfterPaint >= TTextEdit::csmFloodPaintPaceMs - 2,
+        QVERIFY2(dueAfterPaint >= TPaintPacer::csmFloodPaintPaceMs - 2,
                  qPrintable(qsl("the frame after a paint is due %1ms after it, so a timer armed before the paint is hurrying it past the %2ms flood pace")
                                     .arg(dueAfterPaint)
-                                    .arg(TTextEdit::csmFloodPaintPaceMs)));
+                                    .arg(TPaintPacer::csmFloodPaintPaceMs)));
 
         // The later deadline must not lose the frame or the scrollbar's update
         mPaintCount = 0;
         const int lastLine = console->buffer.getLastLineNumber();
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
-                             return mPaintCount > 0 && pane->mPendingPaintRegion.isEmpty() && console->mpScrollBar->maximum() == lastLine + 1;
+                             return mPaintCount > 0 && pane->mpPacer->mPendingPaintRegion.isEmpty() && console->mpScrollBar->maximum() == lastLine + 1;
                          },
                          2s),
                  qPrintable(qsl("after the frame was held back the pane painted %1 times and the scrollbar's maximum stands at %2, not %3")
@@ -664,7 +665,7 @@ private:
     {
         return QTest::qWaitFor(
                 [pane]() {
-                    return !pane->mpPaintPacer->isActive();
+                    return !pane->mpPacer->mpPaintPacer->isActive();
                 },
                 2s);
     }
