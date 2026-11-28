@@ -993,6 +993,7 @@ private slots:
         QCOMPARE(value->currentValue().toDouble(), 30.0);
         QCOMPARE(value->minimumValue().toDouble(), 0.0);
         QCOMPARE(value->maximumValue().toDouble(), 200.0);
+        QCOMPARE(value->minimumStepSize().toDouble(), 2.0);
         QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "gaining a value was not announced as a role change");
         QVERIFY2(smEvents.contains(QAccessible::ValueChanged), "the value was not announced");
 

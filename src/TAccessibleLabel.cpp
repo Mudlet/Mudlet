@@ -112,8 +112,9 @@ QVariant TAccessibleLabel::minimumValue() const
 
 QVariant TAccessibleLabel::minimumStepSize() const
 {
-    // Any value between the two ends is one, as for Qt's own progress bar
-    return accessibleValue() ? QVariant(0.0) : QVariant();
+    // A hundredth of the range, as Qt's own progress bar gives, which screen readers take for the digits to read
+    const TLabelAccessibleValue* value = accessibleValue();
+    return value ? QVariant((value->max - value->min) / 100.0) : QVariant();
 }
 
 /*static*/ QAccessibleInterface* TAccessibleLabel::labelFactory(const QString& classname, QObject* object)
