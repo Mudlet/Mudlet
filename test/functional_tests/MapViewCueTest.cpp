@@ -49,8 +49,10 @@
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "RoomAppearance.h"
 #include "T2DMap.h"
 #include "TConsole.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMapView.h"
 #include "TMapViewManager.h"
@@ -452,6 +454,32 @@ private slots:
         mpHost->mLineSize = 5.0;
         map()->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
         QCOMPARE(pViewMap->eSize, 5.0);
+    }
+
+    void test_anExtraMapWindowRedrawsThePlayerMarkerWhenSetConfigChangesIt()
+    {
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("markerBefore = getConfig({'mapPlayerRoomStyle', 'mapPlayerRoomInnerColor'})")));
+        TMapViewManager* pManager = map()->getViewManager();
+        QVERIFY2(pManager, "the profile has no manager for extra map windows");
+        auto restore = qScopeGuard([pLua, pManager]() {
+            pLua->compileAndExecuteScript(qsl("setConfig(markerBefore); markerBefore = nil"));
+            pManager->closeAllViews();
+        });
+        QVERIFY(pLua->compileAndExecuteScript(qsl("assert(setConfig('mapPlayerRoomStyle', 'redRing'))")));
+        const auto [viewId, message] = pManager->createView(0);
+        QVERIFY2(viewId, qPrintable(message));
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        QPointer<T2DMap> pViewMap = pView->get2DMap();
+        QVERIFY(pViewMap);
+        const QGradientStops redRing = pViewMap->mPlayerRoomColorGradientStops;
+
+        QVERIFY(pLua->compileAndExecuteScript(qsl("assert(setConfig('mapPlayerRoomStyle', 'customRing')); assert(setConfig('mapPlayerRoomInnerColor', '#123456'))")));
+
+        const QGradientStops expected = RoomAppearance::playerRoomStops(map()->mPlayerRoomStyle, map()->mPlayerRoomInnerDiameterPercentage, map()->mPlayerRoomInnerColor, map()->mPlayerRoomOuterColor);
+        QVERIFY2(expected != redRing, "the custom ring draws like the red one, so following the change would prove nothing");
+        QVERIFY2(pViewMap->mPlayerRoomColorGradientStops == expected, "the map window kept drawing the player marker it opened with");
     }
 
     // A second mapper of the same profile - one in a detached window, say -
