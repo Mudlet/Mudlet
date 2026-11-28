@@ -160,6 +160,32 @@ private slots:
         QCOMPARE(listedNames(), QStringList{mNamedPackage});
     }
 
+    void test_aRelistedPackageListKeepsTheSearch()
+    {
+        mpManager->lineEdit_searchBar->setText(qsl("titled"));
+        // Installed after the search was typed, so only a relist can list it
+        const QString installed = qsl("RelistedPackage");
+        mpHost->mInstalledPackages << installed;
+        mpHost->mPackageInfo.insert(installed, {{qsl("title"), qsl("Another titled package")}});
+        emit mpHost->signal_packageListChanged();
+        const QStringList listed = listedNames();
+        mpHost->mInstalledPackages.removeAll(installed);
+        mpHost->mPackageInfo.remove(installed);
+
+        QCOMPARE(listed, QStringList({installed, mNamedPackage}));
+    }
+
+    // An install from the repository relists while Explore is showing, and the relist shows Installed
+    void test_aRelistFromTheRepositoryListsTheMatchingInstalledPackages()
+    {
+        mpManager->pushButton_explore->click();
+        mpManager->lineEdit_searchBar->setText(qsl("titled"));
+        emit mpHost->signal_packageListChanged();
+
+        QVERIFY(mpManager->pushButton_installed->isChecked());
+        QCOMPARE(listedNames(), QStringList{mNamedPackage});
+    }
+
     void test_theRepositoryIsListedAlphabeticallyWhateverTheCase()
     {
         mpManager->pushButton_explore->click();
