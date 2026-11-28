@@ -2221,9 +2221,6 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 
             for (int i = 0; i < hits; i++) {
                 mTargetRoomId = buff[i * 4 + 3];
-                //TODO: multiple assignments
-                //            unsigned int minZ = buff[i * 4 + 1];
-                //            unsigned int maxZ = buff[i * 4 + 2];
             }
             glViewport(0, 0, (GLint)width(), (GLint)height());
             glMatrixMode(GL_PROJECTION);
