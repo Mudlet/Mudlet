@@ -653,6 +653,30 @@ QList<TMarkdownParser::Output> TMarkdownParser::flushHeld()
     return out;
 }
 
+QSet<int> TMarkdownParser::heldLinkIds() const
+{
+    QSet<int> ids;
+    const auto collect = [&ids](const std::vector<TChar>& format) {
+        for (const TChar& c : format) {
+            if (const int id = c.linkIndex()) {
+                ids.insert(id);
+            }
+        }
+    };
+    for (const Row& row : mHeldRows) {
+        for (const Text& cell : row.cells) {
+            collect(cell.format);
+        }
+    }
+    if (mHavePendingRow) {
+        collect(mPendingOutput.format);
+        for (const Text& cell : mPendingCells) {
+            collect(cell.format);
+        }
+    }
+    return ids;
+}
+
 QList<TMarkdownParser::Output> TMarkdownParser::takePendingRow()
 {
     if (!mHavePendingRow) {

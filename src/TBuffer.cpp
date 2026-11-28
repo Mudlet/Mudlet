@@ -8220,6 +8220,10 @@ QSet<int> TBuffer::liveLinkIdsOutsideTheLines()
         ids.insert(mpHost->mMxpClient.linkId());
     }
     ids |= linkIdsOnTheLinesStillToCome();
+    // A table's rows wait in the parser until it is complete, on no line yet
+    if (mpMarkdown) {
+        ids |= mpMarkdown->mParser.heldLinkIds();
+    }
     return ids;
 }
 

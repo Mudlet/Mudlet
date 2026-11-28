@@ -376,6 +376,17 @@ describe("Markdown from the game", function()
     assert.are.equal("  ", row.cells[2].text)
   end)
 
+  -- clearWindow() sweeps the links no line holds, and a held row's are on no line yet
+  it("keeps the links and spoilers of a held table's rows across a clearWindow()", function()
+    feed(ON .. "| SpecHeldLinkHead | B |\n|---|---|\n| " .. osc8("send:held", "go") .. " | " .. osc8('local:?config={"spoiler":true}', "Bob") .. " |\n")
+    clearWindow()
+    settle(function() return getLastLineNumber("main") >= 4 end)
+    local row = getMarkdownBlock("main", lastLine())
+    assert.are.equal("tableRow", row and row.kind, "the held rows were not shown after the clear")
+    assert.are.equal("send:held", row.links[1].destination)
+    assert.are.equal("   ", row.cells[2].text)
+  end)
+
   it("pads a table by the columns its characters take on screen", function()
     feed(ON .. "| 名前 | SpecWide |\n|---|---|\n| abcd | x |\n" .. OFF)
     assert.are.equal("名前 │ SpecWide", lineText(lastLine(3)))

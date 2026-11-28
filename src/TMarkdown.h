@@ -153,6 +153,8 @@ public:
     // The held rows of a table, which stays open for rows still to come
     QList<Output> flushHeld();
     bool holdsLines() const { return mHavePendingRow || !mHeldRows.isEmpty(); }
+    // The OSC 8 links in the rows held back, which are on no line yet
+    QSet<int> heldLinkIds() const;
     void setRuleWidth(int columns) { mRuleWidth = columns; }
     // The colors of the characters the grid adds, such as a bullet
     void setPlainFormat(const TChar& format) { mPlain = format; }
