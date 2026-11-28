@@ -1728,16 +1728,31 @@ echo("plain", "no links here")
         QCOMPARE(sent(), qsl("north|north"));
         // Followed with no visited colour, nothing about the label changed
         QVERIFY(!changes.wait(200));
-        // Its links are read as Qt reads them: a raw < inside a quoted href, or a space after the tag's <, still makes one
-        QVERIFY(session.runLua(qsl(R"lua(
-createLabel("lt", 0, 80, 400, 20, 1)
-echo("lt", [[<a href="headlessRan = headlessRan + (1 < 2 and 10 or 0)">lt</a> < a href="headlessRan = headlessRan + 100">spaced</a>]])
-)lua")));
+        // As the GUI's: none of a label's links takes a click until an anchor tag is found in its text, which a raw <
+        // inside a quoted href or a space after the tag's < hides, and then every link Qt reads in it does
+        const QString oddLinks = qsl(R"html(<a href="headlessRan = headlessRan + (1 < 2 and 10 or 0)">lt</a> < a href="headlessRan = headlessRan + 100">spaced</a>)html");
+        QVERIFY(session.runLua(qsl(R"lua(createLabel("lt", 0, 80, 400, 20, 1) echo("lt", [[%1]]))lua").arg(oddLinks)));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + (1 < 2 and 10 or 0)")), LinkResult::unknown);
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 100")), LinkResult::unknown);
+        QCOMPARE(luaString(session, qsl("headlessRan")), qsl("1"));
+        QVERIFY(session.runLua(qsl(R"lua(echo("lt", [[%1 <a href="headlessRan = headlessRan + 1000">k</a>]]))lua").arg(oddLinks)));
         QVERIFY(changes.wait(1000));
         changes.clear();
         QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + (1 < 2 and 10 or 0)")), LinkResult::ran);
         QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 100")), LinkResult::ran);
         QCOMPARE(luaString(session, qsl("headlessRan")), qsl("111"));
+        // Nor while the label is click-through, passing the mouse on
+        QVERIFY(session.runLua(qsl(R"(enableClickthrough("lt"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 1000")), LinkResult::unknown);
+        QVERIFY(session.runLua(qsl(R"(disableClickthrough("lt"))")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        QCOMPARE(session.followLabelLink(qsl("lt"), qsl("headlessRan = headlessRan + 1000")), LinkResult::ran);
+        QCOMPARE(luaString(session, qsl("headlessRan")), qsl("1111"));
 
         // The visited style restyles the text, which names the label
         QVERIFY(session.runLua(qsl(R"(setLinkStyle("lbl", "#00ff00", "#ff00ff"))")));

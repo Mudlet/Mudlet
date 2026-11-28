@@ -170,10 +170,16 @@ THeadlessSession::LinkResult THeadlessSession::followLabelLink(const QString& la
         mErrorString = tr("The profile has no label called \"%1\".").arg(label);
         return LinkResult::unknown;
     }
-    // Only a link the label shows can be clicked; a pixmap or movie empties the text, and its links with it
-    if (!TLabelModel::linkTargets(pModel->mText).contains(href)) {
+    // Only a link the label shows can be clicked, and none while TLabel finds no anchor tag to turn its links on; a
+    // pixmap or movie empties the text, and its links with it
+    if (!TLabelModel::containsAnchorTag(pModel->mText) || !TLabelModel::linkTargets(pModel->mText).contains(href)) {
         //: Error from a frontend with no window asked to follow a link in a label whose text has no link to that address; %1 is the label's name, %2 the link it gave
         mErrorString = tr("The label \"%1\" has no link to \"%2\".").arg(label, href);
+        return LinkResult::unknown;
+    }
+    if (pModel->mClickThrough) {
+        //: Error from a frontend with no window asked to follow a link in a label that passes clicks through to what is under it; %1 is the label's name
+        mErrorString = tr("The label \"%1\" lets clicks through, so none reaches its links.").arg(label);
         return LinkResult::unknown;
     }
     // The GUI puts a prompt: link's text in its hidden-input box while the game hides what is typed; with no window

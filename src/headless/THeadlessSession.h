@@ -345,13 +345,15 @@ public:
     // is marked visited where the label has a visited colour, which restyles labelContent().text, for an anchor
     // TLabelModel::styleLinks() styles, and so names the label in scriptWindowsChanged; then a send: link's text
     // goes to the game through the aliases, a prompt: link's text replaces the main command line's, as
-    // commandLineTextRequested tells, an http: or https: link opens through QDesktopServices, a link of any other
-    // scheme that is not a Lua method call, such as mailto:, runs nothing and is noted in the Errors console, and
-    // anything else runs as Lua, all before this returns. ran, or failed where the Lua raised an error, the link was
-    // not run or nothing opened it, which errorString() gives; failed too, followed and marked not at all, for a
-    // prompt: link while the game hides input, whose text the GUI puts in its hidden-input box. unknown, with
-    // errorString() saying why, for a name that is not a label's and for an href that is not one of the label's
-    // links as its text holds them now, read as QLabel reads them. refused: where submit() is.
+    // commandLineTextRequested tells, an http: or https: link opens through QDesktopServices, a javascript: link, or
+    // one of any other scheme that is not a Lua method call, such as mailto:, runs nothing and is noted in the Errors
+    // console, and anything else runs as Lua, all before this returns. ran, or failed where the Lua raised an error,
+    // the link was not run or nothing opened it, which errorString() gives; failed too, followed and marked not at
+    // all, for a prompt: link while the game hides input, whose text the GUI puts in its hidden-input box. unknown,
+    // with errorString() saying why, for a name that is not a label's, for an href that is not one of the label's
+    // links as its text holds them now, read as QLabel reads them, and for any while the GUI's label takes no click
+    // on its links: TLabelModel::containsAnchorTag() finds no anchor in its text, or it is click-through. refused:
+    // where submit() is.
     LinkResult followLabelLink(const QString& label, const QString& href);
     // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
     // no profile open. A getter, so it may be called from any handler.

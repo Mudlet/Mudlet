@@ -1420,15 +1420,17 @@ style reaches: `<a href="...">` or `<a href='...'>`, with no entity in a double-
 links are compared with the `href` as written, in a label where `containsAnchorTag()` finds a link. Then a
 `send:` link's text goes to the game through the aliases, a `prompt:` link's text replaces the main command
 line's, which `commandLineTextRequested` tells, an `http:` or `https:` link opens through `QDesktopServices`, a
-link of any other scheme that is not a Lua method call, such as `mailto:`, `ftp://` or `javascript:`, runs
-nothing and is noted in the error console, and anything else runs as Lua, all before it returns. The scheme is
+`javascript:` link, or one of any other scheme that is not a Lua method call, such as `mailto:` or `ftp://`,
+runs nothing and is noted in the error console, and anything else runs as Lua, all before it returns. The scheme is
 read as a browser reads it, in any case and without the whitespace around the `href`, and a `send:` or
 `prompt:` link's text keeps a trailing space. It returns `ran`, or `failed`, with `errorString()` saying why,
 for a Lua error, a link not run, a web link nothing opened and a `prompt:` link while the game hides input
 (`hiddenInputWanted`): the GUI then puts the text in its hidden-input box, which a frontend with no window
 does not have, so the link is not followed or marked visited. It is `unknown`, with `errorString()` saying
-why, for a name that is not a label's and for an `href` that is not one of the label's links as its `text`
-holds them now, read as Qt reads them, with their entities decoded, and `refused` where `runLua()` is. An app
+why, for a name that is not a label's, for an `href` that is not one of the label's links as its `text`
+holds them now, read as Qt reads them, with their entities decoded, and for any while the GUI's label takes no
+click on its links: while `containsAnchorTag()` finds no anchor in its `text`, as a raw `<` in a quoted `href`
+or a space after a tag's `<` hides one, and while it is `clickThrough`. It is `refused` where `runLua()` is. An app
 that opens web links its own way, as one whose engine runs where it cannot start a browser, may keep them from
 it; they are then not marked visited.
 

@@ -146,7 +146,7 @@ struct TLabelModel
         prompted,  // prompt: its text is on the main command line, for the player to finish and send
         opened,    // http: or https: the system opened it
         notOpened, // http: or https: nothing opened it
-        notRun,    // another scheme and not a Lua method call, such as mailto: - noted in the Errors console
+        notRun,    // javascript:, or another scheme and no Lua method call, as mailto: - noted in the Errors console
         ran,       // anything else is Lua, which ran
         failed     // the Lua did not compile or raised an error, as the Errors console says
     };
