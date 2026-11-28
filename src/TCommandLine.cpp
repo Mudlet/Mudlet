@@ -289,6 +289,9 @@ void TCommandLine::editAndSpellCheck(QKeyEvent* keyEvent, const KeyEdit kind)
     }
     if (grouped) {
         editBlock.endEditBlock();
+        // A block edited inside an edit block is laid out only when its geometry is asked for,
+        // so without this adjustHeight() would read the line count from before the key
+        blockBoundingRect(textCursor().block());
         mLastKeyEdit = kind;
         mLastKeyEditRevision = document()->revision();
         mLastKeyEditPosition = textCursor().position();
