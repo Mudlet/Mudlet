@@ -41,6 +41,7 @@
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSet>
 #include <QStandardPaths>
 #include <QTimer>
@@ -253,6 +254,11 @@ void appendNil(TEvent& event)
 {
     event.mArgumentList << QString();
     event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
+}
+
+bool pendingDownloadMeetsCriteria(const TMediaData& pending, const TMediaData& criteria)
+{
+    return pending.mediaProtocol() == criteria.mediaProtocol() && (criteria.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == criteria.mediaType());
 }
 } // namespace
 
@@ -513,12 +519,6 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
         mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
     }
 
-    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
-
-    if (mediaPlayerList.isEmpty()) {
-        return;
-    }
-
     if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
@@ -528,18 +528,35 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
     }
 
     const TMediaData fileRequest = requestForFilePlayers(mediaData);
+    const auto stops = [&](const TMediaData& candidate) {
+        const TMediaData& request = candidate.mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData;
+        if (!isMediaMatch(candidate, request, BareName::AlsoMatchesSourceFile)) {
+            return false;
+        }
+        if (mediaData.mediaPriority() == TMediaData::MediaPriorityNotSet || candidate.mediaPriority() == TMediaData::MediaPriorityNotSet) {
+            return true;
+        }
+        if (priorityStop == PriorityStop::Below) {
+            return candidate.mediaPriority() < mediaData.mediaPriority();
+        }
+        return candidate.mediaPriority() <= mediaData.mediaPriority();
+    };
+
+    // A file still downloading has no player yet, and would start once it lands; as a preload it is
+    // still saved, but not played. A play's priority stop leaves downloads alone: it matches every
+    // name, and scripts rely on a sound they asked for still playing once its download lands.
+    if (priorityStop != PriorityStop::Below) {
+        for (TMediaData& pending : mMediaDownloads) {
+            if (pendingDownloadMeetsCriteria(pending, mediaData) && stops(pending)) {
+                pending.setMediaVolume(TMediaData::MediaVolumePreload);
+            }
+        }
+    }
+
+    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (auto& pPlayer : mediaPlayerList) {
-        if (!pPlayer) {
-            continue;
-        }
-
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
-            continue;
-        }
-
-        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
-            && (priorityStop == PriorityStop::Below ? pPlayer->mediaData().mediaPriority() >= mediaData.mediaPriority() : pPlayer->mediaData().mediaPriority() > mediaData.mediaPriority())) {
+        if (!pPlayer || !stops(pPlayer->mediaData())) {
             continue;
         }
 
@@ -955,6 +972,11 @@ bool TMedia::resume(TMediaData mediaData)
 
 void TMedia::stopAllMediaPlayers()
 {
+    // A file still downloading must not start once it lands
+    for (TMediaData& pending : mMediaDownloads) {
+        pending.setMediaVolume(TMediaData::MediaVolumePreload);
+    }
+
     TMediaData mediaData{};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
@@ -1063,8 +1085,7 @@ void TMedia::updateMedia(TMediaData& mediaData, const std::optional<int> volume,
     // A file still downloading has no player yet, and plays as its download says once it lands. A
     // preload is left alone: given a volume, it would play.
     for (TMediaData& pending : mMediaDownloads) {
-        if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType())
-            && pending.mediaVolume() != TMediaData::MediaVolumePreload && selected(pending)) {
+        if (pendingDownloadMeetsCriteria(pending, mediaData) && pending.mediaVolume() != TMediaData::MediaVolumePreload && selected(pending)) {
             update(pending);
         }
     }
@@ -1568,7 +1589,10 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 {
     TEvent event{};
     TMediaData mediaData = mMediaDownloads.value(reply);
-    mMediaDownloads.remove(reply);
+    // Listed until this returns, so a stop from a sysDownloadDone handler still reaches the request
+    const auto unlist = qScopeGuard([this, reply] {
+        mMediaDownloads.remove(reply);
+    });
 
     if (reply->error() != QNetworkReply::NoError) {
         event.mArgumentList << qsl("sysDownloadError");
@@ -1656,10 +1680,11 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
+                mediaData = mMediaDownloads.value(reply);
 
-                // A preload (volume 0) asked for the file to be in the cache, not to be
-                // heard: playMedia() returns before playing one it already has, so a
-                // download must not play the copy it has just made either.
+                // A preload (volume 0), whether asked for or left by a stop, wants the file
+                // cached, not heard: playMedia() returns before playing one it already has,
+                // so a download must not play the copy it has just made either.
                 if (mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
                     TMedia::play(mediaData);
                 }
