@@ -47,6 +47,11 @@ public:
     void render(QPainter&, const QSize&);
     // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
     // to T2DMap, menus and dragging aside
+    // Cleared for an app that shows the map info box itself: render() then leaves the box out and mapInfo() holds
+    // what it would have painted
+    void setMapInfoPainted(bool painted) { mView.mPaintMapInfo = painted; }
+    // The map info box the last render() left out, a contributor's part each; empty where it painted the box
+    const QList<TMapPainter::MapInfoLine>& mapInfo() const { return mMapInfo; }
     bool rendered() const { return !mView.mSize.isEmpty(); }
     QSize renderedSize() const { return mView.mSize; }
     // Whether the last render() laid out an area's rooms, which a press and a wheel turn act on
@@ -160,6 +165,7 @@ private:
     int mFollowedRoomId = 0;
     int mFollowedAreaId = 0;
     bool mLaidOut = false;
+    QList<TMapPainter::MapInfoLine> mMapInfo;
     // Cleared by a move(), showRoom(), showLevel() or showArea() that leaves the view off the player, set again as it
     // follows the player
     bool mFollowing = true;

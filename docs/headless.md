@@ -1101,6 +1101,12 @@ there were more, and the levels of that area that have rooms. Both calls are fal
 `appMapPointer()` are, and for a map whose last draw showed no area; `followPlayerOnMap()` also with no room
 for the player.
 
+An app that shows the map info box itself, in its own text, calls `setMapInfoPainted(false)`: `renderMap()` and
+`renderAppMap()` then leave the box out, and `mapInfo()` gives what a map's last draw would have painted, the
+part of each contributor the profile has enabled (the built-in ones and those of `registerMapInfo()`) with its
+text, bold, italic and colour, in the box's order, and the box's background. The contributors run at each draw
+as before, a script's in Lua, so `mapInfo()` changes only with a draw, and `mapRepaintRequested` says when.
+
 `showMapLevel()` and `showMapArea()` are the GUI's level buttons and area box for those maps. A level is one of
 the area's that has rooms, shown about the same point; an area is shown following the player where they are in
 it, else about the room nearest the middle of the level shown, or of its level with the most rooms where it has

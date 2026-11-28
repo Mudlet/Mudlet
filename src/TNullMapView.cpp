@@ -346,6 +346,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
         mView = frame;
     });
     mView = result.view;
+    mMapInfo = result.mapInfo;
     mLaidOut = mView.mRoomWidth > 0.0f;
     collectDrawnRooms();
     if (result.areaChanged) {

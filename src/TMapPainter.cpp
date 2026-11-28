@@ -3066,7 +3066,11 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
     if (viewSettled) {
         viewSettled(*this);
     }
-    paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
+    if (mPaintMapInfo) {
+        paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
+    } else {
+        result.mapInfo = mapInfo(mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor);
+    }
 
     if (!mHelpMsg.isEmpty()) {
         painter.setPen(QColor(255, 155, 50));
@@ -3144,6 +3148,38 @@ void TMapPainter::resolveAreaExitClick(QPainter& painter, const QMap<int, QPoint
     }
 }
 
+QList<TMapPainter::MapInfoLine> TMapPainter::mapInfo(Host* pHost, TMap* pMap, int roomID, int displayAreaId, int selectionSize, QColor& infoColor)
+{
+    QList<MapInfoLine> lines;
+    if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
+        return lines;
+    }
+    TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
+    if (!pRoom) {
+        return lines;
+    }
+    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
+    // register or kill contributors, so walk a copy and skip any that went away.
+    const TMap::ScriptCallbackScope callbackScope(pMap);
+    const int areaId = pRoom->getArea();
+    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
+    for (const auto& key : keys) {
+        if (pHost->mMapInfoContributors.contains(key)) {
+            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
+            if (!contributor) {
+                continue;
+            }
+            const MapInfoProperties properties = contributor(roomID, selectionSize, areaId, displayAreaId, infoColor);
+            // Nothing is painted for a contributor with nothing to say, as one whose script failed
+            if (properties.text.isEmpty()) {
+                continue;
+            }
+            lines.append(MapInfoLine{properties.text, properties.isBold, properties.isItalic, properties.color.isValid() ? properties.color : infoColor});
+        }
+    }
+    return lines;
+}
+
 int TMapPainter::paintMapInfo(const QElapsedTimer& renderTimer,
                               QPainter& painter,
                               Host* pHost,
@@ -3169,8 +3205,7 @@ int TMapPainter::paintMapInfo(const QElapsedTimer& renderTimer,
         return yOffset;
     }
 
-    TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
-    if (!pRoom) {
+    if (!pMap->mpRoomDB->getRoom(roomID)) {
         return yOffset;
     }
 
@@ -3185,22 +3220,9 @@ int TMapPainter::paintMapInfo(const QElapsedTimer& renderTimer,
     }
     painter.setFont(font);
 
-    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
-    // register or kill contributors, so walk a copy and skip any that went away.
-    const TMap::ScriptCallbackScope callbackScope(pMap);
-    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
-    for (const auto& key : keys) {
-        if (pHost->mMapInfoContributors.contains(key)) {
-            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
-            if (!contributor) {
-                continue;
-            }
-            auto properties = contributor(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
-            if (!properties.color.isValid()) {
-                properties.color = infoColor;
-            }
-            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, infoBackground, fontHeight, widgetWidth);
-        }
+    const QList<MapInfoLine> lines = mapInfo(pHost, pMap, roomID, displayAreaId, selectionSize, infoColor);
+    for (const MapInfoLine& line : lines) {
+        yOffset += paintMapInfoContributor(painter, xOffset, yOffset, {line.bold, line.italic, line.text, line.color}, infoBackground, fontHeight, widgetWidth);
     }
 
 #ifdef QT_DEBUG

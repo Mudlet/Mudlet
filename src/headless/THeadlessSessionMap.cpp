@@ -104,6 +104,7 @@ bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
         mErrorString = tr("The map is drawn at 10 by 10 pixels or more, not %1 by %2.").arg(size.width()).arg(size.height());
         return false;
     }
+    pView->setMapInfoPainted(mMapInfoPainted);
     pView->render(painter, size);
     return true;
 }
@@ -288,6 +289,7 @@ bool THeadlessSession::renderAppMap(QPainter& painter, const QSize& size)
         mErrorString = tr("The map has no rooms.");
         return false;
     }
+    pView->setMapInfoPainted(mMapInfoPainted);
     pView->render(painter, size);
     return true;
 }
@@ -469,6 +471,22 @@ std::optional<THeadlessSession::MapView> THeadlessSession::mapView(const MapTarg
     }
     view.levels = pView->drawnLevels();
     return view;
+}
+
+THeadlessSession::MapInfo THeadlessSession::mapInfo(const MapTarget map) const
+{
+    MapInfo info;
+    if (!mpHost) {
+        return info;
+    }
+    info.background = mpHost->mMapInfoBg;
+    const TNullMapView* pView = map == MapTarget::app ? (mpAppMap && mpAppMap->parent() == mpHost ? mpAppMap.data() : nullptr) : dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend());
+    if (pView) {
+        for (const TMapPainter::MapInfoLine& line : pView->mapInfo()) {
+            info.lines.append(MapInfoLine{.text = line.text, .bold = line.bold, .italic = line.italic, .color = line.color});
+        }
+    }
+    return info;
 }
 
 QList<THeadlessSession::RoomMatch> THeadlessSession::findRooms(const QString& text) const

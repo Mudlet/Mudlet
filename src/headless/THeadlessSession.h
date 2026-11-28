@@ -721,6 +721,28 @@ public:
     };
     // None before that map has drawn an area, or with no such map
     std::optional<MapView> mapView(MapTarget map) const;
+    // For an app that shows the map info box itself, in its own text: false has renderMap() and renderAppMap() leave
+    // the box out of what they draw from then on, and mapInfo() gives what it holds. The contributors run as before,
+    // so a script's still runs its Lua at each draw.
+    void setMapInfoPainted(bool painted) { mMapInfoPainted = painted; }
+    // One contributor's part of the map info box, as registerMapInfo() gives it; the colour is the map's own text
+    // colour, black or white against its background, where the contributor gave none
+    struct MapInfoLine
+    {
+        QString text;
+        bool bold = false;
+        bool italic = false;
+        QColor color;
+    };
+    // The map info box a map's last draw left out: the parts of the contributors the profile has enabled, in the
+    // box's order, and the box's background (setConfig("mapInfoColor")). No lines while the box is painted, before
+    // that map is drawn, with no such map, and where no contributor is enabled.
+    struct MapInfo
+    {
+        QList<MapInfoLine> lines;
+        QColor background;
+    };
+    MapInfo mapInfo(MapTarget map) const;
     // A room findRooms() found
     struct RoomMatch
     {
@@ -1440,6 +1462,7 @@ private:
     QString mProfileName;
     // The app's map, which the profile holds
     QPointer<TNullMapView> mpAppMap;
+    bool mMapInfoPainted = true;
     QString mErrorString;
     // A local: link that followWindowLink() last followed without an item, which opened its menu and changed its
     // selection: its console's notifier, as one made again under the name starts with no menu open, and the issue
