@@ -19,7 +19,9 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
+# Version: 2.7.0    Hold every Qt module at one version while MSYS2 is part
+#                   way through publishing a new Qt release
+#          2.6.0    Drop the Info-ZIP unzip pin: libarchive 3.8.9-3 opens
 #                   extracted files with O_BINARY, so bsdunzip no longer
 #                   mangles line endings
 #          2.5.0    Pin luarocks to Info-ZIP unzip, since libarchive now
@@ -191,6 +193,32 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
   done
   echo ""
   echo "    Qt debug packages installed"
+  echo ""
+fi
+
+# MSYS2 publishes a Qt release one module at a time, and Qt tags its private ABI
+# with the exact version (QObjectPrivate(QtPrivate_6_12_0)), so a module still
+# built against the previous qt6-base fails to load against the new one with
+# 0xc0000139. Until the stragglers land, put every Qt module on the version
+# they all have.
+QT_PREFIX="${MINGW_PACKAGE_PREFIX}-qt6-"
+QT_VERSIONS=$(/usr/bin/pacman -Q | awk -v p="${QT_PREFIX}" 'index($1, p) == 1 { sub(/-[0-9]+$/, "", $2); print $2 }' | sort -uV)
+if [ "$(echo "${QT_VERSIONS}" | wc -l)" -gt 1 ]; then
+  QT_OLDEST=$(echo "${QT_VERSIONS}" | head -n 1)
+  echo "=== Qt modules are split across versions $(echo "${QT_VERSIONS}" | tr '\n' ' ')- moving them all to ${QT_OLDEST} ==="
+  REPO_URL="https://repo.msys2.org/mingw/${MSYSTEM,,}"
+  REPO_INDEX=$(curl -fsS --retry 5 "${REPO_URL}/") || { echo "=== Could not list ${REPO_URL} ==="; exit 7; }
+  QT_DOWNGRADES=()
+  while read -r pkg version; do
+    [ "${version%-*}" = "${QT_OLDEST}" ] && continue
+    file=$(echo "${REPO_INDEX}" | grep -oE "\"${pkg}-${QT_OLDEST}-[0-9]+-any\.pkg\.tar\.zst\"" | tr -d '"' | sort -V | tail -n 1)
+    if [ -z "${file}" ]; then
+      echo "=== ${pkg} ${QT_OLDEST} is no longer in ${REPO_URL} ==="
+      exit 7
+    fi
+    QT_DOWNGRADES+=("${REPO_URL}/${file}")
+  done < <(/usr/bin/pacman -Q | awk -v p="${QT_PREFIX}" 'index($1, p) == 1')
+  /usr/bin/pacman -U --noconfirm "${QT_DOWNGRADES[@]}" || exit 7
   echo ""
 fi
 

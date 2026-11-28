@@ -1364,7 +1364,7 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
 {
     mWindowNotifier.note();
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
-    // A script names a label for screen readers through Host, which tells only the model
+    // A script changes a label's accessibility through Host, which tells only the model
     pLabel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange) {
         mWindowNotifier.note();
     };
@@ -2979,7 +2979,6 @@ void TNullConsoleFrontend::addMainCommandLineHistory(const QString& sent)
 {
     // The line as it stands, which an alias that clears it leaves nothing of
     const QString command = mMainCommandLineRewritten ? mpHost->windowRegistry().commandLineText(QString()).value_or(QString()) : sent;
-    mMainCommandLineRewritten = false;
     // As TCommandLine::enterCommand(), past the hidden-input box
     if (command.isEmpty() || !mMainCommandLine.writer || (mpHost->isRemoteEchoingActive() && !mpHost->disablePasswordMasking())) {
         return;
@@ -3064,6 +3063,7 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         return false;
     }
     if (!mainCommandLine(name)) {
+        mCommandLines.at(name).rewritten = true;
         mpHost->windowRegistry().setCommandLineText(name, plainText(text));
         // Told even where Mudlet's copy is unchanged, as the app's line may hold what it has yet to pass on
         mWindowNotifier.noteCommandLine(name);
@@ -3083,7 +3083,18 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
 
 void TNullConsoleFrontend::typeCommandLine(const QString& name, const QString& text)
 {
+    if (const auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+        it->second.rewritten = true;
+    }
     mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+}
+
+void TNullConsoleFrontend::holdCommandLineForSend(const QString& name)
+{
+    if (const auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+        it->second.sentToAction = it->second.action != 0;
+        it->second.rewritten = false;
+    }
 }
 
 bool TNullConsoleFrontend::commandLineShown(const QString& name) const
@@ -3134,18 +3145,20 @@ void TNullConsoleFrontend::commandLineSent(const QString& name)
     if (!text.isEmpty() && it->second.writer && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         TCommandHistory::add(it->second.writer->history, text);
     }
-    if (mpHost->mAutoClearCommandLineAfterSend) {
+    const bool lineChangedDuringSend = !it->second.sentToAction && it->second.rewritten;
+    if (mpHost->mAutoClearCommandLineAfterSend && !lineChangedDuringSend) {
         replaceCommandLineText(name, QString());
     }
 }
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 {
-    mMainCommandLineRewritten = false;
-    // A line typed while the game hides input went through the hidden-input box, past the main line
+    // A line typed while the game hides input went through the hidden-input box, past the main line. Such a send
+    // leaves mMainCommandLineRewritten alone, as an outer send still to finish may have had its line written to.
     if (mpHost->passwordEntryWanted()) {
         return false;
     }
+    mMainCommandLineRewritten = false;
     mMainCommandLineTyped = false;
     mMainCommandLineAllSelected = false;
     mMainCommandLineWhollySelected = false;
@@ -3156,7 +3169,12 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 
 void TNullConsoleFrontend::mainCommandLineSent()
 {
-    // TCommandLine::enterCommand() selects a line it keeps
+    // As TCommandLine::enterCommand(), a line changed while it was sent is left for the player. The flag outlives
+    // this send so an outer send that ran this one from the event loop leaves it too.
+    if (mMainCommandLineRewritten) {
+        return;
+    }
+    // TCommandLine::enterCommand() selects a line it keeps as sent
     if (!mpHost->mAutoClearCommandLineAfterSend) {
         mMainCommandLineAllSelected = true;
         mMainCommandLineWhollySelected = true;
