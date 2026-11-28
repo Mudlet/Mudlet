@@ -1363,6 +1363,8 @@ public:
     QColor mCommandLineBgColor{Qt::black};
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
+    // A dot in the corner of every room with special exits
+    bool mMapperShowSpecialExitMarkers = true;
     bool mMapperShowGrid = false;
     // The modern 3D view draws the areas next to the one shown past its edges, and previews of those it cannot place
     bool mMapperStitchAreas = true;

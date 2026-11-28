@@ -1472,19 +1472,24 @@ GLuint ModernGLWidget::selectionTexture(const bool round)
     return addRoomTexture(key, image);
 }
 
-GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor)
+GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor, const bool round, const bool exitMarkers)
 {
     // Most rooms have none, and finding that out needs no key built for every room every frame
-    bool anyMarker = false;
+    const bool specialExitMarker = mpHost && mpHost->mMapperShowSpecialExitMarkers && !room.getSpecialExits().isEmpty();
+    bool anyMarker = specialExitMarker;
     for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
-        anyMarker = anyMarker || room.getExit(direction) > 0 || room.exitStubs.contains(direction);
+        anyMarker = anyMarker || (exitMarkers && (room.getExit(direction) > 0 || room.exitStubs.contains(direction)));
     }
     if (!anyMarker) {
         return 0;
     }
-    const QString markers = exitMarkerKey(room);
+    // Without them the texture is a room's with no markers, and shares its key
+    const QString markers = exitMarkers ? exitMarkerKey(room) : qsl("0000");
     const QColor markerColor = ExitAppearance::contrastColor(roomColor);
-    const QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
+    QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
+    if (specialExitMarker) {
+        key.append(round ? qsl("|sr") : qsl("|s"));
+    }
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
@@ -1492,14 +1497,24 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
         return 0;
     }
 
-    QImage image = clearRoomTextureImage(markerColor);
+    return addRoomTexture(key, exitMarkerImage(room, roomColor, exitMarkers, specialExitMarker, round));
+}
+
+QImage ModernGLWidget::exitMarkerImage(const TRoom& room, const QColor& roomColor, const bool exitMarkers, const bool specialExitMarker, const bool round)
+{
+    QImage image = clearRoomTextureImage(ExitAppearance::contrastColor(roomColor));
     QPainter painter(&image);
     painter.setRenderHint(QPainter::Antialiasing);
     QPen pen;
     const qreal center = scmRoomTextureSize / 2.0;
-    ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
+    if (exitMarkers) {
+        ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
+    }
+    if (specialExitMarker) {
+        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, 0.0, round);
+    }
     painter.end();
-    return addRoomTexture(key, image);
+    return image;
 }
 
 GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo, const bool softHalo)
@@ -2481,7 +2496,9 @@ void ModernGLWidget::renderRooms()
         }
 
         // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
-        const GLuint markerTexture = !detailed ? 0 : (terminal ? (terminalMarkersNeeded(*pR) ? exitMarkerTexture(*pR, background) : 0) : exitMarkerTexture(*pR, wireframes ? background : roomColor));
+        // A terminal's own markers only where it needs them, its special exit dot wherever there is one, on the corner of
+        // its character's square
+        const GLuint markerTexture = !detailed ? 0 : (terminal ? exitMarkerTexture(*pR, background, false, terminalMarkersNeeded(*pR)) : exitMarkerTexture(*pR, wireframes ? background : roomColor, round));
         if (markerTexture) {
             GeometryData& batch = decals.markers[markerTexture];
             batch.textureId = markerTexture;
@@ -3777,6 +3794,7 @@ ModernGLWidget::SceneInputs ModernGLWidget::sceneInputs() const
     inputs.drawUpperLowerLevels = mudlet::self() && mudlet::self()->drawUpperLowerLevels();
     inputs.inOutStubs = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
     inputs.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    inputs.specialExitMarkers = mpHost->mMapperShowSpecialExitMarkers;
     inputs.borderColor = mpHost->mRoomBorderColor;
     inputs.background = backgroundColor();
     inputs.foreground = mpHost->mFgColor_2;

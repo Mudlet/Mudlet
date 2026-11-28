@@ -5701,6 +5701,89 @@ private slots:
         QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
     }
 
+    // A terminal's character shows no special exit, so the dot for one is drawn while the setting is on; but not the
+    // plain stairs the character does show, which the terminal leaves out of its markers
+    void test_terminalMarksASpecialExitWhileItsDotIsShownWithoutGL()
+    {
+        constexpr int kSpecialRoomId = 4;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kSpecialRoomId, areaId, 4, 0, 0));
+        map()->mpRoomDB->getRoom(kSpecialRoomId)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        QVERIFY(map()->setExit(kSpecialRoomId, kPlayerRoomId, DIR_UP));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        const QString savedStyle = mpHost->mapStylePreset().id;
+        const auto restore = qScopeGuard([this, savedMarkers, savedStyle]() {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+            mpHost->setMapStyle(savedStyle);
+        });
+        mpHost->mMapperShowSpecialExitMarkers = true;
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        const auto markersDrawn = [this, areaId]() {
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            QStringList markers;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("markers|"))) {
+                    markers.append(key.section(QLatin1Char('|'), 2));
+                }
+            }
+            return markers;
+        };
+        QCOMPARE(markersDrawn(), QStringList{qsl("0000|s")});
+        mpHost->mMapperShowSpecialExitMarkers = false;
+        QCOMPARE(markersDrawn(), QStringList());
+    }
+
+    // A round room fills the same square as its marker texture, so its special exit dot goes where the circle crosses
+    // the diagonal rather than on the square's corner, which is off the room
+    void test_aRoundRoomsSpecialExitDotSitsOnItsEdgeWithoutGL()
+    {
+        constexpr int kSpecialRoomId = 4;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kSpecialRoomId, areaId, 4, 0, 0));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kSpecialRoomId);
+        pRoom->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        const bool savedBubbleMode = mpHost->mBubbleMode;
+        const auto restore = qScopeGuard([this, savedBubbleMode]() {
+            mpHost->mBubbleMode = savedBubbleMode;
+        });
+        mpHost->mBubbleMode = false;
+        const auto markersDrawn = [this, areaId]() {
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            QStringList markers;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("markers|"))) {
+                    markers.append(key.section(QLatin1Char('|'), 2));
+                }
+            }
+            return markers;
+        };
+        QCOMPARE(markersDrawn(), QStringList{qsl("0000|s")});
+        mpHost->mBubbleMode = true;
+        QCOMPARE(markersDrawn(), QStringList{qsl("0000|sr")});
+
+        const QImage square = ModernGLWidget::exitMarkerImage(*pRoom, QColor(Qt::darkGreen), false, true, false);
+        const QImage round = ModernGLWidget::exitMarkerImage(*pRoom, QColor(Qt::darkGreen), false, true, true);
+        // How many of the dot's pixels lie outside the circle the round room fills
+        const auto offTheCircle = [](const QImage& image) {
+            const qreal half = image.width() / 2.0;
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    if (image.pixelColor(x, y).alpha() > 0 && QLineF(QPointF(half, half), QPointF(x + 0.5, y + 0.5)).length() > half) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        };
+        QVERIFY2(offTheCircle(square) > 0, "a square room's dot is expected to reach past the circle, or this proves nothing");
+        QCOMPARE(offTheCircle(round), 0);
+    }
+
     // A script may fade a 2D highlight out from its center with a clear outer color, which a one-color shape would draw unseen
     void test_aClearHighlightColorGivesWayToItsCenterColorWithoutGL()
     {

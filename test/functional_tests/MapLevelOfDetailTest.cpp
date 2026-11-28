@@ -1513,6 +1513,71 @@ private slots:
         }
     }
 
+    // A grid-mode room fills its whole cell, so its special exit dot goes just
+    // inside the top right corner rather than on it, and only while the
+    // setting is on.
+    void test_aGridRoomWithASpecialExitHasItsDotInsideTheCorner()
+    {
+        const int areaId = freshArea(qsl("Special Exit Grid Area"));
+        QVERIFY(areaId > 0);
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->gridMode = true;
+        QVERIFY(addRoomAt(1, areaId, 0, 0, kEnvRoom));
+        map()->mpRoomDB->getRoom(1)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        auto restore = qScopeGuard([this, savedMarkers] {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+        });
+
+        const auto dotPixel = [this, areaId](const bool markers) {
+            mpHost->mMapperShowSpecialExitMarkers = markers;
+            T2DMap* p2dMap = prepareWidget(areaId, kZoomFortyPixelRooms, 1.0, 10.0);
+            const QImage frame = renderFrame(p2dMap);
+            // The dot's radius is 0.14 of the room, its centre that and a bit
+            // more in from each side of the corner
+            const qreal half = p2dMap->mRoomWidth / 2.0;
+            const qreal inset = p2dMap->mRoomWidth * 0.14 * 1.3;
+            const QPoint dot = QPointF(p2dMap->mRX + half - inset, p2dMap->mRY - half + inset).toPoint();
+            return std::pair{frame.pixelColor(dot), saveFrame(frame, markers ? qsl("grid-special-exit") : qsl("grid-special-exit-off"))};
+        };
+
+        const auto [withDot, withDotFrame] = dotPixel(true);
+        QVERIFY2(withDot == QColor(Qt::white), qPrintable(qsl("drew %1 where the dot goes, frame saved at %2").arg(withDot.name(), withDotFrame)));
+        const auto [withoutDot, withoutDotFrame] = dotPixel(false);
+        QVERIFY2(withoutDot != QColor(Qt::white), qPrintable(qsl("the dot is drawn with the setting off, frame saved at %1").arg(withoutDotFrame)));
+    }
+
+    // Below the threshold the rooms drawn in bulk show no dot, so the player's room, drawn in full, shows none either
+    void test_thePlayersRoomShowsNoSpecialExitDotBelowTheThreshold()
+    {
+        const int areaId = freshArea(qsl("Special Exit Tier Area"));
+        QVERIFY(areaId > 0);
+        constexpr int playerRoomId = 1;
+        QVERIFY(addRoomAt(playerRoomId, areaId, 0, 0, kEnvRoom));
+        map()->mpRoomDB->getRoom(playerRoomId)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        const bool savedMarkers = mpHost->mMapperShowSpecialExitMarkers;
+        const int savedPlayerRoom = map()->mRoomIdHash.value(map()->mProfileName);
+        auto restore = qScopeGuard([this, savedMarkers, savedPlayerRoom] {
+            mpHost->mMapperShowSpecialExitMarkers = savedMarkers;
+            map()->mRoomIdHash[map()->mProfileName] = savedPlayerRoom;
+        });
+
+        const auto frameWith = [this, areaId](const bool markers) {
+            mpHost->mMapperShowSpecialExitMarkers = markers;
+            T2DMap* p2dMap = prepareWidget(areaId, kZoomJustInsideTier, 1.0, 10.0);
+            map()->mRoomIdHash[map()->mProfileName] = playerRoomId;
+            p2dMap->mRoomID = playerRoomId;
+            p2dMap->mMapCenterX = 0;
+            p2dMap->mMapCenterY = 0;
+            return renderFrame(p2dMap);
+        };
+
+        const QImage without = frameWith(false);
+        const QImage with = frameWith(true);
+        QVERIFY2(with == without, qPrintable(qsl("the player's room got a dot, frame saved at %1").arg(saveFrame(with, qsl("tier-special-exit")))));
+    }
+
     // The tier starts below four pixels a room, not at it. A room drawn
     // exactly four pixels across keeps its border; the next zoom out loses it.
     void test_fullDetailIsKeptAtTheThresholdAndDroppedBelowIt()

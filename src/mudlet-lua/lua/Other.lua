@@ -1738,6 +1738,7 @@ local configOptions = {
   "mapRoundRooms",
   "mapShowGrid",
   "mapShowRoomBorders",
+  "mapShowSpecialExitMarkers",
   "mapStitchAreas",
   "mapStyle",
   "mapSymbolFont",

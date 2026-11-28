@@ -686,6 +686,19 @@ void TMapPainter::drawRoom(QPainter& painter,
     }
 
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
+
+    // Not below the level of detail threshold, where the rooms drawn in bulk show none and only the player's room
+    // would still get one
+    if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty() && mRoomWidth >= cLodPixelThreshold) {
+        // Rooms are drawn one by one, so a neighbour drawn later covers whatever of the dot reaches it
+        // A round room is drawn rSize of the cell across in grid mode too, where the rectangle fills the cell, so
+        // only a square grid room has no gap around it
+        const qreal gap = (isGridMode && !mBubbleMode) ? 0.0 : qMin(mRoomWidth, mRoomHeight) * (1.0 - rSize);
+        const qreal diameter = mRoomWidth * rSize;
+        const qreal markerWidth = mBubbleMode ? diameter : roomRectangle.width();
+        const qreal markerHeight = mBubbleMode ? diameter : roomRectangle.height();
+        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, markerWidth, markerHeight, gap, mBubbleMode);
+    }
 }
 
 bool TMapPainter::roomBorderShown(const TRoom& room) const
@@ -1052,6 +1065,7 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
     QList<QPair<TRoom*, QRectF>> selectedRooms;
     QList<QPair<TRoom*, QRectF>> highlightedRooms;
     QList<QPair<TRoom*, QPointF>> verticalExitRooms;
+    QList<QPair<TRoom*, QRectF>> specialExitRooms;
     TRoom* pPlayerRoom = nullptr;
     bool playerRoomCollision = false;
 
@@ -1103,6 +1117,10 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
         if (room->getUp() > 0 || room->exitStubs.contains(DIR_UP) || room->getDown() > 0 || room->exitStubs.contains(DIR_DOWN) || room->getIn() > 0 || room->exitStubs.contains(DIR_IN)
             || room->getOut() > 0 || room->exitStubs.contains(DIR_OUT)) {
             verticalExitRooms.append({room, QPointF(rx, ry)});
+        }
+
+        if (mpHost->mMapperShowSpecialExitMarkers && !room->getSpecialExits().isEmpty()) {
+            specialExitRooms.append({room, roomRect});
         }
     }
 
@@ -1315,6 +1333,12 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
             painter.drawText(roomRect, Qt::AlignCenter, QString::number(room->getId()));
             painter.restore();
         }
+    }
+
+    // After the symbols and room ids, which drawRoom() paints the dot over as well
+    for (const auto& [room, roomRect] : specialExitRooms) {
+        const QPointF center = roomRect.center();
+        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), 0.0, mBubbleMode);
     }
 
     const qreal timeDecor = timer.nsecsElapsed() / 1000000.0;

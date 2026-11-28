@@ -42,7 +42,7 @@ end)
 describe("Tests setConfig for the map keys in a profile without a mapper", function()
   local saved = {}
   local keys = {"mapRoomSize", "mapExitSize", "mapRoundRooms", "showRoomIdsOnMap", "mapShowGrid",
-                "mapShowRoomBorders", "showUpperLowerLevels", "mapInfoColor"}
+                "mapShowRoomBorders", "mapShowSpecialExitMarkers", "showUpperLowerLevels", "mapInfoColor"}
 
   setup(function()
     local _, message = getMapZoom()
@@ -66,6 +66,7 @@ describe("Tests setConfig for the map keys in a profile without a mapper", funct
       showRoomIdsOnMap = not saved.showRoomIdsOnMap,
       mapShowGrid = not saved.mapShowGrid,
       mapShowRoomBorders = not saved.mapShowRoomBorders,
+      mapShowSpecialExitMarkers = not saved.mapShowSpecialExitMarkers,
       showUpperLowerLevels = not saved.showUpperLowerLevels,
       mapInfoColor = {10, 20, 30, 40},
     }
