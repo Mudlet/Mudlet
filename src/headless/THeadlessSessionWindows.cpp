@@ -69,6 +69,20 @@ THeadlessSession::ScriptWindow::Kind kindOf(const Record::Kind kind)
     Q_UNREACHABLE();
 }
 
+THeadlessSession::LabelContent::LiveRegion liveRegionOf(const TLabelLiveRegion liveRegion)
+{
+    using LiveRegion = THeadlessSession::LabelContent::LiveRegion;
+    switch (liveRegion) {
+    case TLabelLiveRegion::Off:
+        return LiveRegion::off;
+    case TLabelLiveRegion::Polite:
+        return LiveRegion::polite;
+    case TLabelLiveRegion::Assertive:
+        return LiveRegion::assertive;
+    }
+    Q_UNREACHABLE();
+}
+
 THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int stackOrder)
 {
     THeadlessSession::ScriptWindow window{record.name, kindOf(record.kind), record.parent, record.geometry, record.visible, record.shown, stackOrder, record.background, record.font, record.inDock};
@@ -380,6 +394,7 @@ bool THeadlessSession::submitWindowCommandLine(const QString& commandLine, const
         return pHost ? dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend()) : nullptr;
     };
     const QStringList commands = pHost->commandLineText(commandLine).value_or(QString()).split(QChar::LineFeed);
+    view()->holdCommandLineForSend(commandLine);
     // TCommandLine::enterCommand() goes on with its own line, so one an action made again under the name gets none
     const QPointer<const QObject> pLine(view()->commandLineInstance(commandLine));
     const auto sameLine = [&view, &commandLine, &pLine]() {
@@ -471,6 +486,7 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.clickThrough = pModel->mClickThrough;
     content.accessibleName = pModel->effectiveAccessibleName();
     content.accessibleButton = pModel->actsAsButton();
+    content.liveRegion = liveRegionOf(pModel->mLiveRegion);
     content.styleSheet = pModel->mStyleSheet;
     return content;
 }

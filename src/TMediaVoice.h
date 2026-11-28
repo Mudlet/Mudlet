@@ -81,15 +81,17 @@ public:
     // own stereo image, at 0, into one point set at the pan with a constant-power pan, at 1.
     static void render(const float* in, float* out, qint64 frames, Glide& gain, Glide& pan, Glide& placement);
 
-    // Whether the backend cannot feed the shared output. QAudioBufferOutput only delivers audio on Qt's
-    // FFmpeg backend: so when another is named, and while one nobody named has not yet been seen to.
-    // Asking starts that check, so FFmpeg is not loaded before it is needed.
+    // QAudioBufferOutput only delivers audio on Qt's FFmpeg backend. True for a backend other than FFmpeg,
+    // for one nobody named until the check sees it feed the shared output, and for any once the check finds
+    // it does not, as a Qt without FFmpeg loads another backend in its place. Asking starts that check, so
+    // FFmpeg is not loaded before it is needed.
     static bool unsupported();
     // Starts that check before anything is played, for a game that has said it sends media
     static void probeBackend();
     // For the media tests
     static bool probeStarted() { return smProbeStarted; }
     static bool probePassed() { return smProbePassed; }
+    static bool probeFailed() { return smProbeFailed; }
 
 signals:
     // The player has played for a while without handing over any audio. Whoever owns this voice
@@ -118,7 +120,7 @@ private:
     bool heardFor(int glideMilliseconds) const;
     void audioBufferReceived(const QAudioBuffer& buffer);
     void checkForSilence();
-    static void probeUnnamedBackend();
+    static void startProbe();
 
     QPointer<QMediaPlayer> mpPlayer;
     QAudioBufferOutput* mpBufferOutput = nullptr;
@@ -151,6 +153,7 @@ private:
     QTimer* mpSilenceTimer = nullptr;
 
     static inline std::atomic<bool> smProbePassed = false;
+    static inline std::atomic<bool> smProbeFailed = false;
     static inline std::atomic<bool> smProbeStarted = false;
 };
 
