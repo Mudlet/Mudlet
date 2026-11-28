@@ -152,7 +152,10 @@ public:
         // Bold as SGR 1, MXP or a link's style asked for it, whatever the colour. Bold is how it is painted:
         // not on a colour, which is brightened instead, and also after a 256-colour index from 8 to 15.
         // Outside TestMask, so only an app embedding Mudlet reads it:
-        BoldAsked = 0x4000000         // 0000 0100 0000 0000 0000 0000 0000 0000
+        BoldAsked = 0x4000000,        // 0000 0100 0000 0000 0000 0000 0000 0000
+        // Screen-reader-only attribute: silenced characters are omitted during verbalization.
+        // Outside TestMask, so it does not affect painting or display attribute matching.
+        Silenced = 0x8000000
     };
     // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
@@ -259,6 +262,7 @@ public:
     bool isConcealed() const { return mFlags & Concealed; }
     bool isBoldAsked() const { return mFlags & BoldAsked; }
     bool isFound() const { return mFlags & Found; }
+    bool isSilenced() const { return mFlags & Silenced; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
     bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
     bool isUnderlineDotted() const { return mFlags & UnderlineDotted; }
@@ -644,6 +648,13 @@ public:
     int wrapIndentWidth(int lineNumber) const;
     bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int lineNumber);
+    bool silenceLine(int lineNumber);
+    bool silenceCurrentTriggerLine();
+    void silenceText(int lineNumber, const QString& text);
+    void silenceTextInCurrentTriggerLine(const QString& text);
+    void setSilenceIncomingLines(bool enabled) { mSilenceIncomingLines = enabled; }
+    bool getLineSilencing() const { return mSilenceIncomingLines; }
+    bool isCharacterSilenced(int lineNumber, int column) const;
     // Colors of the current trigger-pass line as committed, before any
     // trigger ran; nullptr when lineNumber is not the line being processed:
     const TLineFormat* preTriggerPassLine(int lineNumber) const;
@@ -992,6 +1003,7 @@ private:
 
     QString mMudLine;
     TLineFormat mMudBuffer;
+    bool mSilenceIncomingLines = false;
     TLineFormat mPreTriggerPassLine;
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
     TLineFormat mSpareTriggerPassLine;
@@ -1398,6 +1410,9 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     }
     if (attributes & TChar::BoldAsked) {
         presentAttributes << QLatin1String("BoldAsked (0x4000000)");
+    }
+    if (attributes & TChar::Silenced) {
+        presentAttributes << QLatin1String("Silenced (0x8000000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));

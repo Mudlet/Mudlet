@@ -1826,6 +1826,7 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.abortAllDownloads();
     mLuaInterpreter.initLuaGlobals();
+    mainConsoleModel().buffer.setSilenceIncomingLines(false);
     // initLuaGlobals() closed the old lua_State, so the LuaInterface (and its
     // VarUnit tree of registry references) must be rebuilt against the new one.
     // The VarUnit's name-keyed saved/hidden bookkeeping does not depend on the

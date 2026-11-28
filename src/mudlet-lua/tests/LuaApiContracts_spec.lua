@@ -642,6 +642,49 @@ describe("Tests that functions sharing an implementation refuse under their own 
   end
 end)
 
+describe("Tests silenceLine", function()
+  it("is registered and accepts no arguments", function()
+    assert.is_true(pcall(silenceLine))
+  end)
+
+  it("accepts on and off", function()
+    local ok = pcall(silenceLine, "on")
+    local stopped = pcall(silenceLine, "off")
+    assert.is_true(ok)
+    assert.is_true(stopped)
+  end)
+
+  it("rejects invalid modes", function()
+    assertArgError(function() silenceLine("main") end, "expected 'on' or 'off'")
+    assertArgError(function() silenceLine("of") end, "expected 'on' or 'off'")
+    assertArgError(function() silenceLine(true) end, "string expected")
+    assertArgError(function() silenceLine(nil) end, "string expected")
+  end)
+
+  it("rejects extra arguments", function()
+    assertArgError(function() silenceLine("on", "off") end, "at most one argument expected")
+  end)
+end)
+
+describe("Tests silenceText", function()
+  it("accepts one string and returns no values", function()
+    assert.is_function(silenceText)
+    assert.equals(0, select("#", silenceText("hola feos")))
+    assert.equals(0, select("#", silenceText("")))
+  end)
+
+  it("rejects missing and extra arguments", function()
+    assertArgError(function() silenceText() end, "exactly one argument expected")
+    assertArgError(function() silenceText("hola", "feos") end, "exactly one argument expected")
+  end)
+
+  it("rejects nil, booleans and tables", function()
+    assertArgError(function() silenceText(nil) end, "string expected")
+    assertArgError(function() silenceText(true) end, "string expected")
+    assertArgError(function() silenceText({}) end, "string expected")
+  end)
+end)
+
 describe("Tests announce and showNotification", function()
 
   local processingKinds = {"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"}

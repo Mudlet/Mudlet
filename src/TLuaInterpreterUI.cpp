@@ -1777,6 +1777,90 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#silenceLine
+int TLuaInterpreter::silenceLine(lua_State* L)
+{
+    const int argumentCount = lua_gettop(L);
+    if (argumentCount > 1) {
+        lua_pushfstring(L, "%s: at most one argument expected, got %d!", __func__, argumentCount);
+        return lua_error(L);
+    }
+
+    bool enabled = false;
+    if (argumentCount == 1) {
+        if (!checkStringArg(L, __func__, 1, "silencing mode")) {
+            return lua_error(L);
+        }
+        size_t modeLength = 0;
+        const char* modeBytes = lua_tolstring(L, 1, &modeLength);
+        const QLatin1StringView mode(modeBytes, static_cast<qsizetype>(modeLength));
+        if (mode != QLatin1StringView("on") && mode != QLatin1StringView("off")) {
+            lua_pushfstring(L, "%s: expected 'on' or 'off'!", __func__);
+            return lua_error(L);
+        }
+        enabled = mode == QLatin1StringView("on");
+    }
+
+    auto& host = getHostFromLua(L);
+    auto pModel = host.mainConsoleModelOrNull();
+    if (!pModel) {
+        return 0;
+    }
+
+    if (argumentCount == 1) {
+        pModel->buffer.setSilenceIncomingLines(enabled);
+        if (!enabled) {
+            return 0;
+        }
+    }
+
+    if (pModel->buffer.triggerPassUnderWay()) {
+        pModel->buffer.silenceCurrentTriggerLine();
+    } else {
+        pModel->buffer.silenceLine(pModel->mUserCursor.y());
+    }
+    return 0;
+}
+
+int TLuaInterpreter::getLineSilencing(lua_State* L)
+{
+    if (lua_gettop(L) != 0) {
+        lua_pushfstring(L, "%s: no arguments expected!", __func__);
+        return lua_error(L);
+    }
+
+    auto pModel = getHostFromLua(L).mainConsoleModelOrNull();
+    lua_pushboolean(L, pModel && pModel->buffer.getLineSilencing());
+    return 1;
+}
+
+int TLuaInterpreter::silenceText(lua_State* L)
+{
+    const int argumentCount = lua_gettop(L);
+    if (argumentCount != 1) {
+        lua_pushfstring(L, "%s: exactly one argument expected, got %d!", __func__, argumentCount);
+        return lua_error(L);
+    }
+    if (!checkStringArg(L, __func__, 1, "text")) {
+        return lua_error(L);
+    }
+
+    size_t textLength = 0;
+    const char* textBytes = lua_tolstring(L, 1, &textLength);
+    const QString text = QString::fromUtf8(textBytes, static_cast<qsizetype>(textLength));
+    auto pModel = getHostFromLua(L).mainConsoleModelOrNull();
+    if (!pModel) {
+        return 0;
+    }
+
+    if (pModel->buffer.triggerPassUnderWay()) {
+        pModel->buffer.silenceTextInCurrentTriggerLine(text);
+    } else {
+        pModel->buffer.silenceText(pModel->mUserCursor.y(), text);
+    }
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMainConsoleWidth
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
