@@ -1,0 +1,5853 @@
+{
+ "version": 1,
+ "osc": 67,
+ "vectors": [
+  {
+   "id": "switch-on-off",
+   "group": "switching",
+   "rule": "Only the lines between on and off are Markdown",
+   "stock": "n/a",
+   "input": [
+    "Text\n\u001b]67;1\u001b\\# Title\n\u001b]67;0\u001b\\After\n"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "plain",
+     "text": "Text"
+    },
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "Title",
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "After"
+    }
+   ]
+  },
+  {
+   "id": "plain-outside-markdown",
+   "group": "switching",
+   "rule": "Text sent while Markdown is off is shown as sent",
+   "stock": "n/a",
+   "input": [
+    "A **starred** line\n"
+   ],
+   "messages": [],
+   "lines": [
+    {
+     "kind": "plain",
+     "text": "A **starred** line"
+    }
+   ]
+  },
+  {
+   "id": "switch-bel-terminator",
+   "group": "switching",
+   "rule": "BEL ends a sequence as ST does",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u0007*hi*\n\u001b]67;0\u0007"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "hi",
+     "spans": [
+      {
+       "start": 0,
+       "length": 2,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-on-midline",
+   "group": "switching",
+   "rule": "An on sequence in the middle of a line takes effect from the next line",
+   "stock": "n/a",
+   "input": [
+    "abc \u001b]67;1\u001b\\*x*\n*y*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "plain",
+     "text": "abc *x*"
+    },
+    {
+     "kind": "paragraph",
+     "text": "y",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-off-midline",
+   "group": "switching",
+   "rule": "Text after an off sequence on a Markdown line is still part of that Markdown line",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\**a**\u001b]67;0\u001b\\ b\n*c*\n"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a b",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "bold": true
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "*c*"
+    }
+   ]
+  },
+  {
+   "id": "switch-on-while-on",
+   "group": "switching",
+   "rule": "An on sequence while Markdown is on starts a new message",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\one\n\u001b]67;1\u001b\\two\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "one",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "two",
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "switch-on-while-on-ends-fence",
+   "group": "switching",
+   "rule": "A new message ends a code block left open in the one before",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\```\ncode\n\u001b]67;1\u001b\\*x*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "italic": true
+      }
+     ],
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "switch-unknown-parameter",
+   "group": "switching",
+   "rule": "A parameter with an unknown name is ignored, and the others still count",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;shape=round:mark=ok\u001b\\hi\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "hi",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-unknown-first-field",
+   "group": "switching",
+   "rule": "A sequence with an unknown first field is ignored",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\a\n\u001b]67;9;x=y\u001b\\*b*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "b",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-prompt-ga",
+   "group": "switching",
+   "rule": "A prompt ended by Go Ahead is shown as sent, and Markdown stays on after it",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\# Shop\n> ",
+    {
+     "telnet": "GA"
+    },
+    "> quoted\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "Shop",
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "> "
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "quoted",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-prompt-eor",
+   "group": "switching",
+   "rule": "A prompt ended by End of Record is shown as sent",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\HP: **10**",
+    {
+     "telnet": "EOR"
+    },
+    "\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "plain",
+     "text": "HP: **10**"
+    }
+   ]
+  },
+  {
+   "id": "switch-off-while-off",
+   "group": "switching",
+   "rule": "An off sequence while Markdown is off does nothing",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;0\u001b\\*x*\n"
+   ],
+   "messages": [],
+   "lines": [
+    {
+     "kind": "plain",
+     "text": "*x*"
+    }
+   ]
+  },
+  {
+   "id": "off-inside-fence",
+   "group": "switching",
+   "rule": "An off sequence ends an open code block, which the next message does not reopen",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\```\ncode\n\u001b]67;0\u001b\\**x**\n\u001b]67;1\u001b\\**y**\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "**x**"
+    },
+    {
+     "kind": "paragraph",
+     "text": "y",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "bold": true
+      }
+     ],
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "off-inside-table",
+   "group": "switching",
+   "rule": "An off sequence ends a table, and a row in the next message does not rejoin it",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b |\n|---|---|\n| 1 | 2 |\n\u001b]67;0\u001b\\| 3 | 4 |\n\u001b]67;1\u001b\\| 5 | 6 |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      },
+      {
+       "text": "b"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      },
+      {
+       "text": "2"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "| 3 | 4 |"
+    },
+    {
+     "kind": "paragraph",
+     "text": "| 5 | 6 |",
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "off-inside-section",
+   "group": "switching",
+   "rule": "An off sequence closes an open section, and the next message starts outside it",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\n<summary>More</summary>\ninside\n\u001b]67;0\u001b\\outside\n\u001b]67;1\u001b\\next\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "More",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 1,
+     "text": "inside",
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "outside"
+    },
+    {
+     "kind": "paragraph",
+     "text": "next",
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "off-inside-list",
+   "group": "switching",
+   "rule": "An off sequence ends a list, so an indented line in the next message is a paragraph",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n\u001b]67;0\u001b\\\u001b]67;1\u001b\\  b\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "b",
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "switch-unterminated-sequence",
+   "group": "switching",
+   "rule": "A sequence with no terminator by the end of its line is abandoned and none of it is shown",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\a\n\u001b]67;1;mark=ok\n*b*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "b",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-header-pending-at-prompt",
+   "group": "switching",
+   "rule": "A row waiting for its delimiter row when a prompt arrives is a paragraph",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\| a |\n> ",
+    {
+     "telnet": "GA"
+    },
+    "|---|\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "| a |",
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "> "
+    },
+    {
+     "kind": "paragraph",
+     "text": "|---|",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-ends-at-prompt",
+   "group": "switching",
+   "rule": "A prompt ends a table",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\| a |\n|---|\n| 1 |\n> ",
+    {
+     "telnet": "GA"
+    },
+    "| 2 |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "> "
+    },
+    {
+     "kind": "paragraph",
+     "text": "| 2 |",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-header-pending-at-off",
+   "group": "switching",
+   "rule": "A row still waiting for its delimiter row when the message ends is a paragraph",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "| a | b |",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-on-midline-while-on",
+   "group": "switching",
+   "rule": "After an on sequence in the middle of a Markdown line, the rest of the line stays in the old message",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\one \u001b]67;1;mark=ok\u001b\\more\ntwo\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {},
+    {
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "one more",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "two",
+     "message": 1
+    }
+   ]
+  },
+  {
+   "id": "switch-sgr-before-on",
+   "group": "switching",
+   "rule": "An SGR sequence before an on sequence does not put it in the middle of the line",
+   "stock": "n/a",
+   "input": [
+    "\u001b[32m\u001b]67;1\u001b\\# Green\u001b[0m\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "Green",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "fg": "32"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "switch-long-sequence",
+   "group": "switching",
+   "rule": "A sequence of 256 bytes, from its ESC through its terminator, is read",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;note=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:mark=ok\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-two-paragraphs",
+   "group": "lines",
+   "rule": "Every newline is a line break",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\first\nsecond\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "first",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "second",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-blank",
+   "group": "lines",
+   "rule": "An empty line is a blank line",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\a\n\nb\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-leading-spaces-dropped",
+   "group": "lines",
+   "rule": "Leading spaces on a paragraph are dropped",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\   three spaces\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "three spaces",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-four-spaces-not-code",
+   "group": "lines",
+   "rule": "Four leading spaces do not make a code block",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\    four spaces\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "four spaces",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-trailing-spaces-dropped",
+   "group": "lines",
+   "rule": "Trailing spaces are dropped",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\text   \n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-tab-indent",
+   "group": "lines",
+   "rule": "A leading tab counts as four spaces",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n\t- b\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "lines-tab-after-marker",
+   "group": "lines",
+   "rule": "A tab serves as the space after a marker",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\-\ttext\n#\tTitle\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "text",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "Title",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "review-crlf",
+   "group": "lines",
+   "rule": "A carriage return before the newline is not part of the line",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\# A\r\nb\r\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "A",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "review-spaces-only-line",
+   "group": "lines",
+   "rule": "A line of spaces only is a blank line",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\a\n   \nb\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-level-2",
+   "group": "headings",
+   "rule": "## and a space make a level 2 heading",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\## Hello\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 2,
+     "text": "Hello",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-levels",
+   "group": "headings",
+   "rule": "One to six # give levels 1 to 6",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\# One\n## Two\n### Three\n#### Four\n##### Five\n###### Six\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "One",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 2,
+     "text": "Two",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 3,
+     "text": "Three",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 4,
+     "text": "Four",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 5,
+     "text": "Five",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 6,
+     "text": "Six",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-seven-hashes",
+   "group": "headings",
+   "rule": "Seven # start a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\####### Seven\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "####### Seven",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-no-space",
+   "group": "headings",
+   "rule": "A # with no space after it starts a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\#hashtag\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "#hashtag",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-closing-hashes",
+   "group": "headings",
+   "rule": "A closing run of # is dropped",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\## Wimpy ##\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 2,
+     "text": "Wimpy",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-empty",
+   "group": "headings",
+   "rule": "A # alone on a line is an empty heading",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\#\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-only-closing-hashes",
+   "group": "headings",
+   "rule": "A heading whose closing run leaves no text is empty",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\## ##\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 2,
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-after-paragraph",
+   "group": "headings",
+   "rule": "A heading may follow a paragraph with no blank line",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\text\n# Title\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "Title",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-inline-markup",
+   "group": "headings",
+   "rule": "A heading's text holds inline markup",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\# The *Rusty* Anchor\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "The Rusty Anchor",
+     "spans": [
+      {
+       "start": 4,
+       "length": 5,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-in-quote",
+   "group": "headings",
+   "rule": "A heading may sit in a block quote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> ## Note\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 2,
+     "quote": 1,
+     "text": "Note",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-text-then-dashes",
+   "group": "headings",
+   "rule": "Text followed by a line of dashes is a paragraph and a rule",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\Title\n---\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "Title",
+     "message": 0
+    },
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "heading-text-then-equals",
+   "group": "headings",
+   "rule": "Text followed by a line of equals signs is two paragraphs",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\Title\n===\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "Title",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "===",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-italic-star",
+   "group": "emphasis",
+   "rule": "One star on each side makes italic",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\*soft*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "soft",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-italic-underscore",
+   "group": "emphasis",
+   "rule": "One underscore on each side makes italic",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\_soft_\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "soft",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-bold",
+   "group": "emphasis",
+   "rule": "Two stars on each side make bold",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\**Bob** waves\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "Bob waves",
+     "spans": [
+      {
+       "start": 0,
+       "length": 3,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-bold-underscore",
+   "group": "emphasis",
+   "rule": "Two underscores on each side make bold",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\__loud__\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "loud",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-bold-italic",
+   "group": "emphasis",
+   "rule": "Three stars on each side make bold italic",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\***both***\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "both",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "bold": true,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-strike",
+   "group": "emphasis",
+   "rule": "Two tildes on each side strike text through",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\~~gone~~\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "gone",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "strike": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-single-tilde",
+   "group": "emphasis",
+   "rule": "A single tilde is shown as typed",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\~gone~\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "~gone~",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-nested",
+   "group": "emphasis",
+   "rule": "Bold nests inside italic",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\*a **b** c*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a b c",
+     "spans": [
+      {
+       "start": 0,
+       "length": 2,
+       "italic": true
+      },
+      {
+       "start": 2,
+       "length": 1,
+       "bold": true,
+       "italic": true
+      },
+      {
+       "start": 3,
+       "length": 2,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-intraword-star",
+   "group": "emphasis",
+   "rule": "Stars inside a word make italic",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\un*frigging*believable\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "unfriggingbelievable",
+     "spans": [
+      {
+       "start": 2,
+       "length": 8,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-strike-bold",
+   "group": "emphasis",
+   "rule": "Strikethrough and bold combine",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\~~**gone**~~\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "gone",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "bold": true,
+       "strike": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-three-styles",
+   "group": "emphasis",
+   "rule": "Bold, italic and strikethrough combine",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\~~***all***~~ of it\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "all of it",
+     "spans": [
+      {
+       "start": 0,
+       "length": 3,
+       "bold": true,
+       "italic": true,
+       "strike": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-italic-inside-bold",
+   "group": "emphasis",
+   "rule": "Italic nests inside bold",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\**bold and *bold italic* together**\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "bold and bold italic together",
+     "spans": [
+      {
+       "start": 0,
+       "length": 9,
+       "bold": true
+      },
+      {
+       "start": 9,
+       "length": 11,
+       "bold": true,
+       "italic": true
+      },
+      {
+       "start": 20,
+       "length": 9,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-underscores-around-star",
+   "group": "emphasis",
+   "rule": "Two underscores make bold, so with a star inside they make bold italic and no underline",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\__*text*__\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "bold": true,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-bold-code-span",
+   "group": "emphasis",
+   "rule": "A code span may sit in bold",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\**`look north`**\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "look north",
+     "spans": [
+      {
+       "start": 0,
+       "length": 10,
+       "bold": true,
+       "code": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-unclosed",
+   "group": "emphasis",
+   "rule": "A marker never closed on its line is shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\**never closed\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "**never closed",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-not-across-lines",
+   "group": "emphasis",
+   "rule": "Emphasis does not reach across a newline",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\**one\ntwo**\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "**one",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "two**",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "emphasis-escaped-star",
+   "group": "emphasis",
+   "rule": "A backslash before a star shows the star",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\\\*not italic\\*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "*not italic*",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "review-intraword-underscore",
+   "group": "emphasis",
+   "rule": "Underscores inside a word are shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\snake_case_name\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "snake_case_name",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "review-spaced-stars",
+   "group": "emphasis",
+   "rule": "A star with spaces on both sides is shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\5 * 3 * 2\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "5 * 3 * 2",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-span",
+   "group": "code",
+   "rule": "Backticks make a code span",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\type `look north` now\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "type look north now",
+     "spans": [
+      {
+       "start": 5,
+       "length": 10,
+       "code": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-span-double-backtick",
+   "group": "code",
+   "rule": "Two backticks open a span that can hold one",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\``a ` b``\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a ` b",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "code": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-span-strips-one-space",
+   "group": "code",
+   "rule": "One space is dropped from each end of a code span",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\`` `x` ``\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "`x`",
+     "spans": [
+      {
+       "start": 0,
+       "length": 3,
+       "code": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-span-keeps-markup",
+   "group": "code",
+   "rule": "Markdown is not read inside a code span",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\`**x**`\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "**x**",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "code": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-span-unclosed",
+   "group": "code",
+   "rule": "A backtick never closed on its line is shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\a ` b\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a ` b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-backticks",
+   "group": "code",
+   "rule": "Three backticks open and close a code block, and its lines are shown as sent",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\nline 1\n  line 2\n```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "line 1",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "  line 2",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-tildes",
+   "group": "code",
+   "rule": "Three tildes open and close a code block",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\~~~\ncode\n~~~\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-longer-close",
+   "group": "code",
+   "rule": "A closing line longer than the opening one closes the block",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\ncode\n`````\nafter\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "after",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-shorter-does-not-close",
+   "group": "code",
+   "rule": "A line shorter than the opening one is code",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\````\n```\n````\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "```",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-language",
+   "group": "code",
+   "rule": "Text after the opening characters is the language",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```lua\nsend('look')\n```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "language": "lua",
+     "text": "send('look')",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-markdown-inside",
+   "group": "code",
+   "rule": "Markdown is not read inside a code block",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\n# not a heading\n**plain**\n```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "# not a heading",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "**plain**",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-blank-line",
+   "group": "code",
+   "rule": "An empty line inside a code block is a line of code",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\na\n\nb\n```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-unclosed",
+   "group": "code",
+   "rule": "A code block left open ends with its message",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\ncode\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-indented",
+   "group": "code",
+   "rule": "The opening line's indentation is dropped from each line of code",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\  ```\n  a\n    b\n  ```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "  b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-close-with-spaces",
+   "group": "code",
+   "rule": "A closing line may be indented and end in spaces",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\ncode\n  ```  \nafter\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "after",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-close-with-text",
+   "group": "code",
+   "rule": "A line with text after the closing characters is code",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\```\ncode\n``` not closed\n```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "``` not closed",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-backtick-in-info",
+   "group": "code",
+   "rule": "An opening line of backticks with a backtick later on it is a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\``` a`b\ntext\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "``` a`b",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-in-quote",
+   "group": "code",
+   "rule": "A code block is not recognized inside a block quote",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\> ```\n> code\n> ```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "```",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "code",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "```",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "code-fence-after-list",
+   "group": "code",
+   "rule": "A code block indented under a list item ends the list and is not nested",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- item\n  ```\n  code\n  ```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "item",
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "code",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-bullet-markers",
+   "group": "lists",
+   "rule": "A dash, a star or a plus marks a bulleted item",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- dash\n* star\n+ plus\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "dash",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "star",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "plus",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-ordered-dot",
+   "group": "lists",
+   "rule": "A number and a dot mark a numbered item",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\1. first\n2. second\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 1,
+     "text": "first",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 2,
+     "text": "second",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-ordered-paren",
+   "group": "lists",
+   "rule": "A number and a closing parenthesis mark a numbered item",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\1) first\n2) second\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 1,
+     "text": "first",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 2,
+     "text": "second",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-numbers-as-sent",
+   "group": "lists",
+   "rule": "The number of an item is shown as sent",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\3. three\n7. seven\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 3,
+     "text": "three",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 7,
+     "text": "seven",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-nested",
+   "group": "lists",
+   "rule": "An item indented to the text of the item above is nested in it",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- Weapons\n  - a rusty sword\n  - a bow\n- Armor\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "Weapons",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "a rusty sword",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "a bow",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "Armor",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-nested-three",
+   "group": "lists",
+   "rule": "Lists nest to a third level",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n  - b\n    - c\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "b",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 3,
+     "marker": "bullet",
+     "text": "c",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-ordered-in-bullet",
+   "group": "lists",
+   "rule": "A numbered list nests in a bulleted item",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- tools\n  1. hammer\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "tools",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "ordered",
+     "number": 1,
+     "text": "hammer",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-continuation",
+   "group": "lists",
+   "rule": "An indented line that is not an item continues the item above",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- a rusty sword\n  (wielded)\n- a bow\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a rusty sword",
+     "message": 0
+    },
+    {
+     "kind": "continuation",
+     "list": 1,
+     "text": "(wielded)",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a bow",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-task",
+   "group": "lists",
+   "rule": "[ ] and [x] after the marker make a task",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- [ ] find the key\n- [x] open the gate\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "task": "open",
+     "text": "find the key",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "task": "done",
+     "text": "open the gate",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-item-inline-markup",
+   "group": "lists",
+   "rule": "An item's text holds inline markup",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- **bold** item\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "bold item",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-indented-first-item",
+   "group": "lists",
+   "rule": "Indentation before the first item of a list does not nest it",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\   - indented\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "indented",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-blank-line-between",
+   "group": "lists",
+   "rule": "A blank line does not end a list",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n\n  - b\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-after-paragraph",
+   "group": "lists",
+   "rule": "A bulleted list may follow a paragraph with no blank line",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\You carry:\n- a sword\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "You carry:",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a sword",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-ordered-after-paragraph",
+   "group": "lists",
+   "rule": "A numbered item may follow a paragraph with no blank line, whatever its number",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\Steps:\n2. second\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "Steps:",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 2,
+     "text": "second",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-ends-at-unindented-line",
+   "group": "lists",
+   "rule": "A line that is not indented does not join the item above it",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- item\nnot in the list\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "item",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "not in the list",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-marker-alone",
+   "group": "lists",
+   "rule": "A marker with no text after it is a paragraph",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\-\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "-",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-marker-no-space",
+   "group": "lists",
+   "rule": "A marker with no space after it is a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\-item\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "-item",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-heading-in-item",
+   "group": "lists",
+   "rule": "A heading is not read inside an item",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- # not a heading\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "# not a heading",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "review-emote-star",
+   "group": "lists",
+   "rule": "A line that starts with a star and a space is a list item, so a server escapes the star of an emote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\\\* Bob waves\n* Bob waves\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "* Bob waves",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "Bob waves",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-child-under-task",
+   "group": "lists",
+   "rule": "A task's box is part of the item's text, so a child indented two spaces nests under it",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- [ ] task\n  - child\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "task": "open",
+     "text": "task",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "child",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-task-ordered",
+   "group": "lists",
+   "rule": "A task's box may follow a number",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\1. [x] done\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "ordered",
+     "number": 1,
+     "task": "done",
+     "text": "done",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-partial-indent",
+   "group": "lists",
+   "rule": "An item indented less than the text of every open item is at the first level",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n  - b\n - c\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "b",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "c",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-continuation-closes-nested",
+   "group": "lists",
+   "rule": "A line of text indented to an outer item's text closes the nested item and continues the outer one",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n  - b\n  back to a\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "text": "b",
+     "message": 0
+    },
+    {
+     "kind": "continuation",
+     "list": 1,
+     "text": "back to a",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-heading-ends-list",
+   "group": "lists",
+   "rule": "A heading indented under an item is a heading, and ends the list",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n  # x\n  text\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "x",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-marker-in-item",
+   "group": "lists",
+   "rule": "A second list marker at the start of an item's text is text",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- - a\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "- a",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-ends-at-quote",
+   "group": "lists",
+   "rule": "A quoted line ends a list outside the quote",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\- a\n> quoted\n  text\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "quoted",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-task-uppercase",
+   "group": "lists",
+   "rule": "An upper-case X marks a task done",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- [X] done\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "task": "done",
+     "text": "done",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "list-task-no-text",
+   "group": "lists",
+   "rule": "A box with no text after it is the item's text",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- [ ]\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "text": "[ ]",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-one-level",
+   "group": "quotes",
+   "rule": "A > puts the line in a block quote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> Gandalf tells you:\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "Gandalf tells you:",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-no-space",
+   "group": "quotes",
+   "rule": "The space after > is optional",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\>tight\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "tight",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-two-levels",
+   "group": "quotes",
+   "rule": "Each further > adds a level, with or without spaces between",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> outer\n> > inner\n>> also inner\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "outer",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 2,
+     "text": "inner",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 2,
+     "text": "also inner",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-list",
+   "group": "quotes",
+   "rule": "A list may sit in a block quote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> - one\n> - two\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "quote": 1,
+     "text": "one",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "quote": 1,
+     "text": "two",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-nested-list",
+   "group": "quotes",
+   "rule": "Spaces after the quote marker's own space indent what follows, so lists nest inside a quote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> - a\n>   - b\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "quote": 1,
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 2,
+     "marker": "bullet",
+     "quote": 1,
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-blank",
+   "group": "quotes",
+   "rule": "A > with nothing after it is a blank line in the quote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> a\n>\n> b\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "a",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "quote": 1,
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "b",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-after-paragraph",
+   "group": "quotes",
+   "rule": "A quote may follow a paragraph with no blank line",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\He says:\n> hello\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "He says:",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "hello",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "quote-ends-at-unmarked-line",
+   "group": "quotes",
+   "rule": "A line with no > is not in the quote",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\> quoted\nnot quoted\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "quoted",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "not quoted",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-dashes",
+   "group": "rules",
+   "rule": "Three dashes make a rule",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\---\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-stars",
+   "group": "rules",
+   "rule": "Three stars make a rule",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\***\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-underscores",
+   "group": "rules",
+   "rule": "Three underscores make a rule",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\___\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-spaced",
+   "group": "rules",
+   "rule": "Spaces between the characters are allowed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\- - -\n* * *\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-long",
+   "group": "rules",
+   "rule": "A long row of dashes is a rule",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\--------------------------------\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "rule",
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-two-dashes",
+   "group": "rules",
+   "rule": "Two dashes are a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\--\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "--",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-mixed-characters",
+   "group": "rules",
+   "rule": "Mixed characters are a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\-*-\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "-*-",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-equals",
+   "group": "rules",
+   "rule": "A row of equals signs is a paragraph",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\=====\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "=====",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "rule-in-quote",
+   "group": "rules",
+   "rule": "A rule may sit in a block quote",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\> ---\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "rule",
+     "quote": 1,
+     "text": "",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-two-columns",
+   "group": "tables",
+   "rule": "A header row, a delimiter row and rows make a table",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| Item | Qty |\n|---|---|\n| sword | 1 |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "Item"
+      },
+      {
+       "text": "Qty"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "sword"
+      },
+      {
+       "text": "1"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-alignment",
+   "group": "tables",
+   "rule": "Colons in the delimiter row set each column's alignment",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| L | C | R | N |\n|:---|:---:|---:|---|\n| a | b | c | d |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "left",
+      "center",
+      "right",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "L"
+      },
+      {
+       "text": "C"
+      },
+      {
+       "text": "R"
+      },
+      {
+       "text": "N"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "a"
+      },
+      {
+       "text": "b"
+      },
+      {
+       "text": "c"
+      },
+      {
+       "text": "d"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-no-trailing-pipe",
+   "group": "tables",
+   "rule": "The | at the end of a row is optional",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b\n|---|---\n| 1 | 2\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      },
+      {
+       "text": "b"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      },
+      {
+       "text": "2"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-header-only",
+   "group": "tables",
+   "rule": "A table may have no rows under its header",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b |\n|---|---|\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      },
+      {
+       "text": "b"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-inline-markup",
+   "group": "tables",
+   "rule": "A cell holds inline markup",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| Name | Note |\n|---|---|\n| **Tam** | sells `ale` |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "Name"
+      },
+      {
+       "text": "Note"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "Tam",
+       "spans": [
+        {
+         "start": 0,
+         "length": 3,
+         "bold": true
+        }
+       ]
+      },
+      {
+       "text": "sells ale",
+       "spans": [
+        {
+         "start": 6,
+         "length": 3,
+         "code": true
+        }
+       ]
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-escaped-pipe",
+   "group": "tables",
+   "rule": "\\| puts a | in a cell, also inside a code span",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| Exit | Key |\n|---|---|\n| a \\| b | `x\\|y` |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "Exit"
+      },
+      {
+       "text": "Key"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "a | b"
+      },
+      {
+       "text": "x|y",
+       "spans": [
+        {
+         "start": 0,
+         "length": 3,
+         "code": true
+        }
+       ]
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-short-row",
+   "group": "tables",
+   "rule": "A row with too few cells gets empty ones",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b | c |\n|---|---|---|\n| 1 |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      },
+      {
+       "text": "b"
+      },
+      {
+       "text": "c"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      },
+      {
+       "text": ""
+      },
+      {
+       "text": ""
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-long-row",
+   "group": "tables",
+   "rule": "Cells beyond the header's count are dropped",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b |\n|---|---|\n| 1 | 2 | 3 |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none",
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      },
+      {
+       "text": "b"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      },
+      {
+       "text": "2"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-no-delimiter",
+   "group": "tables",
+   "rule": "Rows with no delimiter row after the first are paragraphs",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b |\n| c | d |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "| a | b |",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "| c | d |",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-delimiter-count-mismatch",
+   "group": "tables",
+   "rule": "A delimiter row with a different number of cells makes no table",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a | b |\n|---|\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "| a | b |",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "|---|",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-row-row-delimiter",
+   "group": "tables",
+   "rule": "A row followed by another row is a paragraph, and the second row is tried as a header",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| x |\n| a |\n|---|\n| 1 |\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "| x |",
+     "message": 0
+    },
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-ends-at-blank",
+   "group": "tables",
+   "rule": "A blank line ends a table",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\| a |\n|---|\n| 1 |\n\nafter\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "after",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-ends-at-other-line",
+   "group": "tables",
+   "rule": "A line that does not start with | ends a table",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\| a |\n|---|\n| 1 |\nafter\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none"
+     ],
+     "cells": [
+      {
+       "text": "a"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "tableRow",
+     "cells": [
+      {
+       "text": "1"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "after",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-no-leading-pipe",
+   "group": "tables",
+   "rule": "Rows that do not start with | make no table",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\a | b\n--- | ---\n1 | 2\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a | b",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "--- | ---",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "1 | 2",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "table-in-quote",
+   "group": "tables",
+   "rule": "A table is not recognized inside a block quote",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\> | a |\n> |---|\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "| a |",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "|---|",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "review-midline-pipe",
+   "group": "tables",
+   "rule": "A | in the middle of a line makes no table",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\HP: 10|20 MP: 5|9\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "HP: 10|20 MP: 5|9",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-inline",
+   "group": "links",
+   "rule": "[text](destination) is a link",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\Go [north](send:north) now\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "Go north now",
+     "spans": [
+      {
+       "start": 3,
+       "length": 5,
+       "link": {
+        "destination": "send:north"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-title",
+   "group": "links",
+   "rule": "A title in double quotes follows the destination",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[the quay](send:north \"Walk north\")\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "the quay",
+     "spans": [
+      {
+       "start": 0,
+       "length": 8,
+       "link": {
+        "destination": "send:north",
+        "title": "Walk north"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-single-quoted-title",
+   "group": "links",
+   "rule": "A title may be in single quotes",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[a](send:a 'Tip')\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "link": {
+        "destination": "send:a",
+        "title": "Tip"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-angle-destination",
+   "group": "links",
+   "rule": "A destination between < and > may hold spaces",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[look](<send:look at tam>)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "look",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "link": {
+        "destination": "send:look at tam"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-percent-encoded",
+   "group": "links",
+   "rule": "A percent-encoded destination is kept as written",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[look](send:look%20at%20tam)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "look",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "link": {
+        "destination": "send:look%20at%20tam"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-text-markup",
+   "group": "links",
+   "rule": "A link's text holds emphasis",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[**north** gate](send:north)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "north gate",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "link": {
+        "destination": "send:north"
+       },
+       "bold": true
+      },
+      {
+       "start": 5,
+       "length": 5,
+       "link": {
+        "destination": "send:north"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-autolink-brackets",
+   "group": "links",
+   "rule": "A web address between < and > is a link to itself",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\<https://example.com>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "https://example.com",
+     "spans": [
+      {
+       "start": 0,
+       "length": 19,
+       "link": {
+        "destination": "https://example.com"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-mailto-brackets",
+   "group": "links",
+   "rule": "A mailto: address between < and > is a link to itself",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\<mailto:tam@example.com>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "mailto:tam@example.com",
+     "spans": [
+      {
+       "start": 0,
+       "length": 22,
+       "link": {
+        "destination": "mailto:tam@example.com"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-bare-url",
+   "group": "links",
+   "rule": "A bare web address is a link, without the punctuation that ends it",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\See https://example.com/map.\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "See https://example.com/map.",
+     "spans": [
+      {
+       "start": 4,
+       "length": 23,
+       "link": {
+        "destination": "https://example.com/map"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-bare-url-parens",
+   "group": "links",
+   "rule": "A closing parenthesis with no opening one in the address is not part of it",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\(see https://example.com/a_(b) and https://example.com/c)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "(see https://example.com/a_(b) and https://example.com/c)",
+     "spans": [
+      {
+       "start": 5,
+       "length": 25,
+       "link": {
+        "destination": "https://example.com/a_(b)"
+       }
+      },
+      {
+       "start": 35,
+       "length": 21,
+       "link": {
+        "destination": "https://example.com/c"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-bare-url-trailing-run",
+   "group": "links",
+   "rule": "Punctuation is taken off the end of a bare address one character at a time",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\(https://example.com/c).\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "(https://example.com/c).",
+     "spans": [
+      {
+       "start": 1,
+       "length": 21,
+       "link": {
+        "destination": "https://example.com/c"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-parenthesized-title",
+   "group": "links",
+   "rule": "A title in parentheses is not read, and the link is shown as typed",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\[a](send:a (Tip))\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "[a](send:a (Tip))",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-config-encoded",
+   "group": "links",
+   "rule": "A destination with a percent-encoded configuration is kept as written",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[sword](send:look%20sword?config=%7B%22tooltip%22%3A%22Look%22%7D)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "sword",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "link": {
+        "destination": "send:look%20sword?config=%7B%22tooltip%22%3A%22Look%22%7D"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-local-note",
+   "group": "links",
+   "rule": "A local: destination with a title is a note with a tooltip",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[the iron door](local: \"It needs a silver key\")\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "the iron door",
+     "spans": [
+      {
+       "start": 0,
+       "length": 13,
+       "link": {
+        "destination": "local:",
+        "title": "It needs a silver key"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-no-scheme",
+   "group": "links",
+   "rule": "A destination with no scheme is parsed as written, and the OSC 8 standard gives it no action",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[x](north)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "link": {
+        "destination": "north"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-unclosed",
+   "group": "links",
+   "rule": "A link not closed on its line is shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[north](send:north\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "[north](send:north",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-escaped-bracket",
+   "group": "links",
+   "rule": "A backslash before [ stops a link",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\\\[not a link](x)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "[not a link](x)",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-reference-style",
+   "group": "links",
+   "rule": "A reference-style link is shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\[text][1]\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "[text][1]",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-reference-definition",
+   "group": "links",
+   "rule": "A link definition is a paragraph",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\[1]: https://example.com\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "[1]: https://example.com",
+     "spans": [
+      {
+       "start": 5,
+       "length": 19,
+       "link": {
+        "destination": "https://example.com"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-image",
+   "group": "links",
+   "rule": "An image is shown as its alt text, linked to the address",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\![a map of the quay](https://example.com/quay.png)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a map of the quay",
+     "spans": [
+      {
+       "start": 0,
+       "length": 17,
+       "link": {
+        "destination": "https://example.com/quay.png"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-www-not-linked",
+   "group": "links",
+   "rule": "A bare www. address is not a link",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\www.example.com\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "www.example.com",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-email-brackets-not-linked",
+   "group": "links",
+   "rule": "A mail address between < and > with no mailto: is not a link",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\<tam@example.com>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "<tam@example.com>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "link-other-scheme-brackets",
+   "group": "links",
+   "rule": "Between < and >, only web and mail addresses are links",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\<send:look>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "<send:look>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-html-tag",
+   "group": "literal",
+   "rule": "An HTML tag is shown as typed",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\<b>bold?</b>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "<b>bold?</b>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-mxp-tag",
+   "group": "literal",
+   "rule": "An MXP tag is shown as typed",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\<send>north</send>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "<send>north</send>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-entity",
+   "group": "literal",
+   "rule": "An entity is shown as typed",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\Fish &amp; chips &copy;\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "Fish &amp; chips &copy;",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-trailing-backslash",
+   "group": "literal",
+   "rule": "A backslash at the end of a line is shown",
+   "stock": "differs",
+   "input": [
+    "\u001b]67;1\u001b\\ends with a backslash\\\nnext\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "ends with a backslash\\",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "next",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-backslash-letter",
+   "group": "literal",
+   "rule": "A backslash before a letter is shown",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\C:\\temp\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "C:\\temp",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-escaped-punctuation",
+   "group": "literal",
+   "rule": "A backslash before a # stops a heading",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\\\# not a heading\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "# not a heading",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "literal-angle-comparison",
+   "group": "literal",
+   "rule": "Angle brackets and ampersands in ordinary text are shown as typed",
+   "stock": "same",
+   "input": [
+    "\u001b]67;1\u001b\\1 < 2 & 3 > 2\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "1 < 2 & 3 > 2",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-collapsed",
+   "group": "sections",
+   "rule": "<details>, a summary line and </details> make a section that starts folded",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\n<summary>More</summary>\ninside\n</details>\nafter\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "More",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 1,
+     "text": "inside",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "after",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-open",
+   "group": "sections",
+   "rule": "<details open> makes a section that starts unfolded",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details open>\n<summary>News</summary>\ntoday\n</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "open": true,
+     "text": "News",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 1,
+     "text": "today",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-summary-markup",
+   "group": "sections",
+   "rule": "A summary holds inline markup",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\n<summary>**3 new** messages</summary>\n</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "3 new messages",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-no-summary",
+   "group": "sections",
+   "rule": "With no summary line the summary is empty",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\nhidden\n</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 1,
+     "text": "hidden",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-summary-after-blank",
+   "group": "sections",
+   "rule": "A summary line counts only straight after the opening line",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\n\n<summary>late</summary>\n</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "section": 1,
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 1,
+     "text": "<summary>late</summary>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-nested",
+   "group": "sections",
+   "rule": "Sections nest, and </details> closes the innermost",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\n<summary>Outer</summary>\n<details>\n<summary>Inner</summary>\ndeep\n</details>\nshallow\n</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "Outer",
+     "message": 0
+    },
+    {
+     "kind": "summary",
+     "section": 2,
+     "text": "Inner",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 2,
+     "text": "deep",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "section": 1,
+     "text": "shallow",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-content-kinds",
+   "group": "sections",
+   "rule": "A section holds any Markdown lines",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details>\n<summary>Stats</summary>\n\n## Skills\n- sword\n| a |\n|---|\n```\nmap\n```\n</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "Stats",
+     "message": 0
+    },
+    {
+     "kind": "blank",
+     "section": 1,
+     "text": "",
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 2,
+     "section": 1,
+     "text": "Skills",
+     "message": 0
+    },
+    {
+     "kind": "item",
+     "list": 1,
+     "marker": "bullet",
+     "section": 1,
+     "text": "sword",
+     "message": 0
+    },
+    {
+     "kind": "tableHeader",
+     "align": [
+      "none"
+     ],
+     "section": 1,
+     "cells": [
+      {
+       "text": "a"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "section": 1,
+     "text": "map",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-indented-lines",
+   "group": "sections",
+   "rule": "Spaces around a section line are allowed",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\  <details>\n  <summary>x</summary>\n  </details>  \n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "summary",
+     "section": 1,
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-details-with-text",
+   "group": "sections",
+   "rule": "<details> with other text on its line is a paragraph",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<details> more\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "<details> more",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-close-without-open",
+   "group": "sections",
+   "rule": "</details> with no section open is a paragraph",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\</details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "</details>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-summary-elsewhere",
+   "group": "sections",
+   "rule": "A summary line with no opening line before it is a paragraph",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\<summary>stray</summary>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "<summary>stray</summary>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "section-in-quote",
+   "group": "sections",
+   "rule": "A section is not recognized inside a block quote",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\> <details>\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "quote": 1,
+     "text": "<details>",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-around-marker",
+   "group": "color",
+   "rule": "A color sequence before a marker does not hide the marker",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[31m**red bold**\u001b[0m plain\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "red bold plain",
+     "spans": [
+      {
+       "start": 0,
+       "length": 8,
+       "fg": "31",
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-between-stars",
+   "group": "color",
+   "rule": "A sequence between the two stars of a marker does not split it",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\*\u001b[31m*red**\u001b[0m\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "red",
+     "spans": [
+      {
+       "start": 0,
+       "length": 3,
+       "fg": "31",
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-before-block-marker",
+   "group": "color",
+   "rule": "A sequence before a # does not stop the heading",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[32m## Green\u001b[0m\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "heading",
+     "level": 2,
+     "text": "Green",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "fg": "32"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-bold-keeps-color",
+   "group": "color",
+   "rule": "Markdown bold leaves the color as it was",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[33myellow **bold** yellow\u001b[0m\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "yellow bold yellow",
+     "spans": [
+      {
+       "start": 0,
+       "length": 7,
+       "fg": "33"
+      },
+      {
+       "start": 7,
+       "length": 4,
+       "fg": "33",
+       "bold": true
+      },
+      {
+       "start": 11,
+       "length": 7,
+       "fg": "33"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-truecolor",
+   "group": "color",
+   "rule": "A 24-bit color works on a Markdown line",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[38;2;255;136;0morange\u001b[0m\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "orange",
+     "spans": [
+      {
+       "start": 0,
+       "length": 6,
+       "fg": "38;2;255;136;0"
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-underline",
+   "group": "color",
+   "rule": "Underline comes from SGR and sits beside Markdown styles",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[4munder\u001b[24m **bold**\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "under bold",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "underline": true
+      },
+      {
+       "start": 6,
+       "length": 4,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-underline-over-bold-italic",
+   "group": "color",
+   "rule": "SGR underline combines with Markdown bold italic",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[4m***text***\u001b[24m\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "text",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "underline": true,
+       "bold": true,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-underline-red-bold",
+   "group": "color",
+   "rule": "SGR underline and color combine with Markdown bold",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[4;31m**text**\u001b[0m after\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "text after",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "fg": "31",
+       "underline": true,
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-in-code-span",
+   "group": "color",
+   "rule": "Color works inside a code span",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\`a \u001b[32mb\u001b[0m`\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "a b",
+     "spans": [
+      {
+       "start": 0,
+       "length": 2,
+       "code": true
+      },
+      {
+       "start": 2,
+       "length": 1,
+       "fg": "32",
+       "code": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-in-fence",
+   "group": "color",
+   "rule": "Color works inside a code block, and colored tildes do not close a backtick block",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\```\n\u001b[34m~~~\u001b[0m\nwater\n```\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "code",
+     "text": "~~~",
+     "spans": [
+      {
+       "start": 0,
+       "length": 3,
+       "fg": "34"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "code",
+     "text": "water",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-osc8-link",
+   "group": "color",
+   "rule": "An OSC 8 link works on a Markdown line",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b]8;;send:look\u001b\\**look**\u001b]8;;\u001b\\\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "look",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "link": {
+        "destination": "send:look"
+       },
+       "bold": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-osc8-carries-across-lines",
+   "group": "color",
+   "rule": "An OSC 8 link left open carries across lines until its own sequence ends it",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b]8;;send:look\u001b\\first\nsecond\u001b]8;;\u001b\\ rest\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "first",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "link": {
+        "destination": "send:look"
+       }
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "second rest",
+     "spans": [
+      {
+       "start": 0,
+       "length": 6,
+       "link": {
+        "destination": "send:look"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "color-osc8-covers-markdown-link",
+   "group": "color",
+   "rule": "Where an OSC 8 link covers part of a Markdown link's text, no Markdown link is made",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\[a \u001b]8;;send:x\u001b\\b\u001b]8;;\u001b\\ c](send:y)\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "[a b c](send:y)",
+     "spans": [
+      {
+       "start": 3,
+       "length": 1,
+       "link": {
+        "destination": "send:x"
+       }
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "sgr-carries-across-lines",
+   "group": "color",
+   "rule": "A color left on carries into the Markdown lines that follow",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[35mfirst\n# second\n\u001b[0mthird\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "first",
+     "spans": [
+      {
+       "start": 0,
+       "length": 5,
+       "fg": "35"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "heading",
+     "level": 1,
+     "text": "second",
+     "spans": [
+      {
+       "start": 0,
+       "length": 6,
+       "fg": "35"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "third",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "sgr-carries-past-off",
+   "group": "color",
+   "rule": "A color left on carries past the end of the message",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1\u001b\\\u001b[36mcyan\n\u001b]67;0\u001b\\still cyan\n\u001b[0m"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "cyan",
+     "spans": [
+      {
+       "start": 0,
+       "length": 4,
+       "fg": "36"
+      }
+     ],
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "still cyan",
+     "spans": [
+      {
+       "start": 0,
+       "length": 10,
+       "fg": "36"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mark-named-values",
+   "group": "marks",
+   "rule": "Each named value marks its message",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;mark=neutral\u001b\\neutral\n\u001b]67;1;mark=ok\u001b\\ok\n\u001b]67;1;mark=info\u001b\\info\n\u001b]67;1;mark=warn\u001b\\warn\n\u001b]67;1;mark=error\u001b\\error\n\u001b]67;1;mark=busy\u001b\\busy\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "mark": "neutral"
+    },
+    {
+     "mark": "ok"
+    },
+    {
+     "mark": "info"
+    },
+    {
+     "mark": "warn"
+    },
+    {
+     "mark": "error"
+    },
+    {
+     "mark": "busy"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "neutral",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "ok",
+     "message": 1
+    },
+    {
+     "kind": "paragraph",
+     "text": "info",
+     "message": 2
+    },
+    {
+     "kind": "paragraph",
+     "text": "warn",
+     "message": 3
+    },
+    {
+     "kind": "paragraph",
+     "text": "error",
+     "message": 4
+    },
+    {
+     "kind": "paragraph",
+     "text": "busy",
+     "message": 5
+    }
+   ]
+  },
+  {
+   "id": "mark-hex",
+   "group": "marks",
+   "rule": "Six hexadecimal digits mark a message with a color",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;mark=ff8800\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "mark": "ff8800"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-unknown-value",
+   "group": "marks",
+   "rule": "An unknown value is no mark",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;mark=sparkly\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-none",
+   "group": "marks",
+   "rule": "none is no mark",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;mark=none\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {}
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-parameter-order",
+   "group": "marks",
+   "rule": "Parameters come in any order",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;mark=ok:id=a\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a",
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-duplicate-parameter",
+   "group": "marks",
+   "rule": "When a name appears twice, the last one counts",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;mark=ok:mark=warn\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "mark": "warn"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-update",
+   "group": "marks",
+   "rule": "A change sequence sets the mark of the message its id names, also while Markdown is off",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=craft7:mark=busy\u001b\\You start work.\n\u001b]67;0\u001b\\plain\n\u001b]67;2;id=craft7:mark=ok\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "craft7",
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "You start work.",
+     "message": 0
+    },
+    {
+     "kind": "plain",
+     "text": "plain"
+    }
+   ]
+  },
+  {
+   "id": "mark-update-while-on",
+   "group": "marks",
+   "rule": "A change sequence leaves Markdown on",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=a:mark=busy\u001b\\x\n\u001b]67;2;id=a:mark=error\u001b\\*y*\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a",
+     "mark": "error"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "y",
+     "spans": [
+      {
+       "start": 0,
+       "length": 1,
+       "italic": true
+      }
+     ],
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-update-unknown-id",
+   "group": "marks",
+   "rule": "A change for an unknown id is ignored",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=a:mark=busy\u001b\\x\n\u001b]67;0\u001b\\\u001b]67;2;id=b:mark=ok\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a",
+     "mark": "busy"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-update-unknown-value",
+   "group": "marks",
+   "rule": "A change to an unknown value is ignored",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=a:mark=busy\u001b\\x\n\u001b]67;0\u001b\\\u001b]67;2;id=a:mark=sparkly\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a",
+     "mark": "busy"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-update-missing-mark",
+   "group": "marks",
+   "rule": "A change with no mark is ignored",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=a:mark=busy\u001b\\x\n\u001b]67;0\u001b\\\u001b]67;2;id=a\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a",
+     "mark": "busy"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-update-missing-id",
+   "group": "marks",
+   "rule": "A change with no id is ignored",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=a:mark=busy\u001b\\x\n\u001b]67;0\u001b\\\u001b]67;2;mark=ok\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a",
+     "mark": "busy"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-invalid-id",
+   "group": "marks",
+   "rule": "An id with a character outside its set is ignored, and the other parameters still count",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=bad.id:mark=ok\u001b\\x\n\u001b]67;0\u001b\\"
+   ],
+   "messages": [
+    {
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-update-to-none",
+   "group": "marks",
+   "rule": "A change to none removes the mark",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=a:mark=busy\u001b\\x\n\u001b]67;0\u001b\\\u001b]67;2;id=a:mark=none\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "a"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "x",
+     "message": 0
+    }
+   ]
+  },
+  {
+   "id": "mark-id-reused",
+   "group": "marks",
+   "rule": "An id names the most recent message that used it",
+   "stock": "n/a",
+   "input": [
+    "\u001b]67;1;id=job:mark=busy\u001b\\one\n\u001b]67;1;id=job:mark=busy\u001b\\two\n\u001b]67;0\u001b\\\u001b]67;2;id=job:mark=ok\u001b\\"
+   ],
+   "messages": [
+    {
+     "id": "job",
+     "mark": "busy"
+    },
+    {
+     "id": "job",
+     "mark": "ok"
+    }
+   ],
+   "lines": [
+    {
+     "kind": "paragraph",
+     "text": "one",
+     "message": 0
+    },
+    {
+     "kind": "paragraph",
+     "text": "two",
+     "message": 1
+    }
+   ]
+  }
+ ]
+}

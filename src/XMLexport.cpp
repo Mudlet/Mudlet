@@ -594,6 +594,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
     host.append_attribute("accessibleLabels") = pHost->mAccessibleLabels ? "yes" : "no";
     host.append_attribute("enableOSC8Hyperlinks") = pHost->mEnableOSC8Hyperlinks ? "yes" : "no";
+    host.append_attribute("enableMarkdown") = pHost->mEnableMarkdown ? "yes" : "no";
     host.append_attribute("f3SearchEnabled") = pHost->mF3SearchEnabled ? "yes" : "no";
     host.append_attribute("enableClosedCaption") = pHost->mEnableClosedCaption ? "yes" : "no";
     host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(static_cast<int>(pHost->mCaretShortcut));

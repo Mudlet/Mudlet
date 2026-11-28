@@ -45,7 +45,9 @@
 #include "THyperlinkStyling.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
+#include "TConsoleModel.h"
 #include "TMainConsole.h"
+#include "TMarkdown.h"
 #include "TTextEdit.h"
 #include "TUiTour.h"
 #include "TelnetServerStub.h"
@@ -4476,6 +4478,359 @@ private slots:
     }
     mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
                        : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+  }
+
+  // Before any test that sends OSC 67: the link opens while the buffer has no
+  // Markdown state, which the first on sequence then makes
+  void test_Osc8LinkOpenedBeforeMarkdownStartsKeepsItsDestination() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    QVERIFY2(!console->buffer.markdown(),
+             "an earlier test sent OSC 67, so this proves nothing");
+    injectData(qsl("\x1b]8;;send:early\x1b\\\x1b]67;1\x1b\\early\x1b]8;;"
+                   "\x1b\\\x1b]67;0\x1b\\"));
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("early"));
+    const TMarkdownBlock *pBlock = console->buffer.markdownBlock(line);
+    QVERIFY2(pBlock, "the line was not read as Markdown");
+    QCOMPARE(pBlock->links.size(), 1);
+    QCOMPARE(pBlock->links.first().destination, qsl("send:early"));
+  }
+
+  // A Markdown link is an OSC 8 link written another way: the same action, the same rules
+  void test_MarkdownLinkRunsWhatTheSameOsc8LinkRuns() {
+    injectData(qsl("\x1b]8;;send:look\x1b\\look\x1b]8;;\x1b\\"));
+    const QStringList osc8 = findFirstLinkCommands();
+    QVERIFY2(!osc8.isEmpty(), "the OSC 8 link to compare with was not made");
+    mpHost->mainConsoleView()->buffer.clear();
+    injectData(qsl("\x1b]67;1\x1b\\[look](send:look)\x1b]67;0\x1b\\"));
+    QCOMPARE(findFirstLinkCommands(), osc8);
+  }
+
+  // Shown as a link in Mudlet's own way, as Markdown renderers show theirs,
+  // where an OSC 8 link with no style looks like the text around it
+  void test_MarkdownLinkWithNoStyleIsUnderlined() {
+    injectData(qsl("\x1b]67;1\x1b\\go [north](send:north)\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("go north"));
+    QVERIFY2(!console->buffer.buffer.at(line).at(0).isUnderlined(),
+             "the text before the link was underlined");
+    QVERIFY2(console->buffer.buffer.at(line).at(3).isUnderlined(),
+             "the Markdown link was not drawn as a link");
+  }
+
+  // A style in the link's configuration is used, as an OSC 8 link's is, and
+  // takes the place of the default underline
+  void test_MarkdownLinkUsesTheStyleInItsConfiguration() {
+    injectData(qsl("\x1b]67;1\x1b\\[north](send:north?config=%7B%22style%22%3A%7B"
+                   "%22color%22%3A%22%2300ff00%22%2C%22bold%22%3Atrue%7D%7D)"
+                   "\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("north"));
+    const TChar &styled = console->buffer.buffer.at(line).at(0);
+    QVERIFY2(console->buffer.getLinkIndexAt(line, 0) > 0, "the link was not made");
+    QCOMPARE(styled.foreground(), QColor(0x00, 0xff, 0x00));
+    QVERIFY2(styled.isBold(), "the style's bold was not used");
+    QVERIFY2(!styled.isUnderlined(), "a styled link took the default underline as well");
+  }
+
+  // An OSC 8 link's own style survives the Markdown read, with Markdown bold
+  // added to it
+  void test_Osc8LinkStyleSurvivesOnAMarkdownLine() {
+    injectData(qsl("\x1b]67;1\x1b\\**\x1b]8;;send:look?config={\"style\":{\"color\""
+                   ":\"#00ff00\"}}\x1b\\look\x1b]8;;\x1b\\**\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("look"));
+    const TChar &styled = console->buffer.buffer.at(line).at(0);
+    QCOMPARE(styled.foreground(), QColor(0x00, 0xff, 0x00));
+    QVERIFY2(styled.isBold(), "the Markdown bold around the link was lost");
+  }
+
+  // With a menu, the title takes the place of the link's own tooltip, and
+  // the menu's labels stay
+  void test_MarkdownLinkTitleIsTheTooltipOfALinkWithAMenu() {
+    injectData(qsl("\x1b]67;1\x1b\\[look](send:look?config=%7B%22menu%22%3A%5B%7B"
+                   "%22Look%22%3A%22send%3Alook%22%7D%2C%7B%22Read%22%3A%22send%3A"
+                   "read%22%7D%5D%7D \"Walk north\")\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the Markdown link was not made");
+    const QStringList hints = console->getLinkStore().getHintsConst(linkId);
+    QVERIFY2(hints.size() > 1, "the link's menu was lost");
+    QCOMPARE(hints.first(), qsl("Walk north"));
+  }
+
+  void test_MarkdownLinkTitleIsItsTooltip() {
+    injectData(qsl("\x1b]67;1\x1b\\[a](send:a \"Walk north\")\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the Markdown link was not made");
+    QCOMPARE(console->getLinkStore().getHintsConst(linkId),
+             QStringList{qsl("Walk north")});
+  }
+
+  void test_MarkdownLinkWithNoSchemeHasNoAction() {
+    injectData(qsl("\x1b]67;1\x1b\\[x](north)\x1b]67;0\x1b\\"));
+    QVERIFY2(findFirstLinkCommands().isEmpty(),
+             "a destination with no scheme was made a link");
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("x"));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
+  }
+
+  void test_MarkdownLinksFollowTheHyperlinkPreference() {
+    mpHost->mEnableOSC8Hyperlinks = false;
+    injectData(qsl("\x1b]67;1\x1b\\[look](send:look)\x1b]67;0\x1b\\"));
+    mpHost->mEnableOSC8Hyperlinks = true;
+    QVERIFY2(findFirstLinkCommands().isEmpty(),
+             "a Markdown link was made with hyperlinks turned off");
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("look"));
+    for (int column = 0; column < 4; ++column) {
+      QCOMPARE(console->buffer.getLinkIndexAt(line, column), 0);
+    }
+  }
+
+  // Markers removed before it move the text an OSC 8 link covers, and the
+  // link has to move with it
+  void test_Osc8LinkAfterMarkdownBoldStaysOnItsText() {
+    injectData(qsl("\x1b]67;1\x1b\\**bold** \x1b]8;;send:go\x1b\\go\x1b]8;;"
+                   "\x1b\\\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("bold go"));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 4), 0);
+    QVERIFY2(console->buffer.getLinkIndexAt(line, 5) > 0,
+             "the OSC 8 link left its text");
+    QVERIFY2(console->buffer.getLinkIndexAt(line, 6) > 0,
+             "the OSC 8 link left its text");
+  }
+
+  // A spoiler made by a Markdown link's configuration is hidden as an OSC 8
+  // one is, until revealed
+  void test_MarkdownSpoilerLinkIsHiddenUntilRevealed() {
+    injectData(qsl("\x1b]67;1\x1b\\[Word](local:?config=%7B%22spoiler%22%3Atrue"
+                   "%7D)\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("    "));
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the Markdown spoiler link was not made");
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(line), qsl("Word"));
+  }
+
+  // Once on a Markdown line, an open OSC 8 link carries past the message's
+  // end as color does
+  void test_Osc8LinkOpenedInMarkdownCarriesPastItsMessage() {
+    injectData(qsl("\x1b]67;1\x1b\\\x1b]8;;send:go\x1b\\a"));
+    injectData(qsl("\x1b]67;0\x1b\\b"));
+    injectData(qsl("c\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int last = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(last), qsl("c"));
+    const int linkId = console->buffer.getLinkIndexAt(last - 2, 0);
+    QVERIFY2(linkId > 0, "the link was not made on its Markdown line");
+    QCOMPARE(console->buffer.getLinkIndexAt(last - 1, 0), linkId);
+    QCOMPARE(console->buffer.getLinkIndexAt(last, 0), linkId);
+  }
+
+  // Hidden before triggers and apps see the line, where nothing will wrap it
+  void test_ALinkThatStartsHiddenIsHiddenAsItsLineIsCommitted() {
+    QString committed;
+    TConsoleModel &model = mpHost->mainConsoleModel();
+    const auto watch = connect(&model.mNotifier, &TConsoleModelNotifier::lineCommitted, this,
+                               [&committed, &model](const int line) {
+                                 committed = model.buffer.line(line);
+                               });
+    const auto forget = qScopeGuard([watch] { disconnect(watch); });
+    injectData(qsl("\x1b]67;1\x1b\\# Seen ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    QCOMPARE(committed, qsl("Seen     "));
+  }
+
+  // Hidden before triggers and apps see the line, where the wrap the line is
+  // about to get leaves the link whole on one row
+  void test_ALinkThatStartsHiddenOnALineThatWrapsIsHiddenAsItIsCommitted() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    QString committed;
+    TConsoleModel &model = mpHost->mainConsoleModel();
+    const auto watch = connect(&model.mNotifier, &TConsoleModelNotifier::lineCommitted, this,
+                               [&committed, &model](const int line) {
+                                 committed = model.buffer.line(line);
+                               });
+    const auto forget = qScopeGuard([watch] { disconnect(watch); });
+    injectData(qsl("\x1b]67;1\x1b\\Seen ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl(" one two three four\x1b]67;0\x1b\\"));
+    QCOMPARE(committed, qsl("Seen      one two three four"));
+  }
+
+  // A trigger's nested commit places only the links it makes, so the outer
+  // line's are placed once that line has wrapped
+  void test_ALinkOnAMarkdownLineIsPlacedAfterItWrapsWhenATriggerFeedsALine() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        qsl("SpecFeederTrigger = tempTrigger('Seen one', function() feedTriggers('SpecFed\\n') end)"));
+    const auto kill = qScopeGuard([this] {
+      mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(SpecFeederTrigger)"));
+    });
+    injectData(qsl("\x1b]67;1\x1b\\Seen one two three four ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    QVERIFY2(!console->buffer.lineBuffer.join(QString()).contains(qsl("Hint")), "the hidden link showed");
+    console->getHyperlinkVisibilityManager().onUserInput();
+    QVERIFY2(console->buffer.lineBuffer.join(QString()).contains(qsl("Hint")),
+             "the link was not shown again where it wrapped to");
+  }
+
+  // Shown again where it was hidden: the columns are counted after the
+  // heading's markers came out
+  void test_Osc8VisibilityOnAMarkdownLineHidesAndShowsItsOwnText() {
+    injectData(qsl("\x1b]67;1\x1b\\# Seen ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("Seen     "));
+    console->getHyperlinkVisibilityManager().onUserInput();
+    QCOMPARE(console->buffer.line(line), qsl("Seen Hint"));
+  }
+
+  // Past the wrap column the link lands on a later row, and is hidden and
+  // shown there
+  void test_Osc8VisibilityPastTheWrapColumnOfAMarkdownLine() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    injectData(qsl("\x1b]67;1\x1b\\Seen one two three four ") +
+               expireLink(qsl("reveal"), qsl("\"delay\":60000,\"expire\":{\"input\":true}")) +
+               qsl("\x1b]67;0\x1b\\"));
+    const int last = console->buffer.getLastLineNumber() - 1;
+    QVERIFY2(console->buffer.wrapsFromPreviousLine(last),
+             "the line did not wrap, so this proves nothing");
+    QVERIFY2(!console->buffer.line(last).contains(qsl("Hint")),
+             "the hidden link showed");
+    console->getHyperlinkVisibilityManager().onUserInput();
+    QVERIFY2(console->buffer.line(last).contains(qsl("Hint")),
+             "the link was not shown again on the row it wrapped onto");
+  }
+
+  // A link that starts hidden and that wrapping splits across rows is shown,
+  // as an OSC 8 link over more than one line is: none of its text is lost
+  void test_HiddenLinkSplitByWrappingOnAMarkdownLineIsShown() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    console->buffer.setWrapAt(20);
+    const auto restoreWrap = qScopeGuard(
+        [console, savedWrap] { console->buffer.setWrapAt(savedWrap); });
+    injectData(qsl("\x1b]67;1\x1b\\Seen one two \x1b]8;;send:look?config={\"visibility\":"
+                   "{\"action\":\"reveal\",\"delay\":60000,\"expire\":{\"input\":true}}}"
+                   "\x1b\\Hint text here\x1b]8;;\x1b\\ and the rest\x1b]67;0\x1b\\"));
+    const int last = console->buffer.getLastLineNumber() - 1;
+    QVERIFY2(console->buffer.wrapsFromPreviousLine(last) && console->buffer.wrapsFromPreviousLine(last - 1),
+             "the line did not wrap, so this proves nothing");
+    const QString shown = console->buffer.line(last - 2) + qsl(" ") + console->buffer.line(last - 1) +
+                          qsl(" ") + console->buffer.line(last);
+    QVERIFY2(shown.contains(qsl("Hint")) && shown.contains(qsl("here")),
+             qPrintable(qsl("the split link's text was lost: %1").arg(shown)));
+  }
+
+  // The indent wrapping puts in front of a row carries the row's first
+  // format, link and all, but hiding the link hides only its own text
+  void test_HidingALinkAtTheStartOfAnIndentedMarkdownLineHidesItsText() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int savedWrap = console->buffer.mWrapAt;
+    const int savedIndent = console->buffer.mWrapIndent;
+    console->buffer.setWrapAt(20);
+    console->buffer.setWrapIndent(2);
+    const auto restore = qScopeGuard([console, savedWrap, savedIndent] {
+      console->buffer.setWrapAt(savedWrap);
+      console->buffer.setWrapIndent(savedIndent);
+    });
+    injectData(qsl("\x1b]67;1\x1b\\\x1b]8;;send:look?config={\"visibility\":"
+                   "{\"action\":\"conceal\"}}\x1b\\north\x1b]8;;\x1b\\ and then some "
+                   "more words\x1b]67;0\x1b\\"));
+    int head = console->buffer.getLastLineNumber() - 1;
+    while (head > 0 && console->buffer.wrapsFromPreviousLine(head)) {
+      --head;
+    }
+    QVERIFY2(console->buffer.line(head).startsWith(qsl("  north")),
+             qPrintable(qsl("the line was not indented as set: %1").arg(console->buffer.line(head))));
+    const int linkId = console->buffer.getLinkIndexAt(head, 2);
+    QVERIFY2(linkId > 0, "the link was not made");
+    console->getHyperlinkVisibilityManager().onLinkClicked(linkId);
+    QCOMPARE(console->buffer.line(head).left(7), qsl("       "));
+    QVERIFY2(console->buffer.line(head).mid(7).startsWith(qsl(" and")),
+             qPrintable(qsl("hiding the link took other text: %1").arg(console->buffer.line(head))));
+  }
+
+  // Markdown is a new way for a game to make links, so its destinations meet
+  // the same refusals and clean-up as OSC 8's
+  void test_MarkdownLinkDestinationsMeetTheOsc8Rules_data() {
+    QTest::addColumn<QString>("destination");
+    QTest::addColumn<QStringList>("commands");
+    QTest::newRow("file") << qsl("file:///etc/passwd") << QStringList();
+    QTest::newRow("javascript") << qsl("javascript:alert%281%29") << QStringList();
+    QTest::newRow("preset") << qsl("preset:danger") << QStringList();
+    QTest::newRow("mailto with an attachment")
+        << qsl("mailto:a@example.com?subject=Hi&attach=/etc/hostname")
+        << QStringList{qsl("openUrl(%1)").arg(LuaLiteral::quote(qsl("mailto:a@example.com?subject=Hi")))};
+  }
+
+  void test_MarkdownLinkDestinationsMeetTheOsc8Rules() {
+    QFETCH(QString, destination);
+    QFETCH(QStringList, commands);
+    injectData(qsl("\x1b]67;1\x1b\\[x](%1)\x1b]67;0\x1b\\").arg(destination));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("x"));
+    QCOMPARE(findFirstLinkCommands(), commands);
+  }
+
+  // An OSC 8 spoiler is hidden after the line is read as Markdown, so
+  // trimming the line cannot take it, and it can still be revealed
+  void test_Osc8SpoilerAloneOnAMarkdownLineCanBeRevealed() {
+    injectData(qsl("\x1b]67;1\x1b\\\x1b]8;;local:?config={\"spoiler\":true}"
+                   "\x1b\\Bob\x1b]8;;\x1b\\\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    QCOMPARE(console->buffer.line(line), qsl("   "));
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the spoiler's link was lost");
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(line), qsl("Bob"));
+  }
+
+  // A Markdown link in a selection group starts selected as the same OSC 8
+  // link would
+  void test_MarkdownLinkInASelectionGroupStartsSelected() {
+    injectData(qsl("\x1b]67;1\x1b\\[a](send:a?config=%7B%22selection%22%3A%7B%22"
+                   "group%22%3A%22g%22%2C%22value%22%3A%22a%22%2C%22selected%22%3A"
+                   "true%7D%7D)\x1b]67;0\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = console->buffer.getLastLineNumber() - 1;
+    const int linkId = console->buffer.getLinkIndexAt(line, 0);
+    QVERIFY2(linkId > 0, "the Markdown link was not made");
+    QCOMPARE(console->buffer.getLinkState(linkId),
+             Mudlet::HyperlinkStyling::StateSelected);
   }
 };
 

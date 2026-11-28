@@ -1580,6 +1580,8 @@ void cTelnet::finishDisconnection()
     const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
     model.mTriggerEngineMode = true;
     model.buffer.flushPendingServerWrapJoin();
+    // A Markdown message ends when the connection closes, and what it held is the game's last text
+    model.buffer.endMarkdown();
     model.mTriggerEngineMode = wasInTriggerEngineMode;
 
     // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:
@@ -3079,6 +3081,11 @@ QString cTelnet::getNewEnvironOSCHyperlinksMenu()
     return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
+QString cTelnet::getNewEnvironMarkdown()
+{
+    return mpHost->mEnableMarkdown ? qsl("1") : qsl("0");
+}
+
 QString cTelnet::getNewEnvironOSCHyperlinksCompact()
 {
     return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
@@ -3204,6 +3211,7 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_DISABLED"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksDisabled()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_GMCP"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksGmcp()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_LOCAL"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksLocal()));
+    newEnvironDataMap.insert(qsl("MARKDOWN"), qMakePair(isUserVar, getNewEnvironMarkdown()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
@@ -3314,6 +3322,16 @@ void cTelnet::sendInfoNewEnvironOSCHyperlinks()
     }
 
     sendInfoNewEnvironValues(vars);
+}
+
+void cTelnet::sendMarkdownCapability()
+{
+    sendInfoNewEnvironValue(qsl("MARKDOWN"));
+    if (mpHost->mEnableMarkdown) {
+        sendGMCPSupportsAdd(qsl("Client.Markdown 1"));
+    } else {
+        sendGMCPSupportsRemove(qsl("Client.Markdown"));
+    }
 }
 
 void cTelnet::appendAllNewEnvironValues(std::string& output, const bool isUserVar, const QMap<QString, QPair<bool, QString>>& newEnvironDataMap)
@@ -4032,7 +4050,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
-                supportsList += R"(, "Client.Media 2", "Char.Login 2"])";
+                supportsList += R"(, "Client.Media 2", "Char.Login 2")";
+                if (mpHost->mEnableMarkdown) {
+                    supportsList += R"(, "Client.Markdown 1")";
+                }
+                supportsList += "]";
                 output += supportsList;
             }
             output += TN_IAC;

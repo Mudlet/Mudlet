@@ -8142,6 +8142,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getMarkdownBlock", TLuaInterpreter::getMarkdownBlock);
     lua_register(pGlobalLua, "getCharacterName", TLuaInterpreter::getCharacterName);
     lua_register(pGlobalLua, "getProfileInformation", TLuaInterpreter::getProfileInformation);
     lua_register(pGlobalLua, "setProfileInformation", TLuaInterpreter::setProfileInformation);

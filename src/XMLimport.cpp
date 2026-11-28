@@ -53,6 +53,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 
 XMLimport::XMLimport(Host* pH)
 : mpHost(pH)
@@ -812,6 +813,12 @@ void XMLimport::readHost(Host* pHost)
         pHost->setAccessibleLabels(attributes().value(qsl("accessibleLabels")) == YES);
     }
     setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
+    // Applied once the rest of the host is read, through the setter: turning it off commits what Markdown holds, and
+    // a package's host section is read into a live profile
+    std::optional<bool> enableMarkdown;
+    if (attributes().hasAttribute(qsl("enableMarkdown"))) {
+        enableMarkdown = attributes().value(qsl("enableMarkdown")) == YES;
+    }
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
     setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
@@ -1333,6 +1340,9 @@ void XMLimport::readHost(Host* pHost)
         model.setWrapAt(pHost->mWrapAt);
         model.setIndentCount(pHost->mWrapIndentCount);
         model.setHangingIndentCount(pHost->mWrapHangingIndentCount);
+    }
+    if (enableMarkdown) {
+        pHost->setEnableMarkdown(*enableMarkdown);
     }
 }
 

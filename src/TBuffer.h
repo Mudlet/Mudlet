@@ -61,6 +61,10 @@ class QTextCodec;
 class QTimer;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
+class TMarkdown;
+struct TMarkdownBlock;
+struct TMarkdownLine;
+struct TMarkdownLink;
 class TIngestPipeline;
 struct TIngestJob;
 struct TSpeculatedLine;
@@ -132,6 +136,8 @@ public:
         // From SGR 8 m; however there is no MUD standard protocol to control
         // when we should show concealed text.
         Concealed = 0x20000,          // 0000 0000 0000 0010 0000 0000 0000 0000
+        // A Markdown code span
+        Code = 0x40000,               // 0000 0000 0000 0100 0000 0000 0000 0000
         // Mask for "is flashing" at any rate - will return a logical true
         // should either of the above be set - should both be set then FastBlink
         // should take preference over Blink:
@@ -139,7 +145,7 @@ public:
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x1c3ffff,         // 0000 0001 1100 0011 1111 1111 1111 1111 (includes extended underline styles)
+        TestMask = 0x1c7ffff,         // 0000 0001 1100 0111 1111 1111 1111 1111 (includes extended underline styles and Code)
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -257,6 +263,7 @@ public:
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
+    bool isCode() const { return mFlags & Code; }
     bool isBoldAsked() const { return mFlags & BoldAsked; }
     bool isFound() const { return mFlags & Found; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
@@ -336,6 +343,8 @@ public:
             return qsl("AltFont9");
         case Concealed:
             return qsl("Concealed");
+        case Code:
+            return qsl("Code");
         case UnderlineWavy:
             return qsl("UnderlineWavy");
         case UnderlineDotted:
@@ -699,6 +708,14 @@ public:
     // - public so that the connection teardown and Host's flush timer can
     // flush it:
     void flushPendingServerWrapJoin(const bool endsHyperlink = true);
+    // Commits a table's rows held for its column widths
+    void flushMarkdownHeldLines();
+    // The tag of the paragraph the line belongs to, or null
+    const TMarkdownBlock* markdownBlock(int lineNumber) const;
+    const TMarkdown* markdown() const { return mpMarkdown.get(); }
+    QString markdownParagraphText(int lineNumber) const;
+    void endMarkdown();
+    QString spokenLine(int lineNumber) const;
     bool holdsServerWrapLine() const { return !mServerWrapPendingLine.isEmpty(); }
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
@@ -775,6 +792,8 @@ public:
     // many spaces the break dropped between the two - a copy puts them back;
     // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
+    // An id of the line's Markdown tag, 0 for a line that has none or that column wrapping split off
+    QList<quint32> markdownBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
     int mBatchDeleteSize = 1000;
@@ -869,14 +888,33 @@ private:
     void decodeSGR38(const SgrParameters&, bool isColonSeparated = true);
     void decodeSGR48(const SgrParameters&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
+    bool hyperlinkActionsForUri(const QString& rawUrl, QStringList& command, QStringList& hint, bool* hasCustomTooltip = nullptr);
     void finaliseActiveHyperlink();
     void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
     void carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format);
     void maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length);
+    void maskSpoilerText(const int linkId, QString& line, const std::vector<TChar>& format, const int column, const int length);
     void forgetSpoilerTextOnTheLines(const QSet<int>& linkIds);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
-    void commitLineData(QString line, TLineFormat chars, char ch);
+    void commitLineData(QString line, TLineFormat chars, char ch, quint32 markdownBlockId = 0);
+    bool markdownApplies() const;
+    bool markdownLineUnderWay() const;
+    void retireMarkdownRows(int from, int to);
+    void endOpenMarkdownMessage();
+    int markdownHeadIndent(int head) const;
+    void editMarkdownRanges(TMarkdownBlock& block, int cutFrom, int cutTo, int delta);
+    void applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& format, int id, int column, int length, const Mudlet::HyperlinkStyling& styling, bool onOneLine);
+    void applyWaitingLinkLooks(QString& text, const TLineFormat& chars);
+    int markdownHandOnDelta(int head, int next) const;
+    void decodeMarkdownOSC(QStringView sequence);
+    bool commitMarkdownLine(QString& line, TLineFormat& chars, char ch);
+    void commitMarkdownLines(QList<TMarkdownLine>&& lines);
+    int addMarkdownLink(const TMarkdownLink& link, Mudlet::HyperlinkStyling& styling);
+    int markdownRowOffset(int head, int row) const;
+    void rebaseMarkdownBlock(quint32 id, int delta);
+    void markdownLineEdited(int y, int x, int removed, int inserted);
+    void linkMarkdownLine(TMarkdownLine& line);
     qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
@@ -971,6 +1009,31 @@ private:
     QColor mBackGroundColor;
 
     QPointer<Host> mpHost;
+    // Made on the first OSC 67 the main console's buffer reads
+    std::unique_ptr<TMarkdown> mpMarkdown;
+    // What each OSC 8 or Markdown link was sent as, for the Markdown tag of the line it is on
+    QHash<int, QString> mHyperlinkUris;
+    // The open OSC 8 link reached a Markdown line, so it carries on until its own sequence ends it
+    bool mHyperlinkEnteredMarkdown = false;
+    // An OSC 8 link's spoiler or visibility on a Markdown line, applied once the line is rendered, and whether the link
+    // began on that line
+    QHash<int, std::pair<Mudlet::HyperlinkStyling, bool>> mMarkdownLinkLooks;
+    // Links whose visibility was registered for the line being committed, their length, and whether they start hidden
+    struct PlacedLink
+    {
+        int id = 0;
+        int length = 0;
+        bool concealed = false;
+        int column = 0;
+        QString text;
+        bool hiddenEarly = false;
+    };
+    void showMarkdownLinkText(int head, const PlacedLink& link);
+    void hideLinksKeptWhole(QString& text, QList<PlacedLink>& links);
+    void placeMarkdownLinks(const QList<PlacedLink>& links);
+    QList<PlacedLink> mMarkdownLinksToPlace;
+    // What translateToPlainText() is reading came from the game
+    bool mParsingServerText = false;
 
     bool mBold = false;
     // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour
