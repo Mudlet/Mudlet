@@ -100,7 +100,7 @@ jobs:
         with:
           ref: development
           submodules: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 'recursive' || false }}
-          fetch-depth: ${{ (matrix.type == 'submodule' || matrix.type == 'submodule-branch') && 0 || 1 }}
+          fetch-depth: 1
 
       - name: Download file
         if: matrix.type == 'download'

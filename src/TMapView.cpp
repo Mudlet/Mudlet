@@ -39,6 +39,8 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
+
 TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
 : QWidget(parent)
 , mViewId(viewId)
@@ -59,6 +61,7 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
 
     if (mpHost) {
         mp2dMap->init();
+        followMapperSettings();
     }
 
     connect(mpMap, &TMap::signal_areaChanged, this, [this](int areaId) {
@@ -81,6 +84,8 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
     connect(mpMap, &TMap::signal_mapRepaintRequested, this, repaint3DView);
     connect(mpMap, &TMap::signal_mapperSettingChanged, this, repaint3DView);
 #endif
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, &TMapView::followMapperSettings);
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, &TMapView::followMapperSettings);
     connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();
@@ -104,6 +109,29 @@ void TMapView::keyPressEvent(QKeyEvent* event)
     if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
         QWidget::keyPressEvent(event);
     }
+}
+
+// The mapper settings live on the Host, and a change to one may come with either
+// requestMapRepaint() or announceMapperSettingChanged(), so both lead here
+void TMapView::followMapperSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+    mp2dMap->mShowRoomID = mpHost->mShowRoomID;
+    mp2dMap->mBubbleMode = mpHost->mBubbleMode;
+    mp2dMap->mShowGrid = mpHost->mMapperShowGrid;
+    if (mp2dMap->rSize != mpHost->mRoomSize) {
+        // Symbol and label pixmaps are cached at the room size they were drawn for
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->flushTextLabelPixmapCache();
+        mp2dMap->rSize = mpHost->mRoomSize;
+    }
+    mp2dMap->eSize = mpHost->mLineSize;
+    mp2dMap->mBSize = mpHost->mRoomBorderSize;
+    mp2dMap->mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    mp2dMap->mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    mp2dMap->update();
 }
 
 void TMapView::setupUi()
@@ -208,19 +236,20 @@ void TMapView::updateAreaComboBox()
 
     const auto& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
 
-    QMap<QString, QString> areaNames;
+    QStringList areaNames;
     for (const auto& [areaId, areaName] : areaNamesMap.asKeyValueRange()) {
         if (areaId == -1 && !mpMap->getDefaultAreaShown()) {
             continue;
         }
-        areaNames.insert(areaName.toLower(), areaName);
+        areaNames.append(areaName);
     }
+    // Names may differ only in case; stable, so those keep area-id order, as TNullSecondaryMapView mirrors
+    std::stable_sort(areaNames.begin(), areaNames.end(), [](const QString& a, const QString& b) {
+        return a.compare(b, Qt::CaseInsensitive) < 0;
+    });
 
     mpAreaComboBox->clear();
-    for (const auto& [sortKey, areaName] : areaNames.asKeyValueRange()) {
-        Q_UNUSED(sortKey)
-        mpAreaComboBox->addItem(areaName);
-    }
+    mpAreaComboBox->addItems(areaNames);
 
     // Re-select whichever entry names the area this view is actually
     // showing - not whatever text used to be selected, which goes stale
