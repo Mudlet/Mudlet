@@ -577,6 +577,12 @@ What it guarantees about hidden input is narrow:
   `hiddenInputWanted` false; text set then is taken, and scripts can read it, as they can read the
   GUI's command line then.
 
+`playReplay()` is the GUI's replay button: it plays the replay file at a whole path in the session's
+profile as the player's replay, not a script's, so `localText` says it is loading and when it is over as
+the main console does, and `replayStarted` follows from the event loop. It is false, with the reason in
+`errorString()`, while a replay plays in any profile, for a file that cannot be read or is not a replay,
+and where `pauseReplay()` is refused for anything but a replay playing.
+
 `pauseReplay()`, `resumeReplay()` and `stopReplay()` are the GUI's replay toolbar for a replay of the
 session's profile. A paused replay plays nothing more until it is resumed, and then carries on with what
 was left of the wait it was paused in. `replayPaused()` says whether it is held, as the toolbar reads it;

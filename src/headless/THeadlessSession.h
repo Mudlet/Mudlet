@@ -423,6 +423,11 @@ public:
     // returns. False as setWindowCommandLineText() is, and when the profile begins to close part-way; a line a
     // script deletes part-way takes no more commands.
     bool submitWindowCommandLine(const QString& commandLine, const QString& line);
+    // The GUI's replay button: plays the replay file at that whole path in the session's profile, saying so in
+    // localText as the GUI says it in the main console, with replayStarted following from the event loop. False,
+    // with errorString() saying why, if a replay plays already in any profile, if the file cannot be read or is
+    // not a replay, and where pauseReplay() is refused but for a replay playing.
+    bool playReplay(const QString& path);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
     // as the toolbar's Stop does, saying so in localText. False with no replay of this profile playing, though one

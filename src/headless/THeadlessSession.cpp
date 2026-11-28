@@ -1907,6 +1907,37 @@ bool replayPlaysIn(Host* pHost, QString& errorString)
 
 } // namespace
 
+bool THeadlessSession::playReplay(const QString& path)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (mpHost->busyRunning()) {
+        //: Error from a frontend with no window that was asked to play a replay while a script of its profile is running
+        mErrorString = tr("The profile is running a script, so a replay cannot start until that has ended.");
+        return false;
+    }
+    MudletReplay* pReplay = MudletReplay::self();
+    if (!pReplay || pReplay->running()) {
+        //: Error from a frontend with no window that was asked to play a replay while one plays, in this profile or another
+        mErrorString = tr("A replay is playing already; stop it or wait until it has finished.");
+        return false;
+    }
+    // Read here for the reason, as load() without an error string gives it only to the main console
+    if (QFile file(path); !file.open(QIODevice::ReadOnly)) {
+        //: Error from a frontend with no window that was asked to play a replay file it cannot read; %1 is the file's path, %2 the system's reason
+        mErrorString = tr("The replay file \"%1\" cannot be read: %2").arg(path, file.errorString());
+        return false;
+    }
+    // No error string, as the GUI's replay button calls it, so the replay plays as the player's and not a script's
+    if (!pReplay->load(mpHost, path)) {
+        //: Error from a frontend with no window that was asked to play a file that is not a replay Mudlet can read; %1 is the file's path
+        mErrorString = tr("The file \"%1\" is not a replay that can be played.").arg(path);
+        return false;
+    }
+    return true;
+}
+
 bool THeadlessSession::pauseReplay()
 {
     if (!usable() || !replayPlaysIn(mpHost, mErrorString)) {
