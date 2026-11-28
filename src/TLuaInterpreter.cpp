@@ -10312,6 +10312,18 @@ static QColor hexColorKeepingAlpha(const QString& name, const QColor& replaced)
     return color;
 }
 
+// As getServerEncoding() gives it: never empty, and without the "M_" of Mudlet's own codecs
+static QByteArray scriptVisibleEncoding(const cTelnet& telnet)
+{
+    QByteArray encoding = telnet.getEncoding();
+    if (encoding.isEmpty()) {
+        encoding = "ASCII";
+    } else if (encoding.startsWith("M_")) {
+        encoding.remove(0, 2);
+    }
+    return encoding;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The table argument case for setting multiple properties at once is handled
@@ -10669,7 +10681,12 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("serverEncoding")) {
-        const QPair<bool, QString> result = host.mTelnet.setEncoding(getVerifiedString(L, __func__, 2, "value").toUtf8());
+        const QByteArray encoding = getVerifiedString(L, __func__, 2, "value").toUtf8();
+        // setEncoding() tells the game the charset even when it is unchanged, which a setConfig(getConfig()) restore must not
+        if (encoding == scriptVisibleEncoding(host.mTelnet)) {
+            return success();
+        }
+        const QPair<bool, QString> result = host.mTelnet.setEncoding(encoding);
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second);
         }
@@ -11392,14 +11409,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("serverEncoding"),
              [&]() {
-                 // as getServerEncoding() gives it: never empty, and without the "M_" of Mudlet's own codecs
-                 QByteArray encoding = host.mTelnet.getEncoding();
-                 if (encoding.isEmpty()) {
-                     encoding = "ASCII";
-                 } else if (encoding.startsWith("M_")) {
-                     encoding.remove(0, 2);
-                 }
-                 lua_pushstring(L, encoding.constData());
+                 lua_pushstring(L, scriptVisibleEncoding(host.mTelnet).constData());
              }},
             {qsl("promptForMXPProcessorOn"),
              [&]() {
