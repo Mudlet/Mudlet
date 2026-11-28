@@ -81,6 +81,7 @@ class THyperlinkVisibilityManager : public QObject
 public:
     // The line number of a link kept across a clear whose line the game has not ended yet
     static constexpr int csmLineStillToCome = -1;
+    static constexpr int csmNotTracked = -2;
 
     explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
@@ -104,6 +105,10 @@ public:
     QList<TrackedHyperlink> takeLinks(const QSet<int>& linkIds);
     void trackAwaitingTheirLine(const QList<TrackedHyperlink>& links);
     void anchorLinksAwaitingTheirLine(int lineNumber);
+    // The row a tracked link is on, or csmNotTracked
+    int lineOf(int linkId) const;
+    // Puts a tracked link where its characters are, after the line it is on was committed and wrapped
+    void moveLink(int linkId, int lineNumber, int startColumn);
 
 signals:
     void visibilityChanged();

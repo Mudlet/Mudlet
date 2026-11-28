@@ -35,6 +35,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "THyperlinkSelectionManager.h"
 #include "TIngestPipeline.h"
+#include "TMarkdown.h"
 #include "TPrintSink.h"
 #include "TStringUtils.h"
 #include "UntrustedText.h"
@@ -930,6 +931,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , timeBuffer(other.timeBuffer)
 , promptBuffer(other.promptBuffer)
 , wrapGapBuffer(other.wrapGapBuffer)
+, markdownBuffer(other.markdownBuffer.size(), 0)
 , mLinkStore(other.mLinkStore)
 , mLinesLimit(other.mLinesLimit)
 , mBatchDeleteSize(other.mBatchDeleteSize)
@@ -1041,6 +1043,9 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         timeBuffer = other.timeBuffer;
         promptBuffer = other.promptBuffer;
         wrapGapBuffer = other.wrapGapBuffer;
+        // A copy holds text only: its tags would name blocks in the source's store
+        markdownBuffer = QList<quint32>(other.markdownBuffer.size(), 0);
+        mpMarkdown.reset();
         mLinkStore = other.mLinkStore;
         mLinesLimit = other.mLinesLimit;
         mBatchDeleteSize = other.mBatchDeleteSize;
@@ -1320,6 +1325,8 @@ void TBuffer::dropStateOfRemovedLinks()
         mLinkLooks.remove(id);
         mLinkOriginalText.remove(id);
         mPendingSelectionStyling.remove(id);
+        mHyperlinkUris.remove(id);
+        mMarkdownLinkLooks.remove(id);
         for (int* index : {&mCurrentHoveredLinkIndex, &mCurrentActiveLinkIndex, &mCurrentFocusedLinkIndex, &mLastClickedLinkIndex}) {
             if (*index == id) {
                 *index = 0;
@@ -1460,6 +1467,18 @@ void TBuffer::resetSequenceParserState()
     mLocalIncompleteSequenceBytes.clear();
     mLocalPendingLead = 0;
     mWarnedAboutStringSequence = false;
+    // Markdown is off when a connection opens, and the last one's ids name nothing on this one
+    if (mpMarkdown) {
+        mpMarkdown->mOn = false;
+        mpMarkdown->mLineInMarkdown = false;
+        mpMarkdown->mMessages.forgetIds();
+        endOpenMarkdownMessage();
+        // A link Markdown carried past its line ends with its connection, as one on any other line ends with its line
+        if (mHyperlinkActive && mHyperlinkEnteredMarkdown) {
+            finaliseActiveHyperlink();
+        }
+        mMarkdownLinkLooks.clear();
+    }
 }
 
 void TBuffer::warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd)
@@ -1633,6 +1652,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     // not cleared, on exit: a nested feed re-enters here while the outer chunk is still being decoded.
     const int previousPendingLines = mPendingChunkLines;
     mPendingChunkLines = static_cast<int>(std::count(incoming.cbegin(), incoming.cend(), '\n'));
+    // Only the game turns Markdown on or off: text a script feeds is never Markdown and leaves the game's alone
+    const bool wasParsingServerText = std::exchange(mParsingServerText, isFromServer);
+    const auto serverTextGuard = qScopeGuard([this, wasParsingServerText] {
+        mParsingServerText = wasParsingServerText;
+    });
     const auto pendingLinesGuard = qScopeGuard([this, previousPendingLines] {
         mPendingChunkLines = previousPendingLines;
     });
@@ -1738,7 +1762,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 // Forced inline: parseChunk() is past the size where the compiler inlines into it on its own
 Q_ALWAYS_INLINE bool TBuffer::mxpProcessorEnabled() const
 {
-    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled();
+    // MXP follows the Markdown state at the line's first character, so <details> is never a tag
+    return !mpParseConfig && mpHost->mMxpProcessor.isEnabled() && !markdownLineUnderWay();
 }
 
 Q_ALWAYS_INLINE bool TBuffer::mxpClientBold() const
@@ -2659,6 +2684,9 @@ bool TBuffer::speculationEligible() const
         return false;
     }
     const TMxpMudlet& mxpClient = mpHost->mMxpClient;
+    if (mpMarkdown && mpHost->mEnableMarkdown && (mpMarkdown->mOn || mpMarkdown->mLineInMarkdown || mpMarkdown->mOpenMessage)) {
+        return false;
+    }
     return !mGotOSC && !mHyperlinkActive && !mpHost->mMxpProcessor.isEnabled() && !mxpClient.isInLinkMode() && !mxpClient.hasFgColor() && !mxpClient.hasBgColor();
 }
 
@@ -2880,7 +2908,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         }
     }
 
-    if (mpHost->mUndoServerWrap && isFromServer && ch == '\n' && !forcedLineBreak && !mMudLine.isEmpty()) {
+    // A Markdown line is a whole line as the game sent it, so it is never held to be joined
+    const bool markdownLine = markdownLineUnderWay();
+    if (mpHost->mUndoServerWrap && isFromServer && ch == '\n' && !forcedLineBreak && !mMudLine.isEmpty() && !markdownLine) {
         // The game wraps its own output and this is a genuine newline from
         // it: a segment that runs right up to the game's wrap column is
         // probably not a whole line, so hold it back and join its
@@ -2938,10 +2968,20 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     // Nor before the link has any text: one opened just before a line break is
     // for the line after it.
     if (mHyperlinkActive) {
-        if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty()) {
+        // The Markdown standard carries an open OSC 8 link across lines, as color is, and past its message's end
+        mHyperlinkEnteredMarkdown = mHyperlinkEnteredMarkdown || markdownLine;
+        if (endsStringSequence(ch) && !mCurrentHyperlinkText.isEmpty() && !mHyperlinkEnteredMarkdown) {
             finaliseActiveHyperlink();
+        } else if (markdownLine && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+            // Masked once Markdown has taken its markers and spaces out of the line, which would take masked text with them
+            mMarkdownLinkLooks.insert(mCurrentHyperlinkLinkId, {mCurrentHyperlinkStyling, false});
+            mCurrentHyperlinkStartColumn = 0;
         } else {
             carryActiveHyperlinkPastFlush(mMudLine, mMudBuffer);
+        }
+        // Only whether a carried link has text yet is read, and one carried from line to line would gather all of it
+        if (mHyperlinkActive && mHyperlinkEnteredMarkdown && mCurrentHyperlinkText.size() > 1) {
+            mCurrentHyperlinkText.truncate(1);
         }
     }
 
@@ -2962,12 +3002,27 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
     if (mMudBuffer.capacity() > csmMaxRetainedLineCapacity) {
         TLineFormat().swap(mMudBuffer);
     }
+    if (Q_UNLIKELY(mpMarkdown) && isFromServer && commitMarkdownLine(line, chars, ch)) {
+        ++localBufferPosition;
+        return true;
+    }
+    // A prompt, or a line Markdown was turned off under, is committed as sent: links whose looks waited for the line to
+    // be read as Markdown take them here
+    QList<PlacedLink> placements;
+    if (Q_UNLIKELY(!mMarkdownLinkLooks.isEmpty())) {
+        applyWaitingLinkLooks(line, chars);
+        placements = std::exchange(mMarkdownLinksToPlace, {});
+        hideLinksKeptWhole(line, placements);
+    }
     commitLineData(std::move(line), std::move(chars), ch);
+    if (Q_UNLIKELY(!placements.isEmpty())) {
+        placeMarkdownLinks(std::move(placements));
+    }
     ++localBufferPosition;
     return true;
 }
 
-void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
+void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch, const quint32 markdownBlockId)
 {
     // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
     // blank-line setting below can turn it into a line of one space
@@ -3009,6 +3064,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
             promptBuffer.append(false);
         }
         wrapGapBuffer.append(0);
+        markdownBuffer.append(markdownBlockId);
     } else {
         if (!line.isEmpty()) {
             // The last line is empty, so this is the whole of it
@@ -3030,6 +3086,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         } else {
             promptBuffer.back() = false;
         }
+        markdownBuffer.back() = markdownBlockId;
     }
     // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
@@ -3191,6 +3248,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         timeBuffer.push_back(csmNoTimeStamp);
         promptBuffer << false;
         wrapGapBuffer.append(0);
+        markdownBuffer.append(0);
     }
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -5043,6 +5101,12 @@ void TBuffer::decodeOSC(const QString& sequence)
         return;
     }
 
+    // The whole number decides, as 66 and 68 are other standards' and 6 is xterm's
+    if (sequence.startsWith(qsl("67;")) || sequence == qsl("67")) {
+        decodeMarkdownOSC(QStringView(sequence).mid(2));
+        return;
+    }
+
     const bool serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
 #if defined(DEBUG_OSC_PROCESSING)
     // Only log sequences that aren't just OSC 8 terminators to reduce noise
@@ -5259,235 +5323,19 @@ void TBuffer::decodeOSC(const QString& sequence)
                 return;
             }
 
-            // Parse query parameters for enhanced functionality
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
-#endif
-            // Reset styling to defaults before parsing
-            mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
-            mCurrentHyperlinkMenu.clear();
-            QMap<QString, QString> queryParams;
-            parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
-
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
-#endif
-
-            // Extract custom tooltip parameter
-            QString customTooltip;
-
-            if (queryParams.contains(qsl("tooltip"))) {
-                customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
-            }
-
-            // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
-
-            QString baseUrl = rawUrl;
-
-            if (systemMayOpenUrl(QUrl(rawUrl))) {
-                int queryStart = baseUrl.indexOf('?');
-                if (queryStart != -1) {
-                    // Strip reserved parameters when corresponding OSC 8 features are enabled
-                    // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
-                    const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
-                    const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
-
-                    // Mudlet only removes what the style parser claims, which leaves two kinds of
-                    // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
-                    // for "config"), since keys are compared as literal strings, and one with no
-                    // '=' at all, since the split gives that no key and the style parser passes
-                    // over it. Both are the server's own URL data.
-                    QStringList kept;
-                    for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
-                        if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
-                            continue;
-                        }
-                        kept.append(parameter.text);
-                    }
-
-                    baseUrl = baseUrl.left(queryStart);
-                    if (!kept.isEmpty()) {
-                        baseUrl += '?' + kept.join('&');
-                    }
-                }
-            } else {
-                // On a scheme the system does not open the whole query is Mudlet's, so a '?' in a gmcp: message has to be percent-encoded
-                int queryStart = baseUrl.indexOf('?');
-                if (queryStart != -1) {
-                    baseUrl = baseUrl.left(queryStart);
-                }
-            }
-
             QStringList command;
             QStringList hint;
-
-            if (baseUrl.startsWith(qsl("send:"))) {
-                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
-                mCurrentHyperlinkStyling.baseCommand = innerCommand;
-                command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
-                hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
-            } else if (baseUrl.startsWith(qsl("prompt:"))) {
-                QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
-                mCurrentHyperlinkStyling.baseCommand = innerCommand;
-                command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
-                hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
-            } else if (baseUrl.startsWith(qsl("gmcp:"))) {
-                QString whyNot;
-                const auto gmcpLink = parseGmcpLinkUri(baseUrl, &whyNot);
-                // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
-                if (gmcpLink && mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection()) {
-                    whyNot = qsl("a selection link's data has to be a JSON object");
-                }
-                if (!whyNot.isEmpty()) {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link, as " << whyNot << ": \"" << baseUrl << "\"";
-                    return;
-                }
-                const QString message = gmcpLink->message();
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionGmcp;
-                mCurrentHyperlinkStyling.baseCommand = message;
-                command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
-                //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
-                hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
-            } else if (baseUrl.startsWith(qsl("local:"))) {
-                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionLocal;
-                command = {QString()};
-                hint = {QString()};
-            } else {
-                QUrl qurl(baseUrl);
-                QString scheme = qurl.scheme().toLower();
-
-                if (systemMayOpenUrl(qurl)) {
-                    baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
-                    if (baseUrl.isEmpty()) {
-                        qWarning().noquote() << "TBuffer::decodeOSC(...) - Ignored a mailto link with a field hidden in a recipient";
-                        return;
-                    }
-                    mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
-                    mCurrentHyperlinkStyling.baseCommand = baseUrl;
-                    command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    QString action = QObject::tr("Open browser to");
-                    if (scheme == qsl("mailto")) {
-                        //: Start of the tooltip on a game's link that opens the mail app, followed by a colon and the link's mailto: address
-                        action = QObject::tr("Write an email to");
-                    }
-                    hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
-                } else if ((scheme == qsl("telnet") || scheme == qsl("telnets")) && parseTelnetUri(baseUrl)) {
-                    command = {qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(baseUrl))};
-                    //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
-                    hint = {qsl("%1: %2").arg(QObject::tr("Connect to"), UntrustedText::forTarget(baseUrl))};
-                } else {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
-                    return;
-                }
-            }
-
-            // Add standalone tooltip support (for links without menus)
-            if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
-                // Replace the default hint with the custom tooltip
-                hint = {customTooltip};
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
-#endif
-            }
-
-            // Handle menu functionality by extending commands and hints
-            if (!mCurrentHyperlinkMenu.isEmpty()) {
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
-#endif
-                QStringList menuCommands;
-                QStringList menuHints;
-
-                // Add menu items in pairs (label, command)
-                // The first menu item becomes the link's own action (index 0), except on a local: link, where activating it opens the menu
-                // All items (including first) appear in the menu (index 1+)
-                for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
-                    QString menuLabel = mCurrentHyperlinkMenu[i];
-                    QString menuCommand = mCurrentHyperlinkMenu[i + 1];
-
-                    // Determine command type based on prefix
-                    if (menuCommand.startsWith(qsl("send:"))) {
-                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
-                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (menuCommand.startsWith(qsl("prompt:"))) {
-                        QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
-                        menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
-                        // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
-                        // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
-                        QString whyNot;
-                        const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")), &whyNot);
-                        if (!gmcpItem) {
-                            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item, as " << whyNot << ": \"" << menuCommand << "\"";
-                        }
-                        menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
-                        // An item is an action, and this has none: it is left out rather than typed at the game
-                        continue;
-                    } else if (menuCommand == qsl("-")) {
-                        // Special case: "-" creates a menu separator
-                        menuCommands.append(QString());
-                        menuHints.append(QString());
-                    } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
-                        menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
-                        // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
-                        menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    } else {
-                        // Treat as direct command
-                        menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
-                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
-                    }
-                }
-
-                // Set the tooltip for the link (what shows on hover)
-                // Use custom tooltip if provided, otherwise say how to open the menu
-                QString linkTooltip;
-                if (!customTooltip.isEmpty()) {
-                    // Custom tooltip explicitly provided
-                    linkTooltip = customTooltip;
-                } else {
-                    // Default tooltip for menu links
-                    linkTooltip = QObject::tr("Right-click for menu");
-                    if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
-                        //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
-                        linkTooltip = QObject::tr("Click for menu");
-                    }
-                }
-
-                // For menus, we need tooltip as first hint, then menu labels
-                // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
-                QStringList finalHints;
-                finalHints.append(linkTooltip); // First: tooltip for hover
-                finalHints.append(menuHints);   // Rest: the menu's item labels
-
-                // Every item may have been left out or be a separator; then the link has no menu and keeps its own action and tooltip
-                bool hasMenuItem = false;
-                for (int i = 0; i < menuCommands.size(); ++i) {
-                    hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
-                }
-                if (hasMenuItem) {
-                    command = menuCommands;
-                    hint = finalHints;
-                } else if (!customTooltip.isEmpty()) {
-                    hint = {customTooltip};
-                }
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug() << "[OSC] Final menu commands:" << command;
-                qDebug() << "[OSC] Final menu hints:" << hint;
-#endif
+            if (!hyperlinkActionsForUri(rawUrl, command, hint)) {
+                return;
             }
 
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
             mCurrentHyperlinkLinkId = addLinkToStore(command, hint);
+            // An id handed out again must not take the looks a link that had it left waiting
+            mMarkdownLinkLooks.remove(mCurrentHyperlinkLinkId);
+            // Kept before Markdown's first on sequence too, which can come while this link is open
+            mHyperlinkUris.insert(mCurrentHyperlinkLinkId, rawUrl);
 
             // Store the styling for this link so it can be retrieved later
             mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
@@ -6610,6 +6458,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             ++runStart;
         }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            markdownLineEdited(static_cast<int>(lineBuffer.size()) - 1, static_cast<int>(lineBuffer.back().size()), 0, static_cast<int>(runLength));
             lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
             std::vector<TChar>& chars = buffer.back().expand();
             const size_t first = chars.size();
@@ -6748,6 +6597,7 @@ void TBuffer::appendLine(
             ++runStart;
         }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            markdownLineEdited(static_cast<int>(lineBuffer.size()) - 1, static_cast<int>(lineBuffer.back().size()), 0, static_cast<int>(runLength));
             lineBuffer.back().append(chunk.sliced(runStart, runLength));
             buffer.back().append(static_cast<std::size_t>(runLength), styling);
             if (firstChar) {
@@ -6775,6 +6625,7 @@ void TBuffer::appendEmptyLine()
     timeBuffer << lineArrivalTime();
     promptBuffer << false;
     wrapGapBuffer.append(0);
+    markdownBuffer.append(0);
 }
 
 // This was called "insert" but that is commonly used for built in methods and
@@ -6795,6 +6646,10 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             return false;
         }
         materialisePreTriggerPassLine(y);
+        // Before the text changes, as the indent wrapping put in front of the row is counted from it; an insert past
+        // the row's end puts the spaces that reach it in too
+        const int rowEnd = static_cast<int>(buffer.at(y).size());
+        markdownLineEdited(y, std::min(x, rowEnd), 0, std::max(0, x - rowEnd) + static_cast<int>(insertedText.size()));
         if (x >= static_cast<int>(buffer.at(y).size())) {
             TChar c = currentFormat();
             expandLine(y, x - buffer.at(y).size(), c);
@@ -7359,9 +7214,28 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         qint64 time;
         quint16 wrapGap;
         bool prompt;
+        quint32 markdown;
     };
     // Most calls rewrap a single incoming line into a few, which fit in this array's own inline storage
     QVarLengthArray<RewrappedLine, 8> rewrapped;
+    // A line feed a script put into a Markdown line makes lines of it that the paragraph's offsets no longer fit
+    const auto dropSplitMarkdownTag = [this, &rewrapped](const int sourceLine) {
+        int head = sourceLine;
+        while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+            --head;
+        }
+        const quint32 id = markdownBuffer.at(head);
+        if (!id) {
+            return;
+        }
+        mpMarkdown->forget(id);
+        markdownBuffer[head] = 0;
+        for (RewrappedLine& line : rewrapped) {
+            if (line.markdown == id) {
+                line.markdown = 0;
+            }
+        }
+    };
     const bool movesHeld = mpModel && mpModel->holdsForLineShown();
     QList<TConsoleModel::RewrappedSpan> heldSpans;
     const auto keepWholeForHeld = [movesHeld, &heldSpans, &rewrapped, firstRewrappedLine](const int sourceLine) {
@@ -7384,7 +7258,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // trivial case
         if (buffer[i].empty()) {
             keepWholeForHeld(i);
-            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false});
+            rewrapped.append({std::move(newBufferLine), newLineText, time, wrapGapBuffer.at(i), false, markdownBuffer.at(i)});
             continue;
         }
 
@@ -7405,7 +7279,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
         if (lineBreaks.isEmpty()) {
             keepWholeForHeld(i);
-            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt});
+            rewrapped.append({std::move(buffer[i]), lineText, time, wrapGapBuffer.at(i), isPrompt, markdownBuffer.at(i)});
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
@@ -7465,7 +7339,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (movesHeld) {
                 heldSpans.append({i, w.firstChar, w.lastChar, firstRewrappedLine + static_cast<int>(rewrapped.size()), addsIndent ? (w.isNewline ? indent : hangingIndent) : 0});
             }
-            rewrapped.append({std::move(newBufferLine), std::move(newLineText), segmentTime, static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())), isPrompt});
+            if (w.isNewline && previousSegmentEnd >= 0) {
+                dropSplitMarkdownTag(i);
+            }
+            rewrapped.append({std::move(newBufferLine),
+                              std::move(newLineText),
+                              segmentTime,
+                              static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())),
+                              isPrompt,
+                              previousSegmentEnd < 0 ? markdownBuffer.at(i) : 0});
             previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
@@ -7478,6 +7360,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         timeBuffer.pop_back();
         promptBuffer.pop_back();
         wrapGapBuffer.pop_back();
+        markdownBuffer.pop_back();
     }
 
     const int rewrappedLines = static_cast<int>(rewrapped.size());
@@ -7490,12 +7373,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
                 timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
                 wrapGapBuffer.back() = line.wrapGap;
             }
+            markdownBuffer.back() = line.markdown;
         } else {
             buffer.push_back(std::move(line.chars));
             lineBuffer.append(std::move(line.text));
             timeBuffer.append(line.time);
             promptBuffer.push_back(line.prompt);
             wrapGapBuffer.append(line.wrapGap);
+            markdownBuffer.append(line.markdown);
         }
     }
 
@@ -7663,6 +7548,8 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         noteRemovedLinks(buffer[y], mLinesRemovedTotal + y, x, x_end);
         forgetLooksOfRemovedCharacters(y, x, x_end);
         materialisePreTriggerPassLine(y);
+        // Before the text changes, as the indent wrapping put in front of the row is counted from it
+        markdownLineEdited(y, x, x_end - x, 0);
         lineBuffer[y].remove(x, x_end - x);
         buffer[y].erase(x, x_end);
         spliceEraseFromPreTriggerPassLine(y, x, x_end);
@@ -7671,6 +7558,240 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
 
     // insert replacement
     insertInLine(P_begin, with, format);
+    return true;
+}
+
+// What an OSC 8 link to rawUrl does and the tooltip it shows, with its style in mCurrentHyperlinkStyling and its menu in
+// mCurrentHyperlinkMenu; false when Mudlet refuses the link
+bool TBuffer::hyperlinkActionsForUri(const QString& rawUrl, QStringList& command, QStringList& hint, bool* hasCustomTooltip)
+{
+    // Parse query parameters for enhanced functionality
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Raw URL for parameter parsing:" << rawUrl;
+#endif
+    // Reset styling to defaults before parsing
+    mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
+    mCurrentHyperlinkMenu.clear();
+    QMap<QString, QString> queryParams;
+    parseUriQueryParameters(rawUrl, mCurrentHyperlinkStyling, queryParams);
+
+#if defined(DEBUG_OSC_PROCESSING)
+    qDebug() << "[OSC] Styling parsed directly from JSON (isUnderlined=" << mCurrentHyperlinkStyling.isUnderlined << ")";
+#endif
+
+    // Extract custom tooltip parameter
+    QString customTooltip;
+
+    if (queryParams.contains(qsl("tooltip"))) {
+        customTooltip = UntrustedText::forAuthoredText(queryParams.value(qsl("tooltip")));
+    }
+
+    // Note: title is now parsed directly into mCurrentHyperlinkStyling by parseJsonHyperlinkConfig
+
+    QString baseUrl = rawUrl;
+
+    if (systemMayOpenUrl(QUrl(rawUrl))) {
+        int queryStart = baseUrl.indexOf('?');
+        if (queryStart != -1) {
+            // Strip reserved parameters when corresponding OSC 8 features are enabled
+            // (currently always true; will reflect NEW-ENVIRON negotiation once fully implemented)
+            const bool stripConfig = mpHost->shouldStripOscHyperlinkConfigParam();
+            const bool stripPreset = mpHost->shouldStripOscHyperlinkPresetParam();
+
+            // Mudlet only removes what the style parser claims, which leaves two kinds of
+            // parameter in place: one whose name is percent-encoded (%63%6F%6E%66%69%67
+            // for "config"), since keys are compared as literal strings, and one with no
+            // '=' at all, since the split gives that no key and the style parser passes
+            // over it. Both are the server's own URL data.
+            QStringList kept;
+            for (const auto& parameter : splitOscQueryParameters(baseUrl.mid(queryStart + 1))) {
+                if (parameter.hasSeparator && ((stripConfig && parameter.key == qsl("config")) || (stripPreset && parameter.key == qsl("preset")))) {
+                    continue;
+                }
+                kept.append(parameter.text);
+            }
+
+            baseUrl = baseUrl.left(queryStart);
+            if (!kept.isEmpty()) {
+                baseUrl += '?' + kept.join('&');
+            }
+        }
+    } else {
+        // On a scheme the system does not open the whole query is Mudlet's, so a '?' in a gmcp: message has to be percent-encoded
+        int queryStart = baseUrl.indexOf('?');
+        if (queryStart != -1) {
+            baseUrl = baseUrl.left(queryStart);
+        }
+    }
+
+
+    if (baseUrl.startsWith(qsl("send:"))) {
+        QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(5).toUtf8());
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionSend;
+        mCurrentHyperlinkStyling.baseCommand = innerCommand;
+        command = {qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand))};
+        hint = {qsl("%1: %2").arg(QObject::tr("Send"), UntrustedText::forTarget(innerCommand))};
+    } else if (baseUrl.startsWith(qsl("prompt:"))) {
+        QString innerCommand = QUrl::fromPercentEncoding(baseUrl.mid(7).toUtf8());
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionPrompt;
+        mCurrentHyperlinkStyling.baseCommand = innerCommand;
+        command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
+        hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
+    } else if (baseUrl.startsWith(qsl("gmcp:"))) {
+        QString whyNot;
+        const auto gmcpLink = parseGmcpLinkUri(baseUrl, &whyNot);
+        // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
+        if (gmcpLink && mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection()) {
+            whyNot = qsl("a selection link's data has to be a JSON object");
+        }
+        if (!gmcpLink || !whyNot.isEmpty()) {
+            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link, as " << whyNot << ": \"" << baseUrl << "\"";
+            return false;
+        }
+        const QString message = gmcpLink->message();
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionGmcp;
+        mCurrentHyperlinkStyling.baseCommand = message;
+        command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
+        //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
+        hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
+    } else if (baseUrl.startsWith(qsl("local:"))) {
+        mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionLocal;
+        command = {QString()};
+        hint = {QString()};
+    } else {
+        QUrl qurl(baseUrl);
+        QString scheme = qurl.scheme().toLower();
+
+        if (systemMayOpenUrl(qurl)) {
+            baseUrl = MailtoUri::withOnlyMessageFields(baseUrl);
+            if (baseUrl.isEmpty()) {
+                qWarning().noquote() << "TBuffer::decodeOSC(...) - Ignored a mailto link with a field hidden in a recipient";
+                return false;
+            }
+            mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionOpenUrl;
+            mCurrentHyperlinkStyling.baseCommand = baseUrl;
+            command = {qsl("openUrl(%1)").arg(LuaLiteral::quote(baseUrl))};
+            QString action = QObject::tr("Open browser to");
+            if (scheme == qsl("mailto")) {
+                //: Start of the tooltip on a game's link that opens the mail app, followed by a colon and the link's mailto: address
+                action = QObject::tr("Write an email to");
+            }
+            hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
+        } else if ((scheme == qsl("telnet") || scheme == qsl("telnets")) && parseTelnetUri(baseUrl)) {
+            command = {qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(baseUrl))};
+            //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
+            hint = {qsl("%1: %2").arg(QObject::tr("Connect to"), UntrustedText::forTarget(baseUrl))};
+        } else {
+            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
+            return false;
+        }
+    }
+
+    // Add standalone tooltip support (for links without menus)
+    if (!customTooltip.isEmpty() && (mCurrentHyperlinkMenu.isEmpty() || mCurrentHyperlinkMenu.size() < 2)) {
+        // Replace the default hint with the custom tooltip
+        hint = {customTooltip};
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Added standalone tooltip:" << customTooltip;
+#endif
+    }
+
+    // Handle menu functionality by extending commands and hints
+    if (!mCurrentHyperlinkMenu.isEmpty()) {
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Building menu commands from" << mCurrentHyperlinkMenu.size() << "menu items";
+#endif
+        QStringList menuCommands;
+        QStringList menuHints;
+
+        // Add menu items in pairs (label, command)
+        // The first menu item becomes the link's own action (index 0), except on a local: link, where activating it opens the menu
+        // All items (including first) appear in the menu (index 1+)
+        for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
+            QString menuLabel = mCurrentHyperlinkMenu[i];
+            QString menuCommand = mCurrentHyperlinkMenu[i + 1];
+
+            // Determine command type based on prefix
+            if (menuCommand.startsWith(qsl("send:"))) {
+                QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(5).toUtf8());
+                menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(innerCommand)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (menuCommand.startsWith(qsl("prompt:"))) {
+                QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
+                menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
+                // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
+                // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
+                QString whyNot;
+                const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")), &whyNot);
+                if (!gmcpItem) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item, as " << whyNot << ": \"" << menuCommand << "\"";
+                }
+                menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
+                // An item is an action, and this has none: it is left out rather than typed at the game
+                continue;
+            } else if (menuCommand == qsl("-")) {
+                // Special case: "-" creates a menu separator
+                menuCommands.append(QString());
+                menuHints.append(QString());
+            } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
+                menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
+                // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
+                menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            } else {
+                // Treat as direct command
+                menuCommands.append(qsl("send(%1, false)").arg(LuaLiteral::quote(menuCommand)));
+                menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+            }
+        }
+
+        // Set the tooltip for the link (what shows on hover)
+        // Use custom tooltip if provided, otherwise say how to open the menu
+        QString linkTooltip;
+        if (!customTooltip.isEmpty()) {
+            // Custom tooltip explicitly provided
+            linkTooltip = customTooltip;
+        } else {
+            // Default tooltip for menu links
+            linkTooltip = QObject::tr("Right-click for menu");
+            if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
+                //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
+                linkTooltip = QObject::tr("Click for menu");
+            }
+        }
+
+        // For menus, we need tooltip as first hint, then menu labels
+        // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
+        QStringList finalHints;
+        finalHints.append(linkTooltip); // First: tooltip for hover
+        finalHints.append(menuHints);   // Rest: the menu's item labels
+
+        // Every item may have been left out or be a separator; then the link has no menu and keeps its own action and tooltip
+        bool hasMenuItem = false;
+        for (int i = 0; i < menuCommands.size(); ++i) {
+            hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
+        }
+        if (hasMenuItem) {
+            command = menuCommands;
+            hint = finalHints;
+        } else if (!customTooltip.isEmpty()) {
+            hint = {customTooltip};
+        }
+#if defined(DEBUG_OSC_PROCESSING)
+        qDebug() << "[OSC] Final menu commands:" << command;
+        qDebug() << "[OSC] Final menu hints:" << hint;
+#endif
+    }
+
+    if (hasCustomTooltip) {
+        *hasCustomTooltip = !customTooltip.isEmpty();
+    }
     return true;
 }
 
@@ -7706,9 +7827,16 @@ void TBuffer::finaliseActiveHyperlink()
         // draws the :link style over it once its line is committed
     }
 
+    // On a Markdown line the columns are not known until its markers are taken out, so the link's spoiler and visibility
+    // wait for the line: linkMarkdownLine() applies them to it rendered, applyWaitingLinkLooks() to it as sent
+    const bool looksWaitForMarkdown = mCurrentHyperlinkLinkId > 0 && markdownLineUnderWay() && (mCurrentHyperlinkStyling.isSpoiler || mCurrentHyperlinkStyling.visibility.hasVisibilitySettings);
+    if (looksWaitForMarkdown) {
+        mMarkdownLinkLooks.insert(mCurrentHyperlinkLinkId, {mCurrentHyperlinkStyling, mCurrentHyperlinkStartLine == static_cast<int>(lineBuffer.size()) - 1});
+    }
+
     // For spoilers, capture original text BEFORE any visibility concealment
     // This ensures spoiler reveal works even when combined with visibility actions
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
+    if (!looksWaitForMarkdown && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.isSpoiler) {
         if (!mServerWrapPendingLine.isEmpty() && !mCurrentHyperlinkStartsAfterHeldText) {
             mHeldSpoilerLinkId = mCurrentHyperlinkLinkId;
             mHeldSpoilerStartColumn = mCurrentHyperlinkStartColumn;
@@ -7721,7 +7849,7 @@ void TBuffer::finaliseActiveHyperlink()
     // Register with visibility manager if visibility settings exist
     // Visibility currently only supports single-line hyperlinks
     // Multi-line links will not have visibility management applied
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings) {
+    if (!looksWaitForMarkdown && mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.visibility.hasVisibilitySettings) {
         if (!mServerWrapPendingLine.isEmpty()) {
             // Held text may yet be joined on in front, shifting the columns, or be committed on its
             // own, leaving them as they are - so registered once that is known.
@@ -7742,6 +7870,7 @@ void TBuffer::finaliseActiveHyperlink()
     // Ids are handed out again, so the print drawing cached for this link must not outlive it
     mPrintDrawingLinkId = 0;
     mHyperlinkActive = false;
+    mHyperlinkEnteredMarkdown = false;
     mHyperlinkEnclosingMxpLinkId = 0;
     // Reset enhanced styling
     mCurrentHyperlinkStyling = Mudlet::HyperlinkStyling();
@@ -7834,6 +7963,22 @@ void TBuffer::forgetSpoilerTextOnTheLines(const QSet<int>& linkIds)
 // several lines is set aside a piece at a time, in the order
 // revealSpoilerLink() restores it. Text not stamped with the spoiler's id, such
 // as an MXP <SEND> inside it, is left alone: the reveal finds its text by that id.
+void TBuffer::maskSpoilerText(const int linkId, QString& line, const std::vector<TChar>& format, const int column, const int length)
+{
+    if (length <= 0) {
+        return;
+    }
+    QString& originalText = mLinkOriginalText[linkId];
+    const int end = std::min(column + length, static_cast<int>(line.size()));
+    for (int i = std::max(column, 0); i < end; ++i) {
+        if (static_cast<size_t>(i) < format.size() && format[static_cast<size_t>(i)].linkIndex() != linkId) {
+            continue;
+        }
+        originalText += line.at(i);
+        line[i] = QChar::Space;
+    }
+}
+
 void TBuffer::maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length)
 {
     if (length <= 0) {
@@ -7945,6 +8090,7 @@ void TBuffer::clear()
     timeBuffer << csmNoTimeStamp;
     promptBuffer.push_back(false);
     wrapGapBuffer.append(0);
+    markdownBuffer.append(0);
 }
 
 void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
@@ -7985,6 +8131,8 @@ void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
     collectStale(mLinkOriginalBackgrounds);
     collectStale(mLinkLooks);
     collectStale(mLinkOriginalText);
+    collectStale(mHyperlinkUris);
+    collectStale(mMarkdownLinkLooks);
 
     for (int key : staleIds) {
         mLinkStates.remove(key);
@@ -7993,6 +8141,8 @@ void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
         mLinkOriginalBackgrounds.remove(key);
         mLinkLooks.remove(key);
         mLinkOriginalText.remove(key);
+        mHyperlinkUris.remove(key);
+        mMarkdownLinkLooks.remove(key);
     }
 
     // Prevent applyPendingSelectionStyling from updating non-existent links
@@ -8070,6 +8220,10 @@ QSet<int> TBuffer::liveLinkIdsOutsideTheLines()
         ids.insert(mpHost->mMxpClient.linkId());
     }
     ids |= linkIdsOnTheLinesStillToCome();
+    // A table's rows wait in the parser until it is complete, on no line yet
+    if (mpMarkdown) {
+        ids |= mpMarkdown->mParser.heldLinkIds();
+    }
     return ids;
 }
 
@@ -8140,10 +8294,19 @@ void TBuffer::shrinkBuffer()
                 prefetchAllocatorHeader(chars, 0);
             }
         }
+        if (const quint32 id = markdownBuffer.at(0); id && mpMarkdown) {
+            if (markdownBuffer.size() > 1 && markdownBuffer.at(1) == 0 && wrapsFromPreviousLine(1)) {
+                rebaseMarkdownBlock(id, markdownHandOnDelta(0, 1));
+                markdownBuffer[1] = id;
+            } else {
+                mpMarkdown->forget(id);
+            }
+        }
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
         wrapGapBuffer.pop_front();
+        markdownBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
     }
@@ -8249,6 +8412,10 @@ bool TBuffer::deleteLines(int from, int to)
             forgetLooksOfRemovedCharacters(i, 0, -1);
         }
 
+        // Before the stamps change below, which would hide that the row after the range continues a paragraph
+        if (mpMarkdown) {
+            retireMarkdownRows(from, to);
+        }
         // A line continuing a logical line that starts in the range takes the stamp of the last
         // line there to start one; below a range of continuations alone it still continues the line above
         if (wrapsFromPreviousLine(to + 1)) {
@@ -8265,6 +8432,7 @@ bool TBuffer::deleteLines(int from, int to)
         timeBuffer.remove(from, delta);
         promptBuffer.remove(from, delta);
         wrapGapBuffer.remove(from, delta);
+        markdownBuffer.remove(from, delta);
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         if (mpModel) {
@@ -11265,4 +11433,665 @@ TChar TBuffer::restingCharacter(const TChar& character, const int line, const in
     TChar result = undrawn(character, lookIt->printed.at(printedIndex), lookIt->drawing);
     applyDrawing(result, copy->resting);
     return result;
+}
+
+bool TBuffer::markdownApplies() const
+{
+    if (mpHost.isNull() || !mpHost->mEnableMarkdown || mpParseConfig || !mParsingServerText) {
+        return false;
+    }
+    TConsoleModel* pMainModel = mpHost->mainConsoleModelOrNull();
+    return pMainModel && &pMainModel->buffer == this;
+}
+
+// What follows the 67: empty, or ";1", ";0", ";2" and then ";" and the parameters
+void TBuffer::decodeMarkdownOSC(QStringView sequence)
+{
+    if (!markdownApplies() || !sequence.startsWith(u';')) {
+        return;
+    }
+    if (!mpMarkdown) {
+        mpMarkdown = std::make_unique<TMarkdown>();
+    }
+    TMarkdown& markdown = *mpMarkdown;
+    sequence = sequence.mid(1);
+    const qsizetype split = sequence.indexOf(u';');
+    const QStringView command = split < 0 ? sequence : sequence.left(split);
+    const QStringView parameters = split < 0 ? QStringView() : sequence.mid(split + 1);
+
+    const auto validToken = [](QStringView token) {
+        if (token.isEmpty()) {
+            return false;
+        }
+        for (const QChar c : token) {
+            if (!(c.isLetterOrNumber() && c.unicode() < 128) && c != u'_' && c != u'-') {
+                return false;
+            }
+        }
+        return true;
+    };
+    QString id;
+    TMarkdownMark mark;
+    bool haveMark = false;
+    for (const QStringView parameter : parameters.tokenize(u':')) {
+        const qsizetype equals = parameter.indexOf(u'=');
+        if (equals <= 0) {
+            continue;
+        }
+        const QStringView name = parameter.left(equals);
+        const QStringView value = parameter.mid(equals + 1);
+        if (!validToken(name) || !validToken(value)) {
+            continue;
+        }
+        if (name == u"id" && value.size() <= 32) {
+            id = value.toString();
+        } else if (name == u"mark") {
+            bool valid = false;
+            const TMarkdownMark parsed = TMarkdownMark::parse(value, &valid);
+            if (valid) {
+                mark = parsed;
+                haveMark = true;
+            }
+        }
+    }
+
+    // An on or off sequence part way through a line takes effect on the next one
+    const bool lineUnderWay = !mMudLine.isEmpty();
+    if (command == u"1") {
+        // The line under way stays in the message it began in, and held lines are still to be committed in theirs
+        markdown.mMessages.begin(id, mark, (lineUnderWay && markdown.mLineInMarkdown) ? markdown.mLineMessage : 0, markdown.mOpenMessage);
+        markdown.mOn = true;
+        if (!lineUnderWay) {
+            endOpenMarkdownMessage();
+            markdown.mLineInMarkdown = true;
+            markdown.mLineMessage = markdown.mMessages.current();
+        }
+    } else if (command == u"0") {
+        markdown.mOn = false;
+        if (!lineUnderWay) {
+            markdown.mLineInMarkdown = false;
+            endOpenMarkdownMessage();
+        }
+    } else if (command == u"2") {
+        if (id.isEmpty() || !haveMark) {
+            return;
+        }
+        const quint32 message = markdown.mMessages.change(id, mark);
+        if (message && mpModel) {
+            emit mpModel->mNotifier.markdownMarkChanged(message);
+        }
+    }
+}
+
+// Commits the line as Markdown, or the lines a Markdown message left open before it; true when the line is done
+bool TBuffer::commitMarkdownLine(QString& line, TLineFormat& chars, const char ch)
+{
+    // The posting timer finding nothing to flush
+    if (line.isEmpty() && ch == '\r') {
+        return false;
+    }
+    TMarkdown& markdown = *mpMarkdown;
+    if (!mpHost->mEnableMarkdown) {
+        // Turned off: what is left open is committed, and only a new on sequence turns Markdown back on
+        markdown.mOn = false;
+        markdown.mLineInMarkdown = false;
+    }
+    const bool inMarkdown = markdown.mLineInMarkdown;
+    const quint32 lineMessage = markdown.mLineMessage;
+    markdown.mLineInMarkdown = markdown.mOn;
+    markdown.mLineMessage = markdown.mMessages.current();
+
+    if (!inMarkdown) {
+        endOpenMarkdownMessage();
+        return false;
+    }
+    if (markdown.mOpenMessage != lineMessage) {
+        endOpenMarkdownMessage();
+        // Held while open: a trigger deleting its lines as they come must not take its mark before its last line is in
+        markdown.mMessages.hold(lineMessage);
+    }
+    markdown.mOpenMessage = lineMessage;
+    // A prompt, and a line shown before the rest of it arrived, are shown as sent
+    if (ch == '\xff' || ch == '\r') {
+        commitMarkdownLines(markdown.mParser.addPrompt());
+        return false;
+    }
+    markdown.mParser.setRuleWidth(std::clamp(mWrapAt - mWrapIndent, 3, 1000));
+    markdown.mParser.setPlainFormat(TChar(mForeGroundColor, mBackGroundColor));
+    markdown.mParser.setWideAmbiguous(mpHost->wideAmbiguousEAsianGlyphs());
+    commitMarkdownLines(markdown.mParser.addLine(line, chars, lineMessage));
+    // An off or on sequence part way through this line ended its message, now that the line is in it; unless game text
+    // a trigger fed meanwhile opened another, which ended this one as it began
+    if ((!markdown.mLineInMarkdown || markdown.mLineMessage != lineMessage) && markdown.mOpenMessage == lineMessage) {
+        endOpenMarkdownMessage();
+    } else if (markdown.mParser.holdsLines() && mpModel) {
+        emit mpModel->mNotifier.serverWrapLineHeld();
+    }
+    return true;
+}
+
+void TBuffer::commitMarkdownLines(QList<TMarkdownLine>&& lines)
+{
+    for (TMarkdownLine& line : lines) {
+        // commitLineData() drops it, so it takes no block with it
+        if (line.text.isEmpty() && mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+            continue;
+        }
+        linkMarkdownLine(line);
+        // This line's own: a trigger's nested commit places only those it makes
+        QList<PlacedLink> placements = std::exchange(mMarkdownLinksToPlace, {});
+        hideLinksKeptWhole(line.text, placements);
+        const quint32 id = mpMarkdown->store(std::move(line.block));
+        commitLineData(std::move(line.text), TLineFormat(std::move(line.format)), '\n', id);
+        if (!placements.isEmpty()) {
+            placeMarkdownLinks(std::move(placements));
+        }
+    }
+}
+
+void TBuffer::flushMarkdownHeldLines()
+{
+    if (mpMarkdown && mpMarkdown->mParser.holdsLines()) {
+        commitMarkdownLines(mpMarkdown->mParser.flushHeld());
+        // A row still waiting to be a header is looked at again until it has waited long enough to be shown as it is
+        if (mpMarkdown->mParser.holdsLines() && mpModel) {
+            emit mpModel->mNotifier.serverWrapLineHeld();
+        }
+    }
+}
+
+const TMarkdownBlock* TBuffer::markdownBlock(const int lineNumber) const
+{
+    if (!mpMarkdown || lineNumber < 0 || lineNumber >= markdownBuffer.size()) {
+        return nullptr;
+    }
+    int line = lineNumber;
+    while (line > 0 && markdownBuffer.at(line) == 0 && wrapsFromPreviousLine(line)) {
+        --line;
+    }
+    return mpMarkdown->block(markdownBuffer.at(line));
+}
+
+bool TBuffer::markdownLineUnderWay() const
+{
+    return mpMarkdown && mParsingServerText && mpMarkdown->mLineInMarkdown && !mpHost.isNull() && mpHost->mEnableMarkdown;
+}
+
+// Rows from to to are going: a paragraph whose head stays has their text cut from its ranges, and one whose head goes
+// but whose rows go on past them keeps its tag on its first surviving row
+void TBuffer::retireMarkdownRows(const int from, const int to)
+{
+    const int next = to + 1;
+    const bool nextContinues = next < markdownBuffer.size() && markdownBuffer.at(next) == 0 && wrapsFromPreviousLine(next);
+    // The head of the paragraph the row after the range belongs to, and of the one the range starts in
+    int nextHead = to;
+    while (nextHead > 0 && markdownBuffer.at(nextHead) == 0 && wrapsFromPreviousLine(nextHead)) {
+        --nextHead;
+    }
+    int head = from;
+    while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+        --head;
+    }
+    if (head < from && markdownBuffer.at(head)) {
+        // A paragraph whose head stays loses the rows in the range, and, if it goes on past them, its later text moves
+        // up; if it ends in the range, everything from the range on goes
+        if (TMarkdownBlock* pBlock = mpMarkdown->editableBlock(markdownBuffer.at(head))) {
+            const bool goesOnPastTheRange = nextContinues && nextHead == head;
+            const int cutFrom = markdownRowOffset(head, from) - wrapGapBefore(from);
+            const int cutTo = goesOnPastTheRange ? markdownRowOffset(head, next) : std::numeric_limits<int>::max();
+            editMarkdownRanges(*pBlock, cutFrom, cutTo, goesOnPastTheRange ? cutFrom + wrapGapBefore(next) - cutTo : 0);
+        }
+    }
+    if (nextContinues && nextHead >= from && markdownBuffer.at(nextHead)) {
+        // A paragraph whose head goes and whose rows go on past the range: the first row left becomes its head
+        rebaseMarkdownBlock(markdownBuffer.at(nextHead), markdownHandOnDelta(nextHead, next));
+        markdownBuffer[next] = std::exchange(markdownBuffer[nextHead], 0);
+    }
+    for (int row = from; row <= to; ++row) {
+        if (const quint32 id = markdownBuffer.at(row)) {
+            mpMarkdown->forget(id);
+        }
+    }
+}
+
+// How far a paragraph's offsets move when its head goes and row next becomes its head: where the character at that
+// row's indent ends up, minus where it was, as the new head keeps the part of its indent markdownHeadIndent() does not
+// count as wrapping's
+int TBuffer::markdownHandOnDelta(const int head, const int next) const
+{
+    const int keptIndent = std::min(wrapGapBefore(next), wrapIndentWidth(next));
+    return wrapIndentWidth(next) - keptIndent - markdownRowOffset(head, next);
+}
+
+// The paragraph's text as it was committed, before column wrapping split it into rows
+QString TBuffer::markdownParagraphText(const int lineNumber) const
+{
+    int first = lineNumber;
+    while (first > 0 && markdownBuffer.at(first) == 0 && wrapsFromPreviousLine(first)) {
+        --first;
+    }
+    QString text = lineBuffer.at(first).mid(markdownHeadIndent(first));
+    for (int row = first + 1; row < lineBuffer.size() && markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row); ++row) {
+        text.append(QString(wrapGapBefore(row), QChar::Space));
+        text.append(QStringView(lineBuffer.at(row)).mid(wrapIndentWidth(row)));
+    }
+    return text;
+}
+
+// The spaces column wrapping put in front of a paragraph's first row, which are not part of what was committed
+int TBuffer::markdownHeadIndent(const int head) const
+{
+    return wrapsFromPreviousLine(head) ? 0 : std::min(wrapGapBefore(head), wrapIndentWidth(head));
+}
+
+// The id of a link a Markdown link makes, or 0 where an OSC 8 link to the same destination would be refused
+int TBuffer::addMarkdownLink(const TMarkdownLink& link, Mudlet::HyperlinkStyling& styling)
+{
+    if (!mpHost->mEnableOSC8Hyperlinks || QUrl(link.destination).scheme().isEmpty() || link.destination.startsWith(qsl("preset:"))) {
+        return 0;
+    }
+    // An OSC 8 link left open across this line keeps its own style and menu
+    const Mudlet::HyperlinkStyling openLinkStyling = std::exchange(mCurrentHyperlinkStyling, {});
+    const QStringList openLinkMenu = std::exchange(mCurrentHyperlinkMenu, {});
+    QStringList command;
+    QStringList hint;
+    bool customTooltip = false;
+    const bool accepted = hyperlinkActionsForUri(link.destination, command, hint, &customTooltip);
+    styling = std::exchange(mCurrentHyperlinkStyling, openLinkStyling);
+    mCurrentHyperlinkMenu = openLinkMenu;
+    if (!accepted) {
+        return 0;
+    }
+    // The title is the link's tooltip, ahead of the labels of any menu, unless its configuration gives one
+    if (!link.title.isEmpty() && !customTooltip) {
+        if (hint.isEmpty()) {
+            hint = {UntrustedText::forAuthoredText(link.title)};
+        } else {
+            hint[0] = UntrustedText::forAuthoredText(link.title);
+        }
+    }
+    const int id = addLinkToStore(command, hint);
+    mMarkdownLinkLooks.remove(id);
+    mLinkStore.setStyling(id, styling);
+    mLinkOriginalBackgrounds[id] = mBackGroundColor;
+    mHyperlinkUris.insert(id, link.destination);
+    // As an OSC 8 link starts: in its selection group, and disabled over selected
+    setLinkState(id, Mudlet::HyperlinkStyling::StateDefault);
+    if (styling.selection.hasSelectionSettings && mpModel) {
+        mpModel->mHyperlinkSelectionManager.setGroupExclusive(styling.selection.group, styling.selection.exclusive);
+        mpModel->mHyperlinkSelectionManager.setSelected(styling.selection.group, styling.selection.value, styling.selection.selected);
+        setLinkSelected(id, styling.selection.selected);
+        if (styling.selection.selected) {
+            setLinkState(id, Mudlet::HyperlinkStyling::StateSelected);
+            mPendingSelectionStyling.insert(id);
+        }
+    }
+    if (styling.selection.disabled) {
+        setLinkState(id, Mudlet::HyperlinkStyling::StateDisabled);
+    }
+    return id;
+}
+
+// Gives the line's Markdown links their ids, and lists its OSC 8 links in its block beside them
+void TBuffer::linkMarkdownLine(TMarkdownLine& line)
+{
+    const int markdownLinks = static_cast<int>(line.block.links.size());
+    std::vector<bool> fromMarkdown(line.format.size(), false);
+    for (int index = 0; index < markdownLinks; ++index) {
+        const TMarkdownLink& link = line.block.links.at(index);
+        Mudlet::HyperlinkStyling styling;
+        const int id = addMarkdownLink(link, styling);
+        // Drawn as the link's own style says, or, with none, underlined as Mudlet's other links are
+        const LinkDrawing drawing = id ? printDrawing(id) : LinkDrawing();
+        for (int column = link.start; column < link.start + link.length && static_cast<size_t>(column) < line.format.size(); ++column) {
+            fromMarkdown[static_cast<size_t>(column)] = true;
+            if (id) {
+                TChar& character = line.format[static_cast<size_t>(column)];
+                character.mLinkIndex = static_cast<quint16>(id);
+                applyDrawing(character, drawing);
+                if (!styling.hasCustomStyling) {
+                    character.setAttributes(TChar::Underline, true);
+                }
+            }
+        }
+        if (id) {
+            applyMarkdownLinkLooks(line.text, line.format, id, link.start, link.length, styling, true);
+        }
+    }
+    QHash<int, int> runsOfLink;
+    const int firstOsc8Link = static_cast<int>(line.block.links.size());
+    for (size_t column = 0; column < line.format.size();) {
+        const int id = line.format[column].linkIndex();
+        if (!id || fromMarkdown[column]) {
+            ++column;
+            continue;
+        }
+        size_t end = column;
+        while (end < line.format.size() && line.format[end].linkIndex() == id && !fromMarkdown[end]) {
+            ++end;
+        }
+        line.block.links.append({static_cast<int>(column), static_cast<int>(end - column), mHyperlinkUris.value(id), {}});
+        ++runsOfLink[id];
+        column = end;
+    }
+    // A table's bars can split one link into several runs: each is masked, but the link is shown or hidden only when whole
+    for (int index = firstOsc8Link; index < line.block.links.size(); ++index) {
+        const TMarkdownLink& run = line.block.links.at(index);
+        const int id = line.format[static_cast<size_t>(run.start)].linkIndex();
+        if (const auto looks = mMarkdownLinkLooks.constFind(id); looks != mMarkdownLinkLooks.cend()) {
+            const auto [styling, onOneLine] = looks.value();
+            applyMarkdownLinkLooks(line.text, line.format, id, run.start, run.length, styling, onOneLine && runsOfLink.value(id) == 1);
+        }
+    }
+    for (auto link = runsOfLink.cbegin(); link != runsOfLink.cend(); ++link) {
+        mMarkdownLinkLooks.remove(link.key());
+    }
+}
+
+// A link's spoiler and visibility, applied as finaliseActiveHyperlink() applies an OSC 8 link's, but to the line as it is
+// committed: its columns, and the row it lands on
+void TBuffer::applyMarkdownLinkLooks(QString& text, const std::vector<TChar>& format, const int id, const int column, const int length, const Mudlet::HyperlinkStyling& styling, const bool onOneLine)
+{
+    if (styling.isSpoiler) {
+        maskSpoilerText(id, text, format, column, length);
+    }
+    if (!styling.visibility.hasVisibilitySettings || !onOneLine || !mpModel || length <= 0) {
+        return;
+    }
+    THyperlinkVisibilityManager& manager = mpModel->mHyperlinkVisibilityManager;
+    const bool concealed = manager.registerHyperlink(id, 0, column, length, text.mid(column, length), styling);
+    // Its row and column are known once the line is committed and wrapped, and only then is a link that starts hidden
+    // hidden: a hidden link's spaces at a wrap would be dropped, and its text could never be shown again. Until then it
+    // waits as a link on a line still to come, which a trigger deleting lines above it moves too.
+    manager.trackAwaitingTheirLine(manager.takeLinks({id}));
+    mMarkdownLinksToPlace.append({id, length, concealed && !styling.isSpoiler, column, text.mid(column, length)});
+}
+
+// The text of a link hidden as its line was committed, put back in the order its characters stand
+void TBuffer::showMarkdownLinkText(const int head, const PlacedLink& link)
+{
+    qsizetype next = 0;
+    for (int row = head; row < lineBuffer.size() && next < link.text.size() && (row == head || (markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row))); ++row) {
+        const TLineFormat& format = buffer.at(static_cast<size_t>(row));
+        const int indent = row == head ? markdownHeadIndent(row) : wrapIndentWidth(row);
+        bool shown = false;
+        for (int column = indent; column < static_cast<int>(format.size()) && next < link.text.size(); ++column) {
+            if (format[static_cast<size_t>(column)].linkIndex() == link.id) {
+                lineBuffer[row][column] = link.text.at(next++);
+                shown = true;
+            }
+        }
+        if (shown && mpModel) {
+            emit mpModel->mNotifier.linesChanged(row, row);
+        }
+    }
+}
+
+// After commitLineData(): a link that wrapping left whole on one row is moved onto it, and hidden there if it starts
+// hidden; one wrapping split across rows is no longer hidden or shown, as an OSC 8 link over more than one line is not
+// A link that starts hidden is hidden before triggers and apps see its line, where the wrap the line is about to get
+// leaves it whole on one row; one the wrap would split stays shown, as a wrap could drop a hidden label's spaces
+void TBuffer::hideLinksKeptWhole(QString& text, QList<PlacedLink>& links)
+{
+    QString hidden = text;
+    bool any = false;
+    for (const PlacedLink& link : std::as_const(links)) {
+        if (link.concealed) {
+            hidden.replace(link.column, link.length, QString(link.length, QChar::Space));
+            any = true;
+        }
+    }
+    if (!any) {
+        return;
+    }
+    const QList<WrapInfo> rows = getWrapInfo(hidden, true, false, mWrapAt, clampedWrapIndent(mWrapIndent, mWrapAt), clampedWrapIndent(mWrapHangingIndent, mWrapAt));
+    for (PlacedLink& link : links) {
+        const bool whole = rows.isEmpty() || std::any_of(rows.cbegin(), rows.cend(), [&link](const WrapInfo& row) {
+                               return link.column >= row.firstChar && link.column + link.length <= row.lastChar;
+                           });
+        if (link.concealed && whole) {
+            text.replace(link.column, link.length, QString(link.length, QChar::Space));
+            link.hiddenEarly = true;
+        }
+    }
+}
+
+void TBuffer::placeMarkdownLinks(const QList<PlacedLink>& links)
+{
+    THyperlinkVisibilityManager* pManager = hyperlinkVisibilityManagerOrNull();
+    if (!pManager) {
+        return;
+    }
+    for (const PlacedLink& link : links) {
+        const int head = pManager->lineOf(link.id);
+        if (head < 0 || head >= lineBuffer.size()) {
+            continue;
+        }
+        int runs = 0;
+        int runRow = -1;
+        int runColumn = -1;
+        int runLength = 0;
+        for (int row = head; row < lineBuffer.size() && (row == head || (markdownBuffer.at(row) == 0 && wrapsFromPreviousLine(row))); ++row) {
+            const TLineFormat& format = buffer.at(static_cast<size_t>(row));
+            // Wrapping copies a row's first character's format into the indent in front of it, link and all
+            const int indent = row == head ? markdownHeadIndent(row) : wrapIndentWidth(row);
+            for (int column = indent; column < static_cast<int>(format.size()); ++column) {
+                if (format[static_cast<size_t>(column)].linkIndex() != link.id) {
+                    continue;
+                }
+                int end = column;
+                while (end < static_cast<int>(format.size()) && format[static_cast<size_t>(end)].linkIndex() == link.id) {
+                    ++end;
+                }
+                ++runs;
+                runRow = row;
+                runColumn = column;
+                runLength = end - column;
+                column = end;
+            }
+        }
+        if (runs != 1 || runLength != link.length) {
+            pManager->takeLinks({link.id});
+            // Shown after all, as a link wrapping split is not hidden
+            if (link.hiddenEarly) {
+                showMarkdownLinkText(head, link);
+            }
+            continue;
+        }
+        // One left shown as its line was committed stays shown, as triggers and apps have its text
+        if (link.concealed && !link.hiddenEarly) {
+            pManager->takeLinks({link.id});
+            continue;
+        }
+        pManager->moveLink(link.id, runRow, runColumn);
+        if (link.concealed) {
+            lineBuffer[runRow].replace(runColumn, runLength, QString(runLength, QChar::Space));
+            if (mpModel) {
+                emit mpModel->mNotifier.linesChanged(runRow, runRow);
+            }
+        }
+    }
+}
+
+// Where the text of row, after its indent, starts in the paragraph whose first row is head
+int TBuffer::markdownRowOffset(const int head, const int row) const
+{
+    int offset = static_cast<int>(lineBuffer.at(head).size()) - markdownHeadIndent(head);
+    for (int between = head + 1; between < row; ++between) {
+        offset += wrapGapBefore(between) + static_cast<int>(lineBuffer.at(between).size()) - wrapIndentWidth(between);
+    }
+    return offset + wrapGapBefore(row);
+}
+
+// The paragraph now starts -delta columns into its old text: offsets move by delta, links before the new start are
+// dropped and cells are cut short
+void TBuffer::rebaseMarkdownBlock(const quint32 id, const int delta)
+{
+    TMarkdownBlock* pBlock = mpMarkdown->editableBlock(id);
+    if (!pBlock) {
+        return;
+    }
+    pBlock->contentStart = std::max(0, pBlock->contentStart + delta);
+    const auto moved = [delta](int& start, int& length) {
+        const int end = start + length + delta;
+        start = std::max(0, start + delta);
+        length = std::max(0, end - start);
+        return length > 0;
+    };
+    QList<TMarkdownCell> cells;
+    for (TMarkdownCell cell : std::as_const(pBlock->cells)) {
+        moved(cell.start, cell.length);
+        cells.append(cell);
+    }
+    pBlock->cells = cells;
+    QList<TMarkdownLink> links;
+    for (TMarkdownLink link : std::as_const(pBlock->links)) {
+        if (moved(link.start, link.length)) {
+            links.append(link);
+        }
+    }
+    pBlock->links = links;
+}
+
+// The preference was turned off: what is open is committed, and only a new on sequence turns Markdown back on
+void TBuffer::endMarkdown()
+{
+    if (!mpMarkdown) {
+        return;
+    }
+    mpMarkdown->mOn = false;
+    mpMarkdown->mLineInMarkdown = false;
+    endOpenMarkdownMessage();
+    // A link Markdown carried past its line ends with Markdown
+    if (mHyperlinkActive && mHyperlinkEnteredMarkdown) {
+        finaliseActiveHyperlink();
+    }
+    mHyperlinkEnteredMarkdown = false;
+}
+
+// The looks of the links a line committed as sent carries, which waited for it to be read as Markdown
+void TBuffer::applyWaitingLinkLooks(QString& text, const TLineFormat& chars)
+{
+    const std::vector<TChar> format = chars.toVector();
+    for (size_t column = 0; column < format.size();) {
+        const int id = format[column].linkIndex();
+        size_t end = column + 1;
+        while (end < format.size() && format[end].linkIndex() == id) {
+            ++end;
+        }
+        if (const auto looks = mMarkdownLinkLooks.constFind(id); id && looks != mMarkdownLinkLooks.cend()) {
+            const auto [styling, onOneLine] = looks.value();
+            mMarkdownLinkLooks.erase(looks);
+            applyMarkdownLinkLooks(text, format, id, static_cast<int>(column), static_cast<int>(end - column), styling, onOneLine);
+        }
+        column = end;
+    }
+}
+
+// Commits what the open message still holds, keeping its record while that happens, as a trigger on those lines can
+// delete or clear them
+void TBuffer::endOpenMarkdownMessage()
+{
+    const quint32 message = std::exchange(mpMarkdown->mOpenMessage, 0);
+    if (!message) {
+        return;
+    }
+    mpMarkdown->mMessages.hold(message);
+    commitMarkdownLines(mpMarkdown->mParser.endMessage());
+    mpMarkdown->mMessages.release(message);
+}
+
+// Text was taken out of or put into row y at column x. An edit to a table line, or to the prefix the grid shows, leaves
+// the paragraph untagged; any other moves its links with the text, and drops a link it cuts into.
+void TBuffer::markdownLineEdited(const int y, const int x, const int removed, const int inserted)
+{
+    if (!mpMarkdown || y < 0 || y >= markdownBuffer.size()) {
+        return;
+    }
+    int head = y;
+    while (head > 0 && markdownBuffer.at(head) == 0 && wrapsFromPreviousLine(head)) {
+        --head;
+    }
+    const quint32 id = markdownBuffer.at(head);
+    TMarkdownBlock* pBlock = id ? mpMarkdown->editableBlock(id) : nullptr;
+    if (!pBlock) {
+        return;
+    }
+    // An edit in the indent wrapping put in front of a row changes what the offsets count past, as one in the prefix does
+    const int indent = head == y ? markdownHeadIndent(head) : wrapIndentWidth(y);
+    const int at = (head == y ? 0 : markdownRowOffset(head, y)) + x - indent;
+    const TMarkdownBlock::Kind kind = pBlock->kind;
+    if (kind == TMarkdownBlock::Kind::TableHeader || kind == TMarkdownBlock::Kind::TableRow || kind == TMarkdownBlock::Kind::TableDelimiter || x < indent || at < pBlock->contentStart) {
+        mpMarkdown->forget(id);
+        markdownBuffer[head] = 0;
+        return;
+    }
+    editMarkdownRanges(*pBlock, at, at + removed, inserted - removed);
+}
+
+// Ranges that end by cutFrom stay and those that start at cutTo or later move by delta; links cut into are dropped, and
+// cells cut into end at cutFrom
+void TBuffer::editMarkdownRanges(TMarkdownBlock& block, const int cutFrom, const int cutTo, const int delta)
+{
+    QList<TMarkdownLink> links;
+    for (TMarkdownLink link : std::as_const(block.links)) {
+        if (link.start + link.length <= cutFrom) {
+            links.append(link);
+        } else if (link.start >= cutTo) {
+            link.start += delta;
+            links.append(link);
+        }
+    }
+    block.links = links;
+    for (TMarkdownCell& cell : block.cells) {
+        if (cell.start >= cutTo) {
+            cell.start += delta;
+        } else if (cell.start + cell.length > cutFrom) {
+            cell.length = std::max(0, cutFrom - cell.start);
+        }
+    }
+}
+
+// A line as a screen reader announces it: a table row with its columns named, as "Item: sword, Qty: 1", and a table's
+// header and delimiter rows not at all
+QString TBuffer::spokenLine(const int lineNumber) const
+{
+    const TMarkdownBlock* pBlock = markdownBlock(lineNumber);
+    if (!pBlock || (pBlock->kind != TMarkdownBlock::Kind::TableRow && pBlock->kind != TMarkdownBlock::Kind::TableHeader && pBlock->kind != TMarkdownBlock::Kind::TableDelimiter)) {
+        return lineBuffer.value(lineNumber);
+    }
+    // A wrapped row is heard once, at its first row
+    if (pBlock->kind != TMarkdownBlock::Kind::TableRow || (markdownBuffer.at(lineNumber) == 0 && wrapsFromPreviousLine(lineNumber))) {
+        return {};
+    }
+    const TMarkdownBlock* pHeader = nullptr;
+    QString headerText;
+    // Rows a script edited carry no tag, so they are passed over rather than taken for the table's end
+    for (int line = lineNumber - 1; line >= 0 && line >= lineNumber - TMarkdownParser::csmMaxHeldRows * 4; --line) {
+        const TMarkdownBlock* pAbove = markdownBlock(line);
+        if (!pAbove) {
+            continue;
+        }
+        if (pAbove->table != pBlock->table) {
+            break;
+        }
+        if (pAbove->kind == TMarkdownBlock::Kind::TableHeader) {
+            pHeader = pAbove;
+            headerText = markdownParagraphText(line);
+            break;
+        }
+    }
+    const QString rowText = markdownParagraphText(lineNumber);
+    QStringList cells;
+    for (int column = 0; column < pBlock->cells.size(); ++column) {
+        const QString value = rowText.mid(pBlock->cells.at(column).start, pBlock->cells.at(column).length);
+        if (pHeader && column < pHeader->cells.size()) {
+            const TMarkdownCell& name = pHeader->cells.at(column);
+            //: How a screen reader hears one cell of a table row from the game: the column's name, then the cell's text
+            cells.append(QObject::tr("%1: %2").arg(headerText.mid(name.start, name.length), value));
+        } else {
+            cells.append(value);
+        }
+    }
+    return cells.join(qsl(", "));
 }

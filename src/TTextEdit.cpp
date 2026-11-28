@@ -553,7 +553,7 @@ void TTextEdit::showNewLines()
 
         // content has been added
         for (int i = previousOldScrollPos; i < mOldScrollPos; i++) {
-            newLines.append(mpBuffer->line(i));
+            newLines.append(mpBuffer->spokenLine(i));
             newLines.append('\n');
         }
 

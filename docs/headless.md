@@ -207,7 +207,7 @@ under `credentials/`, and the log says so.
 
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
-fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
+fast blink, concealed, and code in a Markdown line), and says whether each colour is the profile's own, which a frontend may swap
 for its own theme's. A run also names the link it is part of, as "links in the main console and in
 windows" below tells.
 What `echo()` and the like print comes as plain text in `localText`, and with runs of the same kind in
@@ -810,7 +810,7 @@ Each signal's own rules are with the signal, above and below; this is all of the
 runs on one thread, and the session's signals are emitted on it. Which of three ways a signal comes
 decides what its handler may do.
 
-**Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `localText`, `localTextStyled`,
+**Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `markdownMarkChanged`, `localText`, `localTextStyled`,
 `errorConsoleText`, `debugText`, `hiddenInputWanted`, `typedLineMoveRequested`,
 `commandLineTextRequested`, `notificationRequested`, `attentionRequested`, `announcementRequested` and
 the three `transport…Requested` are sent from inside whatever wrote the text or asked: the read of the
@@ -1049,6 +1049,33 @@ Over a spoiler not yet revealed the GUI's right click only reveals it, which `fo
 does; over a `disabled` link, or one whose `menu` is not set, it opens nothing. Anywhere else on the text
 the GUI opens the console's own menu, to copy, select and search, which is the app's to offer over the text
 it drew; the entries a script adds to that menu with `addMouseEvent()` are not listed for the app.
+
+## Embedding it: Markdown from the game
+
+A game that follows the [Markdown Text for MUDs](https://wiki.mudlet.org/w/Standards:Markdown_Text_for_MUDs)
+standard can send headings, lists, quotes, code, tables and collapsible sections. The main console shows them in
+its grid, with markers taken out and bullets, bars and padding drawn in, and `outputLine` and `lineShown` each end
+with the line's `THeadlessSession::MarkdownBlock`, the fields `getMarkdownBlock()` gives scripts but for the text
+and links, which the signal's text and runs carry. An app that lays Markdown out itself reads it there:
+
+- `kind` is `none` for every line that is not Markdown: a prompt, a line shown before the rest of it arrived, and
+  any line a script or trigger wrote. On `lineShown` a table line a trigger wrote into has `none` too, as does a
+  line it wrote into where the console drew in front of the text; other lines keep their block.
+- `contentStart` and each cell's `start` count in the `text` sent with it, as a run's `start` does, so
+  `text.mid(contentStart)` is the line without what the console drew in front of it.
+- `level` is a heading's, 1 to 6. `quote` and `list` are how deep the line is in quotes and lists, and `section`
+  in collapsible sections. An item has a `marker`, bullet or ordered, its `number` if ordered, and a `task` if it
+  is a task. A summary line opens a section, and `open` says the game sent it open. A code line has the
+  `language` its block named.
+- A table's lines share `table`, its header line holds `align`, and a row's `cells` index its text. Rows come
+  once the table is complete, or the game has been quiet a moment, after which later rows come one by one.
+- `message` names the message the line is part of, with its `id` and its `mark` as the line is sent.
+  `markdownMarkChanged(profile, message, mark)` tells of a later change to that mark, for a message whose lines
+  the console no longer holds too. Key messages by `message`: a later message can take an `id`, and a change no
+  longer arrives once that happens, once 256 newer ids push it out, or once the connection is renewed.
+- Inline code is a run with `TextStyle::Code`; the lines of a fenced block are `kind` `code`. Links are runs, as
+  for any line, under "links in the main console and in windows" above; one Mudlet refuses, as with OSC 8 links
+  turned off, arrives as plain text.
 
 ## Embedding it: the 2D map
 
