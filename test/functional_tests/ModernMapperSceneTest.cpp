@@ -2292,6 +2292,9 @@ private slots:
         return open;
     }
 
+    // An edge the preview shares with its name can land an ulp short of it
+    static bool coversName(const QRectF& preview, const QRectF& name) { return preview.adjusted(-0.01, -0.01, 0.01, 0.01).contains(name); }
+
     void test_onlyOnePortalPreviewIsOpenAtATimeWithoutGL()
     {
         const auto [westId, eastId] = addTwoAreas(20);
@@ -2345,7 +2348,7 @@ private slots:
             movePointerTo(widget, card.nameRect.center().toPoint());
             const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
             QCOMPARE(opened.size(), 1);
-            QVERIFY2(opened.first().rect.contains(card.nameRect),
+            QVERIFY2(coversName(opened.first().rect, card.nameRect),
                      qPrintable(qsl("the open preview %1,%2 %3x%4 leaves out part of its name at %5,%6 %7x%8")
                                         .arg(opened.first().rect.x())
                                         .arg(opened.first().rect.y())
@@ -2438,7 +2441,7 @@ private slots:
             const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
             QCOMPARE(opened.size(), 1);
             QVERIFY(view.contains(opened.first().rect));
-            QVERIFY(opened.first().rect.contains(cards.first().nameRect));
+            QVERIFY(coversName(opened.first().rect, cards.first().nameRect));
             QVERIFY(!opened.first().rect.contains(cards.first().anchor));
             movePointerTo(widget, QPoint(5, 5));
         }
@@ -2469,7 +2472,7 @@ private slots:
                 const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
                 QCOMPARE(opened.size(), 1);
                 QVERIFY(view.contains(opened.first().rect));
-                QVERIFY(opened.first().rect.contains(card.nameRect));
+                QVERIFY(coversName(opened.first().rect, card.nameRect));
                 movePointerTo(widget, QPoint(5, 5));
             }
         }
