@@ -20,6 +20,7 @@
 
 
 #include "TMxpVersionTagHandler.h"
+#include "MudletApp.h"
 #include "TMxpClient.h"
 
 TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
@@ -34,14 +35,14 @@ TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMx
         return MXP_TAG_HANDLED;
     }
 
-    // version (aka client.getVersion()) starts with the client name 'mudlet' which
-    // is already in scmVersionString as the CLIENT attribute. We just need the version
+    // version (aka client.getVersion()) starts with the client name 'mudlet', but the
+    // CLIENT attribute takes MudletApp::clientName() instead. We just need the version
     // number here which follows after a space in version.
     //
     // As an attribute/version number with spaces probably should be quoted following
     // MXP/XML syntax we just take everything after the last space to be on the safe side.
 
-    QString payload = scmVersionString.arg(version.section(' ', -1));
+    QString payload = scmVersionString.arg(MudletApp::clientName(), version.section(' ', -1));
 
     // Add the style, if it had been set
     if (!client.getStyle().isNull()) {

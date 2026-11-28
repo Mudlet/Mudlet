@@ -396,6 +396,11 @@ bool THeadlessSession::setDictionaryFolder(const QString& folder)
     return MudletApp::setAppDictionaryFolder(folder);
 }
 
+bool THeadlessSession::setClientName(const QString& name)
+{
+    return MudletApp::setClientName(name);
+}
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {

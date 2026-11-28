@@ -1282,6 +1282,31 @@ const QString& MudletApp::scmVersion()
     return version;
 }
 
+static QString& embedderClientName()
+{
+    static QString name;
+    return name;
+}
+
+bool MudletApp::setClientName(const QString& name)
+{
+    // TTYPE sends it in capitals, which must then make an RFC 1010 terminal name; that also keeps out anything GMCP's
+    // JSON, an MXP attribute or telnet would need escaped
+    static const QRegularExpression terminalName(QRegularExpression::anchoredPattern(qsl("[A-Za-z](?:[A-Za-z0-9/-]{0,38}[A-Za-z0-9])?")));
+    if (!name.isEmpty() && !terminalName.match(name).hasMatch()) {
+        qWarning().noquote() << "MudletApp::setClientName() refused" << name << "as, in capitals, it is not a terminal name RFC 1010 allows";
+        return false;
+    }
+    embedderClientName() = name;
+    return true;
+}
+
+QString MudletApp::clientName()
+{
+    const QString& name = embedderClientName();
+    return name.isEmpty() ? qsl("Mudlet") : name;
+}
+
 bool MudletApp::release()
 {
     return buildSuffix().isEmpty();

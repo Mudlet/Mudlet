@@ -2959,7 +2959,7 @@ QString cTelnet::getNewEnvironCharset()
 
 QString cTelnet::getNewEnvironClientName()
 {
-    return qsl("MUDLET");
+    return MudletApp::clientName().toUpper();
 }
 
 QString cTelnet::getNewEnvironClientVersion()
@@ -3951,7 +3951,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += MSDP_VAR;
             output += "CLIENT_NAME";
             output += MSDP_VAL;
-            output += "Mudlet";
+            output += MudletApp::clientName().toStdString();
             output += MSDP_VAR;
             output += "CLIENT_VERSION";
             output += MSDP_VAL;
@@ -3987,7 +3987,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
-            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData()
+            std::string atcpOptions = std::string("hello ") + MudletApp::clientName().toStdString() + " " + APP_VERSION + MudletApp::buildSuffix().toUtf8().constData()
                                       + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
             output += encodeAndCookBytes(atcpOptions);
             output += TN_IAC;
@@ -4019,7 +4019,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_SB;
             output += OPT_GMCP;
             // MudletApp::buildSuffix() could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletApp::buildSuffix().toUtf8().constData() + std::string(R"("})"));
+            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": ")") + MudletApp::clientName().toStdString() + R"(", "version": ")" + APP_VERSION
+                                         + MudletApp::buildSuffix().toUtf8().constData() + std::string(R"("})"));
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -4790,7 +4791,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_SB;
                 output += OPT_ATCP;
                 // MudletApp::buildSuffix() *could* be a non-ASCII UTF-8 string:
-                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData()
+                std::string atcpOptions = std::string("hello ") + MudletApp::clientName().toStdString() + " " + APP_VERSION + MudletApp::buildSuffix().toUtf8().constData()
                                           + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
                 output += encodeAndCookBytes(atcpOptions);
                 output += TN_IAC;
