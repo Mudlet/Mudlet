@@ -38,6 +38,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -53,6 +54,7 @@ class TBuffer;
 class TConsoleModel;
 class TLineFormat;
 class TNullMapView;
+class TRoom;
 class QKeyEvent;
 class QMimeData;
 class QPoint;
@@ -757,6 +759,13 @@ public:
         int steps = -1;
         // The directions first, from north to out, then the special exits by command
         QList<RoomExit> exits;
+        // As the GUI's room properties edit them: the symbol drawn on it, its environment and the colour that
+        // draws, its weight for the speedwalk and whether the speedwalk avoids it
+        QString symbol;
+        int env = -1;
+        QColor color;
+        int weight = 1;
+        bool locked = false;
     };
     // A room of the map, as the GUI's room properties show it; none for a room not in the map or with no profile
     // open. A getter, so it may be called from any handler.
@@ -769,6 +778,50 @@ public:
     // The areas of the map that have rooms, by name ignoring case, then id; none with no profile open. A getter, so
     // it may be called from any handler.
     QList<MapArea> mapAreas() const;
+    // Edits of the map, as the GUI's mapper makes them in its editing mode and its Lua API makes them in any: each
+    // marks the map unsaved and draws it again, and each is false, with errorString() saying why, where submit() is
+    // refused, for a room or area not in the map and for an edit given nothing it can take, changing nothing.
+    // What editRoom() sets of a room: each left empty is kept
+    struct RoomEdit
+    {
+        std::optional<QString> name;
+        // Empty clears it
+        std::optional<QString> symbol;
+        std::optional<int> env;
+        // From 1
+        std::optional<int> weight;
+        std::optional<bool> locked;
+        // Its place in its area: x, then y (north is up), then z, as setRoomCoordinates() takes them
+        std::optional<std::array<int, 3>> position;
+    };
+    bool editRoom(int roomId, const RoomEdit& edit);
+    // The room's exit that way, one of the twelve directions as RoomExit names them, set to lead to the room toRoomId,
+    // or removed for 0, as setExit() does; with bothWays the exit back from that room the other way too (in for
+    // out, up for down), and when removing, the exit back that led here. False also for a toRoomId not in the map.
+    bool setRoomExit(int roomId, const QString& direction, int toRoomId, bool bothWays);
+    // The room's exit that way locked, so the speedwalk avoids it, or unlocked, as lockExit() does. False also for
+    // a way the room has no exit.
+    bool lockRoomExit(int roomId, const QString& direction, bool locked);
+    // A new room, in the room's area one place from it that way, one of the ten directions other than in and out,
+    // with exits between the two both ways, as the GUI's room creation with exits drawn to it makes; its id, or 0,
+    // with errorString() saying why, as the edits above are and where a room of that area is already in that place.
+    int addRoomBeside(int roomId, const QString& direction);
+    // The room and its exits gone, as deleteRoom() does. False also while a script's map callback runs.
+    bool deleteRoom(int roomId);
+    // The player placed in the room, as centerview() does: the maps follow them there. False also while no map
+    // is open.
+    bool setPlayerRoom(int roomId);
+    // The area renamed, as setAreaName() does: false also for a name that is empty once trimmed or another area's.
+    bool renameArea(int areaId, const QString& name);
+    // An environment a room can be given, with the colour it draws rooms in
+    struct MapEnv
+    {
+        int env = 0;
+        QColor color;
+    };
+    // The environments the map gives a colour of its own, by number, as the GUI's room colour dialog lists them; none with no profile
+    // open. A getter, so it may be called from any handler.
+    QList<MapEnv> mapEnvs() const;
     // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
     // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
     // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
@@ -1380,6 +1433,8 @@ private:
     // The script's or the app's map that has been drawn, as the pointer calls take it; null, with errorString()
     // saying why, otherwise
     TNullMapView* drawnMap(MapTarget map);
+    // The room an edit of the map acts on; null, with errorString() saying why, where the edits are refused for it
+    TRoom* editableRoom(int roomId);
 
     QPointer<Host> mpHost;
     QString mProfileName;

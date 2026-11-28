@@ -1113,6 +1113,16 @@ is locked), and `steps`, the fewest exits from the player's room by rooms and ex
 speedwalk goes, or -1 for none; `findRooms()` gives each room found its `steps` too, and whether it is in the
 player's area. `mapAreas()` lists the areas that have rooms, by name.
 
+The map can be edited with no T2DMap, as the GUI's mapper edits it in its editing mode and the Lua API in any:
+`roomInfo()` also gives a room's symbol, environment and the colour that draws it, weight and lock, and `editRoom()`
+sets any of those, its name and its place; `setRoomExit()` leads one of a room's twelve exits to another room, or
+removes it, both ways if asked, and `lockRoomExit()` locks it; `addRoomBeside()` makes a room one place from
+another, in its area, with exits both ways; `deleteRoom()`, `setPlayerRoom()` and `renameArea()` do as
+`deleteRoom()`, `centerview()` and `setAreaName()` do. `mapEnvs()` lists the environments a room can be given, with
+their colours, as the GUI's room colour dialog lists them: the profile's sixteen colours as 257 to 272, and those a
+script or the player added. Each edit marks the map unsaved and draws it again, and is false, with the reason in
+`errorString()`, for a room or area not in the map or an edit it cannot take, changing nothing.
+
 `setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
 `mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear
 `mapModeChangeEvent` with `"viewing"` or `"editing"` before the call returns, then the session emits

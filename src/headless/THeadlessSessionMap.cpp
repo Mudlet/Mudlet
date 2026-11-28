@@ -526,7 +526,12 @@ std::optional<THeadlessSession::RoomInfo> THeadlessSession::roomInfo(const int r
                   .x = pRoom->x(),
                   .y = pRoom->y(),
                   .z = pRoom->z(),
-                  .steps = stepsFrom(pRoomDB, playerRoomOf(mpHost->mpMap.data())).value(roomId, -1)};
+                  .steps = stepsFrom(pRoomDB, playerRoomOf(mpHost->mpMap.data())).value(roomId, -1),
+                  .symbol = pRoom->mSymbol,
+                  .env = pRoom->environment,
+                  .color = mpHost->mpMap->getColor(roomId),
+                  .weight = pRoom->getWeight(),
+                  .locked = pRoom->isLocked};
     const auto exit = [pRoomDB](const QString& direction, const int toId, const bool locked) {
         const TRoom* pTo = pRoomDB->getRoom(toId);
         return RoomExit{.direction = direction, .to = toId, .toName = pTo ? pTo->name : QString(), .locked = locked};
@@ -562,6 +567,267 @@ QList<THeadlessSession::MapArea> THeadlessSession::mapAreas() const
         return byName != 0 ? byName < 0 : a.id < b.id;
     });
     return areas;
+}
+
+TRoom* THeadlessSession::editableRoom(const int roomId)
+{
+    if (!usable()) {
+        return nullptr;
+    }
+    TRoom* pRoom = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        //: Error from a frontend with no window that was asked to edit a room that is not in the 2D map; %1 is the room's id
+        mErrorString = tr("There is no room %1 in the map.").arg(roomId);
+    }
+    return pRoom;
+}
+
+bool THeadlessSession::editRoom(const int roomId, const RoomEdit& edit)
+{
+    TRoom* pRoom = editableRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    if (edit.weight && *edit.weight < 1) {
+        //: Error from a frontend with no window that was asked to give a room of the 2D map a weight below 1; %1 is the weight
+        mErrorString = tr("A room's weight is from 1; %1 is not.").arg(*edit.weight);
+        return false;
+    }
+    if (!edit.name && !edit.symbol && !edit.env && !edit.weight && !edit.locked && !edit.position) {
+        //: Error from a frontend with no window that was asked to edit a room of the 2D map but given nothing to change
+        mErrorString = tr("The edit changes nothing of the room.");
+        return false;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    if (edit.name) {
+        pRoom->name = *edit.name;
+    }
+    if (edit.symbol) {
+        // As setRoomChar(): 10.0 is the most Unicode version the Qt versions Mudlet takes all know
+        pRoom->mSymbol = edit.symbol->normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
+    }
+    if (edit.env) {
+        pRoom->environment = *edit.env;
+    }
+    if ((edit.weight && pRoom->setWeight(*edit.weight)) || (edit.locked && pRoom->isLocked != *edit.locked)) {
+        pMap->mMapGraphNeedsUpdate = true;
+    }
+    if (edit.locked) {
+        pRoom->isLocked = *edit.locked;
+    }
+    if (edit.position) {
+        const auto [x, y, z] = *edit.position;
+        pMap->setRoomCoordinates(roomId, x, y, z);
+    }
+    pMap->setUnsaved(__func__);
+    pMap->updateArea(pRoom->getArea());
+    return true;
+}
+
+namespace {
+
+// One of the twelve directions as RoomExit names them, as a DIR_ code; 0 for none
+int directionCode(const QString& direction)
+{
+    for (int code = DIR_NORTH; code <= DIR_OUT; ++code) {
+        if (TRoom::dirCodeToShortString(code) == direction) {
+            return code;
+        }
+    }
+    return 0;
+}
+
+} // namespace
+
+bool THeadlessSession::setRoomExit(const int roomId, const QString& direction, const int toRoomId, const bool bothWays)
+{
+    TRoom* pRoom = editableRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    const int code = directionCode(direction);
+    if (!code) {
+        //: Error from a frontend with no window that was asked to set a room's exit in a way that is not one of the twelve directions; %1 is what it was given
+        mErrorString = tr("An exit goes one of n, ne, nw, e, w, s, se, sw, up, down, in and out; %1 is not.").arg(direction);
+        return false;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    if (toRoomId != 0 && !pMap->mpRoomDB->getRoom(toRoomId)) {
+        //: Error from a frontend with no window that was asked to lead a room's exit to a room that is not in the 2D map; %1 is that room's id
+        mErrorString = tr("There is no room %1 in the map.").arg(toRoomId);
+        return false;
+    }
+    const int back = TMap::scmReverseDirections.value(code);
+    const int oldToRoomId = pRoom->getExit(code);
+    pMap->setExit(roomId, toRoomId, code);
+    if (bothWays) {
+        if (toRoomId != 0) {
+            pMap->setExit(toRoomId, roomId, back);
+        } else if (const TRoom* pOld = pMap->mpRoomDB->getRoom(oldToRoomId); pOld && pOld->getExit(back) == roomId) {
+            pMap->setExit(oldToRoomId, 0, back);
+        }
+    }
+    pMap->updateArea(pRoom->getArea());
+    return true;
+}
+
+bool THeadlessSession::lockRoomExit(const int roomId, const QString& direction, const bool locked)
+{
+    TRoom* pRoom = editableRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    const int code = directionCode(direction);
+    if (!code || pRoom->getExit(code) < 1) {
+        //: Error from a frontend with no window that was asked to lock or unlock a room's exit it does not have; %1 is the room's id, %2 the way asked
+        mErrorString = tr("Room %1 has no exit %2.").arg(QString::number(roomId), direction);
+        return false;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    if (pRoom->setExitLock(code, locked)) {
+        pMap->mMapGraphNeedsUpdate = true;
+        pMap->setUnsaved(__func__);
+    }
+    pMap->updateArea(pRoom->getArea());
+    return true;
+}
+
+int THeadlessSession::addRoomBeside(const int roomId, const QString& direction)
+{
+    const TRoom* pRoom = editableRoom(roomId);
+    if (!pRoom) {
+        return 0;
+    }
+    // North is up, as the GUI's map draws y
+    static const QHash<QString, std::array<int, 3>> offsets{{qsl("n"), {0, 1, 0}},
+                                                            {qsl("ne"), {1, 1, 0}},
+                                                            {qsl("nw"), {-1, 1, 0}},
+                                                            {qsl("e"), {1, 0, 0}},
+                                                            {qsl("w"), {-1, 0, 0}},
+                                                            {qsl("s"), {0, -1, 0}},
+                                                            {qsl("se"), {1, -1, 0}},
+                                                            {qsl("sw"), {-1, -1, 0}},
+                                                            {qsl("up"), {0, 0, 1}},
+                                                            {qsl("down"), {0, 0, -1}}};
+    const auto offset = offsets.constFind(direction);
+    if (offset == offsets.cend()) {
+        //: Error from a frontend with no window that was asked to add a room beside another in a way that has no place on the 2D map; %1 is what it was given
+        mErrorString = tr("A new room goes one of n, ne, nw, e, w, s, se, sw, up and down; %1 is not.").arg(direction);
+        return 0;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    const int areaId = pRoom->getArea();
+    const int x = pRoom->x() + (*offset)[0];
+    const int y = pRoom->y() + (*offset)[1];
+    const int z = pRoom->z() + (*offset)[2];
+    if (TArea* pArea = pMap->mpRoomDB->getArea(areaId)) {
+        if (const QList<int> there = pArea->getRoomsByPosition(x, y, z); !there.isEmpty()) {
+            //: Error from a frontend with no window that was asked to add a room to the 2D map where its area already has one; %1 is that room's id
+            mErrorString = tr("Room %1 is already in that place.").arg(there.constFirst());
+            return 0;
+        }
+    }
+    const int newRoomId = pMap->createNewRoomID();
+    if (!pMap->addRoom(newRoomId) || !pMap->setRoomArea(newRoomId, areaId)) {
+        //: Error from a frontend with no window whose new room could not be added to the 2D map; %1 is the room's id
+        mErrorString = tr("Room %1 could not be added to the map.").arg(newRoomId);
+        if (pMap->mpRoomDB->getRoom(newRoomId)) {
+            pMap->mpRoomDB->removeRoom(newRoomId);
+        }
+        return 0;
+    }
+    pMap->setRoomCoordinates(newRoomId, x, y, z);
+    const int code = directionCode(direction);
+    pMap->setExit(roomId, newRoomId, code);
+    pMap->setExit(newRoomId, roomId, TMap::scmReverseDirections.value(code));
+    pMap->updateArea(areaId);
+    return newRoomId;
+}
+
+bool THeadlessSession::deleteRoom(const int roomId)
+{
+    const TRoom* pRoom = editableRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    if (pMap->scriptCallbackInProgress()) {
+        //: Error from a frontend with no window that was asked to delete a room while a script's map callback runs
+        mErrorString = tr("A script's map callback is running; rooms cannot be deleted until it returns.");
+        return false;
+    }
+    const int areaId = pRoom->getArea();
+    pMap->mpRoomDB->removeRoom(roomId);
+    pMap->setUnsaved(__func__);
+    pMap->updateArea(areaId);
+    return true;
+}
+
+bool THeadlessSession::setPlayerRoom(const int roomId)
+{
+    const TRoom* pRoom = editableRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    if (!mpHost->mapOpen()) {
+        //: Error from a frontend with no window that was asked to place the player on the 2D map before any map was opened
+        mErrorString = tr("No map is open; a script opens one, or the app's map.");
+        return false;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    pMap->mRoomIdHash[mpHost->getName()] = roomId;
+    pMap->mNewMove = true;
+    pMap->updatePlayerArea(pRoom->getArea());
+    pMap->requestPlayerAreaShown();
+    return true;
+}
+
+bool THeadlessSession::renameArea(const int areaId, const QString& name)
+{
+    if (!usable()) {
+        return false;
+    }
+    TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
+    if (areaId < 1 || !pRoomDB->getArea(areaId)) {
+        //: Error from a frontend with no window that was asked to rename an area that is not in the 2D map, or the default area; %1 is the area's id
+        mErrorString = tr("There is no area %1 in the map that can be renamed.").arg(areaId);
+        return false;
+    }
+    const QString newName = name.trimmed();
+    if (newName.isEmpty()) {
+        //: Error from a frontend with no window that was asked to give an area of the 2D map an empty name
+        mErrorString = tr("An area's name is not empty, and spaces are trimmed from its ends.");
+        return false;
+    }
+    const QString oldName = pRoomDB->getAreaNamesMap().value(areaId);
+    if (newName == oldName) {
+        return true;
+    }
+    if (pRoomDB->hasAreaName(newName)) {
+        //: Error from a frontend with no window that was asked to give an area of the 2D map the name another area has; %1 is the name
+        mErrorString = tr("Another area is already named %1.").arg(newName);
+        return false;
+    }
+    pRoomDB->setAreaName(areaId, newName);
+    TMap* pMap = mpHost->mpMap.data();
+    pMap->setUnsaved(__func__);
+    pMap->updateArea(areaId);
+    pMap->announceAreaRenamed(oldName, newName);
+    return true;
+}
+
+QList<THeadlessSession::MapEnv> THeadlessSession::mapEnvs() const
+{
+    QList<MapEnv> envs;
+    if (!mpHost || !mpHost->mpMap || !mpHost->mpMap->mpRoomDB) {
+        return envs;
+    }
+    // As the GUI's room colour dialog lists them: the profile's sixteen colours, as 257 to 272, and the map's own
+    const QMap<int, QColor>& colors = mpHost->mpMap->mCustomEnvColors;
+    for (auto it = colors.cbegin(); it != colors.cend(); ++it) {
+        envs.append(MapEnv{.env = it.key(), .color = it.value()});
+    }
+    return envs;
 }
 
 // Gathered into one a turn, as the GUI's update() calls are into one repaint
