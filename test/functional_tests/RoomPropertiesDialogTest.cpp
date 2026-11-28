@@ -1770,6 +1770,51 @@ private slots:
         QCOMPARE(room(scmSecondRoom)->mSymbol, qsl("?"));
     }
 
+    // The fields show one room's colours, so for rooms that differ, the colour shown typed again in another spelling
+    // is a colour decided for them all
+    void theColourShownTypedForRoomsThatDifferReachesThemAll()
+    {
+        for (const bool shortForm : {true, false}) {
+            const QString spelling = shortForm ? qsl("in its short form") : qsl("in lower case");
+            buildMap();
+            mp2dMap->mAreaID = mAreaId;
+            const QList<int> roomIds{scmFirstRoom, scmSecondRoom};
+            // Letters in every code, as a code of digits alone in lower case is the code shown
+            const QList<QColor> borders{QColor(0xAA, 0xBB, 0xCC), QColor(0xDD, 0xEE, 0xFF)};
+            const QList<QColor> symbols{QColor(0xFF, 0xEE, 0xDD), QColor(0xCC, 0xBB, 0xAA)};
+            for (int index = 0; index < roomIds.size(); ++index) {
+                room(roomIds.at(index))->mSymbol = qsl("=");
+                room(roomIds.at(index))->mBorderColor = borders.at(index);
+                room(roomIds.at(index))->mSymbolColor = symbols.at(index);
+            }
+            auto* pDlg = openDialogOn(roomIds);
+            connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+            pDlg->show();
+            QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+            const QColor shownBorder = borderColour(pDlg)->colour();
+            const QColor shownSymbol = symbolColour(pDlg)->colour();
+            QVERIFY2(borders.contains(shownBorder) && symbols.contains(shownSymbol), "SETUP: the fields do not show a room's own colours");
+
+            const auto spelt = [shortForm](const QColor& colour) {
+                const QString code = colour.name();
+                return shortForm ? qsl("#%1%2%3").arg(code.at(1)).arg(code.at(3)).arg(code.at(5)) : code;
+            };
+            typeInto(borderColour(pDlg), spelt(shownBorder), Qt::Key_Return);
+            QCOMPARE(borderColour(pDlg)->text(), shownBorder.name().toUpper());
+            typeInto(symbolColour(pDlg), spelt(shownSymbol), Qt::Key_Return);
+            QCOMPARE(symbolColour(pDlg)->text(), shownSymbol.name().toUpper());
+            pDlg->accept();
+
+            for (const int roomId : roomIds) {
+                QVERIFY2(room(roomId)->mBorderColor == shownBorder,
+                         qPrintable(qsl("the border colour shown, typed %1, left room %2 at %3").arg(spelling).arg(roomId).arg(room(roomId)->mBorderColor.name().toUpper())));
+                QVERIFY2(room(roomId)->mSymbolColor == shownSymbol,
+                         qPrintable(qsl("the symbol colour shown, typed %1, left room %2 at %3").arg(spelling).arg(roomId).arg(room(roomId)->mSymbolColor.name().toUpper())));
+            }
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+    }
+
     // The border controls preview onto the rooms themselves as they are moved,
     // so that the map behind the dialog shows the result; Cancel has to put the
     // rooms back the way it found them.
