@@ -999,6 +999,25 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "The server is MIT-licensed and self-hostable, so you can run your own world "
                  "and invite people to it. New players welcome."),
              GameDetail::OwnUi::ClientGui},
+            {qsl("Realm of Magic"),
+             qsl("realmofmagic.org"),
+             4000,
+             false,
+             qsl("<a href='https://realmofmagic.org/'>Website</a><br>"
+                 "<a href='https://realmofmagic.org/lore'>Wiki</a>"),
+             qsl(":/icons/realmofmagic_480x120.png"),
+             qsl("Realm of Magic is a free text-based fantasy role-playing game that has been running "
+                 "since 1993. Its social heart is Moonglow, a harbour town where adventurers meet, trade "
+                 "and set out from."
+                 "\n\n"
+                 "Learn spells and alchemy, fight your way through more than fifty scripted quests and "
+                 "randomly generated assignments, join quests the immortals run live, and help defend "
+                 "the coast when the vikings raid. Join an order or a family, or take on a role such as "
+                 "judge or lord of the realm."
+                 "\n\n"
+                 "Role play is encouraged, with detailed character descriptions and an extended emote "
+                 "command. A reduced-text port, 4002, is there for players using a screen reader."),
+             GameDetail::OwnUi::ClientGui},
             };
     // clang-format on
 };
