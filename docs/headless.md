@@ -1628,6 +1628,29 @@ and also a call that left it as it was, so an app's mute buttons can follow it a
 once the session's own profile has closed, as the session's other signals do, even while profiles its
 scripts opened live on. They are refused where `submit()` is.
 
+## Embedding it: the profile's settings
+
+An app with its own settings screen reads and changes a profile's settings with `settings()` and
+`setSettings()`, by the keys Lua's `getConfig()` and `setConfig()` take, rather than building Lua for
+`runLua()` that cannot answer with what it read.
+The game's text encoding is the key `serverEncoding`, by the names `getServerEncodingsList()` gives.
+The input line's are `commandSeparator`, `highlightHistory`, `disablePasswordMasking` and `runAllKeyMatches`, as the
+preferences' Input line tab has them.
+The console's colours are text in `#rrggbb` form: the sixteen ANSI ones by the names `color_table` gives them
+(`ansiBlack` to `ansiLightWhite`), then `foregroundColor`, `backgroundColor`, `commandForegroundColor` and
+`commandBackgroundColor`, with `serverMayRedefineColors` beside them; a change reaches text decoded after it.
+`enableOSC8Hyperlinks` and `alertOnNewData` turn OSC 8 links and the new text alert on and off.
+
+`settings()` fills a `QVariantMap` with the value of each key it is given, as `getConfig()` gives it
+with `true` for its second argument: a `bool`, a `double` or a `QString`, an option of several by its
+name, as `showSentText` gives `"never"`, `"always"` or `"script"`. A key `getConfig()` does not know, or
+that gives a table or nothing, is left out. `setSettings()` changes each key as `setConfig()` does,
+events included, and fills a `QMap` with each one it did not take and why: the message `setConfig()`
+gave, its Lua error for a value of the wrong type, or that the value was not a `bool`, a number or a
+string. What it took is kept with the profile and written with its next save, as a script's changes
+are. Both call Mudlet's own functions, so a script that has put its own `getConfig` or `setConfig` in
+the globals changes nothing. They are false, reading or changing nothing, where `runLua()` is refused.
+
 ## Embedding it: commands and buttons that scripts add
 
 `addonCommands()` lists the commands the session's profile's scripts added with `addCommand()`, which

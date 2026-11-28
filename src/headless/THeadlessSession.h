@@ -28,6 +28,7 @@
 #include <QHash>
 #include <QKeySequence>
 #include <QList>
+#include <QMap>
 #include <QObject>
 #include <QPoint>
 #include <QPointF>
@@ -37,6 +38,7 @@
 #include <QSize>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 
 #include <functional>
 #include <memory>
@@ -211,6 +213,16 @@ public:
     // where submit() is refused.
     bool dismissHiddenInput();
     bool runLua(const QString& code);
+    // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
+    // string each, an option of several by its name (showSentText as "never", "always" or "script"). A key
+    // getConfig() does not know, or gives nothing for, is left out. Mudlet's own getConfig() is called, not
+    // whatever a script has put in its place. False, reading nothing, where runLua() is refused.
+    bool settings(const QStringList& keys, QVariantMap& values);
+    // Changes the profile's settings as Lua's setConfig() does, one key at a time, as the preferences dialog
+    // would: what it takes is kept with the profile and saved with it, as the dialog's are. Each key setConfig()
+    // refuses, or whose value is not a bool, a number or a string, goes into refused with why. False, changing
+    // nothing, where runLua() is refused.
+    bool setSettings(const QVariantMap& values, QMap<QString, QString>& refused);
     // As the GUI installs a package given on its command line, but quietly: a refusal is errorString()'s alone
     // to tell. It returns once the install's sysInstall handlers should have run: Qt fires zero timers in the
     // order set, though it does not promise to. installedWithErrors: it stays installed, as in the GUI, but a

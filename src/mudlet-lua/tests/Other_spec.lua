@@ -2329,6 +2329,87 @@ describe("Tests Other.lua functions", function()
       restore("editorAutoComplete")
     end)
 
+    it("round-trips the certificate, game permission and Lua error options", function()
+      for _, key in ipairs({ "sslIgnoreExpired", "sslIgnoreSelfSigned", "sslIgnoreAll", "acceptServerGUI", "acceptServerMedia", "echoLuaErrors" }) do
+        snapshot(key)
+        local target = not getConfig(key)
+        assert.is_true(setConfig(key, target))
+        assert.equals(target, getConfig(key))
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the server encoding as getServerEncoding and setServerEncoding do", function()
+      snapshot("serverEncoding")
+      assert.equals(getServerEncoding(), getConfig("serverEncoding"))
+      assert.is_true(setConfig("serverEncoding", "ISO 8859-1"))
+      assert.equals("ISO 8859-1", getConfig("serverEncoding"))
+      assert.equals("ISO 8859-1", getServerEncoding())
+      assert.is_true(setConfig("serverEncoding", "ASCII"))
+      assert.equals("ASCII", getConfig("serverEncoding"))
+      local ok, message = setConfig("serverEncoding", "No Such Encoding")
+      assert.is_nil(ok)
+      assert.truthy(message:find("does not exist", 1, true))
+      assert.equals("ASCII", getConfig("serverEncoding"))
+      restore("serverEncoding")
+    end)
+
+    it("reads and changes the input line's command separator, history highlight, password masking and key bindings run", function()
+      for _, key in ipairs({ "commandSeparator", "highlightHistory", "disablePasswordMasking", "runAllKeyMatches" }) do
+        snapshot(key)
+      end
+      assert.equals(getCommandSeparator(), getConfig("commandSeparator"))
+      assert.is_true(setConfig("commandSeparator", "|"))
+      assert.equals("|", getConfig("commandSeparator"))
+      assert.equals("|", getCommandSeparator())
+      assert.is_true(setConfig("commandSeparator", ""))
+      assert.equals("", getCommandSeparator())
+      for _, key in ipairs({ "highlightHistory", "disablePasswordMasking", "runAllKeyMatches" }) do
+        local was = getConfig(key)
+        assert.equals("boolean", type(was))
+        assert.is_true(setConfig(key, not was))
+        assert.equals(not was, getConfig(key))
+      end
+      for _, key in ipairs({ "commandSeparator", "highlightHistory", "disablePasswordMasking", "runAllKeyMatches" }) do
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the console colours as #rrggbb, and color_table follows", function()
+      local keys = { "ansiRed", "ansiLightCyan", "foregroundColor", "backgroundColor", "commandForegroundColor", "commandBackgroundColor" }
+      for _, key in ipairs(keys) do
+        snapshot(key)
+        assert.truthy(getConfig(key):match("^#%x%x%x%x%x%x$"))
+      end
+      assert.is_true(setConfig("ansiRed", "#12AB34"))
+      assert.equals("#12ab34", getConfig("ansiRed"))
+      assert.same({ 0x12, 0xab, 0x34 }, color_table.ansiRed)
+      for _, key in ipairs(keys) do
+        assert.is_true(setConfig(key, "#010203"))
+        assert.equals("#010203", getConfig(key))
+      end
+      for _, bad in ipairs({ "red", "#12ab3", "#12ab345", "12ab34" }) do
+        local ok, message = setConfig("ansiRed", bad)
+        assert.is_nil(ok)
+        assert.truthy(message:find("#rrggbb", 1, true))
+      end
+      assert.equals("#010203", getConfig("ansiRed"))
+      for _, key in ipairs(keys) do
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the game's colour redefinition, OSC 8 links and the new text alert", function()
+      for _, key in ipairs({ "serverMayRedefineColors", "enableOSC8Hyperlinks", "alertOnNewData" }) do
+        snapshot(key)
+        local was = getConfig(key)
+        assert.equals("boolean", type(was))
+        assert.is_true(setConfig(key, not was))
+        assert.equals(not was, getConfig(key))
+        restore(key)
+      end
+    end)
+
     it("getConfig returns a keyed table when given a list of keys", function()
       local result = getConfig({ "enableGMCP", "editorAutoComplete" })
       assert.is_table(result)

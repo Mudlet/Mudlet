@@ -85,6 +85,7 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -10193,6 +10194,39 @@ int TLuaInterpreter::removeFileWatch(lua_State* L)
     return 1;
 }
 
+// The profile's console colours, the sixteen by the names color_table gives them
+static QColor Host::*consoleColorMember(QStringView key)
+{
+    static const std::array<std::pair<QStringView, QColor Host::*>, 20> members{{
+            {u"ansiBlack", &Host::mBlack},
+            {u"ansiRed", &Host::mRed},
+            {u"ansiGreen", &Host::mGreen},
+            {u"ansiYellow", &Host::mYellow},
+            {u"ansiBlue", &Host::mBlue},
+            {u"ansiMagenta", &Host::mMagenta},
+            {u"ansiCyan", &Host::mCyan},
+            {u"ansiWhite", &Host::mWhite},
+            {u"ansiLightBlack", &Host::mLightBlack},
+            {u"ansiLightRed", &Host::mLightRed},
+            {u"ansiLightGreen", &Host::mLightGreen},
+            {u"ansiLightYellow", &Host::mLightYellow},
+            {u"ansiLightBlue", &Host::mLightBlue},
+            {u"ansiLightMagenta", &Host::mLightMagenta},
+            {u"ansiLightCyan", &Host::mLightCyan},
+            {u"ansiLightWhite", &Host::mLightWhite},
+            {u"foregroundColor", &Host::mFgColor},
+            {u"backgroundColor", &Host::mBgColor},
+            {u"commandForegroundColor", &Host::mCommandFgColor},
+            {u"commandBackgroundColor", &Host::mCommandBgColor},
+    }};
+    for (const auto& [name, member] : members) {
+        if (name == key) {
+            return member;
+        }
+    }
+    return nullptr;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The table argument case for setting multiple properties at once is handled
@@ -10454,6 +10488,37 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("sslIgnoreExpired")) {
+        host.mSslIgnoreExpired = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("sslIgnoreSelfSigned")) {
+        host.mSslIgnoreSelfSigned = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("sslIgnoreAll")) {
+        host.mSslIgnoreAll = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("acceptServerGUI")) {
+        host.mAcceptServerGUI = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("acceptServerMedia")) {
+        host.mAcceptServerMedia = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("echoLuaErrors")) {
+        host.mEchoLuaErrors = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("serverEncoding")) {
+        const QPair<bool, QString> result = host.mTelnet.setEncoding(getVerifiedString(L, __func__, 2, "value").toUtf8());
+        if (!result.first) {
+            return warnArgumentValue(L, __func__, result.second);
+        }
+        return success();
+    }
     if (key == qsl("promptForMXPProcessorOn")) {
         host.mPromptedForMXPProcessorOn = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -10476,6 +10541,37 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("autoClearInputLine")) {
         host.mAutoClearCommandLineAfterSend = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("commandSeparator")) {
+        host.mCommandSeparator = getVerifiedString(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("highlightHistory")) {
+        host.mHighlightHistory = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("disablePasswordMasking")) {
+        host.setDisablePasswordMasking(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("runAllKeyMatches")) {
+        host.getKeyUnit()->mRunAllKeyMatches = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (QColor Host::*member = consoleColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
+        const QString name = getVerifiedString(L, __func__, 2, "value");
+        static const QRegularExpression hexColor(qsl("^#[0-9A-Fa-f]{6}$"));
+        if (!hexColor.match(name).hasMatch()) {
+            return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
+        }
+        host.*member = QColor::fromString(name);
+        host.applyMainConsoleColors();
+        host.updateAnsi16ColorsInTable();
+        return success();
+    }
+    if (key == qsl("serverMayRedefineColors")) {
+        host.setMayRedefineColors(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("showSentText")) {
@@ -10769,6 +10865,14 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.setEnableBlinkText(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("enableOSC8Hyperlinks")) {
+        host.mEnableOSC8Hyperlinks = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("alertOnNewData")) {
+        host.mAlertOnNewData = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
 
     // Handle experiment keys
     if (key.startsWith(qsl("experiment."))) {
@@ -11029,6 +11133,41 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushboolean(L, host.mAskTlsAvailable);
              }},
+            {qsl("sslIgnoreExpired"),
+             [&]() {
+                 lua_pushboolean(L, host.mSslIgnoreExpired);
+             }},
+            {qsl("sslIgnoreSelfSigned"),
+             [&]() {
+                 lua_pushboolean(L, host.mSslIgnoreSelfSigned);
+             }},
+            {qsl("sslIgnoreAll"),
+             [&]() {
+                 lua_pushboolean(L, host.mSslIgnoreAll);
+             }},
+            {qsl("acceptServerGUI"),
+             [&]() {
+                 lua_pushboolean(L, host.mAcceptServerGUI);
+             }},
+            {qsl("acceptServerMedia"),
+             [&]() {
+                 lua_pushboolean(L, host.mAcceptServerMedia);
+             }},
+            {qsl("echoLuaErrors"),
+             [&]() {
+                 lua_pushboolean(L, host.mEchoLuaErrors);
+             }},
+            {qsl("serverEncoding"),
+             [&]() {
+                 // as getServerEncoding() gives it: never empty, and without the "M_" of Mudlet's own codecs
+                 QByteArray encoding = host.mTelnet.getEncoding();
+                 if (encoding.isEmpty()) {
+                     encoding = "ASCII";
+                 } else if (encoding.startsWith("M_")) {
+                     encoding.remove(0, 2);
+                 }
+                 lua_pushstring(L, encoding.constData());
+             }},
             {qsl("promptForMXPProcessorOn"),
              [&]() {
                  lua_pushboolean(L, host.mPromptedForMXPProcessorOn);
@@ -11052,6 +11191,27 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("autoClearInputLine"),
              [&]() {
                  lua_pushboolean(L, host.mAutoClearCommandLineAfterSend);
+             }},
+            {qsl("commandSeparator"),
+             [&]() {
+                 const QByteArray separator = host.mCommandSeparator.toUtf8();
+                 lua_pushlstring(L, separator.constData(), separator.size());
+             }},
+            {qsl("highlightHistory"),
+             [&]() {
+                 lua_pushboolean(L, host.mHighlightHistory);
+             }},
+            {qsl("disablePasswordMasking"),
+             [&]() {
+                 lua_pushboolean(L, host.disablePasswordMasking());
+             }},
+            {qsl("runAllKeyMatches"),
+             [&]() {
+                 lua_pushboolean(L, host.getKeyUnit()->mRunAllKeyMatches);
+             }},
+            {qsl("serverMayRedefineColors"),
+             [&]() {
+                 lua_pushboolean(L, host.getMayRedefineColors());
              }},
             {qsl("showSentText"),
              [&]() {
@@ -11216,6 +11376,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushboolean(L, host.getEnableBlinkText());
              }},
+            {qsl("enableOSC8Hyperlinks"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableOSC8Hyperlinks);
+             }},
+            {qsl("alertOnNewData"),
+             [&]() {
+                 lua_pushboolean(L, host.mAlertOnNewData);
+             }},
             {qsl("showUpperLowerLevels"),
              [&]() {
                  lua_pushboolean(L, TAppFrontend::instance()->drawUpperLowerLevels());
@@ -11255,6 +11423,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
     auto it = configMap.find(key);
     if (it != configMap.end()) {
         it->second();
+        return 1;
+    }
+    if (QColor Host::*member = consoleColorMember(key)) {
+        lua_pushstring(L, (host.*member).name().toUtf8().constData());
         return 1;
     }
 

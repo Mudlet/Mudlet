@@ -29,6 +29,7 @@ add_library(mudlet_headless STATIC
     THeadlessSessionCompletion.cpp
     THeadlessSessionLinks.cpp
     THeadlessSessionMap.cpp
+    THeadlessSessionSettings.cpp
     THeadlessSessionWindows.cpp
     THeadlessSessionWindowText.cpp
 )
