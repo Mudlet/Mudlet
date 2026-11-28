@@ -2994,6 +2994,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         mark = getLastLineNumber("main")
         assert.is_true(send("mudletSpecDefaultCommand"))
         assert.is_true(contains(textFrom(mark), "mudletSpecDefaultCommand"), textFrom(mark))
+
+        -- an explicit nil must count as omitted, so wrappers can pass their own optional argument on
+        mark = getLastLineNumber("main")
+        assert.is_true(send("mudletSpecNilCommand", nil))
+        assert.is_true(contains(textFrom(mark), "mudletSpecNilCommand"), textFrom(mark))
       end)
     end)
 
@@ -3897,6 +3902,26 @@ end]])
           string.format('loadProfile(%q, true) closeProfile() report(tostring(closeProfile(%q)))', target, target))
         assert.equals("true", run.result[1])
         assert.is_true(waitUntil(function() return not loaded(closing) and not loaded(target) end), "the profiles did not close")
+      end)
+
+      it("does not reuse an http request id after resetProfile()", function()
+        if needsTestMode() then
+          return
+        end
+        local idAfterReset
+        local handler = registerAnonymousEventHandler("mudletSpecHttpIdAfterReset", function(_, id)
+          idAfterReset = id
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+        local run = runInProfileBeingTornDown([[
+local _, _, id = getHTTP("http://127.0.0.1:1/")
+resetProfile()
+report(id)]], [[
+local _, _, id = getHTTP("http://127.0.0.1:1/")
+raiseGlobalEvent("mudletSpecHttpIdAfterReset", id)]])
+        assert.is_number(run.result[1])
+        assert.is_true(waitUntil(function() return idAfterReset end), "the profile was not reset")
+        assert.is_true(idAfterReset > run.result[1])
       end)
 
       it("closes after resetProfile() then closeProfile()", function()

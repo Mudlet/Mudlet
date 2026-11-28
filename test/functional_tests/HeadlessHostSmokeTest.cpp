@@ -57,6 +57,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 
 #include <zip.h>
@@ -348,20 +349,29 @@ registerAnonymousEventHandler("sysExitEvent", function() headlessRecord("sysExit
         return sawHost && !reader.hasError();
     }
 
-    // Stands in for any Lua API that runs the event loop, which the profile has to outlast
-    static void registerRunEventLoop(Host* pHost)
+    // Stands in for any Lua API that runs the event loop, which the profile has to outlast. As a dialog would, it runs
+    // on until `until` holds: a close that saves every profile can outlast a fixed wait on a loaded machine.
+    static void registerRunEventLoop(Host* pHost, std::function<bool()> until = {})
     {
+        struct Running
+        {
+            QPointer<Host> host;
+            std::function<bool()> until;
+        };
         // One for each profile, which its C function reaches through an upvalue
-        static std::vector<std::unique_ptr<QPointer<Host>>> sRunning;
-        sRunning.push_back(std::make_unique<QPointer<Host>>(pHost));
+        static std::vector<std::unique_ptr<Running>> sRunning;
+        sRunning.push_back(std::make_unique<Running>(Running{pHost, std::move(until)}));
         lua_State* state = pHost->getLuaInterpreter()->getLuaGlobalState();
         lua_pushlightuserdata(state, sRunning.back().get());
         lua_pushcclosure(
                 state,
                 [](lua_State* L) -> int {
-                    const auto* pRunning = static_cast<const QPointer<Host>*>(lua_touserdata(L, lua_upvalueindex(1)));
+                    const auto* pRunning = static_cast<const Running*>(lua_touserdata(L, lua_upvalueindex(1)));
                     QTest::qWait(200);
-                    if (!*pRunning) {
+                    if (pRunning->until) {
+                        static_cast<void>(QTest::qWaitFor(pRunning->until, 10000));
+                    }
+                    if (!pRunning->host) {
                         // Returning would run on its closed Lua state
                         qFatal("The profile was deleted under its own script as it ran the event loop.");
                     }
@@ -13785,8 +13795,10 @@ end))lua")
         pumping->getLuaInterpreter()->leaveNestedEventLoop();
         QCOMPARE(HostManager::self()->getHostCount(), openBefore);
 
-        // Where the close then runs, as the GUI's does
-        registerRunEventLoop(host);
+        // Where the close then runs, as the GUI's does, leaving only this profile, whose script holds it
+        registerRunEventLoop(host, []() {
+            return HostManager::self()->getHostCount() <= 1;
+        });
         const QPointer<Host> pHost(host);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 runEventLoop()
