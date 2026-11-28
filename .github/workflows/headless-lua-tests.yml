@@ -47,6 +47,11 @@ jobs:
       CCACHE_COMPRESSLEVEL: 1
       GCC_VERSION: 12
     steps:
+    # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+    - name: Note the folder above the checkout
+      shell: bash
+      run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
     - name: Checkout Mudlet source code
       uses: actions/checkout@v7
       with:
@@ -62,7 +67,7 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.11.3'
-        dir: ${{runner.workspace}}
+        dir: ${{env.WORK_ROOT}}
         # Uncached for the reason build-mudlet-pr.yml gives
         cache: false
         modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
@@ -118,7 +123,7 @@ jobs:
         sudo update-alternatives --set gcc /usr/bin/gcc-${GCC_VERSION}
         sudo update-alternatives --set g++ /usr/bin/g++-${GCC_VERSION}
 
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${WORK_ROOT}/ccache" >> $GITHUB_ENV
 
         # lua-yajl generates the translation statistics during the build
         ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
@@ -144,7 +149,7 @@ jobs:
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
-        path: ${{runner.workspace}}/ccache
+        path: ${{env.WORK_ROOT}}/ccache
         key: ccache-ubuntu-gcc-asan-sha-
         restore-keys: ccache-ubuntu-gcc-asan-sha-
 
@@ -181,7 +186,7 @@ jobs:
       run: |
         log="${{runner.temp}}/headless-lua-tests.log"
         mkdir -p "${XDG_CONFIG_HOME}/mudlet/profiles"
-        cp ${{runner.workspace}}/b/ninja/src/mudlet-headless ${{github.workspace}}/src
+        cp ${WORK_ROOT}/b/ninja/src/mudlet-headless ${{github.workspace}}/src
         status=0
         ${{github.workspace}}/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
           2>&1 | tee "${log}" || status=$?
