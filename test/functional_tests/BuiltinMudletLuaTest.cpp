@@ -33,6 +33,7 @@
 #include <QScopeGuard>
 #include <QStandardPaths>
 #include <QTemporaryDir>
+#include <QThreadPool>
 #include <QTimer>
 #include <QtTest/QtTest>
 
@@ -349,6 +350,37 @@ private slots:
 
         QCOMPARE(luaValue(session, qsl("luaGlobalPath")), unpackedFolder());
         QVERIFY2(!QFileInfo::exists(lockPathFileName), "The lock is still held once the copy is in place");
+    }
+
+    // Once with no profile open, and once with one opened as it unpacks
+    void test_aCopyPreparedBeforeAProfileOpensIsTheOneItLoads()
+    {
+        const QString name = qsl("Builtin Lua Prepared");
+        QVERIFY(writeProfile(name));
+        QVERIFY(registerBuiltinCopy());
+        const auto unregister = qScopeGuard(unregisterBuiltinCopy);
+        const QString folder = unpackedFolder();
+        const auto unpackedCopies = [] {
+            return QDir(cacheLocation()).entryList({qsl("*mudlet-lua-*")}, QDir::Dirs | QDir::NoDotAndDotDot);
+        };
+
+        THeadlessSession::prepareBuiltinLua();
+        QVERIFY(QThreadPool::globalInstance()->waitForDone(30000));
+        QVERIFY(!HostManager::self());
+        QVERIFY(QFileInfo::exists(qsl("%1/LuaGlobal.lua").arg(folder)));
+        QVERIFY(QFileInfo::exists(qsl("%1/geyser/GeyserLabel.lua").arg(folder)));
+        QCOMPARE(unpackedCopies(), QStringList{QFileInfo(folder).fileName()});
+
+        QVERIFY(QDir(cacheLocation()).removeRecursively());
+        THeadlessSession::prepareBuiltinLua();
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(QThreadPool::globalInstance()->waitForDone(30000));
+            QCOMPARE(luaValue(session, qsl("luaGlobalPath")), folder);
+            QCOMPARE(luaValue(session, qsl("debug.getinfo(Geyser.Label.new, 'S').source")), qsl("@%1/geyser/GeyserLabel.lua").arg(folder));
+            QCOMPARE(unpackedCopies(), QStringList{QFileInfo(folder).fileName()});
+        }
     }
 
     void test_anUnpackedCopyIsReusedUnlessAFileOfItIsMissingOrCutShort()
