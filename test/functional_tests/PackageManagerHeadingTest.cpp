@@ -65,8 +65,8 @@ private:
     const QString mProfileName = qsl("Test-PackageManagerHeading");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
-    // sorts first in the list (QString order), so it is the package the dialog
-    // opens on even if the profile ever gains others
+    // sorts before every package a new profile comes with, so it is the
+    // package the dialog opens on
     const QString mPackageName = qsl("AptlyNamedPackage");
 
     Host* mpHost = nullptr;
@@ -239,6 +239,13 @@ private slots:
     // next resize would paint the last package's name over an empty pane
     void test_aClearedHeadingStaysClearedThroughAResize()
     {
+        // The Updates view goes by the live online index, which a branch's bundled packages can trail
+        // by a release, so only a package the index never lists is left installed
+        const QStringList installed = mpHost->mInstalledPackages;
+        auto restoreInstalled = qScopeGuard([this, installed] {
+            mpHost->mInstalledPackages = installed;
+        });
+        mpHost->mInstalledPackages.clear();
         installPackage(mPackageName);
         openManager();
         QCOMPARE(mpManager->label_packageName->text(), mPackageName);

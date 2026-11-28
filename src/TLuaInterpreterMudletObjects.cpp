@@ -57,7 +57,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <math.h>
 #include <utility>
 
@@ -2555,7 +2554,12 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
-    if (location > 0 && location < std::numeric_limits<int>::max()) {
+    // The toolbar is saved with the profile, so one made at a location no bar
+    // shows would keep its name taken where Lua cannot remove it
+    if (location < 0 || location > 3) {
+        return warnArgumentValue(L, __func__, qsl("location %1 invalid, it should be 0 (top), 1 (left), 2 (right) or 3 (floating)").arg(location));
+    }
+    if (location > 0) {
         location++;
     }
     Host& host = getHostFromLua(L);
@@ -2921,11 +2925,7 @@ int TLuaInterpreter::tempKey(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     if (lua_isfunction(L, ++argIndex)) {
-        const int result = pLuaInterpreter->startTempKey(keyModifier, keyCode, QString());
-        if (result == -1) {
-            lua_pushnumber(L, -1);
-            return 2;
-        }
+        const int result = pLuaInterpreter->startTempKey(keyModifier, keyCode, QString()).first;
 
         TKey* key = host.getKeyUnit()->getKey(result);
         Q_ASSERT_X(key, "TLuaInterpreter::tempKey(...)", "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
@@ -2946,8 +2946,12 @@ int TLuaInterpreter::tempKey(lua_State* L)
     }
     const QString luaFunction{lua_tostring(L, argIndex)};
 
-    const int timerID = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
-    lua_pushnumber(L, timerID);
+    const auto [keyID, message] = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
+    lua_pushnumber(L, keyID);
+    if (keyID == -1) {
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
     return 1;
 }
 
@@ -3273,7 +3277,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     }
     bool offline = false;
 
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
