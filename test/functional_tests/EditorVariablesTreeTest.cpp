@@ -32,6 +32,7 @@
 #include <QPixmap>
 #include <QScopeGuard>
 #include <QStyleOptionViewItem>
+#include <QTranslator>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 
@@ -76,6 +77,8 @@ private:
     dlgTriggerEditor* mpEditor = nullptr;
     Host* mpHost = nullptr;
     TTreeWidget* mpVariablesTree = nullptr;
+    // %n strings only read "1 key" through a translation, and the machine's locale could pick another English one
+    QTranslator mAmericanEnglish;
     const QString mProfileName = qsl("EditorVariablesTree-Test-Profile");
     // Written out rather than read from the code under test, so the test fails
     // when that size moves
@@ -169,6 +172,8 @@ private slots:
 
         QVERIFY2(mSession.start(mProfileName), qPrintable(mSession.why()));
         mpHost = mSession.host();
+        QVERIFY2(mAmericanEnglish.load(qsl(":/lang/mudlet_en_US.qm")), "the American English translation is not built in");
+        QCoreApplication::installTranslator(&mAmericanEnglish);
 
         mudlet::self()->slot_showTriggerDialog();
         QCoreApplication::processEvents();
@@ -187,6 +192,8 @@ private slots:
                                                                      "myFunction = function() return 1 end\n"
                                                                      "myKeyed = { alpha = 1, beta = 2 }\n"
                                                                      "myList = { 10, 20, 30 }\n"
+                                                                     "myOneKey = { only = 1 }\n"
+                                                                     "myOneItem = { 10 }\n"
                                                                      "myNested = { kept = \"yes\" }\n"
                                                                      "myParagraph = \"first line\\nsecond line\"\n"
                                                                      "myLeadingBreak = \"\\nafter a break\\n\"\n")),
@@ -200,7 +207,7 @@ private slots:
 
         openTheVariablesView();
         QStringList missing;
-        for (const QString& name : {qsl("myString"), qsl("myNumber"), qsl("myBoolean"), qsl("myFunction"), qsl("myKeyed"), qsl("myList"), qsl("myNested")}) {
+        for (const QString& name : {qsl("myString"), qsl("myNumber"), qsl("myBoolean"), qsl("myFunction"), qsl("myKeyed"), qsl("myList"), qsl("myOneKey"), qsl("myOneItem"), qsl("myNested")}) {
             if (!variableRow(name)) {
                 missing << name;
             }
@@ -215,6 +222,7 @@ private slots:
         mpEditor = nullptr;
         mpHost = nullptr;
         mSession.stop();
+        QCoreApplication::removeTranslator(&mAmericanEnglish);
     }
 
     void test_everyRowIsTheHeightAnItemTreesRowIs()
@@ -332,6 +340,8 @@ private slots:
                                                       {qsl("myBoolean"), qsl("true")},
                                                       {qsl("myKeyed"), qsl("{ 2 keys }")},
                                                       {qsl("myList"), qsl("{ 3 items }")},
+                                                      {qsl("myOneKey"), qsl("{ 1 key }")},
+                                                      {qsl("myOneItem"), qsl("{ 1 item }")},
                                                       {qsl("myFunction"), qsl("function")},
                                                       {qsl("myParagraph"), qsl("\"first line\u2026\"")},
                                                       {qsl("myLeadingBreak"), qsl("\"after a break\"")}};

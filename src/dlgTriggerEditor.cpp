@@ -13101,7 +13101,8 @@ void dlgTriggerEditor::exportTriggerToClipboard()
     } else {
         // Multiple items - export them individually and let user paste multiple times
         exportMultipleTriggersToClipboard(triggersToExport);
-        statusBar()->showMessage(tr("Copied %1 triggers to clipboard").arg(triggersToExport.size()), 2000);
+        //: Status bar message after copying several triggers from the editor; %n is how many, always 2 or more
+        statusBar()->showMessage(tr("Copied %n triggers to clipboard", nullptr, triggersToExport.size()), 2000);
     }
 }
 
@@ -13157,7 +13158,8 @@ void dlgTriggerEditor::exportTimerToClipboard()
         statusBar()->showMessage(tr("Copied %1 to clipboard").arg(timerNames.first().toHtmlEscaped()), 2000);
     } else {
         exportMultipleTimersToClipboard(timersToExport);
-        statusBar()->showMessage(tr("Copied %1 timers to clipboard").arg(timersToExport.size()), 2000);
+        //: Status bar message after copying several timers from the editor; %n is how many, always 2 or more
+        statusBar()->showMessage(tr("Copied %n timers to clipboard", nullptr, timersToExport.size()), 2000);
     }
 }
 
@@ -13207,7 +13209,8 @@ void dlgTriggerEditor::exportAliasToClipboard()
         statusBar()->showMessage(tr("Copied %1 to clipboard").arg(aliasNames.first().toHtmlEscaped()), 2000);
     } else {
         exportMultipleAliasesToClipboard(aliasesToExport);
-        statusBar()->showMessage(tr("Copied %1 aliases to clipboard").arg(aliasesToExport.size()), 2000);
+        //: Status bar message after copying several aliases from the editor; %n is how many, always 2 or more
+        statusBar()->showMessage(tr("Copied %n aliases to clipboard", nullptr, aliasesToExport.size()), 2000);
     }
 }
 
@@ -13257,7 +13260,8 @@ void dlgTriggerEditor::exportActionToClipboard()
         statusBar()->showMessage(tr("Copied %1 to clipboard").arg(actionNames.first().toHtmlEscaped()), 2000);
     } else {
         exportMultipleActionsToClipboard(actionsToExport);
-        statusBar()->showMessage(tr("Copied %1 actions to clipboard").arg(actionsToExport.size()), 2000);
+        //: Status bar message after copying several actions from the editor; %n is how many, always 2 or more
+        statusBar()->showMessage(tr("Copied %n actions to clipboard", nullptr, actionsToExport.size()), 2000);
     }
 }
 
@@ -13307,7 +13311,8 @@ void dlgTriggerEditor::exportScriptToClipboard()
         statusBar()->showMessage(tr("Copied %1 to clipboard").arg(scriptNames.first().toHtmlEscaped()), 2000);
     } else {
         exportMultipleScriptsToClipboard(scriptsToExport);
-        statusBar()->showMessage(tr("Copied %1 scripts to clipboard").arg(scriptsToExport.size()), 2000);
+        //: Status bar message after copying several scripts from the editor; %n is how many, always 2 or more
+        statusBar()->showMessage(tr("Copied %n scripts to clipboard", nullptr, scriptsToExport.size()), 2000);
     }
 }
 
@@ -13357,7 +13362,8 @@ void dlgTriggerEditor::exportKeyToClipboard()
         statusBar()->showMessage(tr("Copied %1 to clipboard").arg(keyNames.first().toHtmlEscaped()), 2000);
     } else {
         exportMultipleKeysToClipboard(keysToExport);
-        statusBar()->showMessage(tr("Copied %1 keys to clipboard").arg(keysToExport.size()), 2000);
+        //: Status bar message after copying several keys from the editor; %n is how many, always 2 or more
+        statusBar()->showMessage(tr("Copied %n keys to clipboard", nullptr, keysToExport.size()), 2000);
     }
 }
 
@@ -13720,7 +13726,8 @@ void dlgTriggerEditor::slot_pasteXml()
             importedItemType = firstImportType;
             importedItemID = importedIDs.first();
 
-            statusBar()->showMessage(tr("Pasted %1 items successfully").arg(importedIDs.size()), 3000);
+            //: Status bar message after pasting items into the editor; %n is how many were pasted
+            statusBar()->showMessage(tr("Pasted %n items successfully", nullptr, importedIDs.size()), 3000);
         } else {
             // No items were imported - don't create undo action
             return;
