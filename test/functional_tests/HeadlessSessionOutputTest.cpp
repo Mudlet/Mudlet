@@ -764,6 +764,10 @@ tempRegexTrigger("^current$", [[moveCursor("main", 3, getLineNumber("main") - 1)
                         idOf.insert(lines.at(i), lineIds.at(i));
                     }
                 });
+        // No line is followed while nothing listens for its updates
+        QVERIFY(session.runLua(qsl(R"(feedTriggers("unfollowed\n"))")));
+        QVERIFY(idOf.contains(qsl("unfollowed")));
+        QCOMPARE(idOf.value(qsl("unfollowed")), qint64(0));
         QSignalSpy updated(&session, &THeadlessSession::linesUpdated);
         const auto updates = [&updated]() {
             QList<THeadlessSession::LineUpdate> all;
@@ -787,6 +791,7 @@ feedTriggers("alpha\nbeta\ngamma\n")
         const qint64 gamma = idOf.value(qsl("gamma"));
         QVERIFY(alpha > 0 && beta > 0 && gamma > 0);
         QCOMPARE(QSet<qint64>({alpha, beta, gamma}).size(), 3);
+        QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("unfollowed")) selectCurrentLine() replace("UNFOLLOWED") moveCursorEnd())")));
         QVERIFY(!updated.wait(200));
 
         QVERIFY(session.runLua(qsl(R"(moveCursor("main", 0, headlessLineOf("beta")) selectCurrentLine() replace("BETA") moveCursorEnd())")));
@@ -824,6 +829,7 @@ moveCursorEnd()
 
         // A line shown after them is not one of theirs, and a clear forgets them all
         QVERIFY(session.runLua(qsl(R"(feedTriggers("delta\n"))")));
+        QVERIFY(idOf.value(qsl("delta")) > 0);
         QVERIFY(!QSet<qint64>({alpha, beta, gamma}).contains(idOf.value(qsl("delta"))));
         QVERIFY(session.runLua(qsl(R"(clearWindow() feedTriggers("after\n") moveCursor("main", 0, headlessLineOf("after")) selectCurrentLine() replace("AFTER") moveCursorEnd())")));
         QVERIFY(updated.wait(1000));

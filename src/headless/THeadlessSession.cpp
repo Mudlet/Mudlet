@@ -2605,9 +2605,9 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
         lineIds.resize(line.text.count(QChar::LineFeed) + 1);
         for (qint64& lineId : lineIds) {
             // A trigger's echo onto a line already sent shares its line, which only that one is updated as
-            if (mSentLineIds.contains(lineId)) {
+            if (!followed || mSentLineIds.contains(lineId)) {
                 lineId = 0;
-            } else if (followed && lineId) {
+            } else if (lineId) {
                 mSentLineIds.insert(lineId);
             }
         }
