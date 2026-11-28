@@ -149,6 +149,8 @@ public:
         // 200 with a Content-Length far larger than what is ever sent, so the
         // download stays in flight until the client gives up on it
         Stalled,
+        // 302 to the body, as the Location
+        Redirect,
     };
 
     explicit StubMapServer(QObject* parent = nullptr)
@@ -265,6 +267,11 @@ private:
             sendHeader(socket, scmAssumedFileSize);
             socket->write(route.body);
             socket->flush();
+            return;
+        case Answer::Redirect:
+            socket->write("HTTP/1.1 302 Found\r\nLocation: " + route.body + "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            socket->flush();
+            socket->disconnectFromHost();
             return;
         }
     }
@@ -958,6 +965,71 @@ private slots:
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a canceled one was refused, so the import flag was left set");
     }
 
+    // A frontend with no console of its own, such as an app over libmudlet, learns
+    // from signal_mapDownloadFinished() how each download it began ended, and from
+    // downloadMap()'s answer whether one began at all.
+    void test_eachDownloadEndsWithItsResult()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
+        QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
+        // After the progress closed, so a frontend has taken the progress down by then
+        QStringList order;
+        QObject orderContext;
+        connect(pMap, &TMap::signal_mapProgressClose, &orderContext, [&order]() {
+            order << qsl("close");
+        });
+        connect(pMap, &TMap::signal_mapDownloadFinished, &orderContext, [&order]() {
+            order << qsl("finished");
+        });
+        const auto closedFirst = [&order]() {
+            return order.size() >= 2 && order.last() == qsl("finished") && order.at(order.size() - 2) == qsl("close");
+        };
+
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the map download never finished");
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), true);
+        QCOMPARE(finishedSpy.at(0).at(1).toString(), QString());
+        QVERIFY2(closedFirst(), qPrintable(order.join(qsl(", "))));
+
+        finishedSpy.clear();
+        order.clear();
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/nosuchmap.xml"))), "the failed map download never finished");
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("Map download encountered an error")), qPrintable(finishedSpy.at(0).at(1).toString()));
+        // Of the URL, which a game can fill with secrets, only its scheme and host
+        QVERIFY2(!finishedSpy.at(0).at(1).toString().contains(qsl("/nosuchmap.xml")), qPrintable(finishedSpy.at(0).at(1).toString()));
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(mpMapServer->url(QString())), qPrintable(finishedSpy.at(0).at(1).toString()));
+        QVERIFY2(closedFirst(), qPrintable(order.join(qsl(", "))));
+
+        finishedSpy.clear();
+        pMap->downloadMap(qsl("%zz"));
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("invalid URL")), qPrintable(finishedSpy.at(0).at(1).toString()));
+
+        finishedSpy.clear();
+        closeSpy.clear();
+        order.clear();
+        QVERIFY(pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml"))));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpMapServer->requestedPaths().contains(qsl("/stalled.xml"));
+                         },
+                         10s),
+                 "the download never reached the server");
+        // Refused, so no result of its own follows
+        QVERIFY(!pMap->downloadMap(mpMapServer->url(qsl("/map.xml"))));
+        QCOMPARE(finishedSpy.count(), 0);
+        pMap->slot_downloadCancel();
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("canceled, on user's request")), qPrintable(finishedSpy.at(0).at(1).toString()));
+        QCOMPARE(closeSpy.count(), 1);
+        QVERIFY2(closedFirst(), qPrintable(order.join(qsl(", "))));
+    }
+
     // Taking that exit is what leaves the profile's map where it was - in
     // memory and on disk. Writing the aborted reply's nothing over the
     // destination file and handing that to the reader, which clears the map
@@ -1100,6 +1172,22 @@ private slots:
         }
     }
 
+    // The URL a redirect leads to can be the one asked for and more, a token say, which is no more shown than that
+    void test_aRedirectsUrlIsShownAsItsHostToo()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        mpMapServer->serve(qsl("/redirected"), QByteArrayLiteral("/redirected.gone?token=SECRET"), StubMapServer::Answer::Redirect);
+        QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/redirected"))), "the redirected download never finished");
+        QVERIFY2(mpMapServer->requestedPaths().contains(qsl("/redirected.gone?token=SECRET")), "the redirect was not followed");
+        QCOMPARE(finishedSpy.count(), 1);
+        const QString reason = finishedSpy.at(0).at(1).toString();
+        QVERIFY2(reason.contains(qsl("Map download encountered an error")), qPrintable(reason));
+        QVERIFY2(!reason.contains(qsl("SECRET")) && !reason.contains(qsl(".gone")), qPrintable(reason));
+        QVERIFY2(reason.contains(mpMapServer->url(QString())), qPrintable(reason));
+        QVERIFY2(!consoleShows(qsl("SECRET")), qPrintable(consoleTextSinceMark()));
+    }
+
     // A location TMap was given directly, past Host's check, is still not fetched
     void test_aStoredMapLocationNotOnTheWebIsNotDownloaded()
     {
@@ -1111,12 +1199,16 @@ private slots:
         file.close();
         pMap->setMmpMapLocation(QUrl::fromLocalFile(localMap).toString());
         QSignalSpy startSpy(pMap, &TMap::signal_mapTransferProgressStart);
+        QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
 
-        pMap->downloadMap();
+        QVERIFY(pMap->downloadMap());
 
         QVERIFY2(consoleShows(qsl("not at a web (http or https) address")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(!consoleShows(localMap), qPrintable(consoleTextSinceMark()));
         QCOMPARE(startSpy.count(), 0);
+        QCOMPARE(finishedSpy.count(), 1);
+        QCOMPARE(finishedSpy.at(0).at(0).toBool(), false);
+        QVERIFY2(finishedSpy.at(0).at(1).toString().contains(qsl("not at a web (http or https) address")), qPrintable(finishedSpy.at(0).at(1).toString()));
         QVERIFY(!pMap->hasActiveTransferProgress());
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download after a refused location was refused, so the import flag was left set");
     }

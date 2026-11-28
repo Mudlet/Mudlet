@@ -122,6 +122,9 @@ struct TMapPainterView
     bool isCenterViewCall = false;
     // Drawn over the map but under the map info box
     std::function<void(QPainter&)> mPaintBelowInfoBox;
+    // Cleared for a caller that shows the map info box itself: the frame leaves it out, and PaintResult::mapInfo
+    // holds its lines
+    bool mPaintMapInfo = true;
     // A click at mPHighlight that the drawing of a room resolves: it clears mPick, and mStartSpeedWalk when the
     // room it lands on is one to speedwalk to
     QPoint mPHighlight;
@@ -150,6 +153,14 @@ public:
     void setView(const View& view) { static_cast<View&>(*this) = view; }
     const View& view() const { return *this; }
 
+    // One contributor's part of the map info box
+    struct MapInfoLine
+    {
+        QString text;
+        bool bold = false;
+        bool italic = false;
+        QColor color;
+    };
     // What painting a view resolved, for its caller to act on: no Lua runs in here but the map info contributors'
     struct PaintResult
     {
@@ -162,10 +173,15 @@ public:
         // Rooms outside the area now shown left the selection, so its room list is stale
         bool selectionPruned = false;
         int lodExitIndexRoomsHandedOver = -1;
+        // The map info box of a view that does not paint it (View::mPaintMapInfo)
+        QList<MapInfoLine> mapInfo;
     };
     // Paints the whole view, the map info box included, at view.mSize. viewSettled is handed the frame's view just
     // before the info box's contributors run, so the Lua they run can read this frame's area and zoom from its caller.
     void paintView(QPainter&, const View&, PaintResult&, const std::function<void(const View&)>& viewSettled = {});
+    // What the profile's enabled map info contributors give for the room, in the order the box shows them, but for
+    // those that give no text; each runs here, a script's in Lua. infoColor is the colour of one that gives none.
+    static QList<MapInfoLine> mapInfo(Host* pHost, TMap* pMap, int roomID, int displayAreaId, int selectionSize, QColor& infoColor);
     // Returns where the box ends, down from the top
     static int paintMapInfo(const QElapsedTimer& renderTimer,
                             QPainter& painter,

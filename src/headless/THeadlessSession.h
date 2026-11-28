@@ -38,6 +38,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -52,6 +53,8 @@ class QTimer;
 class TBuffer;
 class TConsoleModel;
 class TLineFormat;
+class TNullMapView;
+class TRoom;
 class QKeyEvent;
 class QMimeData;
 class QPoint;
@@ -350,6 +353,31 @@ public:
     // mapProgressCancelDisabled, and where submit() is refused, save that a JSON map that start() loads can be
     // aborted from a handler of its mapProgressStarted.
     bool cancelMapOperation();
+    // The map the game offers for download, as GMCP's Client.Map gives its URL, which may hold a user name and
+    // password; empty while it offers none, or with no profile open. offeredMapChanged follows each change.
+    QString offeredMapUrl() const;
+    // Downloads the map the game offers and loads it in place of the profile's, as the GUI's "Download from game"
+    // does: mapProgressStarted, mapProgressChanged and mapProgressFinished show it, cancelMapOperation() aborts it,
+    // and mapDownloadFinished says how it ended. False, with errorString() saying why, with no map offered, while a
+    // map download, import or export runs, and where submit() is refused.
+    bool downloadOfferedMap();
+    // Loads a map file in place of the profile's map, as the Mapper tab of the GUI's preferences does: a path that ends
+    // in .xml, in any case, as Mudlet's XML map, .json as its JSON map, and anything else as its binary map, each
+    // checked, said in the main console and shown as there. A JSON or XML map's progress is shown with
+    // mapProgressStarted, mapProgressChanged and mapProgressFinished while this runs, and a JSON one's is aborted by
+    // cancelMapOperation() from a handler of them, leaving the profile's map as it was, as a file that is not such a map
+    // does. False, with errorString() saying why, for a path that is not absolute, a map that did not load, an aborted
+    // JSON import, while a map download, import or export runs, and where submit() is refused.
+    bool loadMapFile(const QString& fileName);
+    // Saves the profile's map to a file, as that tab does: a path that ends in .json, in any case, as Mudlet's JSON map,
+    // with its progress as above, and anything else as its binary map in the format the profile saves its maps in.
+    // False, with errorString() saying why, as for loadMapFile(), and for a file that could not be written.
+    bool saveMapFile(const QString& fileName);
+    // Empties the profile's map, as the Mapper tab's "Delete map" does: no rooms or areas but the default one, the
+    // default colours, and no custom data, while the map files saved before stay. The map is drawn again as after a
+    // load. False, with errorString() saying why, while a map download, import or export runs, and where submit() is
+    // refused.
+    bool deleteMap();
     // A key pressed as on the GUI's input line, which offers it to the profile's key bindings where that line
     // would: the first that matches runs, or each one when the profile runs them all. The key and modifiers are
     // those of Qt's key event, which a binding must match exactly, so a key on the keypad carries
@@ -599,7 +627,10 @@ public:
     // a draw that moves to another area raises sysMapAreaChanged. A script opens the map first, as with
     // openMapWidget(). The map info box runs the profile's Lua, so this is refused where submit() is. False, with
     // errorString() saying why, with no map open, a painter that is not active or a size under 10 by 10 pixels.
-    bool renderMap(QPainter& painter, const QSize& size);
+    // A layoutScale above 1 lays it out at size times that, drawn scaled down to size, for a window shown enlarged, as
+    // the outlines, line weights and border fading are in pixels; mapPointer(), moveMapView() and mapView() keep to
+    // size's pixels.
+    bool renderMap(QPainter& painter, const QSize& size, qreal layoutScale = 1.0);
     // The pointer, at a position in what renderMap() last drew
     struct MapPointerEvent
     {
@@ -635,6 +666,212 @@ public:
     // script opens in a profile saved as editing raises mapModeChangeEvent with "editing" before it is there, as the
     // GUI's does, with no mapViewOnlyChanged.
     bool setMapViewOnly(bool viewOnly);
+    // The app's own 2D map, for an app that shows the map whether or not a script opened one, as the GUI's main
+    // window always offers its mapper: apart from the script's, with its own centre and selection (the zoom is the
+    // area's, so shared), following the player as the GUI's does. Scripts do not hear of it: it raises neither
+    // sysMapAreaChanged nor sysMapWindowMousePressEvent, and getMapSelection() does not see its selection; a
+    // double-click on it speedwalks as on theirs. It is made on the first call that needs it and goes with the
+    // profile, or with closeAppMap(). Once made, scripts see the map as open (Host::mapOpen()), closed or not, as
+    // once the player opened the GUI's mapper: centerview() moves the player on it, and getPlayerRoom() answers.
+    // mapRepaintRequested is emitted for it as for the script's, and setMapViewOnly() switches it too, also while
+    // no script has opened a map.
+    // Draws it as renderMap() draws the script's. False, with errorString() saying why, where renderMap() is, and
+    // for a map with no rooms, where the GUI would say there are none: an app shows nothing in its place.
+    bool renderAppMap(QPainter& painter, const QSize& size);
+    // What mapPointer() does, on what renderAppMap() last drew; getMousePosition() does not follow it. False, with
+    // errorString() saying why, as mapPointer() is, and before renderAppMap() has drawn it.
+    bool appMapPointer(const MapPointerEvent& event);
+    // Centres the app's map on the room and selects it, as panning the GUI's map to it and clicking it does, until
+    // the player moves or a script centres the map; mapRepaintRequested follows. False, with errorString() saying
+    // why, for a room not in the map and where submit() is refused.
+    bool showRoomOnAppMap(int roomId);
+    // Centres the script's map on the room, as choosing it in the GUI's map search does, until the player moves or a
+    // script centres the map: the selection stays, less its rooms in other areas, and no event is raised;
+    // mapRepaintRequested follows. False, with errorString() saying why, before renderMap() has drawn a map a script
+    // opened, where submit() is refused, and for a room not in the map.
+    bool centreMapOnRoom(int roomId);
+    // Lets the app's map go, as for an app that no longer shows it; a later call makes it again
+    void closeAppMap();
+    // Which map a call acts on: the one a script opened (renderMap()), or the app's own (renderAppMap())
+    enum class MapTarget { script, app };
+    // A drag and a pinch on that map, as on a touch screen: what it last drew moved by pan, in its pixels, then zoomed
+    // by zoom (above 0; 2 shows the rooms twice as large) about the point about of it, as the pinch's middle stays
+    // under the fingers, from 3 rooms across the narrow side to MapView::maxZoom, as the area's zoom, which the
+    // next render draws. A move that leaves the view off the player stops it following the player, until the player
+    // moves to another room or followPlayerOnMap(); a zoom about the middle alone does not. mapRepaintRequested
+    // follows, also when nothing changed. False, with errorString() saying why, where the pointer calls are, and
+    // where the last render showed no area.
+    bool moveMapView(MapTarget map, const QPointF& pan, qreal zoom, const QPointF& about);
+    // Centres that map on the player's room and has it follow the player again; mapRepaintRequested follows. As the
+    // GUI's map does, the map's first room stands in for the player's while the player is in none. False, with
+    // errorString() saying why, as moveMapView() is, and for a map with no rooms.
+    bool followPlayerOnMap(MapTarget map);
+    // Shows that level of the area the map drew last, about the same point, as the GUI's level buttons do, until the
+    // player moves to another room or followPlayerOnMap(); mapRepaintRequested follows. False, with errorString()
+    // saying why, as moveMapView() is, and for a level the area has no rooms on.
+    bool showMapLevel(MapTarget map, int level);
+    // Shows that area on the map, as picking it in the GUI's area box does: following the player where they are in
+    // it, else about the room nearest the middle of its current level, or of its level with the most rooms where it
+    // has none on the current one, the script's map raising sysMapAreaChanged as the GUI's does; mapRepaintRequested
+    // follows. False, with errorString() saying why, where moveMapView() is but for a last draw that showed no area,
+    // and for an area not in the map or with no rooms.
+    bool showMapArea(MapTarget map, int areaId);
+    // Walks the player to the room, as a double-click on it on the GUI's map does, with the profile's doSpeedWalk()
+    // or else the shortest path by known exits. False, with errorString() saying why, for a room not in the map, with
+    // no room the player is in; a walk that finds no path says so in the console, as the double-click does.
+    bool walkToRoom(int roomId);
+    // A room a map's last render drew, at its middle in the frame's pixels
+    struct MapRoom
+    {
+        int id = 0;
+        QPointF position;
+        QString name;
+    };
+    // What a map's last render laid out, for an app to place what it draws over the map and to keep a gesture in
+    // step with it: the area and level drawn, the zoom (rooms across the narrow side) and the most moveMapView()
+    // zooms out to, whether it follows the player, the player's room as followPlayerOnMap() takes it, a room's cell
+    // in pixels, the rooms of that area and level it drew, at most 500, those nearest the middle where there were
+    // more, and the area's levels
+    struct MapView
+    {
+        int areaId = 0;
+        QString areaName;
+        int level = 0;
+        qreal zoom = 0.0;
+        qreal minZoom = 0.0;
+        qreal maxZoom = 0.0;
+        bool following = true;
+        int playerRoomId = 0;
+        qreal roomSize = 0.0;
+        QList<MapRoom> rooms;
+        // The levels of the area that have rooms, lowest first
+        QList<int> levels;
+    };
+    // None before that map has drawn an area, or with no such map
+    std::optional<MapView> mapView(MapTarget map) const;
+    // For an app that shows the map info box itself, in its own text: false has renderMap() and renderAppMap() leave
+    // the box out of what they draw from then on, and mapInfo() gives what it holds. The contributors run as before,
+    // so a script's still runs its Lua at each draw.
+    void setMapInfoPainted(bool painted) { mMapInfoPainted = painted; }
+    // One contributor's part of the map info box, as registerMapInfo() gives it; the colour is the map's own text
+    // colour, black or white against its background, where the contributor gave none
+    struct MapInfoLine
+    {
+        QString text;
+        bool bold = false;
+        bool italic = false;
+        QColor color;
+    };
+    // The map info box a map's last draw left out: the parts of the contributors the profile has enabled, in the
+    // box's order, and the box's background (setConfig("mapInfoColor")). No lines while the box is painted, before
+    // that map is drawn, with no such map, and where no contributor is enabled.
+    struct MapInfo
+    {
+        QList<MapInfoLine> lines;
+        QColor background;
+    };
+    MapInfo mapInfo(MapTarget map) const;
+    // A room findRooms() found
+    struct RoomMatch
+    {
+        int id = 0;
+        QString name;
+        int areaId = 0;
+        QString areaName;
+        // Whether it is in the area of the player's room
+        bool inPlayerArea = false;
+        // As RoomInfo::steps
+        int steps = -1;
+    };
+    // The rooms of the map whose name holds the text, ignoring case, as searchRoom() finds them, and the room whose
+    // id it is, in no order; none with no profile open or for empty text. A getter, so it may be called from any
+    // handler.
+    QList<RoomMatch> findRooms(const QString& text) const;
+    // A way out of a room: one of the twelve directions, as "n" to "out", or a special exit's command
+    struct RoomExit
+    {
+        QString direction;
+        int to = 0;
+        QString toName;
+        bool locked = false;
+    };
+    struct RoomInfo
+    {
+        int id = 0;
+        QString name;
+        int areaId = 0;
+        QString areaName;
+        int x = 0;
+        int y = 0;
+        int z = 0;
+        // The fewest exits from the player's room to it, by rooms and exits that are not locked, as the GUI's
+        // speedwalk goes: 0 for the player's room, -1 with no such way or no room the player is in
+        int steps = -1;
+        // The directions first, from north to out, then the special exits by command
+        QList<RoomExit> exits;
+        // As the GUI's room properties edit them: the symbol drawn on it, its environment and the colour that
+        // draws, its weight for the speedwalk and whether the speedwalk avoids it
+        QString symbol;
+        int env = -1;
+        QColor color;
+        int weight = 1;
+        bool locked = false;
+    };
+    // A room of the map, as the GUI's room properties show it; none for a room not in the map or with no profile
+    // open. A getter, so it may be called from any handler.
+    std::optional<RoomInfo> roomInfo(int roomId) const;
+    struct MapArea
+    {
+        int id = 0;
+        QString name;
+    };
+    // The areas of the map that have rooms, by name ignoring case, then id; none with no profile open. A getter, so
+    // it may be called from any handler.
+    QList<MapArea> mapAreas() const;
+    // Edits of the map, as the GUI's mapper makes them in its editing mode and its Lua API makes them in any: each
+    // marks the map unsaved and draws it again, and each is false, with errorString() saying why, where submit() is
+    // refused, for a room or area not in the map and for an edit given nothing it can take, changing nothing.
+    // What editRoom() sets of a room: each left empty is kept
+    struct RoomEdit
+    {
+        std::optional<QString> name;
+        // Empty clears it
+        std::optional<QString> symbol;
+        std::optional<int> env;
+        // From 1
+        std::optional<int> weight;
+        std::optional<bool> locked;
+        // Its place in its area: x, then y (north is up), then z, as setRoomCoordinates() takes them
+        std::optional<std::array<int, 3>> position;
+    };
+    bool editRoom(int roomId, const RoomEdit& edit);
+    // The room's exit that way, one of the twelve directions as RoomExit names them, set to lead to the room toRoomId,
+    // or removed for 0, as setExit() does; with bothWays the exit back from that room the other way too (in for
+    // out, up for down), and when removing, the exit back that led here. False also for a toRoomId not in the map.
+    bool setRoomExit(int roomId, const QString& direction, int toRoomId, bool bothWays);
+    // The room's exit that way locked, so the speedwalk avoids it, or unlocked, as lockExit() does. False also for
+    // a way the room has no exit.
+    bool lockRoomExit(int roomId, const QString& direction, bool locked);
+    // A new room, in the room's area one place from it that way, one of the ten directions other than in and out,
+    // with exits between the two both ways, as the GUI's room creation with exits drawn to it makes; its id, or 0,
+    // with errorString() saying why, as the edits above are and where a room of that area is already in that place.
+    int addRoomBeside(int roomId, const QString& direction);
+    // The room and its exits gone, as deleteRoom() does. False also while a script's map callback runs.
+    bool deleteRoom(int roomId);
+    // The player placed in the room, as centerview() does: the maps follow them there. False also while no map
+    // is open.
+    bool setPlayerRoom(int roomId);
+    // The area renamed, as setAreaName() does: false also for a name that is empty once trimmed or another area's.
+    bool renameArea(int areaId, const QString& name);
+    // An environment a room can be given, with the colour it draws rooms in
+    struct MapEnv
+    {
+        int env = 0;
+        QColor color;
+    };
+    // The environments the map gives a colour of its own, by number, as the GUI's room colour dialog lists them; none with no profile
+    // open. A getter, so it may be called from any handler.
+    QList<MapEnv> mapEnvs() const;
     // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
     // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
     // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
@@ -1026,6 +1263,13 @@ signals:
     // The map operation can no longer be aborted, as the GUI's dialog then drops its Abort: at once for an XML
     // import, and for an export writing its file or a download that has arrived
     void mapProgressCancelDisabled(const QString& profile);
+    // offeredMapUrl() changed, as the game offered a map; from the event loop
+    void offeredMapChanged(const QString& profile);
+    // A map download, whichever began it, ended: loaded, its rooms now the profile's map, or not, with error being
+    // the message the console was given, which can be empty and names no more of the map's URL than its scheme and
+    // host. From the event loop, after its mapProgressFinished where its progress had started, so long as shutdown()
+    // or a later start() has not let the profile go.
+    void mapDownloadFinished(const QString& profile, bool loaded, const QString& error);
     // The map opened with no mapping script installed, where the GUI suggests one: the first time it opens
     // once the profile has loaded, as the GUI asks. The profile marks it asked then, whether or not anything
     // listens, and a save keeps that, so it never comes again for that profile. From the event loop, even once
@@ -1215,6 +1459,9 @@ private:
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
+    // usable() for loadMapFile() and saveMapFile(), which also refuse a path that is not absolute and a map download,
+    // import or export under way: the file's name, for their errors, or none, with mErrorString saying why
+    std::optional<QString> mapFileUsable(const QString& fileName);
     // Lua's own message, out of what the GUI's error console shows of it
     static QString luaErrorOf(const QString& consoleText);
     static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);
@@ -1232,9 +1479,21 @@ private:
     // pointer() on the mapper's window
     bool pointMapper(const ScriptWindow& mapper, const WindowPointerEvent& event);
     void noteMapPointer(const QPointF& position);
+    // What pointMap() does on a map view; scriptMap for the script's, whose getMousePosition() it moves
+    bool pointView(TNullMapView& view, const MapPointerEvent& event, Qt::MouseButtons buttons, const std::optional<QSize>& windowSize, bool scriptMap);
+    // The app's map, made for the open profile if there is none; null with no profile open
+    TNullMapView* appMap();
+    // The script's or the app's map that has been drawn, as the pointer calls take it; null, with errorString()
+    // saying why, otherwise
+    TNullMapView* drawnMap(MapTarget map);
+    // The room an edit of the map acts on; null, with errorString() saying why, where the edits are refused for it
+    TRoom* editableRoom(int roomId);
 
     QPointer<Host> mpHost;
     QString mProfileName;
+    // The app's map, which the profile holds
+    QPointer<TNullMapView> mpAppMap;
+    bool mMapInfoPainted = true;
     QString mErrorString;
     // A local: link that followWindowLink() last followed without an item, which opened its menu and changed its
     // selection: its console's notifier, as one made again under the name starts with no menu open, and the issue

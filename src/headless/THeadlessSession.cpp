@@ -951,6 +951,30 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                             }
                         },
                         Qt::QueuedConnection);
+                // After the close's own relay, so it follows mapProgressFinished
+                connect(
+                        pMap,
+                        &TMap::signal_mapDownloadFinished,
+                        &mMapProgressRelay,
+                        [this, run](const bool loaded, const QString& error) {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit mapDownloadFinished(profile, loaded, error);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // Queued, as the game's message that offers it is being read
+                connect(
+                        pMap,
+                        &TMap::signal_mmpMapLocationChanged,
+                        this,
+                        [this, run]() {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit offeredMapChanged(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
                 // After the start's own relay, so it follows mapProgressStarted
                 connect(
                         pMap,
@@ -1597,6 +1621,129 @@ bool THeadlessSession::cancelMapOperation()
         return false;
     }
     mpHost->mpMap->slot_mapProgressDialogCancelled();
+    return true;
+}
+
+QString THeadlessSession::offeredMapUrl() const
+{
+    return mpHost ? mpHost->getMmpMapLocation() : QString();
+}
+
+bool THeadlessSession::downloadOfferedMap()
+{
+    if (!usable()) {
+        return false;
+    }
+    if (mpHost->getMmpMapLocation().isEmpty()) {
+        //: Error from a frontend with no window that was asked to download the map the game offers when the game has offered none
+        mErrorString = tr("The game has offered no map to download.");
+        return false;
+    }
+    if (!mpHost->mpMap->downloadMap()) {
+        //: Error from a frontend with no window that was asked to download the map the game offers while a map download, import or export runs
+        mErrorString = tr("A map download, import or export is running; wait for it to end.");
+        return false;
+    }
+    return true;
+}
+
+// What loadMapFile() and saveMapFile() refuse before touching the map, and the file's name, for their errors
+std::optional<QString> THeadlessSession::mapFileUsable(const QString& fileName)
+{
+    if (!usable()) {
+        return std::nullopt;
+    }
+    if (!QFileInfo(fileName).isAbsolute()) {
+        //: Error from a frontend with no window that was asked to load or save the map with a file that is not given by its whole path
+        mErrorString = tr("The map file must be given by its whole path.");
+        return std::nullopt;
+    }
+    if (mpHost->mpMap->importRunning() || mpHost->mpMap->hasActiveTransferProgress()) {
+        //: Error from a frontend with no window that was asked to load or save the map while a map download, import or export runs
+        mErrorString = tr("A map download, import or export is running; wait for it to end.");
+        return std::nullopt;
+    }
+    return QFileInfo(fileName).fileName();
+}
+
+bool THeadlessSession::loadMapFile(const QString& fileName)
+{
+    const std::optional<QString> name = mapFileUsable(fileName);
+    if (!name) {
+        return false;
+    }
+    bool loaded = false;
+    const bool xml = fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive);
+    const bool json = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
+    if (xml) {
+        loaded = mpHost->importMapFile(fileName);
+    } else if (json) {
+        auto [jsonLoaded, reason] = mpHost->mpMap->importJsonMapFile(fileName);
+        loaded = jsonLoaded;
+        if (!loaded) {
+            //: %1 is the file the map was being loaded from, %2 why it could not be
+            mpHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
+                                   "reason: %2.")
+                                        .arg(fileName, reason));
+        } else {
+            // As loadJsonMap() does, so the map is drawn again as for the other two
+            mpHost->mpMap->announceMapLoaded(true);
+        }
+    } else {
+        loaded = mpHost->loadMapFile(fileName);
+    }
+    if (!loaded) {
+        //: Error from a frontend with no window whose map file did not load; the main console says why. %1 is the file's name.
+        mErrorString = tr("Could not load map from %1.").arg(*name);
+        return false;
+    }
+    // Host::loadMapFile()'s audit ends by condensing the load's lines out of the console, so this one leaves an
+    // "[  OK  ]" there; importMapFile()'s audit of an XML map is not condensed
+    if (!xml && !json) {
+        mpHost->mpMap->audit();
+    }
+    return true;
+}
+
+bool THeadlessSession::saveMapFile(const QString& fileName)
+{
+    const std::optional<QString> name = mapFileUsable(fileName);
+    if (!name) {
+        return false;
+    }
+    bool saved = false;
+    if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+        saved = mpHost->saveMapFile(fileName, 0);
+    } else {
+        auto [jsonSaved, reason] = mpHost->mpMap->writeJsonMapFile(fileName);
+        saved = jsonSaved;
+        if (!saved) {
+            //: %1 is the file the map was being exported to, %2 why it could not be
+            mpHost->postMessage(tr("[ ERROR ] - Unable to save JSON map file: %1\n"
+                                   "reason: %2.")
+                                        .arg(fileName, reason));
+        }
+    }
+    if (!saved) {
+        //: Error from a frontend with no window whose map could not be saved to a file. %1 is the file's name.
+        mErrorString = tr("Could not save map to %1.").arg(*name);
+        return false;
+    }
+    return true;
+}
+
+bool THeadlessSession::deleteMap()
+{
+    if (!usable()) {
+        return false;
+    }
+    if (mpHost->mpMap->importRunning() || mpHost->mpMap->hasActiveTransferProgress()) {
+        //: Error from a frontend with no window that was asked to delete the map while a map download, import or export runs
+        mErrorString = tr("A map download, import or export is running; wait for it to end.");
+        return false;
+    }
+    mpHost->mpMap->mapClear();
+    mpHost->mpMap->updateArea(-1);
     return true;
 }
 

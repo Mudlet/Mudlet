@@ -371,6 +371,14 @@ steps, where only the session's own signals are delivered, so its start and chan
 the `start()` that loads a JSON map, still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
 through `host()`, carries on after its script returns.
 
+`loadMapFile()` and `saveMapFile()` are the Mapper tab's Load and Save buttons of the GUI's preferences, for an
+app that has no such tab: the file's ending picks Mudlet's XML, JSON or binary map, as the GUI's file dialog does,
+a binary map is saved in the format the profile saves its maps in, and the main console says how it went, as in
+the GUI. They run within their call, as a script's `loadMap()` does, so a JSON or XML map's progress arrives as
+for a script's import, and `cancelMapOperation()` from a handler of it aborts a JSON one, leaving the profile's map
+as it was. They take only a whole path, and refuse while a map download, import or export runs.
+`deleteMap()` is that tab's "Delete map": the map is emptied, and the files saved before stay, as in the GUI.
+
 A map operation or package download still open when its profile closes, or when `shutdown()` or a later
 `start()` lets the profile go, gets its end there, so every start an app is sent is followed by one end.
 A session that is deleted sends none.
@@ -1062,6 +1070,15 @@ As the GUI's does, a draw that moves to another area raises `sysMapAreaChanged`.
 the profile's Lua, so the call is refused where `submit()` is, from a handler of `outputLine` and the
 other signals sent in the middle of a write.
 
+The map's outlines, line weights and the room size below which a room's border fades and then goes are
+in pixels, so a small window an app shows enlarged would have its rooms drawn as tiny rooms magnified:
+filled dots for the levels above and below, rooms without borders, thinner exits. Such an app passes
+`renderMap()` a `layoutScale`, how many of the units it lays its own maps out in make one of the
+window's pixels, from 1 to 16: the map is laid out at the size times that and drawn scaled down to the
+size, so its rooms look as on a map laid out at that larger size. The zoom, the rooms across the narrow
+side, is the area's as before, and `mapPointer()`, `moveMapView()` and `mapView()` keep to the size's
+pixels.
+
 `mapRepaintRequested` says when the GUI would draw the map again: a script opened the map, showed it
 again or replaced it with an embedded mapper, the player moved or a script centred the map, the map
 loaded or changed, or its zoom, colours, settings or info box did. It comes once a turn
@@ -1085,6 +1102,54 @@ does, and it is refused where `renderMap()` is. Once the map is drawn, and while
 `getMousePosition()` follows each `mapPointer()` call, even one the map does nothing for: the `position`
 is taken as that point of the `mapper` window among `scriptWindows()`, which the GUI's map fills from its
 top left, so the app draws the map at that window's size for the two to agree.
+
+`moveMapView()` is a drag and a pinch on a touch screen, which the GUI's mouse has no way to give: it moves
+what the script's map (`MapTarget::script`) or the app's own (`MapTarget::app`) last drew by a distance in
+its pixels, then zooms it by a factor about a point, which stays under the fingers, from 3 rooms across the
+narrow side to `mapView()`'s `maxZoom` (half as much again as the area's widest side, at least 30 rooms), as
+the area's zoom, as the wheel sets it. The next draw lays it out, as for the wheel, and `mapRepaintRequested`
+follows each call. A move that leaves the view off the player, as a pan or a zoom about a point other than the
+middle does, stops the map following the player until the player moves to another room, as the GUI's pan
+does, or until `followPlayerOnMap()` centres it on the player again. `mapView()` says what the last draw laid
+out, for an app to keep what it draws over the map, and a gesture still under way, in step with it: the area
+and level, the zoom and its limits, whether it follows the player, the player's room (the map's first room while
+the player is in none, as the GUI's map takes it), a room's cell in pixels
+and the rooms of that area and level it drew, each at its middle, at most 500, those nearest the middle where
+there were more, and the levels of that area that have rooms. Both calls are false, with the reason in `errorString()`, where `mapPointer()` and
+`appMapPointer()` are, and for a map whose last draw showed no area; `followPlayerOnMap()` also for a map with no
+rooms.
+
+An app that shows the map info box itself, in its own text, calls `setMapInfoPainted(false)`: `renderMap()` and
+`renderAppMap()` then leave the box out, and `mapInfo()` gives what a map's last draw would have painted, the
+part of each contributor the profile has enabled (the built-in ones and those of `registerMapInfo()`) with its
+text, bold, italic and colour, in the box's order, and the box's background. The contributors run at each draw
+as before, a script's in Lua, so `mapInfo()` changes only with a draw, and `mapRepaintRequested` says when.
+
+`showMapLevel()` and `showMapArea()` are the GUI's level buttons and area box for those maps. A level is one of
+the area's that has rooms, shown about the same point; an area is shown following the player where they are in
+it, else about the room nearest the middle of the level shown, or of its level with the most rooms where it has
+none on that one. Either leaves the map off the player as a pan does, and an area shown on the script's map raises
+`sysMapAreaChanged` as the area box does. They are false, with the reason in
+`errorString()`, where `moveMapView()` is (`showMapArea()` also when the last draw showed no area), and for a level
+or an area with no rooms. `centreMapOnRoom()` centres the script's map on a room as choosing it in the GUI's map
+search does, leaving the map off the player and the selection as it was in the room's area; it is false before
+`renderMap()` has drawn a map a script opened, where `submit()` is refused, and for a room not in the map.
+`walkToRoom()` walks to a room as a double-click on it does, with no map drawn: it is false for a room not in the
+map and with no room for the player. `roomInfo()` gives a room's name, area,
+coordinates and exits (the twelve directions, then the special exits, each with the room it leads to and whether it
+is locked), and `steps`, the fewest exits from the player's room by rooms and exits that are not locked, as the
+speedwalk goes, or -1 for none; `findRooms()` gives each room found its `steps` too, and whether it is in the
+player's area. `mapAreas()` lists the areas that have rooms, by name.
+
+The map can be edited with no T2DMap, as the GUI's mapper edits it in its editing mode and the Lua API in any:
+`roomInfo()` also gives a room's symbol, environment and the colour that draws it, weight and lock, and `editRoom()`
+sets any of those, its name and its place; `setRoomExit()` leads one of a room's twelve exits to another room, or
+removes it, both ways if asked, and `lockRoomExit()` locks it; `addRoomBeside()` makes a room one place from
+another, in its area, with exits both ways; `deleteRoom()`, `setPlayerRoom()` and `renameArea()` do as
+`deleteRoom()`, `centerview()` and `setAreaName()` do. `mapEnvs()` lists the environments a room can be given, with
+their colours, as the GUI's room colour dialog lists them: the profile's sixteen colours as 257 to 272, and those a
+script or the player added. Each edit marks the map unsaved and draws it again, and is false, with the reason in
+`errorString()`, for a room or area not in the map or an edit it cannot take, changing nothing.
 
 `setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
 `mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear
