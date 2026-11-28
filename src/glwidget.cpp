@@ -36,6 +36,10 @@
 #include <QPainter>
 #include <QVBoxLayout>
 #include <QWindow>
+
+#include <algorithm>
+#include <cmath>
+
 #ifdef Q_OS_MACOS
 #include <OpenGL/glu.h>
 #else
@@ -185,7 +189,7 @@ void GLWidget::slot_defaultView()
     zRot = 10.0;
     mScale = 1.0;
     is2DView = false;
-    update();
+    applyScale();
 }
 
 void GLWidget::slot_sideView()
@@ -195,7 +199,7 @@ void GLWidget::slot_sideView()
     zRot = 0.0;
     mScale = 1.0;
     is2DView = false;
-    update();
+    applyScale();
 }
 
 void GLWidget::slot_topView()
@@ -206,15 +210,25 @@ void GLWidget::slot_topView()
     mScale = 1.0;
     // This is the ONLY place this value is set:
     is2DView = true;
-    update();
+    applyScale();
 }
 
 void GLWidget::slot_setScale(int angle)
 {
     mScale = 150 / (static_cast<float>(angle) + 300.0f);
-    makeCurrent();
-    resizeGL(width(), height());
-    doneCurrent();
+    applyScale();
+}
+
+// paintGL() never sets the projection, so a new scale has no effect until resizeGL() rebuilds it. Without a
+// context makeCurrent() does nothing and the GL calls would land in whichever context is current; Qt's own first
+// resizeGL() picks the scale up instead
+void GLWidget::applyScale()
+{
+    if (isValid()) {
+        makeCurrent();
+        resizeGL(width(), height());
+        doneCurrent();
+    }
     update();
 }
 
@@ -323,6 +337,22 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
     mMapCenterY = yPos;
     mMapCenterZ = zPos;
     update();
+}
+
+// A room in an environment with no color of its own: the mapper's default room color where one is set, keeping the
+// transparency this view draws it with. Unset, the room keeps this view's own color for environment 1, as before.
+void GLWidget::applyDefaultRoomColor(float* material) const
+{
+    if (!mpHost || !mpHost->mMapperDefaultRoomColor.isValid()) {
+        return;
+    }
+    const QColor& color = mpHost->mMapperDefaultRoomColor;
+    GLfloat current[4];
+    glGetFloatv(GL_CURRENT_COLOR, current);
+    glColor4f(color.redF(), color.greenF(), color.blueF(), current[3]);
+    material[0] = color.redF();
+    material[1] = color.greenF();
+    material[2] = color.blueF();
 }
 
 void GLWidget::paintGL()
@@ -738,12 +768,14 @@ void GLWidget::paintGL()
 
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 1.0};
+                        bool undefinedEnvironment = false;
                         int env = pExit->environment;
                         if (mpMap->mEnvColors.contains(env)) {
                             env = mpMap->mEnvColors[env];
                         } else {
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
+                                undefinedEnvironment = true;
                             }
                         }
                         switch (env) {
@@ -891,6 +923,9 @@ void GLWidget::paintGL()
                             mc3[1] = _c.greenF();
                             mc3[2] = _c.blueF();
                             mc3[3] = 0.2;
+                        }
+                        if (undefinedEnvironment) {
+                            applyDefaultRoomColor(mc3);
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 1);
@@ -1147,12 +1182,14 @@ void GLWidget::paintGL()
 
                         //on top
                         float mc3[] = {0.2, 0.2, 0.6, 0.2};
+                        bool undefinedEnvironment = false;
                         int env = pExit->environment;
                         if (mpMap->mEnvColors.contains(env)) {
                             env = mpMap->mEnvColors[env];
                         } else {
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 env = 1;
+                                undefinedEnvironment = true;
                             }
                         }
                         switch (env) {
@@ -1300,6 +1337,9 @@ void GLWidget::paintGL()
                             mc3[1] = _c.greenF();
                             mc3[2] = _c.blueF();
                             mc3[3] = 0.2;
+                        }
+                        if (undefinedEnvironment) {
+                            applyDefaultRoomColor(mc3);
                         }
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                         glMateriali(GL_FRONT, GL_SHININESS, 36);
@@ -1541,12 +1581,14 @@ void GLWidget::paintGL()
                 glEnd();
 
                 float mc3[] = {0.2, 0.2, 0.6, 0.2};
+                bool undefinedEnvironment = false;
                 int env = pR->environment;
                 if (mpMap->mEnvColors.contains(env)) {
                     env = mpMap->mEnvColors[env];
                 } else {
                     if (!mpMap->mCustomEnvColors.contains(env)) {
                         env = 1;
+                        undefinedEnvironment = true;
                     }
                 }
 
@@ -1696,6 +1738,9 @@ void GLWidget::paintGL()
                     mc3[2] = _c.blueF();
                     mc3[3] = 0.2;
                 }
+                if (undefinedEnvironment) {
+                    applyDefaultRoomColor(mc3);
+                }
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 96);
                 glDisable(GL_DEPTH_TEST);
@@ -1843,12 +1888,14 @@ void GLWidget::paintGL()
 
             glEnd();
 
+            bool undefinedEnvironment = false;
             int env = pR->environment;
             if (mpMap->mEnvColors.contains(env)) {
                 env = mpMap->mEnvColors[env];
             } else {
                 if (!mpMap->mCustomEnvColors.contains(env)) {
                     env = 1;
+                    undefinedEnvironment = true;
                 }
             }
             switch (env) {
@@ -1998,6 +2045,9 @@ void GLWidget::paintGL()
                 mc3[3] = 1.0;
             }
             glDisable(GL_DEPTH_TEST);
+            if (undefinedEnvironment) {
+                applyDefaultRoomColor(mc3);
+            }
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
             glMateriali(GL_FRONT, GL_SHININESS, 6);
             glLoadIdentity();
@@ -2242,27 +2292,25 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
     mPanMode = false;
 }
 
+float GLWidget::scaleAfterWheel(const float scale, const int angleDeltaY)
+{
+    // Fractional, as touchpads and high-resolution wheels send a notch in many small parts
+    const float notches = static_cast<float>(angleDeltaY) / (8.0f * 15.0f);
+    // The field of view is 60 times the scale in degrees, and the view empties or flips at 0 and at 180 degrees
+    constexpr float minScale = 0.05f;
+    constexpr float maxScale = 2.5f;
+    const float step = std::abs(scale) < 0.3f ? 0.01f : 0.03f;
+    return std::clamp(scale + step * notches, minScale, maxScale);
+}
+
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    const int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
-    const int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
-    bool used = false;
-    if (yDelta) {
-        if (abs(mScale) < 0.3) {
-            mScale += 0.01 * yDelta;
-        } else {
-            mScale += 0.03 * yDelta;
-        }
-        makeCurrent();
-        resizeGL(width(), height());
-        doneCurrent();
-        update();
-        used = true;
+    const int angleDeltaY = e->angleDelta().y();
+    if (!angleDeltaY) {
+        e->ignore();
+        return;
     }
-
-    // Space for future use of xDelta - depending on what that is the update
-    // may need to be moved out of the yDelta part
-    Q_UNUSED(xDelta)
-
-    e->setAccepted(used);
+    mScale = scaleAfterWheel(mScale, angleDeltaY);
+    applyScale();
+    e->accept();
 }

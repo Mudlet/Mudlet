@@ -195,8 +195,9 @@ public:
     // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
     // signal but quitRequested and mainWindowResizeRequested, which run mid-write, and fail once a close of the
     // profile has begun; submit() checks each line of a paste as a call. It is the app's input line being sent: the
-    // main command line holds the line while its aliases run, then is emptied or kept as the profile says. A command
-    // from elsewhere, such as a button, goes through runLua() and expandAlias(), which leave the line alone.
+    // main command line holds the line while its aliases run, then is emptied or kept as the profile says, unless
+    // something wrote to it meanwhile, which is left as written. A command from elsewhere, such as a button, goes
+    // through runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -290,7 +291,7 @@ public:
     {
         // Plain text, empty for none
         QString tooltip;
-        // A click follows the first item; where menu is set, the GUI's right click lists the items, under menuTitle
+        // A click follows the first item, or on a local: link opens the menu; where menu is set, the GUI's right click lists the items, under menuTitle
         // if that is not empty
         bool menu = false;
         QString menuTitle;
@@ -319,13 +320,16 @@ public:
     // own ids, or of the main console for "main" or no name; nullopt too for a name windowLines() refuses
     std::optional<Link> windowLink(const QString& window, int id) const;
     // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
-    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link and a menu's greyed-out item
-    // run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
-    // otherwise its selection group is updated and its command or function runs before this returns, so an
-    // OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error, which
-    // errorString() gives. noSuchItem: item does not index link()'s items. unknown: an id the main console does
-    // not hold. refused: where submit() is; errorString() says why.
-    enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
+    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link, a local: note and a menu's
+    // greyed-out item run nothing (disabled), nor does a link the game's visibility settings have concealed
+    // (concealed); and otherwise its selection group is updated and its command or function runs before this
+    // returns, so an OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error,
+    // which errorString() gives. A local: link with a menu runs nothing without an item, as the GUI's click only
+    // opens the menu, and an item picked straight after leaves the selection that follow changed. A gmcp: link or
+    // item while GMCP is off for the connection, or with no connection, sends nothing and leaves the link as it was
+    // (gmcpOff). noSuchItem: item does not index link()'s items. unknown: an id the main console does not hold.
+    // refused: where submit() is; errorString() says why.
+    enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused, gmcpOff };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
     // The same for a link of that window, shown or hidden, as only the app knows what its pointer can reach;
     // unknown too for a name windowLines() refuses. What it changes of the link is windowTextChanged's to tell.
@@ -395,9 +399,10 @@ public:
     // Enter on that line, holding this text, each line of it a command: one goes to the function a script's
     // setCmdLineAction() gave the line, or else through the aliases to the game as submit() sends it, and then a
     // console's own line echoes it in its console unless the profile never echoes commands. The text joins the
-    // line's history, and the line is then emptied where the profile clears a sent command, which
-    // windowCommandLineTextChanged tells. Before it returns. False as setWindowCommandLineText() is, and when the
-    // profile begins to close part-way; a line a script deletes part-way takes no more commands.
+    // line's history, and the line is then emptied, which windowCommandLineTextChanged tells, where the profile
+    // clears a sent command, unless the line has no such function and something wrote to it meanwhile. Before it
+    // returns. False as setWindowCommandLineText() is, and when the profile begins to close part-way; a line a
+    // script deletes part-way takes no more commands.
     bool submitWindowCommandLine(const QString& commandLine, const QString& line);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
@@ -744,6 +749,9 @@ public:
         // What a screen reader says for it, and whether it is told it is a button
         QString accessibleName;
         bool accessibleButton = false;
+        // How a screen reader is told of a change of its text, as setLabelLiveRegion() gave it and ARIA's aria-live
+        enum class LiveRegion { off, polite, assertive };
+        LiveRegion liveRegion = LiveRegion::off;
         // As setLabelStyleSheet() gave it, which Mudlet does not interpret: drawing it is the app's to do or not
         QString styleSheet;
 
@@ -1235,6 +1243,16 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
     QString mErrorString;
+    // A local: link that followWindowLink() last followed without an item, which opened its menu and changed its
+    // selection: its console's notifier, as one made again under the name starts with no menu open, and the issue
+    // of its id, which another link takes once the store wraps
+    struct MenuOpen
+    {
+        QPointer<const QObject> console;
+        int link = 0;
+        qint64 issue = 0;
+    };
+    MenuOpen mLinkWithMenuOpen;
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
