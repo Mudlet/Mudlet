@@ -14,7 +14,8 @@ jobs:
     name: Check labels
     runs-on: ubuntu-latest
     steps:
-      - uses: docker://agilepathway/pull-request-label-checker:latest
+      # the image is published under "latest" only, so the pin is that tag's digest as of 2026-09-20
+      - uses: docker://agilepathway/pull-request-label-checker@sha256:253c71fe97d6ae19fff21608f1e10493ec322e7c95d4fed4695b2b8d11f58fb2
         with:
           none_of: 'needs documentation'
           repo_token: ${{ secrets.GITHUB_TOKEN }}
