@@ -1924,7 +1924,7 @@ bool THeadlessSession::playReplay(const QString& path)
         mErrorString = tr("A replay is playing already; stop it or wait until it has finished.");
         return false;
     }
-    // Whole, as load() would take a relative path as the profile's log folder's and not the file just checked
+    // load() reads a relative path from the profile's log folder, which is not the file just checked
     const QString filePath = QFileInfo(path).absoluteFilePath();
     // Read here for the reason, as load() without an error string gives it only to the main console
     if (QFile file(filePath); !file.open(QIODevice::ReadOnly)) {
