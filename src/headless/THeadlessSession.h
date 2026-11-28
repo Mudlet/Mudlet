@@ -695,6 +695,13 @@ public:
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
+        // The packages whose code made it, Geyser's work for them included, sorted: one, or each package with an
+        // item of the name the code ran under; none for the profile's own, code compiled from a string, a mapper and
+        // an MXP frame. A console's own command line is its console's.
+        QStringList packages;
+        // Whether it suits a phone's screen: made by none of the packages, or by one that packageMobile() says does,
+        // for an app on a small screen to leave out the others unless the player asks for them
+        bool mobile = true;
 
         bool operator==(const ScriptWindow&) const = default;
     };
@@ -704,6 +711,16 @@ public:
     QList<ScriptWindow> scriptWindows() const;
     // The first of them with the name, or with the name and kind, as a console's own command line has its name
     std::optional<ScriptWindow> scriptWindow(const QString& name, std::optional<ScriptWindow::Kind> kind = std::nullopt) const;
+    // Whether a package's, or else a module's, details declare that its interface suits a phone's screen too: a
+    // config.lua's mobile = [[yes]] or mobile = true, or a "mobile" of "yes" or "true" in any case from
+    // setPackageInfo() or setModuleInfo(). False for a name that is neither, and with no profile open.
+    bool packageMobile(const QString& name) const;
+    // What a script sets for the whole profile rather than on a window of its own
+    enum class ProfileLook { borderTop, borderRight, borderBottom, borderLeft, backgroundImage, appStyleSheet, profileStyleSheet };
+    // The packages whose code set it last, as for ScriptWindow::packages: none for the profile, for what no script
+    // has set, and with no profile open. A main window background image counts from setBackgroundImage() and
+    // resetBackgroundImage() on the main console.
+    QStringList profileLookPackages(ProfileLook look) const;
     // What a label shows, for the app to draw it as the GUI's QLabel would. Its geometry, background and font are
     // its ScriptWindow's.
     struct LabelContent
@@ -1078,6 +1095,10 @@ signals:
     // What buttonBars() gives changed, by a script, a package or the profile's reset, for the app to read the bars
     // again. One for all the changes made before the event loop runs, from the event loop.
     void buttonsChanged(const QString& profile);
+    // What packageMobile() or profileLookPackages() gives may differ: a package or module installed, removed or given
+    // other details, or a profile look set by other code than before. One for all the changes made before the event
+    // loop runs, from the event loop. scriptWindowsChanged tells of the windows whose mobile it changed.
+    void packageUiChanged(const QString& profile);
     // With Options::supplyTransport, the profile wants a connection to host:port, as it starts, reconnects or a script
     // connects: answer with transportConnected(), or transportClosed() if it cannot be made, passing connection, its
     // id. tlsRequested is the profile's secure connection setting, for the app to honour as it can; the profile calls
@@ -1291,6 +1312,8 @@ private:
     unsigned int mAddonCommandsQueuedRun = 0;
     // The same for buttonsChanged
     unsigned int mButtonsQueuedRun = 0;
+    // The same for packageUiChanged
+    unsigned int mPackageUiQueuedRun = 0;
     std::unique_ptr<HostManager> mpPool;
     struct ShownLine
     {

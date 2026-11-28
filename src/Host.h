@@ -675,6 +675,11 @@ public:
     // Every package or module that could own the code a Lua chunk came from, by
     // the "Script: name" style item names or a file's package folder; "" is the profile
     QSet<QString> packagesOwningChunk(const QString& chunkName);
+    // Whether a package's, or else a module's, details say its interface suits a phone's screen too: a mobile of
+    // "yes" or "true" in any case
+    bool packageDeclaresMobile(const QString& name) const;
+    // The packages a package's, or else a module's, details list as its dependencies
+    QStringList packageDependencies(const QString& name) const;
     // The script whose top-level code is running, so code it runs directly can
     // be told apart from another script of the same name in another package
     struct RunningScript
@@ -1505,6 +1510,9 @@ signals:
     void signal_packageRemoved(const QString& packageName);
     // The buttons or bars a frontend draws, or a push-down button's state, changed; the GUI redraws its own.
     void signal_buttonsChanged();
+    // A package's or module's details changed, or who set one of TWindowRegistry's looks, for a frontend that leaves
+    // out the interface of a package not made for its screen
+    void signal_packageUiChanged();
     // The frontend owns the editor, notepad and IRC client it opens for a
     // profile. On close it closes them and lets go of them; on destruction it
     // deletes them there and then, while the units the editor references still

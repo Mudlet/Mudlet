@@ -4020,6 +4020,7 @@ QString Host::setPackageInfo(const QString& packageName, const QString& info, co
     if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName) || std::any_of(mInstalledPackages.cbegin(), mInstalledPackages.cend(), sharesItsFolder)
         || std::any_of(mInstalledModules.keyBegin(), mInstalledModules.keyEnd(), sharesItsFolder)) {
         mPackageInfo[packageName] = details;
+        emit signal_packageUiChanged();
         return {};
     }
 
@@ -4032,6 +4033,7 @@ QString Host::setPackageInfo(const QString& packageName, const QString& info, co
     }
     TAppFrontend::instance()->configWritten();
     mPackageInfo[packageName] = details;
+    emit signal_packageUiChanged();
     return {};
 }
 
@@ -4572,6 +4574,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         auto takeBackWhatTheManifestOverwrote = [&, this]() {
             mPackageInfo = packageInfoBeforeConfig;
             mModuleInfo = moduleInfoBeforeConfig;
+            emit signal_packageUiChanged();
         };
         // before we start importing xmls in, see if the config.lua manifest file exists
         // - if it does, update the packageName from it
@@ -5159,6 +5162,30 @@ QSet<QString> Host::packagesOwningChunk(const QString& chunkName)
     return owners;
 }
 
+static QMap<QString, QString> packageOrModuleInfo(const Host& host, const QString& name)
+{
+    // As the package exporter reads them for a name that is both
+    return host.mPackageInfo.contains(name) ? host.mPackageInfo.value(name) : host.mModuleInfo.value(name);
+}
+
+bool Host::packageDeclaresMobile(const QString& name) const
+{
+    const QString value = packageOrModuleInfo(*this, name).value(qsl("mobile")).trimmed();
+    return !value.compare(qsl("yes"), Qt::CaseInsensitive) || !value.compare(qsl("true"), Qt::CaseInsensitive);
+}
+
+QStringList Host::packageDependencies(const QString& name) const
+{
+    QStringList dependencies;
+    // The package exporter joins them with commas
+    for (const QString& dependency : packageOrModuleInfo(*this, name).value(qsl("dependencies")).split(QLatin1Char(','))) {
+        if (const QString trimmed = dependency.trimmed(); !trimmed.isEmpty()) {
+            dependencies << trimmed;
+        }
+    }
+    return dependencies;
+}
+
 QString Host::packageOwningFile(const QString& fileName)
 {
     // Only the folder Mudlet unpacked a package into: a module file can sit
@@ -5195,6 +5222,7 @@ void Host::removePackageInfo(const QString& packageName, const bool isModule)
     } else {
         mPackageInfo.remove(packageName);
     }
+    emit signal_packageUiChanged();
 }
 
 // This may be called by installPackage(...) in that case however it will have
@@ -5603,6 +5631,9 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
                 // lua_tostring() would turn a number key into a string in place, which lua_next() rejects
                 if (lua_isstring(L, -1) && lua_type(L, -2) == LUA_TSTRING) {
                     packageInfo[lua_tostring(L, -2)] = lua_tostring(L, -1);
+                } else if (lua_type(L, -1) == LUA_TBOOLEAN && lua_type(L, -2) == LUA_TSTRING) {
+                    // So that mobile = true declares as mobile = [[true]] does
+                    packageInfo[lua_tostring(L, -2)] = lua_toboolean(L, -1) ? qsl("true") : qsl("false");
                 }
                 lua_pop(L, 1);
             }
@@ -5612,6 +5643,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
             } else {
                 mPackageInfo[packageName] = packageInfo;
             }
+            emit signal_packageUiChanged();
         }
         lua_close(L);
         return packageName;

@@ -27,6 +27,7 @@
 
 #include <QAbstractButton>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileInfo>
@@ -99,6 +100,7 @@ private:
     QPushButton* buttonNamed(const QString& name) const { return mpDialog->findChild<QPushButton*>(name); }
     QLineEdit* fieldNamed(const QString& name) const { return mpDialog->findChild<QLineEdit*>(name); }
     QPushButton* startOverButton() const { return buttonNamed(qsl("exporterStartOverButton")); }
+    QCheckBox* phoneBox() const { return mpDialog->findChild<QCheckBox*>(qsl("exporterMobile")); }
     QTextEdit* descriptionField() const { return mpDialog->findChild<QTextEdit*>(qsl("textEdit_description")); }
     QListWidget* filesToShip() const { return mpDialog->findChild<QListWidget*>(qsl("listWidget_addedFiles")); }
     QString selectionTitle() const { return mpDialog->findChild<QGroupBox*>(qsl("groupBox_exportSelection"))->title(); }
@@ -174,6 +176,7 @@ private:
         QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the cross that takes the picture off is still offered with no picture to take off");
         QCOMPARE(filesToShip()->count(), 0);
         QCOMPARE(mpDialog->countCheckedItems(), 0);
+        QVERIFY2(!phoneBox()->isChecked(), "the box saying the interface fits a phone is still ticked");
         QVERIFY2(!startOverButton()->isEnabled(), "the clear button is still available on a form with nothing on it to clear");
         QVERIFY2(notice()->isHidden(), "the notice is still on show");
     }
@@ -222,6 +225,22 @@ private:
             return QString();
         }
         return QString::fromUtf8(items.readAll());
+    }
+
+    QString exportedConfig(const QString& packageName)
+    {
+        const QString packageFile = qsl("%1/%2.mpackage").arg(mExportDir.path(), packageName);
+        QFile::remove(packageFile);
+        mpDialog->slot_exportPackage();
+        if (!waitForExportToSettle() || !QFileInfo::exists(packageFile)) {
+            return QString();
+        }
+        QTemporaryDir unpacked;
+        QFile config(qsl("%1/config.lua").arg(unpacked.path()));
+        if (!unpacked.isValid() || !unpackInto(packageFile, unpacked) || !config.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString();
+        }
+        return QString::fromUtf8(config.readAll());
     }
 
     bool countChipReads(const QString& wanted) const
@@ -690,6 +709,38 @@ private slots:
         QCOMPARE(mBoxesAnswered, 0);
 
         verifyTheFormIsFresh(freshAuthor, freshVersion, freshDescription);
+    }
+
+    // Read back as Host::packageDeclaresMobile() reads it, so a hand-written mobile = true ticks the box too
+    void test_thePhoneBoxIsWrittenAndReadBack()
+    {
+        openExporter();
+        QVERIFY2(phoneBox(), "the exporter has no box saying the interface fits a phone");
+        QVERIFY2(!phoneBox()->isChecked(), "a fresh form already says the interface fits a phone");
+        QVERIFY2(!startOverButton()->isEnabled(), "SETUP: the clear button is available on a fresh form");
+        phoneBox()->setChecked(true);
+        QVERIFY2(startOverButton()->isEnabled(), "ticking the phone box left the clear button unavailable");
+        phoneBox()->setChecked(false);
+
+        auto& info = mpHost->mPackageInfo[mPackageName];
+        const auto forget = qScopeGuard([this]() {
+            mpHost->mPackageInfo[mPackageName].remove(qsl("mobile"));
+        });
+        info.insert(qsl("mobile"), qsl(" TRUE "));
+        comboNamed(qsl("packageList"))->setCurrentIndex(rowOfThePackage());
+        TestPixels::settle();
+        QVERIFY2(phoneBox()->isChecked(), "a package whose details say mobile = true did not tick the phone box");
+
+        folderRow()->setCheckState(0, Qt::Checked);
+        TestPixels::settle();
+        const QString ticked = exportedConfig(mPackageName);
+        QVERIFY2(!ticked.isEmpty(), "SETUP: the export left no config.lua to read");
+        QVERIFY2(ticked.contains(qsl("\nmobile = [[yes]]\n")), qPrintable(qsl("the ticked box was not written as mobile = [[yes]]:\n%1").arg(ticked)));
+
+        phoneBox()->setChecked(false);
+        const QString unticked = exportedConfig(mPackageName);
+        QVERIFY2(!unticked.isEmpty(), "SETUP: the second export left no config.lua to read");
+        QVERIFY2(!unticked.contains(qsl("mobile")), qPrintable(qsl("an unticked box still wrote a mobile line:\n%1").arg(unticked)));
     }
 
     void test_choosingTheFirstEntryAgainStartsOver()

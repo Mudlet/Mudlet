@@ -37,6 +37,7 @@
 
 class ExporterTreeDelegate;
 class Host;
+class QCheckBox;
 class QCloseEvent;
 class QDropEvent;
 class QGroupBox;
@@ -297,6 +298,7 @@ private:
     QLabel* mpLabel_saveCaption = nullptr;
     QLabel* mpLabel_savePath = nullptr;
     uiDesign::ChipRow* mpChipRow_dependencies = nullptr;
+    QCheckBox* mpCheckBox_mobile = nullptr;
     QPointer<QPushButton> mpButton_startOver;
     dlgSystemMessageArea* mpNotice = nullptr;
     QString mSavePathShown;

@@ -206,6 +206,57 @@ TLabelModel::Callback labelCallback(const THeadlessSession::WindowPointerEvent::
     Q_UNREACHABLE();
 }
 
+QStringList makersOf(const TWindowRegistry& registry, const THeadlessSession::ScriptWindow& window)
+{
+    using Kind = THeadlessSession::ScriptWindow::Kind;
+    using MadeKind = TWindowRegistry::MadeKind;
+    switch (window.kind) {
+    case Kind::label:
+        return registry.makers(MadeKind::Label, window.name);
+    case Kind::miniConsole:
+    case Kind::userWindow:
+        return registry.makers(MadeKind::SubConsole, window.name);
+    case Kind::commandLine:
+        // enableCommandLine() gives a console a command line of the console's name, inside it, which no maker is
+        // noted for
+        if (const QStringList makers = registry.makers(MadeKind::CommandLine, window.name); !makers.isEmpty() || window.parent != window.name) {
+            return makers;
+        }
+        return registry.makers(MadeKind::SubConsole, window.name);
+    case Kind::textBox:
+        return registry.makers(MadeKind::TextBox, window.name);
+    case Kind::scrollBox:
+        return registry.makers(MadeKind::ScrollBox, window.name);
+    case Kind::mapper:
+    case Kind::mxpFrame:
+        return {};
+    }
+    Q_UNREACHABLE();
+}
+
+TWindowRegistry::Look lookOf(const THeadlessSession::ProfileLook look)
+{
+    using ProfileLook = THeadlessSession::ProfileLook;
+    using Look = TWindowRegistry::Look;
+    switch (look) {
+    case ProfileLook::borderTop:
+        return Look::BorderTop;
+    case ProfileLook::borderRight:
+        return Look::BorderRight;
+    case ProfileLook::borderBottom:
+        return Look::BorderBottom;
+    case ProfileLook::borderLeft:
+        return Look::BorderLeft;
+    case ProfileLook::backgroundImage:
+        return Look::BackgroundImage;
+    case ProfileLook::appStyleSheet:
+        return Look::AppStyleSheet;
+    case ProfileLook::profileStyleSheet:
+        return Look::ProfileStyleSheet;
+    }
+    Q_UNREACHABLE();
+}
+
 // A console and its own command line share a name; this is the console
 const THeadlessSession::ScriptWindow* windowNamed(const QList<THeadlessSession::ScriptWindow>& windows, const QString& name)
 {
@@ -255,7 +306,23 @@ QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
             windows.append(scriptWindowOf(records[i], 0));
         }
     }
+    for (ScriptWindow& window : windows) {
+        window.packages = makersOf(mpHost->windowRegistry(), window);
+        window.mobile = window.packages.isEmpty() || std::any_of(window.packages.cbegin(), window.packages.cend(), [this](const QString& package) {
+                            return mpHost->packageDeclaresMobile(package);
+                        });
+    }
     return windows;
+}
+
+bool THeadlessSession::packageMobile(const QString& name) const
+{
+    return mpHost && mpHost->packageDeclaresMobile(name);
+}
+
+QStringList THeadlessSession::profileLookPackages(const ProfileLook look) const
+{
+    return mpHost ? mpHost->windowRegistry().lookSetters(lookOf(look)) : QStringList();
 }
 
 std::optional<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindow(const QString& name, const std::optional<ScriptWindow::Kind> kind) const
@@ -278,6 +345,30 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
     if (!pView) {
         return;
     }
+    connect(pHost, &Host::signal_packageUiChanged, this, [this, run]() {
+        auto* pView = mpHost ? dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()) : nullptr;
+        if (run != mRun || !pView) {
+            return;
+        }
+        // Each window's mobile may follow a package's details
+        pView->windowNotifier().note();
+        if (mPackageUiQueuedRun == run) {
+            return;
+        }
+        mPackageUiQueuedRun = run;
+        QMetaObject::invokeMethod(
+                this,
+                [this, run]() {
+                    if (mPackageUiQueuedRun == run) {
+                        mPackageUiQueuedRun = 0;
+                    }
+                    if (run == mRun) {
+                        const QString profile = mProfileName;
+                        emit packageUiChanged(profile);
+                    }
+                },
+                Qt::QueuedConnection);
+    });
     connect(
             &pView->windowNotifier(),
             &TWindowNotifier::windowsChanged,
