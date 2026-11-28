@@ -617,13 +617,28 @@ jobs:
         echo "MUDLET_TEST_MMCP_DIR=${peer_dir}" >> "${GITHUB_ENV}"
         echo "MMCP peer fixture ready on 127.0.0.1:$(cat "${peer_dir}/port")"
 
+    - name: (Linux) Check the Lua spec runner
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
+      run: python3 -I "${{github.workspace}}/CI/test-run-lua-specs.py"
+
     - name: (Linux) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
-      # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes 480-730s under ASan, and the rest is headroom for a slow runner.
+      # wall-clock time, so the suite needs a budget of its own, with headroom for a
+      # slow runner.
       timeout-minutes: 20
-      run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
+      # A Mudlet process per spec file, three at a time: one fewer than the runner's four
+      # cores leaves one for the X servers, the fixtures and Mudlet's helper threads. Spec
+      # files that talk to a fixture run one at a time, as a fixture serves one client, and
+      # only they get the fake Discord's runtime directory and library path. --budget ends
+      # inside timeout-minutes, so a hung process is still stopped and reported.
+      run: |
+        python3 -I "${{github.workspace}}/CI/run-lua-specs.py" \
+          --jobs 3 --xvfb --budget 1080 \
+          --failure-marker /tmp/busted-tests-failed \
+          --fixture-env "XDG_RUNTIME_DIR=${MUDLET_TEST_DISCORD_RUNTIME_DIR}" \
+          --fixture-env "LD_LIBRARY_PATH=${MUDLET_TEST_DISCORD_LIB_PATH}" \
+          -- "${{github.workspace}}/src/mudlet" --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         # Off by default; the flood specs pend without it
@@ -645,16 +660,16 @@ jobs:
         # following it is a regression rather than an environment quirk. The
         # macOS runners are not gated: their window server can refuse a resize.
         MUDLET_TEST_REQUIRE_WINDOW_RESIZE: 1
-        # The fake Discord IPC server's socket lives in this runtime directory,
-        # and the bundled discord-rpc library is only reachable through this
-        # library path - without both the Discord specs have nothing to talk to.
+        # The fake Discord IPC server's socket lives in its runtime directory, and
+        # the bundled discord-rpc library is only reachable through its library
+        # path - the runner hands both to the spec files that talk to a fixture,
+        # and without them the Discord specs have nothing to talk to.
         MUDLET_TEST_REQUIRE_DISCORD: 1
-        XDG_RUNTIME_DIR: ${{env.MUDLET_TEST_DISCORD_RUNTIME_DIR}}
-        LD_LIBRARY_PATH: ${{env.MUDLET_TEST_DISCORD_LIB_PATH}}
-        # The session bus socket lives in the runtime directory replaced above,
-        # so Qt's D-Bus platform theme can no longer find it and would fall back
-        # to spawning dbus-launch. Point it at nothing instead: libdbus leaks
-        # the buffer it reads the autolaunch reply into (1032 bytes, reported
+        # The session bus socket lives in the runtime directory, which the spec
+        # files that talk to a fixture get in place of the runner's own, so Qt's
+        # D-Bus platform theme there can no longer find it and would fall back to
+        # spawning dbus-launch. Point every process at nothing instead: libdbus
+        # leaks the buffer it reads the autolaunch reply into (1032 bytes, reported
         # against this job by LeakSanitizer with no Mudlet frames in the stack),
         # and no spec needs a session bus.
         DBUS_SESSION_BUS_ADDRESS: 'disabled:'
@@ -680,7 +695,7 @@ jobs:
       if: >-
         !cancelled() && steps.build.outcome == 'success'
         && matrix.run_tests == 'true' && runner.os == 'macOS'
-      # Covers both suites, side by side on the 3-core arm64 runner: ctest 440-690s, Lua 550-710s.
+      # Covers both suites, side by side on the 3-core arm64 runner: ctest 440-690s.
       # The Lua run has its own, shorter limit below.
       timeout-minutes: 20
       run: |
@@ -705,16 +720,22 @@ jobs:
         )
         lua_log="${{runner.temp}}/lua-tests.log"
         lua_tests=""
-        # Half again the slowest green run, and short enough of timeout-minutes to leave
-        # stopping the run and reporting on it inside the step
-        lua_budget=1080
-        lua_deadline=$(( SECONDS + lua_budget ))
+        # The runner stops what is still running at the end of its budget and reports on it.
+        # Short enough of timeout-minutes to leave that, the wait for a runner that hangs
+        # itself and the printing of the log inside the step
+        lua_budget=1020
+        lua_deadline=$(( SECONDS + lua_budget + 40 ))
         if [ -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
-          env "${lua_tests_env[@]}" ~/Desktop/Mudlet.app/Contents/MacOS/mudlet \
-            --profile "Mudlet self-test" --mirror --offline > "${lua_log}" 2>&1 &
+          # A Mudlet process per spec file, two at a time beside ctest; they share the
+          # runner's one desktop. Spec files that talk to a fixture run one at a time.
+          env "${lua_tests_env[@]}" python3 -I "${{github.workspace}}/CI/run-lua-specs.py" \
+            --jobs 2 --budget "${lua_budget}" \
+            --failure-marker /tmp/busted-tests-failed \
+            -- ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline \
+            > "${lua_log}" 2>&1 &
           lua_tests=$!
         else
-          echo "No packaged app to run the Lua tests with - an earlier step failed" > "${lua_log}"
+          echo "::error::No packaged app to run the Lua tests with - an earlier step failed" > "${lua_log}"
         fi
 
         cd "${WORK_ROOT}/b/ninja"
@@ -732,27 +753,24 @@ jobs:
           sleep 5
         done
         if [ -n "${lua_tests}" ] && kill -0 "${lua_tests}" 2>/dev/null; then
-          echo "::error::The Lua run was still going after ${lua_budget}s - stopping it"
+          echo "::error::The Lua run was still going 40s after its ${lua_budget}s budget - stopping it"
           kill "${lua_tests}" 2>/dev/null || true
-          sleep 10
+          # Longer than the runner takes to stop what it started and report
+          sleep 15
           kill -9 "${lua_tests}" 2>/dev/null || true
         fi
-        lua_status=0
-        [ -z "${lua_tests}" ] || wait "${lua_tests}" || lua_status=$?
-        echo "::group::Lua tests"
+        # No packaged app fails the Lua half too
+        lua_status=1
+        if [ -n "${lua_tests}" ]; then
+          lua_status=0
+          wait "${lua_tests}" || lua_status=$?
+        fi
+        # No group around it: the runner puts each spec file's output in a group of its own
         cat "${lua_log}"
-        echo "::endgroup::"
         touch "${{runner.temp}}/lua-tests.shown"
 
-        # Mudlet exits 0 whatever its specs did, so a failed spec has to fail this step
-        # itself; the upload steps below go by the ctest result alone.
-        if [ -e /tmp/busted-tests-failed ]; then
-          echo "::error::Lua specs failed - see the Lua tests group above"
-          lua_status=1
-        elif ! grep -Eq '[0-9]+ success(es)? / [0-9]+ failures? / [0-9]+ errors?' "${lua_log}"; then
-          echo "::error::The Lua run ended before its summary line - see the Lua tests group above"
-          [ "${lua_status}" -ne 0 ] || lua_status=1
-        fi
+        # The runner exits non-zero when a spec file failed; the upload steps below go by
+        # the ctest result alone.
         echo "C++ tests exited with ${ctest_status}, the Lua run with ${lua_status}"
         [ "${ctest_status}" -eq 0 ] && [ "${lua_status}" -eq 0 ]
 

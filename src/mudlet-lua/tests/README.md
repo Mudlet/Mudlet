@@ -109,6 +109,55 @@ MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
 xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 ```
 
+### Running every spec file in a process of its own
+
+`CI/run-lua-specs.py` runs each spec file in a fresh Mudlet process of its own,
+several at a time, which is how the Linux, macOS and Windows CI jobs run them.
+Each process gets a config root of its own (with `mudlet/profiles` created up
+front) and a failure marker of its own, and is handed its spec file as
+`TESTS_DIRECTORY`. The run passes only when every spec file passes on its own.
+
+The Linux, macOS and Windows CI jobs run each spec file alone, so a spec file
+must pass without any other having run before it.
+
+```sh
+# Linux: every job slot gets an X server of its own
+python3 -I CI/run-lua-specs.py --jobs 3 --xvfb \
+  -- ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
+
+# macOS; QT_QPA_PLATFORM=offscreen is optional and keeps the windows off the screen
+QT_QPA_PLATFORM=offscreen python3 -I CI/run-lua-specs.py --jobs 4 \
+  -- ./build/src/mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
+
+# Windows, from an MSYS2 CLANG64 shell, with the build the ci-windows preset makes
+python3 -I CI/run-lua-specs.py --jobs 3 \
+  -- ./build-CLANG64/release/mudlet.exe --profile "Mudlet self-test" --offline
+```
+
+On Windows and macOS all the processes share one desktop, where `--xvfb` on Linux
+gives each job slot an X server of its own.
+
+The HTTP server, telnet fixture, MMCP peer and fake Discord that CI starts each
+serve one client, so the spec files that talk to one run one at a time, ahead of
+the others. The runner recognises them by a fixture's variable in their text
+(`MUDLET_TEST_HTTP_PORT`, `MUDLET_TEST_TELNET_DIR`, `MUDLET_TEST_MMCP_DIR`,
+`MUDLET_TEST_DISCORD_*`), so a new spec file that reads one is handled the same
+way. `--fixture-env K=V` sets a variable for those spec files alone.
+
+`--logs` picks whose output is printed, each spec file's as soon as it has
+finished: `all`, `failed` or `none` (default: `all` on GitHub Actions, `failed`
+elsewhere). The slowest spec files, the failures with their reasons and the totals
+follow at the end. Each config root is deleted once its spec file has finished,
+unless `--keep` is given. The temporary work directory the runner makes is
+deleted at the end, also unless `--keep` is given; a work directory named with
+`--work-dir` is never deleted. `--list` prints the spec files, fixture specs
+marked, without starting anything. The runner's self-test needs no Mudlet; it runs
+on Linux and macOS and skips itself on Windows:
+
+```sh
+python3 -I CI/test-run-lua-specs.py
+```
+
 ## Running the fuzzers
 
 `TelnetTriggerFuzz_spec.lua` drives random bytes through the telnet parser and

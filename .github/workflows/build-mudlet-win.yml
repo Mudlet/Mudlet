@@ -208,7 +208,16 @@ jobs:
         fi
         echo "fixture HTTP server ready on 127.0.0.1:${MUDLET_TEST_HTTP_PORT}"
 
-        $GITHUB_WORKSPACE/build-$MSYSTEM/release/mudlet.exe --profile "Mudlet self-test" --offline
+        # A Mudlet process per spec file, three at a time, one fewer than the runner's
+        # four cores. They all share the runner's one desktop, where on Linux each job
+        # slot has an X server of its own. The short work directory keeps profile paths
+        # as short as they were, and --budget ends inside timeout-minutes, so a hung
+        # process is still stopped and reported.
+        "${python_bin}" -I "$(cygpath -m "$GITHUB_WORKSPACE")/CI/run-lua-specs.py" \
+          --jobs 3 --budget 1080 \
+          --work-dir "${temp_dir}/ls" \
+          --failure-marker "$(cygpath -m "$TEMP")/busted-tests-failed" \
+          -- "$(cygpath -m "$GITHUB_WORKSPACE")/build-$MSYSTEM/release/mudlet.exe" --profile "Mudlet self-test" --offline
 
     - name: Passed Lua tests
       shell: msys2 {0}
