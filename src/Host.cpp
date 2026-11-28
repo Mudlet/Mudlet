@@ -3116,7 +3116,7 @@ bool Host::hasConsoleView() const
 
 bool Host::mapOpen() const
 {
-    return mpMap && mapViewFrontend();
+    return mpMap && (mapViewFrontend() || (!hasConsoleView() && mpNullConsoleFrontend->mAppMapOpened));
 }
 
 TMapViewFrontend* Host::mapViewFrontend() const

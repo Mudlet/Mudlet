@@ -37,9 +37,10 @@
 #include <QSettings>
 #include <QTimer>
 
-TNullMapView::TNullMapView(Host* pHost, QObject* parent)
+TNullMapView::TNullMapView(Host* pHost, QObject* parent, const bool raisesEvents)
 : QObject(parent)
 , mpHost(pHost)
+, mRaisesEvents(raisesEvents)
 {
     TMap* pMap = pHost->mpMap.data();
     // The symbol pixmaps are kept by colour and symbol alone; a loaded map's font arrives through this too
@@ -173,6 +174,9 @@ void TNullMapView::paint()
 
 void TNullMapView::raiseAreaChanged(const int areaId, const int lastViewedAreaId)
 {
+    if (!mRaisesEvents) {
+        return;
+    }
     TEvent areaViewedChangedEvent{};
     areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
     areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -226,6 +230,36 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     }
 }
 
+// The view T2DMap is left with once the player pans it to the room and clicks it: the area and level of the room,
+// centred on it, the room selected, and still in shift mode for the player's room, so the next frame keeps it
+bool TNullMapView::showRoom(const int roomId)
+{
+    TMap* pMap = mpHost->mpMap.data();
+    TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+    const TRoom* pRoom = pRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    // As paint() and TMapPainter take the player's room, which shift mode is kept for
+    int playerRoomId = pMap->mRoomIdHash.value(pMap->mProfileName);
+    if (!pRoomDB->getRoom(playerRoomId)) {
+        playerRoomId = pRoomDB->getRoomMap().constBegin().key();
+    }
+    mRecentre = false;
+    mPendingZoom.reset();
+    mView.mAreaID = pRoom->getArea();
+    mView.mMapCenterX = pRoom->x();
+    mView.mMapCenterY = -pRoom->y();
+    mView.mMapCenterZ = pRoom->z();
+    mView.mShiftMode = true;
+    mView.mPick = false;
+    mView.mRoomID = playerRoomId;
+    mView.mMultiSelectionSet = {roomId};
+    mView.mMultiSelectionHighlightRoomId = roomId;
+    requestRepaint();
+    return true;
+}
+
 bool TNullMapView::showsArea() const
 {
     return mLaidOut && mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID);
@@ -266,7 +300,9 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
                     mpHost->mpMap.data(), mView.mMultiSelectionSet, multiSelection, mView.mMultiSelectionHighlightRoomId, TMapPainter::roomsAtPoint(mView, *pArea, position), modifiers);
         }
     }
-    TMapPainter::raiseMousePressEvent(mpHost);
+    if (mRaisesEvents) {
+        TMapPainter::raiseMousePressEvent(mpHost);
+    }
     requestRepaint();
 }
 

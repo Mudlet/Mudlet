@@ -52,6 +52,7 @@ class QTimer;
 class TBuffer;
 class TConsoleModel;
 class TLineFormat;
+class TNullMapView;
 class QKeyEvent;
 class QMimeData;
 class QPoint;
@@ -635,6 +636,39 @@ public:
     // script opens in a profile saved as editing raises mapModeChangeEvent with "editing" before it is there, as the
     // GUI's does, with no mapViewOnlyChanged.
     bool setMapViewOnly(bool viewOnly);
+    // The app's own 2D map, for an app that shows the map whether or not a script opened one, as the GUI's main
+    // window always offers its mapper: apart from the script's, with its own centre and selection (the zoom is the
+    // area's, so shared), following the player as the GUI's does. Scripts do not hear of it: it raises neither
+    // sysMapAreaChanged nor sysMapWindowMousePressEvent, and getMapSelection() does not see its selection; a
+    // double-click on it speedwalks as on theirs. It is made on the first call that needs it and goes with the
+    // profile, or with closeAppMap(). Once made, scripts see the map as open (Host::mapOpen()), closed or not, as
+    // once the player opened the GUI's mapper: centerview() moves the player on it, and getPlayerRoom() answers.
+    // mapRepaintRequested is emitted for it as for the script's, and setMapViewOnly() switches it too, also while
+    // no script has opened a map.
+    // Draws it as renderMap() draws the script's. False, with errorString() saying why, where renderMap() is, and
+    // for a map with no rooms, where the GUI would say there are none: an app shows nothing in its place.
+    bool renderAppMap(QPainter& painter, const QSize& size);
+    // What mapPointer() does, on what renderAppMap() last drew; getMousePosition() does not follow it. False, with
+    // errorString() saying why, as mapPointer() is, and before renderAppMap() has drawn it.
+    bool appMapPointer(const MapPointerEvent& event);
+    // Centres the app's map on the room and selects it, as panning the GUI's map to it and clicking it does, until
+    // the player moves or a script centres the map; mapRepaintRequested follows. False, with errorString() saying
+    // why, for a room not in the map and where submit() is refused.
+    bool showRoomOnAppMap(int roomId);
+    // Lets the app's map go, as for an app that no longer shows it; a later call makes it again
+    void closeAppMap();
+    // A room findRooms() found
+    struct RoomMatch
+    {
+        int id = 0;
+        QString name;
+        int areaId = 0;
+        QString areaName;
+    };
+    // The rooms of the map whose name holds the text, ignoring case, as searchRoom() finds them, and the room whose
+    // id it is, in no order; none with no profile open or for empty text. A getter, so it may be called from any
+    // handler.
+    QList<RoomMatch> findRooms(const QString& text) const;
     // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
     // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
     // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
@@ -1232,9 +1266,15 @@ private:
     // pointer() on the mapper's window
     bool pointMapper(const ScriptWindow& mapper, const WindowPointerEvent& event);
     void noteMapPointer(const QPointF& position);
+    // What pointMap() does on a map view; scriptMap for the script's, whose getMousePosition() it moves
+    bool pointView(TNullMapView& view, const MapPointerEvent& event, Qt::MouseButtons buttons, const std::optional<QSize>& windowSize, bool scriptMap);
+    // The app's map, made for the open profile if there is none; null with no profile open
+    TNullMapView* appMap();
 
     QPointer<Host> mpHost;
     QString mProfileName;
+    // The app's map, which the profile holds
+    QPointer<TNullMapView> mpAppMap;
     QString mErrorString;
     // A local: link that followWindowLink() last followed without an item, which opened its menu and changed its
     // selection: its console's notifier, as one made again under the name starts with no menu open, and the issue

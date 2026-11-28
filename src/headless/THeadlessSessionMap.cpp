@@ -24,8 +24,13 @@
 #include "TMapViewsFrontend.h"
 #include "TNullConsoleFrontend.h"
 #include "TNullMapView.h"
+#include "TRoom.h"
+#include "TRoomDB.h"
 
 #include <QPainter>
+#include <QStringMatcher>
+
+#include <algorithm>
 
 bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
 {
@@ -73,8 +78,10 @@ bool THeadlessSession::setMapViewOnly(const bool viewOnly)
     }
     auto* pView = dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend());
     const bool mainShown = pView && pView->shown();
+    // The app's map has the item too, as the GUI's main window always has its mapper
+    const bool appShown = mpAppMap && mpAppMap->parent() == mpHost;
     // The GUI's item is on a secondary map view as well
-    if (!mainShown && (!mpHost->mpMap || mpHost->mpMap->mapViewsFrontend()->getViewIds().isEmpty())) {
+    if (!mainShown && !appShown && (!mpHost->mpMap || mpHost->mpMap->mapViewsFrontend()->getViewIds().isEmpty())) {
         //: Error from a frontend with no window that was asked to switch the 2D map between viewing and editing before a script opened one, or after it closed or hid it
         mErrorString = tr("No map is open; a script opens one, as with openMapWidget().");
         return false;
@@ -87,6 +94,8 @@ bool THeadlessSession::setMapViewOnly(const bool viewOnly)
     const QString profile = mpHost->getName();
     if (mainShown) {
         pView->setViewOnly(viewOnly);
+    } else if (appShown) {
+        mpAppMap->setViewOnly(viewOnly);
     } else {
         TNullMapView::switchMode(mpHost, viewOnly);
     }
@@ -137,6 +146,12 @@ bool THeadlessSession::pointMap(const MapPointerEvent& event, const Qt::MouseBut
         mErrorString = tr("The map has not been drawn yet; the position is in what renderMap() drew.");
         return false;
     }
+    return pointView(*pView, event, buttons, windowSize, true);
+}
+
+bool THeadlessSession::pointView(TNullMapView& view, const MapPointerEvent& event, const Qt::MouseButtons buttons, const std::optional<QSize>& windowSize, const bool scriptMap)
+{
+    auto* pView = &view;
     if (const QSize drawn = pView->renderedSize(); windowSize && drawn != *windowSize) {
         //: Error from a frontend with no window that was given a mouse action on the map's window after a script resized that window and before the map was drawn again; %1 and %2 are the width and height the map was last drawn at, %3 and %4 those of its window
         mErrorString = tr("The map was last drawn at %1 by %2 pixels and its window is %3 by %4; the position is in what renderMap() drew.")
@@ -147,7 +162,7 @@ bool THeadlessSession::pointMap(const MapPointerEvent& event, const Qt::MouseBut
         return false;
     }
     // Before the press, as what it raises may ask getMousePosition()
-    if (!windowSize) {
+    if (scriptMap && !windowSize) {
         noteMapPointer(event.position);
     }
     switch (event.type) {
@@ -183,6 +198,106 @@ bool THeadlessSession::pointMap(const MapPointerEvent& event, const Qt::MouseBut
         return true;
     }
     return false;
+}
+
+TNullMapView* THeadlessSession::appMap()
+{
+    if (!mpHost) {
+        return nullptr;
+    }
+    // One a closed profile left is gone with it; a profile opened since has none yet
+    if (!mpAppMap || mpAppMap->parent() != mpHost) {
+        mpAppMap = new TNullMapView(mpHost, mpHost, false);
+        mpAppMap->setShown(true);
+        if (auto* pFrontend = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend())) {
+            pFrontend->mAppMapOpened = true;
+        }
+    }
+    return mpAppMap;
+}
+
+bool THeadlessSession::renderAppMap(QPainter& painter, const QSize& size)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (!painter.isActive()) {
+        //: Error from a frontend with no window that was asked to draw the 2D map with a painter that has nothing to paint on
+        mErrorString = tr("The painter is not active.");
+        return false;
+    }
+    if (size.width() < 10 || size.height() < 10) {
+        //: Error from a frontend with no window that was asked to draw the 2D map smaller than it can be drawn; %1 and %2 are the width and height asked for
+        mErrorString = tr("The map is drawn at 10 by 10 pixels or more, not %1 by %2.").arg(size.width()).arg(size.height());
+        return false;
+    }
+    // Made first, so the map's first rooms ask for a repaint as for the script's map
+    TNullMapView* pView = appMap();
+    if (!mpHost->mpMap->mpRoomDB || mpHost->mpMap->mpRoomDB->isEmpty()) {
+        //: Error from a frontend with no window that was asked to draw the app's own 2D map for a profile whose map has no rooms
+        mErrorString = tr("The map has no rooms.");
+        return false;
+    }
+    pView->render(painter, size);
+    return true;
+}
+
+bool THeadlessSession::appMapPointer(const MapPointerEvent& event)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (!mpAppMap || mpAppMap->parent() != mpHost || !mpAppMap->rendered()) {
+        //: Error from a frontend with no window that was given a mouse action on its own 2D map before it had drawn that map, which the action's position is in
+        mErrorString = tr("The app's map has not been drawn yet; the position is in what renderAppMap() drew.");
+        return false;
+    }
+    return pointView(*mpAppMap, event, event.button, std::nullopt, false);
+}
+
+bool THeadlessSession::showRoomOnAppMap(const int roomId)
+{
+    if (!usable()) {
+        return false;
+    }
+    if (!appMap()->showRoom(roomId)) {
+        //: Error from a frontend with no window that was asked to show a room on its own 2D map that is not in the map; %1 is the room's id
+        mErrorString = tr("There is no room %1 in the map.").arg(roomId);
+        return false;
+    }
+    return true;
+}
+
+void THeadlessSession::closeAppMap()
+{
+    delete mpAppMap.data();
+}
+
+QList<THeadlessSession::RoomMatch> THeadlessSession::findRooms(const QString& text) const
+{
+    QList<RoomMatch> found;
+    if (!mpHost || !mpHost->mpMap || !mpHost->mpMap->mpRoomDB || text.isEmpty()) {
+        return found;
+    }
+    const TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
+    const QMap<int, QString>& areaNames = pRoomDB->getAreaNamesMap();
+    bool isId = false;
+    const int id = text.trimmed().toInt(&isId);
+    // As searchRoom(): the matcher prepares the search once, but never finds what is outside the BMP ignoring case
+    const bool beyondBmp = std::any_of(text.cbegin(), text.cend(), [](const QChar c) {
+        return c.isSurrogate();
+    });
+    const QStringMatcher matcher(beyondBmp ? QString() : text, Qt::CaseInsensitive);
+    for (const TRoom* pRoom : pRoomDB->getRoomMap()) {
+        if (!pRoom) {
+            continue;
+        }
+        const bool matches = (isId && pRoom->getId() == id) || (beyondBmp ? pRoom->name.contains(text, Qt::CaseInsensitive) : matcher.indexIn(pRoom->name) != -1);
+        if (matches) {
+            found.append(RoomMatch{.id = pRoom->getId(), .name = pRoom->name, .areaId = pRoom->getArea(), .areaName = areaNames.value(pRoom->getArea())});
+        }
+    }
+    return found;
 }
 
 // Gathered into one a turn, as the GUI's update() calls are into one repaint

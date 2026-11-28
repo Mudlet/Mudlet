@@ -38,7 +38,9 @@ class QSize;
 class TNullMapView final : public QObject, public TMapViewFrontend
 {
 public:
-    explicit TNullMapView(Host* pHost, QObject* parent = nullptr);
+    // One that raisesEvents is a script's map; one that does not is an app's own, which scripts do not hear of: it
+    // raises neither sysMapAreaChanged nor sysMapWindowMousePressEvent
+    explicit TNullMapView(Host* pHost, QObject* parent = nullptr, bool raisesEvents = true);
     // A hidden mapper does not paint
     void setShown(bool shown);
     // What T2DMap would draw at that size, whether or not the mapper is shown, raising sysMapAreaChanged as it does
@@ -53,6 +55,9 @@ public:
     void doubleClick(const QPoint&);
     // False for less than half a notch, which T2DMap ignores
     bool wheel(const QPointF&, const QPoint& angleDelta, Qt::KeyboardModifiers);
+    // Centres the next render() on the room and selects it, as a pan and a click on T2DMap do, until the player
+    // moves or the map is centred again; false for a room that is not in the map
+    bool showRoom(int roomId);
     // As T2DMap::slot_toggleMapViewOnly(), which raises mapModeChangeEvent
     void setViewOnly(bool viewOnly);
     // As T2DMap::init() switches a new map to editing where the profile was saved so, which raises the event too:
@@ -97,6 +102,7 @@ private:
     int centredRoomId() const { return mRecentre ? mFollowedRoomId : mView.mRoomID; }
 
     Host* mpHost = nullptr;
+    const bool mRaisesEvents = true;
     bool mShown = false;
     bool mPaintScheduled = false;
     // What T2DMap keeps between frames: the view last drawn, as the pointer and the selection have changed it since,

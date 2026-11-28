@@ -394,6 +394,9 @@ public:
     TMapViewFrontend* mapView() const { return mpEmbeddedMapper ? mpEmbeddedMapper.data() : mMapWidget ? mMapWidget->pView.get() : nullptr; }
     // Called by the map view where the GUI asks T2DMap for an update(), for an app that draws the map
     std::function<void()> mMapRepaintRequested;
+    // Set once an app has its own map of the profile (THeadlessSession::renderAppMap()), which opens the map for
+    // scripts as the player opening the GUI's mapper does, so centerview() follows the player on it: Host::mapOpen()
+    bool mAppMapOpened = false;
     void restoreOwnMapper() override {}
     // TMainConsole shows the dlgMapper drawing the map after a load; a closed map widget's dock keeps it hidden
     void showLoadedMap() override { showEmbeddedMapper(); }
