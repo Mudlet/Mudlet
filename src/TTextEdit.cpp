@@ -30,6 +30,7 @@
 #include "Host.h"
 #include "TBuffer.h"
 #include "TCommandLine.h"
+#include "TConsoleAnnouncements.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
@@ -502,35 +503,8 @@ void TTextEdit::showNewLines()
     }
     scheduleUpdate();
 
-
-    if (QAccessible::isActive() && mpConsole->getType() == TConsole::MainConsole && mpHost->mAnnounceIncomingText && mudlet::self()->getActiveHost() == mpHost) {
-        QString newLines;
-
-        // content has been deleted
-        if (previousOldScrollPos > mOldScrollPos) {
-            QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(this)->textInterface();
-            if (!ti) {
-                return;
-            }
-            auto totalCharacterCount = ti->characterCount();
-            ti->setCursorPosition(totalCharacterCount);
-            QAccessibleTextRemoveEvent event(this, totalCharacterCount, QString());
-            QAccessible::updateAccessibility(&event);
-            return;
-        }
-
-        // content has been added
-        for (int i = previousOldScrollPos; i < mOldScrollPos; i++) {
-            newLines.append(mpBuffer->spokenLine(i));
-            newLines.append('\n');
-        }
-
-        newLines = newLines.trimmed();
-        if (newLines.isEmpty()) {
-            return;
-        }
-
-        mudlet::self()->announce(newLines, QString(), true);
+    if (consoleAnnouncements::wanted(*mpHost, mpConsole->getType() == TConsole::MainConsole)) {
+        consoleAnnouncements::announceNewLines(this, *mpBuffer, previousOldScrollPos, mOldScrollPos);
     }
 }
 

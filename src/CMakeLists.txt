@@ -299,6 +299,7 @@ set(mudlet_app_SRCS
     TPaintPacer.cpp
     TPasswordEntry.cpp
     TConsole.cpp
+    TConsoleAnnouncements.cpp
     TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
@@ -654,6 +655,7 @@ set(mudlet_app_HDRS
     TPaintPacer.h
     TPasswordEntry.h
     TConsole.h
+    TConsoleAnnouncements.h
     TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
