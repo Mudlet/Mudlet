@@ -10827,6 +10827,29 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("logTimestamps")) {
+        host.mIsLoggingTimestamps = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("logFileNameFormat")) {
+        // The preferences' choices; the empty one names the log by logFileName instead of the date
+        static const QStringList values{qsl("yyyy-MM-dd#HH-mm-ss"), qsl("yyyy-MM-ddTHH-mm-ss"), qsl("yyyy-MM-dd"), qsl("yyyy-MM"), QString()};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+        if (!values.contains(value)) {
+            return warnArgumentChoice(L, __func__, qsl("logFileNameFormat"), values, value);
+        }
+        host.mLogFileNameFormat = value;
+        return success();
+    }
+    if (key == qsl("logFileName")) {
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+        // The log goes in the profile's log folder, never a folder a separator would name
+        if (value.contains(QLatin1Char('/')) || value.contains(QLatin1Char('\\'))) {
+            return warnArgumentValue(L, __func__, qsl("a log file name cannot contain '/' or '\\'"));
+        }
+        host.mLogFileName = value;
+        return success();
+    }
     if (key == qsl("f3SearchEnabled")) {
         const bool value = getVerifiedBool(L, __func__, 2, "value");
         host.setF3SearchEnabled(value);
@@ -11337,6 +11360,18 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("logInHTML"),
              [&]() {
                  lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat);
+             }},
+            {qsl("logTimestamps"),
+             [&]() {
+                 lua_pushboolean(L, host.mIsLoggingTimestamps);
+             }},
+            {qsl("logFileNameFormat"),
+             [&]() {
+                 lua_pushstring(L, host.mLogFileNameFormat.toUtf8().constData());
+             }},
+            {qsl("logFileName"),
+             [&]() {
+                 lua_pushstring(L, host.mLogFileName.toUtf8().constData());
              }},
             {qsl("f3SearchEnabled"),
              [&]() {

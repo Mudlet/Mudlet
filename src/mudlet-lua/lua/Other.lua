@@ -1756,7 +1756,10 @@ local configOptions = {
   "ircHostSecure",
   "lazyCaptureGlobals",
   "logDirectory",                    -- read-only in getConfig
+  "logFileName",
+  "logFileNameFormat",
   "logInHTML",
+  "logTimestamps",
   "mapDeletedRoomExitsAsStubs",
   "mapExitSize",
   "mapInfoColor",
