@@ -1639,13 +1639,10 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesAppended, &model.mNotifier, noteScroll);
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::contentEdited, &model.mNotifier, noteScroll);
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesChanged, &model.mNotifier, noteScroll);
-        // As TConsole::applyTimeStamps(), shown or not
+        // As TConsole::applyTimeStamps(), which leaves a hidden pane's report to its showEvent()
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::timeStampsToggled, &model.mNotifier, [this, name]() {
             mWindowNotifier.note();
-            // A hidden pane keeps the size it had until the resize it is owed reaches it
-            if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end() && (!it->second.paneResizePending || paneShown(it->second))) {
-                reportConsoleSize(name);
-            }
+            resizePane(name);
         });
         const auto noteText = [this, name]() {
             mWindowNotifier.noteText(name);
@@ -1729,10 +1726,12 @@ void TNullConsoleFrontend::reportConsoleSize(const QString& name)
     }
     const TConsoleModel& model = *it->second.pModel;
     const QSize grid = model.mGridSize;
-    if (!grid.width() || grid == it->second.reportedGrid) {
+    const int timeStampWidth = model.mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0;
+    if (!grid.width() || (grid == it->second.reportedGrid && timeStampWidth == it->second.reportedTimeStampWidth)) {
         return;
     }
     it->second.reportedGrid = grid;
+    it->second.reportedTimeStampWidth = timeStampWidth;
     TEvent event{};
     event.mArgumentList.append(qsl("sysConsoleSizeChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1742,7 +1741,7 @@ void TNullConsoleFrontend::reportConsoleSize(const QString& name)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     event.mArgumentList.append(QString::number(grid.height()));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(model.mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0));
+    event.mArgumentList.append(QString::number(timeStampWidth));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(event);
 }
