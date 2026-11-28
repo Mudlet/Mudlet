@@ -43,6 +43,8 @@ ECHO_PATH = "/echo"
 
 MEDIA_PATH = "/media/"
 
+BINARY_ERROR_PATH = "/binary-error"
+
 REDIRECT_PATH = "/redirect/"
 
 HANGUP_PATH = "/hangup"
@@ -94,7 +96,19 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         if self.media_requested():
             self.serve_media()
             return
+        if self.path == BINARY_ERROR_PATH:
+            self.serve_binary_error()
+            return
         super().do_GET()
+
+    def serve_binary_error(self):
+        """An error body that is not text, so a spec can check error events carry it unchanged."""
+        payload = b"a\x00b\xffc"
+        self.send_response(500)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def media_requested(self):
         return self.path.startswith(MEDIA_PATH) and self.path.endswith(".wav")
