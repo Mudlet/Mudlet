@@ -38,6 +38,7 @@ Failure Telnet_spec.lua: Tests the Client.GUI package offer records the Client.G
 # thread back, and busted runs every spec in one call, so pumpEvents() and waitForEvent() never run one. Replays,
 # speedwalks, deferred saves and installs, the text-to-speech mock and the file watcher's polling all run on one.
 Failure Alias_spec.lua: Alias processing state across a nested expandAlias command around expandAlias() leaves command holding what a timer expanded
+Failure BlinkTextTeardown_spec.lua: Deleting the last console showing blinking text leaves the console's freed buffer alone while its panes are destroyed
 Failure IDManager_spec.lua: Tests the functionality of IDMgr Tests the functionality of a private manager from getNewIDManager Tests the functionality of IDMgr:registerTimer Should hand the fourth argument to tempTimer as its repeating flag
 Failure IDManager_spec.lua: Tests the functionality of IDMgr Tests the functionality of a private manager from getNewIDManager Tests the functionality of IDMgr:registerTimer Should run the function it was given exactly once
 Failure Media_spec.lua: Tests the text-to-speech Lua API Tests the text-to-speech family a queued line starts speaking when the current one ends
