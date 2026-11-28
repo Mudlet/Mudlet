@@ -10227,6 +10227,91 @@ static QColor Host::*consoleColorMember(QStringView key)
     return nullptr;
 }
 
+// The 2D map's colours, as the preferences' Mapper colors tab keeps them; the sixteen colour the default environments
+static QColor Host::*mapColorMember(QStringView key)
+{
+    static const std::array<std::pair<QStringView, QColor Host::*>, 23> members{{
+            {u"mapBackgroundColor", &Host::mBgColor_2},
+            {u"mapLinkColor", &Host::mFgColor_2},
+            {u"mapRoomBorderColor", &Host::mRoomBorderColor},
+            {u"mapRoomCollisionBorderColor", &Host::mRoomCollisionBorderColor},
+            {u"mapLowerLevelColor", &Host::mLowerLevelColor},
+            {u"mapUpperLevelColor", &Host::mUpperLevelColor},
+            {u"mapGridColor", &Host::mMapGridColor},
+            {u"mapAnsiBlack", &Host::mBlack_2},
+            {u"mapAnsiRed", &Host::mRed_2},
+            {u"mapAnsiGreen", &Host::mGreen_2},
+            {u"mapAnsiYellow", &Host::mYellow_2},
+            {u"mapAnsiBlue", &Host::mBlue_2},
+            {u"mapAnsiMagenta", &Host::mMagenta_2},
+            {u"mapAnsiCyan", &Host::mCyan_2},
+            {u"mapAnsiWhite", &Host::mWhite_2},
+            {u"mapAnsiLightBlack", &Host::mLightBlack_2},
+            {u"mapAnsiLightRed", &Host::mLightRed_2},
+            {u"mapAnsiLightGreen", &Host::mLightGreen_2},
+            {u"mapAnsiLightYellow", &Host::mLightYellow_2},
+            {u"mapAnsiLightBlue", &Host::mLightBlue_2},
+            {u"mapAnsiLightMagenta", &Host::mLightMagenta_2},
+            {u"mapAnsiLightCyan", &Host::mLightCyan_2},
+            {u"mapAnsiLightWhite", &Host::mLightWhite_2},
+    }};
+    for (const auto& [name, member] : members) {
+        if (name == key) {
+            return member;
+        }
+    }
+    return nullptr;
+}
+
+// The player room marker's styles, by the index the preferences' list and the profile keep them at
+static const QStringList& playerRoomStyles()
+{
+    static const QStringList styles{qsl("original"), qsl("redRing"), qsl("blueYellowRing"), qsl("customRing")};
+    return styles;
+}
+
+// The player room marker's style, sizes and colours
+struct PlayerRoomMarker
+{
+    quint8 style = 0;
+    quint8 outerDiameter = 0;
+    quint8 innerDiameter = 0;
+    QColor outerColor;
+    QColor innerColor;
+};
+
+// From the Host's copy, which the profile keeps: the map's, which a map view draws, is unset until a mapper is made
+static PlayerRoomMarker playerRoomMarker(Host& host)
+{
+    PlayerRoomMarker marker;
+    host.getPlayerRoomStyleDetails(marker.style, marker.outerDiameter, marker.innerDiameter, marker.outerColor, marker.innerColor);
+    return marker;
+}
+
+static void setPlayerRoomMarker(Host& host, const PlayerRoomMarker& marker)
+{
+    host.setPlayerRoomStyleDetails(marker.style, marker.outerDiameter, marker.innerDiameter, marker.outerColor, marker.innerColor);
+    TMap* pMap = host.mpMap.data();
+    pMap->mPlayerRoomStyle = marker.style;
+    pMap->mPlayerRoomOuterDiameterPercentage = marker.outerDiameter;
+    pMap->mPlayerRoomInnerDiameterPercentage = marker.innerDiameter;
+    pMap->mPlayerRoomOuterColor = marker.outerColor;
+    pMap->mPlayerRoomInnerColor = marker.innerColor;
+    pMap->requestMapRepaint();
+}
+
+// "#rrggbb" with the alpha of the colour it replaces, which the preferences can pick and #rrggbb cannot say; invalid for anything else
+static QColor hexColorKeepingAlpha(const QString& name, const QColor& replaced)
+{
+    static const QRegularExpression hexColor(qsl("^#[0-9A-Fa-f]{6}$"));
+    if (!hexColor.match(name).hasMatch()) {
+        return {};
+    }
+    QColor color = QColor::fromString(name);
+    color.setAlpha(replaced.alpha());
+    return color;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The table argument case for setting multiple properties at once is handled
@@ -10333,7 +10418,77 @@ int TLuaInterpreter::setConfig(lua_State* L)
 #endif
         if (key == qsl("mapShowRoomBorders")) {
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->requestMapRepaint();
             return success();
+        }
+        if (key == qsl("mapRoomBorderSize")) {
+            // As mapExitSize: it divides the border pen's width and is saved to one decimal place
+            const double size = getVerifiedDouble(L, __func__, 2, "value");
+            if (!std::isfinite(size) || size < 1.0) {
+                return warnArgumentValue(L, __func__, qsl("mapRoomBorderSize must be a number of at least 1, got %1").arg(size));
+            }
+            host.mRoomBorderSize = size;
+            host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (key == qsl("mapLargeAreaExitArrows")) {
+            host.setLargeAreaExitArrows(getVerifiedBool(L, __func__, 2, "value"));
+            host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (QColor Host::*member = mapColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
+            const QString name = getVerifiedString(L, __func__, 2, "value");
+            const QColor color = hexColorKeepingAlpha(name, host.*member);
+            if (!color.isValid()) {
+                return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
+            }
+            host.*member = color;
+            if (member == &Host::mBgColor_2) {
+                host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
+            }
+            // The map keeps its own copy of the sixteen for the environments 257 to 272, as the preferences refresh it
+            if (key.startsWith(QLatin1StringView("mapAnsi"))) {
+                host.mpMap->restore16ColorSet();
+            }
+            host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (key.startsWith(QLatin1StringView("mapPlayerRoom"))) {
+            PlayerRoomMarker marker = playerRoomMarker(host);
+            if (key == qsl("mapPlayerRoomStyle")) {
+                const QString value = getVerifiedString(L, __func__, 2, "value");
+                const qsizetype style = playerRoomStyles().indexOf(value);
+                if (style < 0) {
+                    return warnArgumentChoice(L, __func__, qsl("mapPlayerRoomStyle"), playerRoomStyles(), value);
+                }
+                marker.style = static_cast<quint8>(style);
+                setPlayerRoomMarker(host, marker);
+                return success();
+            }
+            if (key == qsl("mapPlayerRoomOuterDiameter") || key == qsl("mapPlayerRoomInnerDiameter")) {
+                // The preferences' spin boxes' ranges: a percentage of the room, and of the outer diameter
+                const bool outer = key == qsl("mapPlayerRoomOuterDiameter");
+                const int percent = getVerifiedInt(L, __func__, 2, "value");
+                const int lowest = outer ? 50 : 0;
+                const int highest = outer ? 200 : 96;
+                if (percent < lowest || percent > highest) {
+                    return warnArgumentValue(L, __func__, qsl("%1 must be from %2 to %3, got %4").arg(QString::fromUtf8(lua_tostring(L, 1))).arg(lowest).arg(highest).arg(percent));
+                }
+                (outer ? marker.outerDiameter : marker.innerDiameter) = static_cast<quint8>(percent);
+                setPlayerRoomMarker(host, marker);
+                return success();
+            }
+            if (key == qsl("mapPlayerRoomOuterColor") || key == qsl("mapPlayerRoomInnerColor")) {
+                QColor& replaced = key == qsl("mapPlayerRoomOuterColor") ? marker.outerColor : marker.innerColor;
+                const QString name = getVerifiedString(L, __func__, 2, "value");
+                const QColor color = hexColorKeepingAlpha(name, replaced);
+                if (!color.isValid()) {
+                    return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
+                }
+                replaced = color;
+                setPlayerRoomMarker(host, marker);
+                return success();
+            }
         }
         if (key == qsl("mapShowGrid")) {
             host.mMapperShowGrid = getVerifiedBool(L, __func__, 2, "value");
@@ -11077,6 +11232,35 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushboolean(L, host.mMapperShowRoomBorders);
              }},
+            {qsl("mapRoomBorderSize"),
+             [&]() {
+                 lua_pushnumber(L, host.mRoomBorderSize);
+             }},
+            {qsl("mapLargeAreaExitArrows"),
+             [&]() {
+                 lua_pushboolean(L, host.getLargeAreaExitArrows());
+             }},
+            {qsl("mapPlayerRoomStyle"),
+             [&]() {
+                 const QByteArray style = playerRoomStyles().value(playerRoomMarker(host).style, playerRoomStyles().constFirst()).toUtf8();
+                 lua_pushlstring(L, style.constData(), style.size());
+             }},
+            {qsl("mapPlayerRoomOuterDiameter"),
+             [&]() {
+                 lua_pushnumber(L, playerRoomMarker(host).outerDiameter);
+             }},
+            {qsl("mapPlayerRoomInnerDiameter"),
+             [&]() {
+                 lua_pushnumber(L, playerRoomMarker(host).innerDiameter);
+             }},
+            {qsl("mapPlayerRoomOuterColor"),
+             [&]() {
+                 lua_pushstring(L, playerRoomMarker(host).outerColor.name().toUtf8().constData());
+             }},
+            {qsl("mapPlayerRoomInnerColor"),
+             [&]() {
+                 lua_pushstring(L, playerRoomMarker(host).innerColor.name().toUtf8().constData());
+             }},
             {qsl("mapInfoColor"),
              [&]() {
                  lua_newtable(L);
@@ -11484,6 +11668,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
         return 1;
     }
     if (QColor Host::*member = consoleColorMember(key)) {
+        lua_pushstring(L, (host.*member).name().toUtf8().constData());
+        return 1;
+    }
+    if (QColor Host::*member = mapColorMember(key)) {
         lua_pushstring(L, (host.*member).name().toUtf8().constData());
         return 1;
     }

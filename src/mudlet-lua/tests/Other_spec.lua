@@ -2410,6 +2410,54 @@ describe("Tests Other.lua functions", function()
       end
     end)
 
+    it("reads and changes the map's colours as #rrggbb, keeping each one's alpha", function()
+      local keys = { "mapBackgroundColor", "mapLinkColor", "mapRoomBorderColor", "mapGridColor", "mapAnsiRed", "mapAnsiLightWhite", "mapPlayerRoomOuterColor" }
+      for _, key in ipairs(keys) do
+        snapshot(key)
+        assert.truthy(getConfig(key):match("^#%x%x%x%x%x%x$"))
+        assert.is_true(setConfig(key, "#12AB34"))
+        assert.equals("#12ab34", getConfig(key))
+      end
+      local r, g, b = getMapBackgroundColor()
+      assert.same({ 0x12, 0xab, 0x34 }, { r, g, b })
+      for _, bad in ipairs({ "red", "#12ab3", "#12ab345", "12ab34" }) do
+        local ok, message = setConfig("mapLinkColor", bad)
+        assert.is_nil(ok)
+        assert.truthy(message:find("#rrggbb", 1, true))
+      end
+      for _, key in ipairs(keys) do
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the map's border size, area exit arrows and player room marker", function()
+      local keys = { "mapRoomBorderSize", "mapLargeAreaExitArrows", "mapPlayerRoomStyle", "mapPlayerRoomOuterDiameter", "mapPlayerRoomInnerDiameter" }
+      for _, key in ipairs(keys) do
+        snapshot(key)
+      end
+      assert.is_true(setConfig("mapRoomBorderSize", 12.5))
+      assert.equals(12.5, getConfig("mapRoomBorderSize"))
+      assert.is_nil(setConfig("mapRoomBorderSize", 0.5))
+      local arrows = getConfig("mapLargeAreaExitArrows")
+      assert.is_true(setConfig("mapLargeAreaExitArrows", not arrows))
+      assert.equals(not arrows, getConfig("mapLargeAreaExitArrows"))
+      for _, style in ipairs({ "redRing", "blueYellowRing", "customRing", "original" }) do
+        assert.is_true(setConfig("mapPlayerRoomStyle", style))
+        assert.equals(style, getConfig("mapPlayerRoomStyle"))
+      end
+      assert.is_nil(setConfig("mapPlayerRoomStyle", "square"))
+      assert.is_true(setConfig("mapPlayerRoomOuterDiameter", 150))
+      assert.equals(150, getConfig("mapPlayerRoomOuterDiameter"))
+      assert.is_nil(setConfig("mapPlayerRoomOuterDiameter", 201))
+      assert.is_true(setConfig("mapPlayerRoomInnerDiameter", 0))
+      assert.equals(0, getConfig("mapPlayerRoomInnerDiameter"))
+      assert.is_nil(setConfig("mapPlayerRoomInnerDiameter", 97))
+      assert.equals(150, getConfig("mapPlayerRoomOuterDiameter"))
+      for _, key in ipairs(keys) do
+        restore(key)
+      end
+    end)
+
     it("getConfig returns a keyed table when given a list of keys", function()
       local result = getConfig({ "enableGMCP", "editorAutoComplete" })
       assert.is_table(result)
