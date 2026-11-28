@@ -121,11 +121,14 @@ private:
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();
+    void keepMarkOffNextCharacter();
     void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
-    void processNormalKey(QEvent*);
+    void processNormalKey(QKeyEvent*);
+    enum class KeyEdit { Other, Typing, Backspace, Delete };
+    void editAndSpellCheck(QKeyEvent*, KeyEdit);
     bool keybindingMatched(QKeyEvent*);
     bool keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent*) const;
     void spellCheckWord(QTextCursor& c);
@@ -156,6 +159,9 @@ private:
     bool mEditStartedOnBlankLine = false;
     bool mPlayerTypedLine = false;
     QString mLastPlainText;
+    KeyEdit mLastKeyEdit = KeyEdit::Other;
+    int mLastKeyEditRevision = -1;
+    int mLastKeyEditPosition = -1;
 
     class UserEditScope
     {
@@ -166,6 +172,8 @@ private:
 
     private:
         TCommandLine& mLine;
+        // A paste runs one inside the scope of the key that pasted
+        const bool mOuterEditInProgress;
     };
 };
 
