@@ -1050,24 +1050,37 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (preventLuaEvent) {
             return;
         }
-        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        const QString func = "handleWindowResizeEvent";
-        const QString n = "WindowResizeEvent";
-        pLua->call(func, n);
+    }
+    if (!(mType & (MainConsole | UserWindow))) {
+        return;
+    }
+    // QMainWindow::restoreState() resizes windows part way through rearranging the docks, and a
+    // handler that docks, floats, shows or hides one then leaves freed items in Qt's dock layout
+    if (mudlet* const app = mudlet::self(); app && app->restoringLayout()) {
+        // Dropped if the window has been resized since, as that resize reports the newer size
+        app->callAfterLayoutRestore(this, [this, x, y, heldSize = event->size()]() {
+            if (size() == heldSize) {
+                raiseResizeEvents(x, y);
+            }
+        });
+        return;
+    }
+    raiseResizeEvents(x, y);
+}
 
-        raiseMudletSysWindowResizeEvent(x, y);
+void TConsole::raiseResizeEvents(const int overallWidth, const int overallHeight)
+{
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+
+    if (mType & MainConsole) {
+        raiseMudletSysWindowResizeEvent(overallWidth, overallHeight);
     }
     //create the sysUserWindowResize Event for automatic resizing with Geyser
-    if (mType & (UserWindow)) {
-        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        const QString func = "handleWindowResizeEvent";
-        const QString n = "WindowResizeEvent";
-        pLua->call(func, n);
-
+    if (mType & UserWindow) {
         TEvent mudletEvent{};
         mudletEvent.mArgumentList.append(QLatin1String("sysUserWindowResizeEvent"));
-        mudletEvent.mArgumentList.append(QString::number(x));
-        mudletEvent.mArgumentList.append(QString::number(y));
+        mudletEvent.mArgumentList.append(QString::number(overallWidth));
+        mudletEvent.mArgumentList.append(QString::number(overallHeight));
         mudletEvent.mArgumentList.append(mConsoleName);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2942,6 +2955,14 @@ void TConsole::clearSplit()
 
 void TConsole::raiseMudletResizeEvent()
 {
+    // Held while Qt restores the layout, as in resizeEvent(), and measured when delivered
+    if (mudlet* const app = mudlet::self(); app && app->restoringLayout()) {
+        app->callAfterLayoutRestore(this, [this]() {
+            raiseMudletResizeEvent();
+        });
+        return;
+    }
+
     // Hiding the TConsole - particularly the main one, multiview is not active
     // and the profile is being switched away from causes a zero column count
     // even though the TConsole is not actually resized - so don't raise the

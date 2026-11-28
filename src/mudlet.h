@@ -213,6 +213,9 @@ public:
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
     bool layoutLoading() const override { return mIsLoadingLayout; }
+    bool restoringLayout() const { return mRestoringLayout; }
+    // While restoringLayout(), holds callback until Qt has finished, and drops it if context is gone by then
+    void callAfterLayoutRestore(QObject* context, std::function<void()> callback);
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
@@ -389,6 +392,7 @@ public:
     int mEditorTreeWidgetIconSize = 0;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
+    bool mRestoringLayout = false;
     QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
@@ -642,6 +646,7 @@ private:
 
     inline static QPointer<mudlet> smpSelf = nullptr;
 
+    QList<std::pair<QPointer<QObject>, std::function<void()>>> mCallsAfterLayoutRestore;
 
     QString mDefaultStyle;
     // The portable.txt that named a data directory Mudlet could not use, and the

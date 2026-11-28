@@ -8670,6 +8670,86 @@ describe("Main window size and saved layout", function()
       assert.are.same({savedWidth, savedHeight}, {width, height})
     end)
 
+    -- swapping a side dock for a bottom one changes both sizes, so the load resizes both
+    local function saveThenSwapDocks(first, second)
+      openUserWindow(first, false, true, "left")
+      openUserWindow(second, false, true, "bottom")
+      pumpEvents(300)
+      assert.is_true(saveWindowLayout())
+      openUserWindow(first, false, true, "bottom")
+      openUserWindow(second, false, true, "left")
+      pumpEvents(300)
+    end
+
+    it("a resize handler the load runs finds every window already where the layout puts it", function()
+      -- getMousePosition() has no answer only when there is no main window, whose docks this is about
+      if not getMousePosition() then
+        pending("there is no main window to dock user windows in")
+      end
+      -- a handler that docks or floats a window part way through Qt's restore corrupts its dock layout
+      local first, second = "layoutRestoredA", "layoutRestoredB"
+      local handlers = {}
+      finally(function()
+        for _, handler in ipairs(handlers) do
+          killAnonymousEventHandler(handler)
+        end
+        deleteMiniConsole(first)
+        deleteMiniConsole(second)
+      end)
+      saveThenSwapDocks(first, second)
+      local seen = {}
+      -- the argument each event names the window in
+      for event, nameArgument in pairs({sysUserWindowResizeEvent = 4, sysConsoleSizeChanged = 2}) do
+        seen[event] = {}
+        handlers[#handlers + 1] = registerAnonymousEventHandler(event, function(...)
+          local name = select(nameArgument, ...)
+          if name == first or name == second then
+            table.insert(seen[event], {{getWindowGeometry(first)}, {getWindowGeometry(second)}})
+          end
+        end)
+      end
+      assert.is_true(loadWindowLayout())
+      local restored = {{getWindowGeometry(first)}, {getWindowGeometry(second)}}
+      for event, geometries in pairs(seen) do
+        assert.is_true(#geometries > 0, "the load raised no " .. event .. " for either window")
+        for _, geometry in ipairs(geometries) do
+          assert.are.same(restored, geometry, event)
+        end
+      end
+    end)
+
+    it("a resize event the load held back is dropped once a handler has resized that window since", function()
+      -- getMousePosition() has no answer only when there is no main window, whose docks this is about
+      if not getMousePosition() then
+        pending("there is no main window to dock user windows in")
+      end
+      local first, second = "layoutHeldA", "layoutHeldB"
+      local handler
+      finally(function()
+        if handler then
+          killAnonymousEventHandler(handler)
+        end
+        deleteMiniConsole(first)
+        deleteMiniConsole(second)
+      end)
+      saveThenSwapDocks(first, second)
+      local resized
+      local reported = {}
+      handler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, width, height, name)
+        if name ~= first and name ~= second then
+          return
+        end
+        reported[name] = {width, height}
+        if not resized then
+          resized = name == first and second or first
+          resizeWindow(resized, 345, 234)
+        end
+      end)
+      assert.is_true(loadWindowLayout())
+      assert.is_truthy(resized, "the load resized neither window")
+      assert.are.same({getUserWindowSize(resized)}, reported[resized])
+    end)
+
     it("openUserWindow refuses a window a handler deletes or replaces as it is made or as the layout loads", function()
       local other, deleted, replaced, replacedInLoad = "layoutFontOther", "layoutFontDeleted", "layoutFontReplaced", "layoutLoadReplaced"
       local target, replace, trigger
