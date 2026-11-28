@@ -426,6 +426,187 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aLocalLinkRunsOnlyAnItemChosenFromItsMenu()
+    {
+        const QString name = qsl("Headless Follow Local");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(qsl("note: ") + osc8(qsl("local:?config={\"tooltip\":\"It needs a key\"}"), qsl("the door")))
+                               + feed(qsl("menu: ") + osc8(qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("the chest")))));
+
+        const QList<int> note = linksOnLineStarting(output, qsl("note: "));
+        QCOMPARE(note.size(), 1);
+        QVERIFY(session.link(note.first())->disabled);
+        QCOMPARE(session.followLink(note.first()), THeadlessSession::LinkResult::disabled);
+        QVERIFY(!session.link(note.first())->visited);
+
+        const QList<int> menu = linksOnLineStarting(output, qsl("menu: "));
+        QCOMPARE(menu.size(), 1);
+        QCOMPARE(session.followLink(menu.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(luaGlobal(session, "headlessSent").isEmpty());
+        QCOMPARE(session.followLink(menu.first(), 0), THeadlessSession::LinkResult::ran);
+        QCOMPARE(luaGlobal(session, "headlessSent"), qsl("look;"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLocalMenuLinksSelectionChangesOnceForAFollowAndItsPick()
+    {
+        const QString name = qsl("Headless Follow Local Selection");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ") + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("flour")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(links.size(), 1);
+        QCOMPARE(session.followLink(links.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(links.first())->selected);
+        QCOMPARE(session.followLink(links.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.link(links.first())->selected, "picking from the menu the follow opened changed the selection back");
+        QCOMPARE(luaGlobal(session, "headlessSent"), qsl("look;"));
+        // A pick with no follow before it is a right click's, which changes the selection itself
+        QCOMPARE(session.followLink(links.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY(!session.link(links.first())->selected);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aMenuOpenedInOneWindowLeavesAPickInAnotherToChangeItsSelection()
+    {
+        const QString name = qsl("Headless Follow Local Selection Windows");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(qsl("createMiniConsole('mini', 10, 20, 300, 200)\n"
+                                   "tempRegexTrigger('^tick: ', [[selectCurrentLine() copy() appendBuffer('mini')]])")));
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ") + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("flour")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(links.size(), 1);
+        const std::optional<THeadlessSession::WindowText> rows = session.windowLines(qsl("mini"), 0, 1);
+        QVERIFY(rows);
+        QCOMPARE(rows->lines.size(), 1);
+        const int inMini = rows->lines.at(0).runs.constLast().link;
+        QCOMPARE(inMini, links.first());
+        QVERIFY(session.windowLink(qsl("mini"), inMini)->menu);
+
+        QCOMPARE(session.followLink(links.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(links.first())->selected);
+        QCOMPARE(session.followWindowLink(qsl("mini"), inMini, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.windowLink(qsl("mini"), inMini)->selected, "a pick in the mini console was taken for one from the main console's menu");
+        QVERIFY(session.link(links.first())->selected);
+
+        QCOMPARE(session.followWindowLink(qsl("mini"), inMini), THeadlessSession::LinkResult::ran);
+        QVERIFY(!session.windowLink(qsl("mini"), inMini)->selected);
+        QCOMPARE(session.followWindowLink(qsl("mini"), inMini, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(!session.windowLink(qsl("mini"), inMini)->selected, "picking from the menu the mini console's follow opened changed the selection back");
+        QVERIFY(session.link(links.first())->selected);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aPickTheMenuCouldNotMakeLeavesItOpen()
+    {
+        const QString name = qsl("Headless Follow Local Refused Pick");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ")
+                     + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"},{\"Hello\":\"gmcp:Core.Hello\"}]}"),
+                            qsl("flour")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(links.size(), 1);
+        const int tick = links.first();
+        QVERIFY(!session.link(tick)->items.at(1).enabled);
+        QCOMPARE(session.followLink(tick), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(tick)->selected);
+        QCOMPARE(session.followLink(tick, 1), THeadlessSession::LinkResult::disabled);
+        QCOMPARE(session.followLink(tick, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.link(tick)->selected, "a greyed-out item closed the menu, so the pick after it changed the selection back");
+        QCOMPARE(session.followLink(tick), THeadlessSession::LinkResult::ran);
+        QVERIFY(!session.link(tick)->selected);
+        QCOMPARE(session.followLink(tick, 2), THeadlessSession::LinkResult::noSuchItem);
+        QCOMPARE(session.followLink(tick, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(!session.link(tick)->selected, "an item the link does not have closed the menu, so the pick after it changed the selection back");
+        QVERIFY(session.shutdown(false));
+    }
+
+    // With no connection sendGMCP() sends nothing, so a gmcp: link, clicked or picked from its menu, is left as it was
+    void test_aGmcpLinkWithNoConnectionIsLeftAsItWas()
+    {
+        const QString name = qsl("Headless Follow Gmcp Unconnected");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(qsl("hint: ") + osc8(qsl("gmcp:Game.Pref.Set?config={\"selection\":{\"group\":\"headlessHints\",\"value\":\"on\",\"exclusive\":false}}"), qsl("hints"))
+                                    + qsl(" mode: ")
+                                    + osc8(qsl("gmcp:Game.Mode?config={\"selection\":{\"group\":\"headlessMode\",\"value\":\"m\",\"exclusive\":false},"
+                                               "\"menu\":[{\"Fast\":\"gmcp:Game.Mode.Fast\"},{\"Slow\":\"gmcp:Game.Mode.Slow\"}]}"),
+                                           qsl("mode")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("hint: "));
+        QCOMPARE(links.size(), 2);
+
+        QCOMPARE(session.followLink(links.at(0)), THeadlessSession::LinkResult::gmcpOff);
+        QVERIFY2(!session.link(links.at(0))->visited, "the link was marked followed");
+        QVERIFY2(!session.link(links.at(0))->selected, "the link was shown as chosen");
+
+        QCOMPARE(session.followLink(links.at(1), 1), THeadlessSession::LinkResult::gmcpOff);
+        QVERIFY2(!session.link(links.at(1))->visited, "the link was marked followed for a pick from its menu");
+        QVERIFY2(!session.link(links.at(1))->selected, "the link was shown as chosen for a pick from its menu");
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_followingAnotherLinkClosesTheMenu()
+    {
+        const QString name = qsl("Headless Follow Local Then Another");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ") + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("flour")))));
+        QVERIFY(session.runLua(feed(qsl("go: ") + osc8(qsl("send:north"), qsl("north")))));
+        const QList<int> tick = linksOnLineStarting(output, qsl("tick: "));
+        const QList<int> go = linksOnLineStarting(output, qsl("go: "));
+        QCOMPARE(tick.size(), 1);
+        QCOMPARE(go.size(), 1);
+        QCOMPARE(session.followLink(tick.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(tick.first())->selected);
+        QCOMPARE(session.followLink(go.first()), THeadlessSession::LinkResult::ran);
+        QCOMPARE(session.followLink(tick.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(!session.link(tick.first())->selected, "a pick after another link was followed was taken for one from the menu");
+        QCOMPARE(luaGlobal(session, "headlessSent"), qsl("north;look;"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinkThatTookTheIdOfOneWhoseMenuOpenedChangesItsSelectionOnAPick()
+    {
+        const QString name = qsl("Headless Follow Local Reused Id");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        const QString tickUri = qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}");
+        QVERIFY(session.runLua(feed(qsl("tick: ") + osc8(tickUri, qsl("flour")))));
+        const QList<int> tick = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(tick.size(), 1);
+        QCOMPARE(session.followLink(tick.first()), THeadlessSession::LinkResult::ran);
+        // The store holds 20000 ids, so the link fed after this many more takes this one's
+        QVERIFY(session.runLua(qsl("for i = 1, 19999 do echoLink('x', '', '') end")));
+        QVERIFY(session.runLua(feed(qsl("again: ") + osc8(tickUri, qsl("flour")))));
+        const QList<int> again = linksOnLineStarting(output, qsl("again: "));
+        QCOMPARE(again, tick);
+        QVERIFY(!session.link(tick.first())->selected);
+        QCOMPARE(session.followLink(tick.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.link(tick.first())->selected, "a pick on the link that took the id was taken for one from the old link's menu");
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_followingALinkOfAnExclusiveGroupSelectsOnlyIt()
     {
         const QString name = qsl("Headless Follow Group");

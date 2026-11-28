@@ -411,6 +411,8 @@ QString TIrcClient::readIrcNickName(Host* pH)
 
         if (nick.isEmpty()) {
             nick = qsl("%1%2").arg(TIrcClient::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
+            // Stored, or every later read (getIrcNick(), restartIrc()) would make up a different nick
+            pH->writeProfileData(TIrcClient::NickNameCfgItem, nick);
         }
     }
     return nick;

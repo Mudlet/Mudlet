@@ -1459,7 +1459,8 @@ void dlgPackageExporter::slot_packageChanged(int index)
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageDataPath.clear();
-    QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
+    // The list offers installed modules too, and those keep their details apart from packages'
+    const QMap<QString, QString> packageInfo = mpHost->mPackageInfo.contains(packageName) ? mpHost->mPackageInfo.value(packageName) : mpHost->mModuleInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
     if (!icon.isEmpty()) {
@@ -1876,6 +1877,15 @@ void dlgPackageExporter::slot_exportPackage()
     mPackageName = ui->lineEdit_packageName->text();
     if (mPackageName.isEmpty()) {
         displayResultMessage(tr("Please enter the package name."), false);
+        return;
+    }
+    // The name becomes a folder under the temporary directory that is wiped before each export,
+    // so ".." or a path in it would wipe a folder outside it. Windows drops trailing dots and spaces,
+    // making "..." or ".. " a step out too, so refuse every name of nothing else.
+    static const QRegularExpression onlyDotsAndSpaces(qsl("^[. ]*$"));
+    if (mPackageName.contains(onlyDotsAndSpaces) || mPackageName.contains(QLatin1Char('/')) || mPackageName.contains(QLatin1Char('\\'))) {
+        //: Shown in the package exporter when the package or module name could not be used as a file name
+        displayResultMessage(tr("The name cannot be only dots and spaces, or contain \"/\" or \"\\\". Please choose another name."), false);
         return;
     }
 

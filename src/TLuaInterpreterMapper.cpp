@@ -53,6 +53,8 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <optional>
+#include <tuple>
 #include <math.h>
 #include <memory>
 #include <string>
@@ -98,6 +100,15 @@ static void roomUserDataChanged(TMap& map, const TRoom& room, const bool drawn, 
     map.setUnsavedKeepingRevisions(fromWhere);
     // Still repainted, as a map info contributor may show the key and is asked again on every paint
     map.updatePlayerArea(room.getArea());
+}
+
+// The map's own room.ui_ keys (the room name font, and "Show room names") are read by every area's view
+static void mapUserDataChanged(TMap& map, const bool drawn, const char* fromWhere)
+{
+    map.setUnsaved(fromWhere);
+    if (drawn) {
+        map.updateArea(-1);
+    }
 }
 
 static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
@@ -896,8 +907,9 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
     }
 
     if (!host.mpMap->mUserData.isEmpty()) {
+        const bool drawn = std::any_of(host.mpMap->mUserData.keyBegin(), host.mpMap->mUserData.keyEnd(), roomUserDataKeyDrawn);
         host.mpMap->mUserData.clear();
-        host.mpMap->setUnsaved(__func__);
+        mapUserDataChanged(*host.mpMap, drawn, __func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -919,7 +931,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     const bool removed = host.mpMap->mUserData.remove(key) > 0;
     if (removed) {
-        host.mpMap->setUnsaved(__func__);
+        mapUserDataChanged(*host.mpMap, roomUserDataKeyDrawn(key), __func__);
     }
     lua_pushboolean(L, removed);
     return 1;
@@ -1050,8 +1062,10 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
             // It is a string so it is (we will assume) a direction
             hasDirection = true;
         } else if (lua_type(L, 2) == LUA_TNUMBER) {
-            const int value = qRound(lua_tonumber(L, 2));
-            if (value >= DIR_NORTH && value <= DIR_OUT) {
+            // Compared before converting, as converting NaN or a value outside int's range is undefined
+            const double rounded = std::round(lua_tonumber(L, 2));
+            if (rounded >= DIR_NORTH && rounded <= DIR_OUT) {
+                const int value = static_cast<int>(rounded);
                 // Ambiguous - look in more detail and check whether there is a
                 // a room with the given number and/or an exit stub:
                 const bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
@@ -1259,13 +1273,13 @@ int TLuaInterpreter::createMapper(lua_State* L)
         counter++;
     }
 
-    const int x = getVerifiedInt(L, __func__, counter, "mapper x-coordinate");
+    const int x = getVerifiedGeometry(L, __func__, counter, "mapper x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "mapper y-coordinate");
+    const int y = getVerifiedGeometry(L, __func__, counter, "mapper y-coordinate");
     counter++;
-    const int width = getVerifiedInt(L, __func__, counter, "mapper width");
+    const int width = getVerifiedGeometry(L, __func__, counter, "mapper width");
     counter++;
-    const int height = getVerifiedInt(L, __func__, counter, "mapper height");
+    const int height = getVerifiedGeometry(L, __func__, counter, "mapper height");
 
     QString windowName = "";
     if (hasParentWindow) {
@@ -1655,6 +1669,151 @@ int TLuaInterpreter::getAreaGraph(lua_State* L)
         lua_settable(L, -3);
     }
     lua_setfield(L, -2, "links");
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaExploration
+// How much of an area is mapped: its rooms, and the exits in it known to exist but not mapped yet (exit stubs)
+int TLuaInterpreter::getAreaExploration(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    const TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+
+    int openExits = 0;
+    QList<int> roomsWithOpenExits;
+    for (const int roomId : pA->getAreaRooms()) {
+        const TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR) {
+            continue;
+        }
+        // A map file can hold a stub twice, or one where the room has the exit by now: each way out counts once, and
+        // only while it is still unmapped
+        QSet<int> unmapped;
+        for (const int direction : pR->exitStubs) {
+            if (pR->getExit(direction) < 1) {
+                unmapped.insert(direction);
+            }
+        }
+        if (!unmapped.isEmpty()) {
+            openExits += unmapped.size();
+            roomsWithOpenExits << roomId;
+        }
+    }
+    std::sort(roomsWithOpenExits.begin(), roomsWithOpenExits.end());
+    // Read before any table is made: making one can run a __gc handler, which could delete the area
+    const auto roomCount = pA->getAreaRooms().size();
+
+    lua_newtable(L);
+    lua_pushnumber(L, roomCount);
+    lua_setfield(L, -2, "rooms");
+    lua_pushnumber(L, openExits);
+    lua_setfield(L, -2, "openExits");
+    lua_createtable(L, roomsWithOpenExits.size(), 0);
+    for (int i = 0; i < roomsWithOpenExits.size(); ++i) {
+        lua_pushnumber(L, roomsWithOpenExits.at(i));
+        lua_rawseti(L, -2, i + 1);
+    }
+    lua_setfield(L, -2, "roomsWithOpenExits");
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaConnections
+// Each area this one has an exit to or an entrance from, with those exits and entrances; a one-way link has only one
+// of the two. Unlike getAreaGraph() it names the rooms on both sides, and unlike getAreaExits() the way in as well
+int TLuaInterpreter::getAreaConnections(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    TRoomDB* pRoomDB = host.mpMap->mpRoomDB.get();
+    const TArea* pA = pRoomDB->getArea(areaId);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+
+    struct Passage
+    {
+        int from;
+        int to;
+        QString exit;
+        bool operator<(const Passage& other) const { return std::tie(from, exit, to) < std::tie(other.from, other.exit, other.to); }
+    };
+    struct Neighbour
+    {
+        QList<Passage> exits;
+        QList<Passage> entrances;
+    };
+    // Not -1 for a missing room: that is the default area's ID, and an exit into it is a connection like any other
+    const auto areaOfRoom = [pRoomDB](const int roomId) -> std::optional<int> {
+        const TRoom* pR = pRoomDB->getRoom(roomId);
+        return pR ? std::optional<int>(pR->getArea()) : std::nullopt;
+    };
+
+    QMap<int, Neighbour> neighbours;
+    const auto outgoing = pA->getAreaExitRoomData();
+    for (auto it = outgoing.cbegin(); it != outgoing.cend(); ++it) {
+        const std::optional<int> toArea = areaOfRoom(it.value().second);
+        if (toArea.has_value() && *toArea != areaId) {
+            neighbours[*toArea].exits << Passage{it.key(), it.value().second, it.value().first};
+        }
+    }
+    // The ways in, from the rooms the entrance map files under each of this area's rooms, rather than from every other
+    // area's exits: a script going through all the areas would otherwise scan them all once per area
+    const QMultiHash<int, int>& entrances = pRoomDB->getEntranceHash();
+    for (const int toRoomId : pA->getAreaRooms()) {
+        for (auto it = entrances.constFind(toRoomId); it != entrances.cend() && it.key() == toRoomId; ++it) {
+            const TRoom* pFrom = pRoomDB->getRoom(it.value());
+            if (!pFrom || pFrom->getArea() == areaId) {
+                continue;
+            }
+            // The entrance map may still file a room none of whose exits leads here any more, or one whose way here is
+            // a special exit with no name: such a room is no neighbour
+            QList<Passage> passages;
+            for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+                if (pFrom->getExit(direction) == toRoomId) {
+                    passages << Passage{pFrom->getId(), toRoomId, TRoom::dirCodeToString(direction)};
+                }
+            }
+            const QMap<QString, int>& specialExits = pFrom->getSpecialExits();
+            for (auto itSpecial = specialExits.cbegin(); itSpecial != specialExits.cend(); ++itSpecial) {
+                if (itSpecial.value() == toRoomId && !itSpecial.key().isEmpty()) {
+                    passages << Passage{pFrom->getId(), toRoomId, itSpecial.key()};
+                }
+            }
+            if (!passages.isEmpty()) {
+                neighbours[pFrom->getArea()].entrances << passages;
+            }
+        }
+    }
+
+    const auto pushPassages = [L](QList<Passage> passages) {
+        std::sort(passages.begin(), passages.end());
+        lua_createtable(L, passages.size(), 0);
+        for (int i = 0; i < passages.size(); ++i) {
+            lua_createtable(L, 0, 3);
+            lua_pushnumber(L, passages.at(i).from);
+            lua_setfield(L, -2, "from");
+            lua_pushnumber(L, passages.at(i).to);
+            lua_setfield(L, -2, "to");
+            lua_pushstring(L, passages.at(i).exit.toUtf8().constData());
+            lua_setfield(L, -2, "exit");
+            lua_rawseti(L, -2, i + 1);
+        }
+    };
+
+    lua_newtable(L);
+    for (auto it = neighbours.cbegin(); it != neighbours.cend(); ++it) {
+        lua_pushnumber(L, it.key());
+        lua_createtable(L, 0, 2);
+        pushPassages(it.value().exits);
+        lua_setfield(L, -2, "exits");
+        pushPassages(it.value().entrances);
+        lua_setfield(L, -2, "entrances");
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -2852,6 +3011,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
+        if (!host.mpMap->mpRoomDB->getRoom(host.mpMap->mRoomIdHash.value(host.getName(), -1))) {
+            return warnArgumentValue(L, __func__, qsl("the player does not have a valid roomID set, so there is no current room to walk from"), true);
+        }
         return warnArgumentValue(L, __func__, qsl("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
     host.startSpeedWalk();
@@ -3111,12 +3273,12 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 
     if (n > 1) {
         area = qsl("f");
-        x = getVerifiedInt(L, __func__, 1, "x-coordinate");
-        y = getVerifiedInt(L, __func__, 2, "y-coordinate");
+        x = getVerifiedGeometry(L, __func__, 1, "x-coordinate");
+        y = getVerifiedGeometry(L, __func__, 2, "y-coordinate");
     }
     if (n > 2) {
-        width = getVerifiedInt(L, __func__, 3, "width");
-        height = getVerifiedInt(L, __func__, 4, "height");
+        width = getVerifiedGeometry(L, __func__, 3, "width");
+        height = getVerifiedGeometry(L, __func__, 4, "height");
     }
 
     Host& host = getHostFromLua(L);
@@ -3147,9 +3309,11 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     // Shared, as each paint calls a copy of the callback. Paints repeat, and views on different rooms take
     // turns, so report each error text once; capped, saying so, for texts that change on every call
     auto reportedErrors = std::make_shared<QSet<QString>>();
+    // L may be a coroutine, which can be suspended or collected by the time the map paints
+    lua_State* globalL = host.getLuaInterpreter()->getLuaGlobalState();
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
-            [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+            [=, L = globalL](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
                 Q_UNUSED(infoColor)
                 const ScriptCallerScope callerScope(*pHost->getLuaInterpreter(), false);
                 const int callerStackTop = lua_gettop(L);
@@ -3210,7 +3374,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                 lua_settop(L, callerStackTop);
                 return MapInfoProperties{isBold, isItalic, text, color};
             },
-            L,
+            globalL,
             callback);
 
     host.mpMap->updateArea(-1);
@@ -3245,6 +3409,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
     pR->calcRoomDimensions();
+    host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(pR->getArea());
 
     lua_pushboolean(L, true);
@@ -4113,9 +4278,15 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         lua_pushstring(L, "setExitStub: direction must be between 1 and 12");
         return lua_error(L);
     }
+    const bool refused = status && pR->hasExit(dir);
+    // Called even when refused, as it reports the refusal in the Errors console
     pR->setExitStub(dir, status);
+    if (refused) {
+        return warnArgumentValue(L, __func__, qsl("roomID %1 already has an exit in direction '%2', so it cannot have a stub there too").arg(QString::number(roomId), TRoom::dirCodeToString(dir)));
+    }
     host.mpMap->updateArea(pR->getArea());
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeightFilter
 // Function passed to setExitWeightFilter should return numeric exit weight (current or modified)
@@ -4359,7 +4530,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     const QString key{keyName};
 
     host.mpMap->mUserData[key] = value;
-    host.mpMap->setUnsaved(__func__);
+    mapUserDataChanged(*host.mpMap, roomUserDataKeyDrawn(key), __func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4525,17 +4696,17 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const int r = getVerifiedInt(L, __func__, 2, "red component");
     if (r < 0 || r > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "setRoomCharColor: bad argument #2 value (red component %d is out of range 0 to 255)", r);
         return lua_error(L);
     }
     const int g = getVerifiedInt(L, __func__, 3, "green component");
     if (g < 0 || g > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "setRoomCharColor: bad argument #3 value (green component %d is out of range 0 to 255)", g);
         return lua_error(L);
     }
     const int b = getVerifiedInt(L, __func__, 4, "blue component");
     if (b < 0 || b > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (blue component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "setRoomCharColor: bad argument #4 value (blue component %d is out of range 0 to 255)", b);
         return lua_error(L);
     }
 
@@ -4597,21 +4768,9 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     if (!pRoomDB->getRoom(id)) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
-    if (pRoomDB->roomIDToHash.value(id) == hash && (hash.isEmpty() || pRoomDB->hashToRoomID.value(hash, -1) == id)) {
-        lua_pushboolean(L, true);
-        return 1;
+    if (pRoomDB->setRoomHash(id, hash)) {
+        host.mpMap->setUnsaved(__func__);
     }
-    if (pRoomDB->roomIDToHash.contains(id)) {
-        pRoomDB->hashToRoomID.remove(pRoomDB->roomIDToHash.take(id));
-    }
-    if (!hash.isEmpty()) {
-        if (pRoomDB->hashToRoomID.contains(hash)) {
-            pRoomDB->roomIDToHash.remove(pRoomDB->hashToRoomID[hash]);
-        }
-        pRoomDB->hashToRoomID[hash] = id;
-        pRoomDB->roomIDToHash[id] = hash;
-    }
-    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }

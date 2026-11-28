@@ -24,7 +24,11 @@
  *  - the dialog takes itself off screen before the load starts, rather than
  *    sitting there through it collecting further clicks (PR #5313, issue #5303);
  *  - asking again for the profile that is already open reconnects it instead of
- *    loading it a second time (PR #7778, issue #7698).
+ *    loading it a second time (PR #7778, issue #7698);
+ *  - the auto-reconnect setting and character name changed for the open profile
+ *    reach it, rather than waiting on disk until it is next opened;
+ *  - a password changed for the open profile is the one it signs in with next,
+ *    rather than waiting on disk until it is next opened.
  *
  * Run with: ctest -R ConnectionDialogOpenProfileTest -V
  */
@@ -208,6 +212,28 @@ private slots:
         QVERIFY2(!mDialogOnScreenDuringTheLoad, "The dialog was still on screen while the profile loaded");
     }
 
+    void test_aPasswordChangedForTheOpenProfileReachesIt()
+    {
+        QVERIFY2(openTheTestProfile(), "The test profile could not be opened, so there is nothing for the dialog to change");
+        QVERIFY2(reopenDialog(), "No dialog to test against");
+        QVERIFY(selectTestProfile());
+        auto* pHost = HostManager::self()->getHost(mProfileName);
+        QVERIFY(pHost);
+        // the saved password is filled in on the next turn of the event loop, over anything typed before then
+        QTest::qWait(100ms);
+
+        dialog()->character_password_entry->selectAll();
+        // spaces at either end are part of the password, as the saved copy keeps them
+        QTest::keyClicks(dialog()->character_password_entry, qsl(" sesame "));
+        // the dialog waits for typing to pause before it saves
+        QVERIFY2(QTest::qWaitFor(
+                         [pHost]() {
+                             return pHost->getPass() == qsl(" sesame ");
+                         },
+                         5s),
+                 "The open profile is still using its old password");
+    }
+
     // With the profile open, the dialog has to leave it alone and just
     // reconnect it rather than run the load a second time. PR #7778.
     void test_askingForTheOpenProfileAgainReconnectsIt()
@@ -233,6 +259,36 @@ private slots:
                          15s),
                  "Asking for the open profile again did not reconnect it");
         QCOMPARE(loads.count(), 0);
+    }
+
+    // The dialog is the only place to set auto-reconnect, and it leaves both of
+    // these editable for a profile that is already open
+    void test_changesToTheOpenProfileReachIt()
+    {
+        QVERIFY2(openTheTestProfile(), "The test profile could not be opened, so there is nothing for the dialog to change");
+        QVERIFY2(reopenDialog(), "No dialog to test against");
+        QVERIFY(selectTestProfile());
+        auto* pHost = HostManager::self()->getHost(mProfileName);
+        QVERIFY(pHost);
+
+        const bool wasReconnecting = pHost->mTelnet.mAutoReconnect;
+        QCOMPARE(dialog()->auto_reconnect->isChecked(), wasReconnecting);
+        dialog()->auto_reconnect->click();
+        QCOMPARE(pHost->mTelnet.mAutoReconnect, !wasReconnecting);
+        dialog()->auto_reconnect->click();
+        QCOMPARE(pHost->mTelnet.mAutoReconnect, wasReconnecting);
+
+        // Unticking it is how a player stops a game that is down from being retried
+        dialog()->auto_reconnect->setChecked(true);
+        pHost->mTelnet.mTimerFailedConnectionRetry->start(1h);
+        dialog()->auto_reconnect->click();
+        QVERIFY(!pHost->mTelnet.mAutoReconnect);
+        QVERIFY2(!pHost->mTelnet.mTimerFailedConnectionRetry->isActive(), "Turning auto-reconnect off left a retry of a failed connection waiting to run");
+
+        dialog()->login_entry->selectAll();
+        QTest::keyClicks(dialog()->login_entry, qsl("Hero"));
+        QCOMPARE(pHost->getLogin(), qsl("Hero"));
+        QCOMPARE(MudletApp::readProfileData(mProfileName, qsl("login")), qsl("Hero"));
     }
 };
 
