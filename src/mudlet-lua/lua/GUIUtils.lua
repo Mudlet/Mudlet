@@ -276,6 +276,15 @@ color_table["yellow_green"]           = { 154, 205, 50 }
 color_table["YellowGreen"]            = { 154, 205, 50 }
 
 
+-- The value and maximum setGauge() was last given, unless a script has written the gauge's value itself since
+local function gaugeReading(gaugeName)
+  local info = gaugesTable[gaugeName]
+  if info.maximum and info.current / info.maximum == info.value then
+    return info.current, info.maximum
+  end
+  return info.value, 1
+end
+
 --- Move a custom gauge.
 ---
 --- @usage This would move the health bar gauge to the location 1200, 400.
@@ -292,7 +301,7 @@ function moveGauge(gaugeName, x, y)
   moveWindow(gaugeName .. "_text", x, y)
   -- save new values in table
   gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
-  setGauge(gaugeName, gaugesTable[gaugeName].current or gaugesTable[gaugeName].value, gaugesTable[gaugeName].maximum or 1)
+  setGauge(gaugeName, gaugeReading(gaugeName))
 end
 
 
@@ -350,7 +359,7 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
   end
   -- save new values in table
   gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
-  setGauge(gaugeName, gaugesTable[gaugeName].current or gaugesTable[gaugeName].value, gaugesTable[gaugeName].maximum or 1)
+  setGauge(gaugeName, gaugeReading(gaugeName))
 end
 
 local function namedColorError(message)
@@ -1181,7 +1190,7 @@ function resizeGauge(gaugeName, width, height)
   resizeWindow(gaugeName .. "_text", width, height)
   -- save new values in table
   gaugesTable[gaugeName].width, gaugesTable[gaugeName].height = width, height
-  setGauge(gaugeName, gaugesTable[gaugeName].current or gaugesTable[gaugeName].value, gaugesTable[gaugeName].maximum or 1)
+  setGauge(gaugeName, gaugeReading(gaugeName))
 end
 
 

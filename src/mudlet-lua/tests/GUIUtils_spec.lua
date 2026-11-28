@@ -2301,6 +2301,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.is_nil(getLabelAccessibleValue(gaugeName .. "_back"))
         assert.spy(setSpy).was_not_called()
       end)
+
+      it("Should be moved or resized at a value a script wrote into gaugesTable itself", function()
+        setGauge(gaugeName, 30, 200)
+        gaugesTable[gaugeName].value = 0.5
+        moveGauge(gaugeName, 30, 300)
+        assert.equals(150, select(3, getWindowGeometry(gaugeName .. "_front")))
+        gaugesTable[gaugeName].value = 0.25
+        resizeGauge(gaugeName, 200, 20)
+        assert.equals(50, select(3, getWindowGeometry(gaugeName .. "_front")))
+      end)
     end)
 
     describe("Tests the functionality of moveGauge", function()
@@ -2504,6 +2514,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.equals(8, gaugesTable[gaugeName].y)
         assert.are.same({x = 7, y = 8, width = 300, height = 20}, geometry(gaugeName .. "_back"))
         assert.are.same({x = 7, y = 8, width = 300, height = 20}, geometry(gaugeName .. "_front"))
+      end)
+
+      it("Should keep the gauge's value, out of the maximum given, in its new window", function()
+        setGauge(gaugeName, 30, 200)
+        setGaugeWindow(userWindow, gaugeName, 7, 8)
+        assert.are.same({30, 0, 200}, {getLabelAccessibleValue(gaugeName .. "_back")})
+        assert.equals(45, select(3, getWindowGeometry(gaugeName .. "_front")))
       end)
 
       it("Should error for an unknown gauge", function()

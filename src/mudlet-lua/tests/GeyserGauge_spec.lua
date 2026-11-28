@@ -160,6 +160,13 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.equal(30, geometry("ggsValue_front").width)
     end)
 
+    it("lays out a value a script wrote into it itself through a new style sheet", function()
+      gauge:setValue(30, 200)
+      gauge.value = 50
+      gauge:setStyleSheet("background-color: red;", "background-color: black;")
+      assert.are.equal(100, geometry("ggsValue_front").width)
+    end)
+
     it("leaves its back label no value for a reading it cannot give, so a reader goes by what it draws", function()
       gauge:setValue(30, 200)
       -- without asking setLabelAccessibleValue(), which would warn of it at every prompt
