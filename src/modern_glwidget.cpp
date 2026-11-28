@@ -8571,7 +8571,7 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
         PortalCard card;
         card.rect = nameRect;
         card.nameRect = nameRect;
-        // Grown from the name away from the exit, flipped only when that keeps it in view
+        // Grown from the name away from the exit, flipped only when that keeps it in view, over the exit only if nothing else does
         const QSizeF openSize(qMax(scmPortalThumbnailPixels + 2.0 * scmPortalPadding, nameWidth), scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding);
         const auto grown = [&nameRect, &openSize](const bool rightward, const bool downward) {
             QRectF grownRect(QPointF(), openSize);
@@ -8590,9 +8590,12 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
         const bool rightward = tip->x() <= nameRect.center().x();
         const bool downward = tip->y() <= nameRect.center().y();
         card.openRect = grown(rightward, downward);
-        if (!viewRect.contains(card.openRect)) {
+        for (const bool overTheExit : {false, true}) {
+            if (viewRect.contains(card.openRect)) {
+                break;
+            }
             for (const auto& [right, down] : {std::pair{rightward, !downward}, std::pair{!rightward, downward}, std::pair{!rightward, !downward}}) {
-                if (const QRectF other = grown(right, down); viewRect.contains(other) && !other.contains(*tip)) {
+                if (const QRectF other = grown(right, down); viewRect.contains(other) && (overTheExit || !other.contains(*tip))) {
                     card.openRect = other;
                     break;
                 }

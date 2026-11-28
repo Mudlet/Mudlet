@@ -2446,6 +2446,37 @@ private slots:
         widget.mPointerInView = false;
     }
 
+    void test_aNorthOrSouthPortalPreviewStaysInTheViewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(20);
+        const int next = 1 + 20 * 20;
+        map()->setExit(1, -1, DIR_EAST);
+        map()->setExit(10, next, DIR_NORTH);
+        map()->setExit(20 * 19 + 10, next, DIR_SOUTH);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        int tried = 0;
+        for (int y = -40; y <= 60; ++y) {
+            queueFrameAt(widget, westId, 2.0f, QPoint(9, y));
+            const QRectF view = widget.rect().toRectF();
+            for (const ModernGLWidget::PortalCard& card : widget.portalCards()) {
+                const bool nearAnEdge = card.nameRect.top() < view.top() + 40.0 || card.nameRect.bottom() > view.bottom() - 40.0;
+                if (!view.contains(card.nameRect) || !nearAnEdge || std::abs(card.anchor.x() - card.nameRect.center().x()) > 1.0) {
+                    continue;
+                }
+                ++tried;
+                movePointerTo(widget, card.nameRect.center().toPoint());
+                const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
+                QCOMPARE(opened.size(), 1);
+                QVERIFY(view.contains(opened.first().rect));
+                QVERIFY(opened.first().rect.contains(card.nameRect));
+                movePointerTo(widget, QPoint(5, 5));
+            }
+        }
+        QVERIFY(tried > 0);
+        widget.mPointerInView = false;
+    }
+
     void test_stitchingTurnedOffLeavesTheViewAsItWasWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();
