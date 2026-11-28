@@ -2056,9 +2056,10 @@ end))lua");
             QVERIFY(session.settings({qsl("serverEncoding")}, values));
             QCOMPARE(values.value(qsl("serverEncoding")), QVariant(qsl("ASCII")));
 
-            // Mudlet's own codec when Qt has none, which getConfig() names without its "M_"
-            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("CP437")}}, refused));
+            // Mudlet's own codec, which getConfig() names without its "M_"
+            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("M_CP437")}}, refused));
             QVERIFY(refused.isEmpty());
+            QCOMPARE(session.host()->mTelnet.getEncoding(), QByteArray("M_CP437"));
             QVERIFY(session.settings({qsl("serverEncoding")}, values));
             QCOMPARE(values.value(qsl("serverEncoding")), QVariant(qsl("CP437")));
 
@@ -2116,7 +2117,7 @@ end))lua");
                                   {qsl("backgroundColor"), qsl("#0a141e")},
                                   {qsl("serverMayRedefineColors"), true},
                                   {qsl("enableOSC8Hyperlinks"), false},
-                                  {qsl("alertOnNewData"), false}};
+                                  {qsl("alertOnNewData"), true}};
         QVariantMap values;
         QMap<QString, QString> refused;
         {
@@ -2129,7 +2130,7 @@ end))lua");
                                   {qsl("backgroundColor"), qsl("#000000")},
                                   {qsl("serverMayRedefineColors"), false},
                                   {qsl("enableOSC8Hyperlinks"), true},
-                                  {qsl("alertOnNewData"), true}}));
+                                  {qsl("alertOnNewData"), false}}));
 
             QVERIFY(session.setSettings({{qsl("ansiRed"), qsl("crimson")}}, refused));
             QVERIFY(refused.value(qsl("ansiRed")).contains(qsl("#rrggbb")));
