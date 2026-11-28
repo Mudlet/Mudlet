@@ -73,6 +73,7 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QLockFile>
+#include <QMutex>
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDateTime>
@@ -82,6 +83,9 @@
 #include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#if QT_CONFIG(thread)
+#include <QThreadPool>
+#endif
 #include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
@@ -354,6 +358,22 @@ QByteArray builtinLuaHash(const QStringList& files)
     return hash.result().toHex();
 }
 
+struct BuiltinLua
+{
+    QStringList files;
+    QByteArray hash;
+};
+
+// Once a run, as the files are in the program
+const BuiltinLua& builtinLua()
+{
+    static const BuiltinLua lua = [] {
+        const QStringList files = builtinLuaFiles();
+        return BuiltinLua{files, builtinLuaHash(files)};
+    }();
+    return lua;
+}
+
 // By size as well as by name, as a copy cut short by a power loss still has every file
 bool holdsBuiltinLuaFiles(const QString& folder, const QStringList& files)
 {
@@ -448,11 +468,13 @@ void removeOtherBuiltinLuaCopies(const QString& cacheLocation, const QString& fo
 // Lua's io and dofile() cannot read a Qt resource, and loadTranslations() and scripts that use luaGlobalPath
 // read with those, so the built-in copy is loaded from a folder it is unpacked to. Returns that folder's
 // LuaGlobal.lua, or an empty string where it could not be made.
-QString unpackedBuiltinLuaGlobal()
+QString unpackedBuiltinLuaGlobal(const QString& cacheLocation)
 {
-    const QString cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    const QStringList files = builtinLuaFiles();
-    const QByteArray hash = builtinLuaHash(files);
+    // TLuaInterpreter::prepareBuiltinLua()'s thread may be unpacking as a profile loads
+    static QMutex oneThreadAtATime;
+    const QMutexLocker oneThread(&oneThreadAtATime);
+    const QStringList& files = builtinLua().files;
+    const QByteArray& hash = builtinLua().hash;
     if (files.isEmpty() || hash.isEmpty()) {
         return {};
     }
@@ -472,7 +494,7 @@ QString unpackedBuiltinLuaGlobal()
         qWarning().noquote() << qsl("TLuaInterpreter: another Mudlet still holds %1, so the built-in Lua files are unpacked without it").arg(lock.fileName());
     }
     if (holdsBuiltinLuaFiles(folder, files)) {
-        markBuiltinLuaCopyInUse(folder);
+        markBuiltinLuaCopyUsed(folder);
         removeOtherBuiltinLuaCopies(cacheLocation, folderName);
         return luaGlobal;
     }
@@ -501,7 +523,7 @@ QString unpackedBuiltinLuaGlobal()
             return {};
         }
     }
-    markBuiltinLuaCopyInUse(folder);
+    markBuiltinLuaCopyUsed(folder);
     removeOtherBuiltinLuaCopies(cacheLocation, folderName);
     return luaGlobal;
 }
@@ -7493,6 +7515,19 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
     return true;
 }
 
+void TLuaInterpreter::prepareBuiltinLua()
+{
+#if defined(INCLUDE_BUILTIN_MUDLET_LUA)
+    Q_INIT_RESOURCE(mudlet_lua);
+#endif
+#if QT_CONFIG(thread)
+    // Read on this thread, as Qt on Android keeps the folders it has looked up in a map it does not lock
+    QThreadPool::globalInstance()->start([cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)] {
+        unpackedBuiltinLuaGlobal(cacheLocation);
+    });
+#endif
+}
+
 void TLuaInterpreter::preloadModule(const QByteArray& name, lua_CFunction open)
 {
     if (name.isEmpty() || !open) {
@@ -8730,8 +8765,9 @@ void TLuaInterpreter::loadGlobal()
     const QString builtinLuaGlobal = builtinLuaFile(qsl("LuaGlobal.lua"));
     if (QFileInfo::exists(builtinLuaGlobal)) {
         mPossiblePaths.prepend(builtinLuaGlobal);
-        const QString unpackedLuaGlobal = unpackedBuiltinLuaGlobal();
+        const QString unpackedLuaGlobal = unpackedBuiltinLuaGlobal(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
         if (!unpackedLuaGlobal.isEmpty()) {
+            markBuiltinLuaCopyInUse(QFileInfo(unpackedLuaGlobal).absolutePath());
             mPossiblePaths.prepend(unpackedLuaGlobal);
         }
     }

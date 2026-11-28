@@ -102,6 +102,8 @@ public:
     // disk, in every Lua state made afterwards. The last one given for a name is the one found; one with
     // no name or no function is refused.
     static void preloadModule(const QByteArray& name, lua_CFunction open);
+    // See THeadlessSession::prepareBuiltinLua()
+    static void prepareBuiltinLua();
     void abortAllDownloads();
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();
