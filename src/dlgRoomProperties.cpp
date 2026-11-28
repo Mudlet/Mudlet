@@ -22,12 +22,15 @@
 
 
 #include "dlgRoomProperties.h"
-#include "AlphaColourWell.h"
+#include "ColourValue.h"
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "mudlet.h"
+#include "uiDesign.h"
+#include "widgetutils.h"
 
 #include <QColorDialog>
 #include <QLineEdit>
@@ -127,9 +130,61 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 {
     // init generated dialog
     setupUi(this);
-    mBorderColorButtonWords = pushButton_setBorderColor->text();
-    // The well's words say how opaque the colour is, so its name says what it sets
-    pushButton_setBorderColor->setAccessibleName(mBorderColorButtonWords);
+
+    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor);
+    mpSymbolColour->setObjectName(qsl("roomPropertiesSymbolColour"));
+    //: Room properties dialog, screen reader name of the field showing the room symbol's color as a code, which a code can be typed into
+    mpSymbolColour->setAccessibleName(tr("Symbol color"));
+    //: Room properties dialog, in the field for the room symbol's color while no color was chosen for it: the symbol is then drawn in black or white, whichever stands out against the room
+    mpSymbolColour->setDefaultWord(tr("Automatic"));
+    horizontalLayout_widget_symbolColor->insertWidget(horizontalLayout_widget_symbolColor->indexOf(pushButton_setSymbolColor), mpSymbolColour);
+    mpBorderColour = new uiDesign::ColourValue(widget_borderColor);
+    mpBorderColour->setObjectName(qsl("roomPropertiesBorderColour"));
+    //: Room properties dialog, screen reader name of the field showing the room border's color as a code, which a code can be typed into
+    mpBorderColour->setAccessibleName(tr("Border color"));
+    horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour);
+    horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour->opacityBox());
+    mpBorderColour->opacityBox()->setObjectName(qsl("roomPropertiesBorderOpacity"));
+    mpSymbolColour->setChooseButton(pushButton_setSymbolColor);
+    mpBorderColour->setChooseButton(pushButton_setBorderColor);
+    // Made after setupUi() set the form's tab order, the colour fields and the opacity box would come after OK and
+    // Cancel, so the whole chain goes here: the form's own order, with each tab's controls as they stand on screen.
+    // The tab widget stays out of it: setTabOrder() takes it for all it holds, and Remove would come after the tab bar
+    QList<QWidget*> tabOrder{lineEdit_name,
+                             lineEdit_hash,
+                             comboBox_area,
+                             plainTextEdit_description,
+                             pushButton_setRoomColor,
+                             lineEdit_roomSymbol,
+                             comboBox_roomSymbol,
+                             mpSymbolColour,
+                             pushButton_setSymbolColor,
+                             pushButton_resetSymbolColor,
+                             mpBorderColour,
+                             mpBorderColour->opacityBox(),
+                             pushButton_setBorderColor,
+                             pushButton_resetBorderColor,
+                             spinBox_borderThickness,
+                             checkBox_hidden,
+                             spinBox_weight,
+                             comboBox_weight,
+                             checkBox_locked,
+                             tableWidget_userData,
+                             pushButton_addUserData,
+                             pushButton_removeUserData};
+    // OK and Cancel trade places between platforms
+    uiDesign::collectFocusableInLayoutOrder(dialogButtonBox->layout(), tabOrder);
+    for (int i = 1, total = tabOrder.size(); i < total; ++i) {
+        setTabOrder(tabOrder.at(i - 1), tabOrder.at(i));
+    }
+    restyleColourRows();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgRoomProperties::restyleColourRows);
+    // A typed colour goes the way one chosen in the colours window does
+    connect(mpSymbolColour, &uiDesign::ColourValue::colourEntered, this, &dlgRoomProperties::slot_symbolColorSelected);
+    connect(mpSymbolColour, &uiDesign::ColourValue::defaultEntered, this, &dlgRoomProperties::slot_resetSymbolColor);
+    connect(mpBorderColour, &uiDesign::ColourValue::colourEntered, this, &dlgRoomProperties::slot_borderColorSelected);
+    connect(mpBorderColour, &uiDesign::ColourValue::opacityEntered, this, &dlgRoomProperties::slot_borderOpacitySelected);
+    connect(mpBorderColour, &uiDesign::ColourValue::defaultEntered, this, &dlgRoomProperties::slot_resetBorderColor);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
@@ -151,6 +206,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     });
 
     setAttribute(Qt::WA_DeleteOnClose);
+}
+
+dlgRoomProperties::~dlgRoomProperties()
+{
+    // ~QDialog hides the dialog once this destructor is done, and a colour field or the opacity box still holding an
+    // edit takes it on losing the focus, emitting into these slots when this object is no longer a valid receiver
+    widgetutils::disconnectChildSignals(this);
 }
 
 void dlgRoomProperties::init(
@@ -278,8 +340,7 @@ void dlgRoomProperties::init(
     // Configure border display
     selectedBorderColor = pFirstRoom->mBorderColor;
     mBorderThickness = pFirstRoom->mBorderThickness;
-
-    showBorderColor();
+    showBorderColour();
 
     // Set thickness spinbox
     spinBox_borderThickness->setValue(mBorderThickness);
@@ -531,7 +592,8 @@ void dlgRoomProperties::accept()
         }
     }
 
-    // Find border settings to return back
+    // Find border settings to return back. An opacity set alone for rooms that differ in colour has no one colour to
+    // go with the save, and the preview has already given it to each room with that room's own colour.
     bool changeBorderColor = mBorderColorWasChanged;
     QColor newBorderColor = selectedBorderColor;
     bool changeBorderThickness = mBorderThicknessWasChanged;
@@ -631,13 +693,19 @@ void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor();
     QString newSymbol = getNewSymbol();
-    if (newSymbol == multipleValuesPlaceholder) {
+    const bool symbolsDiffer = newSymbol == multipleValuesPlaceholder;
+    if (symbolsDiffer) {
         newSymbol = QString();
-        pushButton_setSymbolColor->setStyleSheet(QString());
-    } else {
-        pushButton_setSymbolColor->setStyleSheet(
-                qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
     }
+    // Rooms with different symbols show no one colour until one is decided for all of them
+    if (symbolsDiffer && !mSymbolColorWasChanged) {
+        mpSymbolColour->clear();
+    } else if (selectedSymbolColor.isValid()) {
+        mpSymbolColour->setColour(selectedSymbolColor);
+    } else {
+        mpSymbolColour->setDefault(realSymbolColor);
+    }
+    pushButton_resetSymbolColor->setEnabled(resetOffered(selectedSymbolColor));
     const bool roundRoom = mpHost->mBubbleMode;
     label_preview->setStyleSheet(qsl("background-color: %1; border: %2; border-radius: %3px;")
                                          .arg(mRoomColor.name(),
@@ -687,6 +755,48 @@ void dlgRoomProperties::slot_resetSymbolColor()
     selectedSymbolColor = QColor();
     mSymbolColorWasChanged = true;
     slot_updatePreview();
+}
+
+void dlgRoomProperties::restyleColourRows()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    for (QWidget* pRow : {widget_symbolColor, widget_borderColor}) {
+        const QString row = qsl("#%1").arg(pRow->objectName());
+        pRow->setStyleSheet(uiDesign::inputStyleSheet(tokens, row) + uiDesign::buttonStyleSheet(tokens, row));
+        uiDesign::lineUpNumberBoxesWithFields(pRow);
+    }
+    for (QPushButton* pChoose : {pushButton_setSymbolColor, pushButton_setBorderColor}) {
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
+    }
+    for (QPushButton* pReset : {pushButton_resetSymbolColor, pushButton_resetBorderColor}) {
+        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens);
+    }
+}
+
+// The field shows the first room's colour, and the other rooms of a selection may carry colours of their own
+bool dlgRoomProperties::resetOffered(const QColor& chosen) const
+{
+    return mRoomIds.size() > 1 || chosen.isValid();
+}
+
+bool dlgRoomProperties::borderColoursDiffer() const
+{
+    const QList<QColor> colours = mOriginalBorderColors.values();
+    return std::any_of(colours.cbegin(), colours.cend(), [&colours](const QColor& colour) {
+        return colour != colours.constFirst();
+    });
+}
+
+void dlgRoomProperties::showBorderColour()
+{
+    // A room with no border colour of its own is drawn in the map's, so the field shows that code, not a word
+    mpBorderColour->setDefaultWord(mpHost->mRoomBorderColor.name(QColor::HexRgb).toUpper());
+    if (selectedBorderColor.isValid()) {
+        mpBorderColour->setColour(selectedBorderColor);
+    } else {
+        mpBorderColour->setDefault(mpHost->mRoomBorderColor);
+    }
+    pushButton_resetBorderColor->setEnabled(resetOffered(selectedBorderColor));
 }
 
 QColor dlgRoomProperties::backgroundBasedColor(QColor background)
@@ -856,25 +966,29 @@ void dlgRoomProperties::slot_borderColorSelected(const QColor& color)
 {
     selectedBorderColor = color;
     mBorderColorWasChanged = true;
-    showBorderColor();
+    showBorderColour();
     emitBorderPreview();
 }
 
-// A border colour may be see-through, so it is shown as a swatch over a checkerboard with how opaque it is;
-// with none chosen the button goes back to saying what it does
-void dlgRoomProperties::showBorderColor()
+// The field shows the first room's colour, so it is everyone's only while the rooms agree or once one was decided for
+// them all; until then each room takes the opacity alone
+void dlgRoomProperties::slot_borderOpacitySelected(const QColor& colour)
 {
-    uiDesign::AlphaColourWell::on(pushButton_setBorderColor)->setColour(selectedBorderColor);
-    if (!selectedBorderColor.isValid()) {
-        pushButton_setBorderColor->setText(mBorderColorButtonWords);
+    if (mBorderColorWasChanged || !borderColoursDiffer()) {
+        slot_borderColorSelected(colour);
+        return;
     }
+    // What the field shows, for the colours window to open on
+    selectedBorderColor = colour;
+    mBorderAlphaOnly = colour.alpha();
+    emitBorderPreview();
 }
 
 void dlgRoomProperties::slot_resetBorderColor()
 {
     selectedBorderColor = QColor();
     mBorderColorWasChanged = true;
-    showBorderColor();
+    showBorderColour();
     emitBorderPreview();
 }
 
@@ -1205,6 +1319,13 @@ void dlgRoomProperties::emitBorderPreview()
         }
         if (mBorderColorWasChanged) {
             room->mBorderColor = selectedBorderColor;
+        } else if (mBorderAlphaOnly) {
+            // A room with no colour of its own keeps following the map's
+            QColor colour = mOriginalBorderColors.value(roomId);
+            if (colour.isValid()) {
+                colour.setAlpha(*mBorderAlphaOnly);
+            }
+            room->mBorderColor = colour;
         }
         if (mBorderThicknessWasChanged) {
             room->mBorderThickness = mBorderThickness;
@@ -1227,7 +1348,8 @@ void dlgRoomProperties::restoreOriginalBorders()
 
 void dlgRoomProperties::reject()
 {
+    // Hiding the dialog takes the focus from a colour field, which takes the code typed in it, so restore after that
+    QDialog::reject();
     restoreOriginalBorders();
     emit signal_preview_border(mRoomIds);
-    QDialog::reject();
 }

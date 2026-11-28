@@ -3761,8 +3761,11 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
-            <property name="text">
+            <property name="accessibleName">
              <string>Outer ring color</string>
+            </property>
+            <property name="text">
+             <string notr="true"/>
             </property>
            </widget>
           </item>
@@ -3771,8 +3774,11 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
-            <property name="text">
+            <property name="accessibleName">
              <string>Inner ring color</string>
+            </property>
+            <property name="text">
+             <string notr="true"/>
             </property>
            </widget>
           </item>
@@ -3820,9 +3826,6 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="suffix">
              <string>%</string>
             </property>
-            <property name="prefix">
-             <string>Outer diameter: </string>
-            </property>
             <property name="minimum">
              <number>50</number>
             </property>
@@ -3850,9 +3853,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="suffix">
              <string>%</string>
-            </property>
-            <property name="prefix">
-             <string>Inner diameter: </string>
             </property>
             <property name="maximum">
              <number>96</number>

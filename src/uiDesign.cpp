@@ -1064,8 +1064,10 @@ QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix
     const bool arrowsAvailable = !downArrow.isEmpty() && !upArrow.isEmpty();
 
     QStringList fieldTypes{qsl("QLineEdit"), qsl("QPlainTextEdit"), qsl("QTextEdit")};
+    QStringList singleLineTypes{qsl("QLineEdit")};
     if (arrowsAvailable) {
         fieldTypes << qsl("QComboBox") << qsl("QAbstractSpinBox");
+        singleLineTypes << qsl("QComboBox") << qsl("QAbstractSpinBox");
     }
     QStringList focusedTypes;
     QStringList disabledTypes;
@@ -1082,6 +1084,10 @@ QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix
                       .arg(tokens.field.name(), tokens.text.name(), tokens.border.name(), QString::number(scmRadiusInput))
                       .arg(QString::number(scmInputPaddingVertical), QString::number(scmInputPaddingHorizontal), QString::number(scmInputContentHeight))
                       .arg(tokens.accent.name(), tokens.accentText.name(), QString::number(scmInputBorderWidth))
+            // Qt makes a rule's max-height the widget's maximum at every polish, as it does min-height, and caps the
+            // size hint with it, which for a spin box is a few pixels taller than a field's. A multi-line field grows.
+            + scoped(singleLineTypes)
+            + qsl(" { max-height: %1px; }").arg(QString::number(scmInputContentHeight))
             // A frame rather than an outer ring: where the platform draws a ring of its own, two read as a fault
             + scoped(focusedTypes) + qsl(" { border: %2px solid %1; }").arg(tokens.accent.name(), QString::number(scmInputBorderWidth)) + scoped(disabledTypes)
             + qsl(" { color: %1; background-color: %2; border: %4px solid %3; }").arg(tokens.disabledText.name(), disabledField.name(), disabledBorder.name(), QString::number(scmInputBorderWidth))
@@ -1094,8 +1100,10 @@ QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix
                       .arg(tokens.field.name(), tokens.text.name(), tokens.border.name(), tokens.accent.name(), tokens.accentText.name(), QString::number(scmInputBorderWidth))
                       .arg(QString::number(scmRadiusInput))
             // Both of those hold a QLineEdit of their own, which the rules above
-            // would otherwise draw as a second field inside the first
-            + scoped({qsl("QComboBox QLineEdit"), qsl("QAbstractSpinBox QLineEdit")}) + qsl(" { background: transparent; border: none; border-radius: 0px; padding: 0px; min-height: 0px; }");
+            // would otherwise draw as a second field inside the first, and hold to a field's height inside a box held
+            // taller than one
+            + scoped({qsl("QComboBox QLineEdit"), qsl("QAbstractSpinBox QLineEdit")})
+            + qsl(" { background: transparent; border: none; border-radius: 0px; padding: 0px; min-height: 0px; max-height: %1px; }").arg(QString::number(QWIDGETSIZE_MAX));
 
     if (arrowsAvailable) {
         rules += scoped({qsl("QComboBox::drop-down")})
@@ -1125,6 +1133,246 @@ QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix
                  + scoped({qsl("QAbstractSpinBox::up-button:pressed"), qsl("QAbstractSpinBox::down-button:pressed")}) + qsl(" { background-color: %1; }").arg(tokens.accentSoft);
     }
     return rules;
+}
+
+namespace {
+
+// What QLineEdit leaves for its cursor at either end of its text
+constexpr int scmLineEditCursorRoom = 2;
+// ...and how far inside its trailing edge right-aligned text ends: that room, and as much again that QLineEdit keeps
+// for the cursor drawn after the last character
+constexpr int scmRightAlignedTextRoom = 2 * scmLineEditCursorRoom;
+
+// On every box fitNumberBoxes() looks after, which places its values itself
+constexpr const char* scmFittedNumberBox = "uiFittedNumberBox";
+
+QLineEdit* editFieldOf(const QAbstractSpinBox* pBox)
+{
+    return pBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+}
+
+class NumberBoxFit : public QObject
+{
+public:
+    explicit NumberBoxFit(const QList<QSpinBox*>& boxes)
+    : QObject(boxes.first())
+    {
+        for (QSpinBox* pBox : boxes) {
+            mBoxes.append(pBox);
+            pBox->setProperty(scmFittedNumberBox, true);
+            pBox->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            pBox->installEventFilter(this);
+            if (QLineEdit* pEdit = editFieldOf(pBox)) {
+                pEdit->installEventFilter(this);
+            }
+            // As holdHeight(): a box's first Polish reaches the filter before the style does
+            pBox->ensurePolished();
+        }
+        fit();
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        switch (pEvent->type()) {
+        // The width is measured in the box's font, which a sheet landing can change
+        case QEvent::Polish:
+        case QEvent::StyleChange:
+        case QEvent::FontChange:
+            if (qobject_cast<QSpinBox*>(pWatched)) {
+                fit();
+            }
+            break;
+        case QEvent::Resize:
+        case QEvent::LayoutDirectionChange:
+            if (auto* pEdit = qobject_cast<QLineEdit*>(pWatched)) {
+                insetFromTrailingEdge(pEdit);
+            }
+            break;
+        default:
+            break;
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    [[nodiscard]] int widestValue() const
+    {
+        int widest = 0;
+        for (const QSpinBox* pBox : mBoxes) {
+            if (!pBox) {
+                continue;
+            }
+            const QFontMetrics metrics(pBox->font());
+            for (const int value : {pBox->minimum(), pBox->maximum()}) {
+                widest = std::max(widest, metrics.horizontalAdvance(pBox->prefix() + pBox->locale().toString(value) + pBox->suffix()));
+            }
+        }
+        return widest;
+    }
+
+    // As wide as the widest value needs, where a spin box measures itself for far more
+    void fit()
+    {
+        const int width = 2 * (scmInputBorderWidth + scmInputPaddingHorizontal + scmLineEditCursorRoom) + widestValue() + scmInputStepperWidth;
+        for (QSpinBox* pBox : std::as_const(mBoxes)) {
+            if (!pBox) {
+                continue;
+            }
+            pBox->setFixedSize(width, scmInputHeight);
+            if (QLineEdit* pEdit = editFieldOf(pBox)) {
+                insetFromTrailingEdge(pEdit);
+            }
+        }
+    }
+
+    // So the widest value is centred in the field, and a shorter one ends where it does
+    void insetFromTrailingEdge(QLineEdit* pEdit) const
+    {
+        const int inset = std::max(0, (pEdit->width() - widestValue()) / 2 - scmRightAlignedTextRoom);
+        if (pEdit->layoutDirection() == Qt::RightToLeft) {
+            pEdit->setTextMargins(inset, 0, 0, 0);
+        } else {
+            pEdit->setTextMargins(0, 0, inset, 0);
+        }
+    }
+
+    QList<QPointer<QSpinBox>> mBoxes;
+};
+
+// QStyleSheetStyle lays a spin box's editor against the frame on the left but inside the padding on the right; a text
+// margin gives a value the room a field's text has, measured again whenever the box lays the editor out
+class NumberBoxInset : public QObject
+{
+public:
+    NumberBoxInset(QAbstractSpinBox* pBox, QLineEdit* pEdit)
+    : QObject(pBox)
+    , mpBox(pBox)
+    , mpEdit(pEdit)
+    {
+        pEdit->installEventFilter(this);
+        inset();
+    }
+
+    void inset()
+    {
+        if (!mpBox || !mpEdit || mpBox->property(scmFittedNumberBox).toBool()) {
+            return;
+        }
+        // Only a value starting at the leading edge, in a box the input recipe draws
+        const bool leading = (mpBox->alignment() & Qt::AlignHorizontal_Mask) == Qt::AlignLeft;
+        if (!leading || !mpBox->testAttribute(Qt::WA_StyleSheetTarget)) {
+            if (mInsetApplied) {
+                mpEdit->setTextMargins(0, 0, 0, 0);
+                mInsetApplied = false;
+            }
+            return;
+        }
+        const bool rightToLeft = mpEdit->layoutDirection() == Qt::RightToLeft;
+        const QRect edit = mpEdit->geometry();
+        const int room = rightToLeft ? mpBox->width() - 1 - edit.right() : edit.left();
+        const int inset = std::max(0, scmInputBorderWidth + scmInputPaddingHorizontal - room);
+        mpEdit->setTextMargins(rightToLeft ? 0 : inset, 0, rightToLeft ? inset : 0, 0);
+        mInsetApplied = true;
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        switch (pEvent->type()) {
+        case QEvent::Move:
+        case QEvent::Resize:
+        case QEvent::LayoutDirectionChange:
+            inset();
+            break;
+        default:
+            break;
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    QPointer<QAbstractSpinBox> mpBox;
+    QPointer<QLineEdit> mpEdit;
+    bool mInsetApplied = false;
+};
+
+class HeldHeight : public QObject
+{
+public:
+    HeldHeight(QWidget* pWidget, const int height)
+    : QObject(pWidget)
+    , mHeight(height)
+    {
+        pWidget->installEventFilter(this);
+    }
+
+    void hold(QWidget* pWidget, const int height)
+    {
+        mHeight = height;
+        pWidget->setFixedHeight(height);
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Polish || pEvent->type() == QEvent::StyleChange) {
+            static_cast<QWidget*>(pWatched)->setFixedHeight(mHeight);
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    int mHeight;
+};
+
+} // namespace
+
+void fitNumberBoxes(const QList<QSpinBox*>& boxes)
+{
+    if (!boxes.isEmpty()) {
+        new NumberBoxFit(boxes);
+    }
+}
+
+void lineUpNumberBoxesWithFields(QWidget* pRoot)
+{
+    for (QAbstractSpinBox* pBox : pRoot->findChildren<QAbstractSpinBox*>()) {
+        QLineEdit* pEdit = editFieldOf(pBox);
+        if (!pEdit || pBox->property(scmFittedNumberBox).toBool()) {
+            continue;
+        }
+        // Not findChild(), for the reason holdHeight() gives
+        NumberBoxInset* pInset = nullptr;
+        for (QObject* pChild : pBox->children()) {
+            if ((pInset = dynamic_cast<NumberBoxInset*>(pChild))) {
+                break;
+            }
+        }
+        if (pInset) {
+            pInset->inset();
+        } else {
+            new NumberBoxInset(pBox, pEdit);
+        }
+    }
+}
+
+void holdHeight(QWidget* pWidget, const int height)
+{
+    // Not findChild(): without Q_OBJECT of its own, a HeldHeight is any QObject to the meta-object system
+    HeldHeight* pHeld = nullptr;
+    for (QObject* pChild : pWidget->children()) {
+        if ((pHeld = dynamic_cast<HeldHeight*>(pChild))) {
+            break;
+        }
+    }
+    if (!pHeld) {
+        pHeld = new HeldHeight(pWidget, height);
+    }
+    // Polished first: a widget's first Polish reaches the filter before the style, which then puts a sheet's
+    // min-height and max-height back over the hold
+    pWidget->ensurePolished();
+    pHeld->hold(pWidget, height);
 }
 
 namespace {
@@ -1731,6 +1979,16 @@ QPixmap tintedGlyph(const QPixmap& source, const QColor& color)
     painter.fillRect(glyph.rect(), color);
     painter.end();
     return glyph;
+}
+
+// Black and white squares four pixels on a side. The picture's own squares are
+// three times as tall as they are wide, as it was drawn to be squeezed into a
+// 3:1 icon, so it is squeezed by the same amount here.
+QPixmap checkerboardTile(const qreal devicePixelRatio)
+{
+    QPixmap tile = QPixmap(qsl(":/icons/black_white_transparent_check_1x3_ratio.png")).scaled(QSize(48, 16) * devicePixelRatio, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    tile.setDevicePixelRatio(devicePixelRatio);
+    return tile;
 }
 
 namespace {

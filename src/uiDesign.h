@@ -46,6 +46,7 @@ class QObject;
 class QPainter;
 class QPalette;
 class QRect;
+class QSpinBox;
 class QTabBar;
 class QTimer;
 class QWidget;
@@ -194,7 +195,8 @@ inline constexpr int scmRadiusPanel = 8;
 inline constexpr int scmRadiusProminentInput = scmRadiusPanel;
 
 // Set on a form rather than a window, so a code pane keeps the field it paints itself; a window with no form
-// passes the container's selector as selectorPrefix.
+// passes the container's selector as selectorPrefix. Every single-line field, combo box and spin box is held to
+// scmInputHeight; one that has to be taller keeps its own height with holdHeight().
 QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix = QString());
 
 // Exported for a read-only field, which is let down the same way without being disabled
@@ -274,6 +276,9 @@ void keepClickFocusOffControls(QWidget* pRoot);
 void letPopupsTakeTheFieldsCorner(QWidget* pRoot);
 
 inline constexpr int scmInputContentHeight = 22;
+// A colour well beside a form's controls shows a value rather than taking one in, so it is smaller than a field
+inline constexpr int scmColourWellWidth = 40;
+inline constexpr int scmColourWellHeight = 22;
 inline constexpr int scmInputPaddingVertical = 2;
 inline constexpr int scmInputPaddingHorizontal = 6;
 inline constexpr int scmInputBorderWidth = 1;
@@ -282,6 +287,19 @@ inline constexpr int scmInputStepperWidth = 16;
 // A window drawing its own split button pads its words clear of this itself: no selector can ask whether a button
 // carries a menu.
 inline constexpr int scmInputDropDownWidth = 18;
+
+// Spin boxes standing one above another and holding the same kind of number, an opacity or a diameter: one fixed
+// size for all of them, each value right-aligned so the suffixes line up down the column, and inset from the
+// trailing edge so the widest value any of them can hold sits in the middle. Kept so across font and style changes.
+// Call once per group.
+void fitNumberBoxes(const QList<QSpinBox*>& boxes);
+// A spin box's value starting where a field's text does, mirrored right to left; a box fitNumberBoxes() looks after
+// and a centred or trailing value are left alone. Call after setting inputStyleSheet(), and again wherever a spin box
+// is built after that pass; re-running is harmless.
+void lineUpNumberBoxesWithFields(QWidget* pRoot);
+// The input and button recipes set a styled field's or button's height limits again at every polish; this puts the
+// widget back to a height of its own after each, for a control that has to be taller than a field
+void holdHeight(QWidget* pWidget, const int height);
 
 qreal contrastRatio(const QColor& first, const QColor& second);
 
@@ -384,6 +402,9 @@ void paintAccentBar(QPainter* pPainter, const QRect& row, const QColor& accent, 
 
 // Fills through the alpha channel, keeping antialiased edges that recolouring pixels would harden
 QPixmap tintedGlyph(const QPixmap& source, const QColor& color);
+
+// What a colour that may be see-through is painted over, so its transparency shows the board through it
+QPixmap checkerboardTile(const qreal devicePixelRatio);
 
 // Lucide authors at 2, which reads heavy at toolbar and editor sizes; the glyphs ship as SVG so the weight is set
 // here.

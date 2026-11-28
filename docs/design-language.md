@@ -248,6 +248,33 @@ surface, a 1px border, `scmRadiusInput`, an accent frame on focus. Framing a
 platform draws inside it, so the sheet claims those two only once it has tinted
 arrow PNGs cached to point at, and otherwise leaves them the platform's frame.
 
+Every single-line control the sheet draws - a line edit, a combo box, a spin
+box, a colour row and its opacity box - is one height, `scmInputHeight` (28px:
+22px of content, 2px of padding and the 1px hairline above and below), so
+controls standing on one row meet at the top and the bottom. The rule lives in
+`inputStyleSheet()` alone: the single-line kinds take `max-height` as well as
+`min-height`, which Qt sets as the widget's maximum and minimum at every polish
+and which also caps its size hint; uncapped, a spin box's hint is 31px under
+macOS and 33px offscreen. `QPlainTextEdit` and `QTextEdit` are not capped, and the editor
+inside a combo box or a spin box has the cap taken off again, so a box held
+taller does not hold its editor at a field's height. A control that has to be
+another height keeps it with `holdHeight()`, called where it is sized, which
+sets its height again after every polish: the Mapper page's 3D map style
+picker, whose pictures are 48px tall; the trigger editor's pattern rows, whose
+type list and line spacer stand at the row's height in the profile's display
+font; and a `ChipRow`'s field, which shares the chips' line.
+
+A spin box's value starts where a field's text does. Qt's stylesheet style
+places the box's editor against the frame on the left and inside the padding on
+the right, which leaves a left-to-right value starting 7px before the text of
+a field above it; a padding rule on the editor moves nothing.
+`lineUpNumberBoxesWithFields(container)` gives the editor a text margin making
+up the difference, mirrored right to left and taken again whenever the box lays
+its editor out. A box `fitNumberBoxes()` looks after and a value centred or
+set at the trailing edge are left alone. It runs from each styled window's
+style pass on the container the input sheet was set on, and again wherever a
+window builds a spin box after that pass.
+
 The list a combo box drops down is the field opened up: the same surface, the
 same hairline and the same `scmRadiusInput` corner as the box it came out of,
 with the accent under the chosen row. It was the card once, and on a card -
@@ -434,6 +461,140 @@ Three kinds of button are left out on purpose:
   them - the content height included.
 - **The editor's placeholders** (`uiDesign::PlaceholderButton`) are tool buttons
   painting their own dashed frame, so no `QPushButton` rule reaches them.
+
+### A colour is shown apart from the buttons that change it
+
+A colour well is one target doing two things: it shows the colour, and a click
+on it opens the colours window, with nothing on it saying it can be clicked. A
+colour row keeps the two apart (`uiDesign::ColourValue`, `src/ColourValue.h`).
+The colour is an input like any other on the form, drawn by
+`inputStyleSheet()`: it shows the code over a swatch at its leading edge and
+takes a code typed into it, `#RGB` or `#RRGGBB`. A colour that may be
+see-through has an opacity box after it, since a code carries no alpha. Then
+come the buttons, glyphs alone: Choose opens the colours window, and Reset,
+where the item has a default, puts it back. Choose carries Lucide's
+swatch-book. Not the pipette: macOS's colours window has a pipette of its own
+that picks a colour off the screen, and a pipette on the button would promise
+that. Not the palette either, which is already the Settings sidebar's
+Appearance glyph. The swatch is a second way to Choose, for the player who
+clicks the colour itself: a click on it presses the row's Choose
+(`setChooseButton()`), so it does exactly what that button does and nothing
+while the button is unavailable. Unlike the old well it never stands alone,
+and under the pointer it says it can be clicked: a pointing hand where the
+code has the text cursor, a ring in `accent` in the inset round the swatch, and
+Choose's tooltip. The target is the swatch with that inset, 26px square.
+Reset (rotate-ccw) is unavailable while the item has nothing
+to reset; the field is then empty, its placeholder says what the item is drawn
+with - "Automatic" for a room's symbol, the code of the map's border colour for
+its border, so that field is no wider than any other - and its swatch shows
+that colour. The room
+properties dialog's symbol and border rows (`roomPropertiesSymbolColour`,
+`roomPropertiesBorderColour`, `roomPropertiesBorderOpacity`) and the settings'
+Player room marker card (`settingsPlayerRoomOuterColour`,
+`settingsPlayerRoomInnerColour` and their `...Opacity` boxes) are built this
+way, and so are the settings' two colour cards; the trigger editor keeps its
+wells.
+
+A box holding a percentage stands over another of its kind - the two ring
+opacities, the two diameters - so the values line up as numbers in a column
+do: `fitNumberBoxes()` gives a group one width, measured from the widest value
+any of them can hold, right-aligns every value and insets it from the trailing
+edge by half of what that widest value leaves, so "100%" is centred and "60%"
+ends where it does, the percent signs one over the other. Centring each value
+on its own puts every sign somewhere else.
+
+Every colour row stands at a field's height, `scmInputHeight`: field,
+opacity box and buttons, the buttons square, so a colour row looks the same in
+the room properties dialog, the Player room marker card and the colour cards,
+and meets the fields and lists beside it. The room properties dialog gives its
+rows the button recipe as well as the input recipe, scoped to the row, so
+Choose and Reset have the design's face there too. `holdHeight()` and
+`fitNumberBoxes()` polish a widget before holding it: the first Polish reaches
+their event filter before the style, which then sets the recipe's height
+limits back, and a dialog that sizes itself before it is shown (`adjustSize()`)
+never gives them a later style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
+way back. On the Main display's card that button also removes a picture a script put behind the main display, so while
+there is one the button shows "Reset all colors and remove the background image", with a tooltip about the picture. The words are set
+when the profile is read in, after a reset and each time the window becomes active again. The card's own colours (Foreground, Background and the command
+colours; the map's background, borders, links, levels, info box and grid) are
+label-and-row pairs in `PairGridLayout`. The Main display's belong together a
+row at a time (Foreground beside Background), so they are read across: two
+pairs to a row, and one to a row in that same order. The map's are two columns
+read down (`ReadingOrder::DownColumns`): the five that may be see-through -
+background, map info background, upper level, lower level, grid - leading
+(`setLeadingPairs(5)`), and Room border, Overlapping rooms border and Link
+trailing, so the opacity boxes form one column and the buttons after them line
+up, rather than appearing on alternate sides wherever the order put them. The
+trailing column is two rows shorter, and the space under it stays empty. Where
+the two columns do not fit side by side the trailing one goes under the leading
+one whole; read across, the see-through colours were shuffled in among the
+others. The Main display's Background may be see-through as well and has the
+card's one opacity box, in the trailing column. On both cards, side by side each
+column is only as wide as its own labels and rows - the Main display's leading
+column keeps no room for an opacity box none of its rows has, so the card drops
+to one pair a row no sooner than its rows need - with 24px between the two
+(`setPairSpacing(scmFieldPairGap)`, the gap between the console colours' Normal
+and Light columns). Both cards two pairs to a row beside the sidebar's names
+take a 998px window under cocoa in English (994px offscreen), where every page
+alone would fit beside the names down to 874px (868px offscreen). The names
+therefore fold first: `sidebarWidths()` sets `collapseBelow`, one width on every
+page so that a click in the sidebar never folds or unfolds them, to what both
+colour cards need two pairs to a row beside the names, and a card drops to one
+pair a row only once even the rail leaves it too little (the Main display's
+below 853px under cocoa, 844px offscreen). The other way round, narrowing the
+window would stack a card, then spread it out again as the names went. On a
+page without a colour card the names fold at that same width. A window with no
+remembered size opens at the width that keeps both colour cards side by side
+beside the names: past the usual 1060px where a wide font needs it, and no
+wider than the screen.
+
+Which arrangement a card shows is decided in `arrangeColourCards()` and handed
+to the grid with `setPairsPerRow()`, rather than left to the grid's own reading
+of the width it is given. That width moves with the page's scroll bar, and the
+page's height moves with the arrangement: a card that wraps is taller, a page
+that becomes too tall shows its bar, and the 12px the bar takes held the card
+wrapped - the same window showed either arrangement depending on how it got
+there. The decision takes the width with room kept for the bar whether it is
+showing or not, and an arrangement is taken up only
+`scmColourArrangementHysteresis` (4px) past the width it needs and given up
+below it, so a window held at the breakpoint keeps what it had. The previews
+are shown or hidden by the same rule.
+
+The sixteen console colours are a table under the divider: "Normal" and
+"Light" over two columns, and each of the eight names down the side once.
+Listed as sixteen pairs, every name was written twice ("Red", "Light red") and
+a colour stood beside whichever twin the grid put next to it; as a table, each
+colour is beside its own twin, so a light colour is judged against the normal
+one it brightens. The light twins' labels stay in the `.ui` file, hidden; the
+field and the Choose button carry the whole name ("Light red") as their
+accessible name and in Choose's tooltip, and a search for "light red" lights
+up the row's name and the Light heading.
+
+Beside the table, in the width the table leaves, a preview draws the colours in
+use: `ConsoleColourPreview` writes a few lines of a game - the echoed command,
+a room, its exits in light cyan, someone speaking, then the eight names of each
+column in their own colours over a command line, under the seam the console
+draws there - on the Background in the profile's display font, and over the
+pictures a script set behind the main console with `setBackgroundImage()`: the
+full-window one under the Background, showing where that is see-through, and the
+main display's over it, each laid out by the console's own rule (border, center,
+tile or cover) as though the console were the preview's size. A "style" one is
+left out: it is a stylesheet, which a widget painting itself has no way to
+draw. `MapColourPreview` draws rooms in the environment
+colours on the grid, linked, with a room a level up and one down, two rooms on
+one spot and the info box. A swatch shows a colour; it cannot show black words
+on a black background, a link that vanishes into the grid or an info box
+nobody can read, which is what a player choosing colours is trying to avoid.
+Both read the colours at every paint and are told to `update()` whenever one
+changes. The map preview measures everything as `T2DMap` does, with a cell
+standing for the map's room width: rooms from Room size, borders from Border
+size and only while "Show room borders" is on, links from Exit size, the grid
+line from Grid width, and the same anti-aliasing and cosmetic pens under "Use
+high quality graphics in 2D view", so a choice that looks right in the preview
+looks the same on the map; it is told to `update()` when one of those settings
+changes too. They take the table's height and never more (size policy Ignored
+down), so the card is no taller for them, and below 200px they are hidden
+rather than wrapped under the table, which would make it so.
 
 ### Menus
 
@@ -820,8 +981,10 @@ label and its controls keep their own widths and the row wraps where it runs out
 of room rather than widening the column, check boxes that stood side by side are
 columns as wide as their own words that stack whole when they do not fit, and
 the two colour cards - the Main display's and the map's - are one
-`uiDesign::PairGridLayout` (`reflowColourCards()`): label, well, label, well
-with every well one width, one pair to a row where two do not fit.
+`uiDesign::PairGridLayout` (`reflowColourCards()`): label, row, label, row,
+one pair to a row where two do not fit - read across on the Main display and
+down two columns on the map - and the console colours' table under them (see
+"A colour is shown apart from the buttons that change it").
 
 The card is one component for both windows, the way the sidebar is.
 `cardStyleSheet(metrics, tokens)` draws the frame and the title inside it, and
@@ -862,16 +1025,23 @@ is `sidebarWidths()` / `updateSidebarMode()` in
 
 - Widths are measured off font metrics, `sizeHint()`s and the actual scrollbar
   width, over every page rather than the one on show, so a page switch does
-  not move the collapse point - unless the page on show is wider than the
-  reading column, when the collapse point follows that page and the names fold
-  rather than the page scrolling sideways. The window's minimum is where even
-  the rail leaves the widest page too little room.
+  not move the collapse point: the names fold where the widest page, or both
+  colour cards two pairs to a row, no longer fit beside them. The window's
+  minimum is where even the rail leaves the widest page too little room.
 - The window has no maximum: a page's column grows with the window and its
-  cards use the room, so the reading column is the floor the names fold at and
-  never a ceiling. `fullyExpanded`, the names beside the widest page's column,
-  is the most a window with no remembered size opens at.
+  cards use the room, so the reading column is never a ceiling. A window with
+  no remembered size opens at `opening`, held to
+  the screen's width by `openingWidth()` and never to less than 1060px: `fullyExpanded`, the names beside the widest page's column, or wider
+  where both colour cards need it to stand two pairs to a row beside the
+  names, at the width `arrangeColourCards()` takes that up at (998px under
+  cocoa, 994px offscreen, which is also the width the names fold below,
+  against 887px and 892px for `fullyExpanded`). `fullyExpanded` itself still
+  counts each page's minimum, and a colour card's minimum is one pair to a row.
 - The test is against the window's own width, not the space left over, so
-  collapsing cannot flip the condition that caused it.
+  collapsing cannot flip the condition that caused it. A breakpoint inside a
+  scrolling page is held to the same rule: the colour cards are measured with
+  the page's scroll bar room kept whether it is showing or not, since what they
+  decide moves the page's height and so the bar (`arrangeColourCards()`).
 - The measurement is the per-window half. What is done with its answer is
   `uiDesign::setSidebarCollapsed()`, shared with `editorSidebarWidths()` /
   `updateEditorSidebarMode()` in `src/dlgTriggerEditor.cpp`. Both windows
@@ -1608,6 +1778,11 @@ handles; keep them stable.
 | `settingsHeroHeadline`, `settingsHeroDetail`, `settingsHeroLink` | Hero card parts |
 | `settingsCheckBoxWrap`, `settingsWrappedLabel` | A check box whose text wraps |
 | `settingsSearchDebounce` | The search timer - tests wait on it by name |
+| `settingsDisplayColours`, `settingsMapColours` | The two colour cards' `PairGridLayout` |
+| `settingsColour_<stem>`, `settingsOpacity_<stem>` | A colour card's field and opacity box, `<stem>` being its Choose button's name after `pushButton_` (`settingsColour_lRed`, `settingsOpacity_mapGridColor`) |
+| `settingsDisplayConsoleColours`, `settingsMapConsoleColours` | The console colours' table with the preview beside it; `...Table` is the table alone |
+| `settingsDisplayColoursNormal`, `settingsDisplayColoursLight`, `settingsMapColoursNormal`, `settingsMapColoursLight` | The table's column headings |
+| `settingsDisplayColoursPreview`, `settingsMapColoursPreview` | The two previews |
 
 ### Dynamic properties
 

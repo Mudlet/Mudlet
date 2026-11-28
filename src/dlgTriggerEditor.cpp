@@ -214,8 +214,6 @@ static constexpr int scmEditorSearchResultIndent = 14;
 static constexpr int scmEditorCodeHeaderGlyphSize = 13;
 static constexpr int scmEditorCodeHeaderInset = 4;
 
-static constexpr int scmEditorColorWellHeight = 22;
-static constexpr int scmEditorColorWellWidth = 40;
 static constexpr int scmEditorRowControlGap = 8;
 static constexpr int scmEditorOptionRowGap = 24;
 // Wide enough for the toolbar's labels and the trigger options strip on one line; restoreWindowGeometry()
@@ -2223,12 +2221,14 @@ void dlgTriggerEditor::applyPatternWidgetStyle(dlgTriggerPatternEdit* patternWid
     const QMargins rowMargins = patternWidget->layout()->contentsMargins();
     const int contentHeight = rowHeight - rowMargins.top() - rowMargins.bottom();
     for (QWidget* pControl : {static_cast<QWidget*>(patternWidget->singleLineTextEdit_pattern),
-                              static_cast<QWidget*>(patternWidget->comboBox_patternType),
-                              static_cast<QWidget*>(patternWidget->spinBox_lineSpacer),
                               static_cast<QWidget*>(patternWidget->pushButton_fgColor),
                               static_cast<QWidget*>(patternWidget->pushButton_bgColor),
                               static_cast<QWidget*>(patternWidget->label_prompt)}) {
         pControl->setMaximumHeight(contentHeight);
+    }
+    // The row's height, which the display font can take past a field's, where the input recipe holds these two to one
+    for (QWidget* pControl : {static_cast<QWidget*>(patternWidget->comboBox_patternType), static_cast<QWidget*>(patternWidget->spinBox_lineSpacer)}) {
+        uiDesign::holdHeight(pControl, contentHeight);
     }
 
     patternWidget->comboBox_patternType->setFixedWidth(patternTypeColumnWidth(patternWidget->comboBox_patternType->font()));
@@ -2378,6 +2378,7 @@ void dlgTriggerEditor::createPatternItem(int index)
     // What a drag from the grip means depends on where the other rows are, which only the editor knows
     pItem->label_dragHandle->installEventFilter(this);
     applyPatternWidgetStyle(pItem);
+    uiDesign::lineUpNumberBoxesWithFields(pItem);
     pItem->spinBox_lineSpacer->installEventFilter(this);
 }
 
@@ -15628,7 +15629,7 @@ void dlgTriggerEditor::buildTriggerOptionsStrip()
                           tr("The colour behind the matched text. Choose Keep in the picker to leave the game's own."));
     for (QPushButton* pWell : {pForm->pushButtonFgColor, pForm->pushButtonBgColor}) {
         pWell->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        pWell->setFixedSize(scmEditorColorWellWidth, scmEditorColorWellHeight);
+        pWell->setFixedSize(uiDesign::scmColourWellWidth, uiDesign::scmColourWellHeight);
         pHighlightLayout->addWidget(pWell);
     }
     pHighlightLayout->insertWidget(0, pForm->checkBox_triggerColorizer);
@@ -17567,8 +17568,9 @@ void dlgTriggerEditor::applyEditorShellStyle()
                                static_cast<QWidget*>(mpActionsMainArea),
                                static_cast<QWidget*>(mpVarsMainArea)}) {
         uiDesign::keepClickFocusOffControls(pMainArea);
-        // Pattern rows are made later, so createPatternItem() does the same for its box
+        // Pattern rows are made later, so createPatternItem() does the same for its boxes
         uiDesign::letPopupsTakeTheFieldsCorner(pMainArea);
+        uiDesign::lineUpNumberBoxesWithFields(pMainArea);
     }
 
     // After the sheets: the Events label is held to the chips' line height, known only once the field rule has landed
