@@ -255,7 +255,12 @@ private:
         pMap->mRoomIdHash[qsl("OtherProfile")] = scmRoom3;
         pDB->hashToRoomID[qsl("hash-abc")] = scmRoom1;
         pDB->hashToRoomID[qsl("hash-日本語")] = scmRoom2;
-        pMap->mMapSymbolFont = QFont(qsl("DejaVu Serif"), 14);
+        // Light, not the default Normal: a binary load that misreads the
+        // OpenType weight comes back as Black (900), which is also what an
+        // untouched Black font would show.
+        QFont symbolFont(qsl("DejaVu Serif"), 14);
+        symbolFont.setWeight(QFont::Light);
+        pMap->mMapSymbolFont = symbolFont;
         pMap->mMapSymbolFontFudgeFactor = 1.25;
         pMap->mIsOnlyMapSymbolFontToBeUsed = true;
 
@@ -455,6 +460,9 @@ private:
         }
         QCOMPARE(pMap->mMapSymbolFont.family(), qsl("DejaVu Serif"));
         QCOMPARE(pMap->mMapSymbolFont.pointSize(), 14);
+        QFont lightSymbolFont(qsl("DejaVu Serif"), 14);
+        lightSymbolFont.setWeight(QFont::Light);
+        QCOMPARE(pMap->mMapSymbolFont.weight(), lightSymbolFont.weight());
         QCOMPARE(pMap->mMapSymbolFontFudgeFactor, 1.25);
         QVERIFY(pMap->mIsOnlyMapSymbolFontToBeUsed);
     }

@@ -111,6 +111,21 @@ QFont::StyleStrategy symbolFontStyleStrategy(const bool onlySymbolFontUsed)
     return static_cast<QFont::StyleStrategy>((onlySymbolFontUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality);
 }
 
+// Qt 6's QFont::toString() stores an OpenType weight (Normal is 400, Light is
+// 300) and, on Qt 6.12, 19 comma-separated fields. fromString() reads that
+// weight on the old 0-99 scale when it is given only the first 10 fields, and
+// the closest old weight to 300, 400 or 700 is Black, which comes back as 900.
+// A weight above 99 is already OpenType, so the description has to be kept
+// whole. A weight still on the 0-99 scale is a Qt 5 description, or the old
+// QFont(QString) duplication of one, and only its first 10 fields are real.
+QString symbolFontDescriptionForFromString(const QStringList& fields)
+{
+    if (fields.size() >= 5 && fields.at(4).toInt() > 99) {
+        return fields.join(QLatin1Char(','));
+    }
+    return fields.mid(0, 10).join(QLatin1Char(','));
+}
+
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -2069,12 +2084,19 @@ bool TMap::restore(QString location)
             if (mVersion >= 19) {
                 // Read the data from the file directly in version 19 or later
                 ifs >> mMapSymbolFont;
-                if ((mVersion < 21) && mMapSymbolFont.toString().split(QLatin1String(",")).size() > 15) {
-                    // We need to clean up the effects of using QFont(string)
-                    // for a format 17 or 18 below - as this fix went in before
-                    // 21 was used it only has to be used for map formats 19 and
-                    // 20:
-                    mMapSymbolFont.fromString(mMapSymbolFont.toString().split(QLatin1String(",")).mid(0, 10).join(QLatin1String(",")));
+                if (mVersion < 21) {
+                    // Formats 19 and 20 could be saved from a font built with
+                    // QFont(QString), which duplicated the tail of its
+                    // description. Shortening every long description to 10
+                    // fields also hits a healthy Qt 6 font, whose toString()
+                    // is longer than 15 fields, and turns its weight into
+                    // Black (900). Repair only a description that is still on
+                    // the old weight scale.
+                    const QString description = mMapSymbolFont.toString();
+                    const QString repaired = symbolFontDescriptionForFromString(description.split(QLatin1String(",")));
+                    if (repaired != description) {
+                        mMapSymbolFont.fromString(repaired);
+                    }
                 }
                 ifs >> mMapSymbolFontFudgeFactor;
                 ifs >> mIsOnlyMapSymbolFontToBeUsed;
@@ -2096,11 +2118,12 @@ bool TMap::restore(QString location)
                 // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2070
                 // and:
                 // https://code.qt.io/cgit/qt/qtbase.git/tree/src/gui/text/qfont.cpp?h=5.15#n2128
-                // this suggests that only one or ten elements are accepted so
-                // we CAN fix past mistakes by only considering the first ten
-                // elements:
+                // A Qt 5 description, and the duplication of one, is read from
+                // its first 10 fields. A Qt 6 description carries an OpenType
+                // weight above 99 and has to be kept whole, or fromString()
+                // turns Light, Normal and Bold into Black (900):
                 const QStringList fontStrings{mUserData.take(qsl("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
-                const QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
+                const QString fontString{symbolFontDescriptionForFromString(fontStrings)};
                 const QString fontFudgeFactorString = mUserData.take(qsl("system.fallback_mapSymbolFontFudgeFactor"));
                 const QString onlyUseSymbolFontString = mUserData.take(qsl("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
