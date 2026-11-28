@@ -212,6 +212,14 @@ public:
     // dismissing it then lasts until the game stops hiding input. False while the box would not be open, and
     // where submit() is refused.
     bool dismissHiddenInput();
+    // The automatic login's name and password, changed in the running profile, which the connection dialog's
+    // boxes do not reach: the next connection logs in with them, and this one too if its login is still to come.
+    // setLogin() trims the name and stores it with the profile, as Options::login is, but an empty one clears it.
+    // setPassword() is for this run only, as Options::password is: an empty one withdraws the one given, and the
+    // profile's stored one, if any, is read again. False where submit() is refused, and from setLogin() when the
+    // name could not be stored, which leaves the profile's as it was.
+    bool setLogin(const QString& login);
+    bool setPassword(const QString& password);
     bool runLua(const QString& code);
     // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
     // string each, an option of several by its name (showSentText as "never", "always" or "script"). A key
@@ -1156,6 +1164,7 @@ private:
     void beginSave(std::function<void(bool)> done);
     void saveEach(QList<QPointer<Host>> profiles, qsizetype closesUnsavedBefore, QStringList unsaved, std::function<void(bool)> done);
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
+    bool storeConnectionDetail(const QString& item, const QString& value);
     void detachFromHost();
     void connectInputRelays(unsigned int run);
     void connectCommandRelays(unsigned int run);

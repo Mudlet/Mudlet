@@ -1136,13 +1136,21 @@ bool THeadlessSession::storeConnectionDetails(const Options& options, const std:
         items.append({qsl("login"), options.login});
     }
     for (const auto& [item, value] : items) {
-        if (const auto [stored, reason] = MudletApp::writeProfileData(mProfileName, item, value); !stored) {
-            //: %1 is the internal name of a profile setting, such as url or port, %2 a profile name, %3 the reason it could not be written
-            mErrorString = tr("The %1 of the profile \"%2\" could not be stored: %3").arg(item, mProfileName, reason);
+        if (!storeConnectionDetail(item, value)) {
             return false;
         }
     }
     return true;
+}
+
+bool THeadlessSession::storeConnectionDetail(const QString& item, const QString& value)
+{
+    const auto [stored, reason] = MudletApp::writeProfileData(mProfileName, item, value);
+    if (!stored) {
+        //: %1 is the internal name of a profile setting, such as url or port, %2 a profile name, %3 the reason it could not be written
+        mErrorString = tr("The %1 of the profile \"%2\" could not be stored: %3").arg(item, mProfileName, reason);
+    }
+    return stored;
 }
 
 Host* THeadlessSession::host() const
@@ -1280,6 +1288,25 @@ bool THeadlessSession::inputHidden(const bool sending)
         mErrorString = tr("Hidden input is not open: the game is not hiding what is typed.");
     }
     return false;
+}
+
+bool THeadlessSession::setLogin(const QString& login)
+{
+    const QString name = login.trimmed();
+    if (!usable() || !storeConnectionDetail(qsl("login"), name)) {
+        return false;
+    }
+    mpHost->changeLogin(name);
+    return true;
+}
+
+bool THeadlessSession::setPassword(const QString& password)
+{
+    if (!usable()) {
+        return false;
+    }
+    mpHost->changeGivenPass(password);
+    return true;
 }
 
 bool THeadlessSession::runLua(const QString& code)

@@ -406,15 +406,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (MudletApp::storingPasswordsSecurely()) {
-        loadSecuredPassword();
-    } else {
-        QString password{readProfileData(qsl("password"))};
-        if (!password.isEmpty()) {
-            setPass(password);
-            password.clear();
-        }
-    }
+    loadStoredPassword();
 
     if (MudletApp::publicTest()) {
         thankForUsingPTB();
@@ -6621,6 +6613,43 @@ void Host::setProxyPassword(const QString& password)
         postMessage(tr("[ WARN ]  - The saved proxy password could not be deleted, so the next time this profile is loaded it will have that password again."));
     }
     mProxyPassword = password;
+}
+
+void Host::loadStoredPassword()
+{
+    if (MudletApp::storingPasswordsSecurely()) {
+        loadSecuredPassword();
+        return;
+    }
+    QString password{readProfileData(qsl("password"))};
+    if (!password.isEmpty()) {
+        setPass(password);
+        password.clear();
+    }
+}
+
+void Host::changeLogin(const QString& login)
+{
+    if (login == mLogin) {
+        return;
+    }
+    mLogin = login;
+    mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
+}
+
+void Host::changeGivenPass(const QString& password)
+{
+    if (password.isEmpty() && !mPassGiven) {
+        return;
+    }
+    SecureStringUtils::secureStringClear(mPass);
+    mPassGiven = false;
+    if (password.isEmpty()) {
+        loadStoredPassword();
+    } else {
+        givePass(password);
+    }
+    mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
 }
 
 void Host::loadSecuredPassword()

@@ -205,6 +205,14 @@ With no Java VM registered with Qt - `mudlet-headless` run as a bare executable,
 load Qt Core through `System.loadLibrary` - the KeyStore cannot be reached, so the folder keeps them all
 under `credentials/`, and the log says so.
 
+`setLogin()` and `setPassword()` change the automatic login's name and password in the profile that is
+running, which reads both only as it loads: the next connection logs in with them, with no close and load
+of the profile, and so does the one that is open if its login is still to come. The name is trimmed and
+stored with the profile, as `options.login` is, and an empty one clears it. The password is for this run
+only, as `options.password` is, and nothing stores it; an empty one withdraws the one given, and the
+password stored for the profile, if any, is read again. Both are false, with `errorString()` saying why,
+where `submit()` is refused, and `setLogin()` also when the name could not be stored.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap

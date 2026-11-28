@@ -225,6 +225,9 @@ public:
     void setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
     QString& getLogin() { return mLogin; }
     void setLogin(const QString& login) { mLogin = login; }
+    // The login name, changed while the profile runs: the automatic login reads it at its login step, so it is for
+    // the next connection unless this one's login is still to come
+    void changeLogin(const QString& login);
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
     // One given for this run, as a headless frontend's option is, which the stored one does not replace; an
@@ -238,6 +241,10 @@ public:
         mPass = QString(password.constData(), password.size());
         mPassGiven = true;
     }
+    // The one given for this run, changed while the profile runs: an empty one withdraws it, and the stored one,
+    // if any, is read again as at the load. The automatic login reads it at its password step, so it is for the
+    // next connection unless this one's password step is still to come.
+    void changeGivenPass(const QString& password);
     // A password still being fetched from the keychain counts: the auto-login is timer based, so
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
@@ -1557,6 +1564,8 @@ private:
     bool installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
+    // The password stored for the profile, from the keychain or the profile's own file
+    void loadStoredPassword();
     void loadSecuredPassword();
     // The lookup loadSecuredPassword() starts, on a manager of its own that this deletes once the
     // lookup has answered. Apart so that a test can hand in a manager that stands in for the keychain.
