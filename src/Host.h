@@ -248,6 +248,19 @@ public:
     // if any, is read again as at the load. The automatic login reads it at its password step, so it is for the
     // next connection unless this one's password step is still to come.
     void changeGivenPass(const QString& password);
+    // The proxy's password given for this run, as givePass() gives the game's: the load does not replace it
+    // with the stored one and a save does not store it. An empty one is none.
+    void giveProxyPass(const QString& password)
+    {
+        if (password.isEmpty()) {
+            return;
+        }
+        mProxyPassword = QString(password.constData(), password.size());
+        mProxyPassGiven = true;
+    }
+    bool proxyPassGiven() const { return mProxyPassGiven; }
+    // As changeGivenPass(), for the proxy's: it is used from the next connection.
+    void changeGivenProxyPass(const QString& password);
     // A password still being fetched from the keychain counts: the auto-login is timer based, so
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
@@ -1719,6 +1732,7 @@ private:
     QString mLogin;
     QString mPass;
     bool mPassGiven = false;
+    bool mProxyPassGiven = false;
     bool mSecuredPasswordPending = false;
     // The store refused the saved password, as against having none or not being there at all
     bool mSecuredPasswordUnreadable = false;

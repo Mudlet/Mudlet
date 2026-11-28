@@ -6672,6 +6672,20 @@ void Host::changeGivenPass(const QString& password)
     mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
 }
 
+void Host::changeGivenProxyPass(const QString& password)
+{
+    if (password.isEmpty() && !mProxyPassGiven) {
+        return;
+    }
+    SecureStringUtils::secureStringClear(mProxyPassword);
+    mProxyPassGiven = false;
+    if (password.isEmpty()) {
+        mProxyPassword = CredentialManager::retrieveCredential(getName(), "proxy");
+    } else {
+        giveProxyPass(password);
+    }
+}
+
 void Host::loadSecuredPassword()
 {
     // Use async API for QtKeychain integration with file fallback

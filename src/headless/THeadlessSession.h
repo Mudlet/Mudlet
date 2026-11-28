@@ -85,6 +85,8 @@ public:
         QString login;
         // For this run only; nothing stores it
         QString password;
+        // The password of the profile's proxy (setProxy()), for this run only too; nothing stores it
+        QString proxyPassword;
         // An absolute path, made if need be: the folder that holds the profiles, Mudlet.ini and the passwords
         // stored for them, in place of the GUI's folder and the system's keychain, except in an Android app with
         // a Java VM registered with Qt (docs/headless.md), whose profile passwords go to the KeyStore unless
@@ -234,6 +236,28 @@ public:
     // when a detail could not be stored; setAddress() also where start() would refuse the details.
     bool setAddress(const QString& host, int port, bool tls);
     bool setAutoReconnect(bool reconnect);
+    // The profile preferences' proxy: whether the game is reached through a SOCKS5 proxy, and where that is.
+    // Its password is not part of it.
+    struct Proxy
+    {
+        bool use = false;
+        QString address;
+        // 0 is none
+        int port = 0;
+        QString username;
+    };
+    // The proxy as the running profile holds it. False where submit() is refused.
+    bool proxy(Proxy& proxy);
+    // Changes it as the profile preferences do: kept with the profile and written with its next save, and used
+    // from the next connection, a download's too; a connection that is open stays as it is. The address is
+    // trimmed. Refused, changing nothing, for a port outside 0 to 65535, for an address that is not a host's,
+    // and for a proxy to use that lacks its address or its port, as the preferences would then connect
+    // without one and say nothing. False where submit() is refused as well.
+    bool setProxy(const Proxy& proxy);
+    // The proxy's password, for this run only, as Options::proxyPassword is: an empty one withdraws the one
+    // given, and the one stored for the profile, if any, is read again. Used from the next connection. False
+    // where submit() is refused.
+    bool setProxyPassword(const QString& password);
     bool runLua(const QString& code);
     // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
     // string each, an option of several by its name (showSentText as "never", "always" or "script"). A key
@@ -1168,7 +1192,7 @@ private:
     void tellConfigSaved();
     void beginStart(const Options&, std::function<void(StartResult)> done);
     std::optional<StartResult> prepareStart(Options&, std::optional<bool>& tls, bool& stalePasswords);
-    StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password);
+    StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password, const QString& proxyPassword);
     void beginInstallPackage(const QString& path, std::function<void(PackageResult)> done);
     void finishInstallPackage(const QString& path, std::function<void(PackageResult)> done);
     // saved is set once the closes that save have begun, for a session deleted after that

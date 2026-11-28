@@ -225,6 +225,20 @@ stored with the profile: it counts from the next time the connection is lost or 
 already waiting is still made, and disconnecting calls that off. Both are false where `submit()` is refused
 and when a detail could not be stored, and `setAddress()` also for details `start()` would refuse.
 
+`proxy()` and `setProxy()` read and change the proxy of the profile preferences, which the connection dialog
+does not hold: whether the game is reached through a SOCKS5 proxy, and the proxy's address, port and user
+name (`THeadlessSession::Proxy`). A change is kept with the profile and written with its next save, as the
+preferences' is, and used from the next connection and the next download; a connection that is open stays as
+it is. The address is trimmed. `setProxy()` refuses a port outside 0 to 65535, an address that is not a
+host's, and a proxy to use that has no address or no port, which the preferences take and then connect
+without a proxy, saying nothing. The proxy's password is `options.proxyPassword` at the start and
+`setProxyPassword()` in the running profile: for this run only, as `options.password` is, so the profile's
+save neither stores it nor writes it to the profile's file; an empty one withdraws the one given, and the one
+stored for the profile, if any, is read again. A proxy that refuses the connection, or the user name and
+password, fails the connection as in the GUI, with its message in the profile's console. All three are false,
+with `errorString()` saying why, where `submit()` is refused. No Lua function reads or changes the proxy, as
+none does in the GUI.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
