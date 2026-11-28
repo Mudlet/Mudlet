@@ -1647,6 +1647,88 @@ bool THeadlessSession::downloadOfferedMap()
     return true;
 }
 
+// What loadMapFile() and saveMapFile() refuse before touching the map, and the file's name, for their errors
+std::optional<QString> THeadlessSession::mapFileUsable(const QString& fileName)
+{
+    if (!usable()) {
+        return std::nullopt;
+    }
+    if (!QFileInfo(fileName).isAbsolute()) {
+        //: Error from a frontend with no window that was asked to load or save the map with a file that is not given by its whole path
+        mErrorString = tr("The map file must be given by its whole path.");
+        return std::nullopt;
+    }
+    if (mpHost->mpMap->importRunning() || mpHost->mpMap->hasActiveTransferProgress()) {
+        //: Error from a frontend with no window that was asked to load or save the map while a map download, import or export runs
+        mErrorString = tr("A map download, import or export is running; wait for it to end.");
+        return std::nullopt;
+    }
+    return QFileInfo(fileName).fileName();
+}
+
+bool THeadlessSession::loadMapFile(const QString& fileName)
+{
+    const std::optional<QString> name = mapFileUsable(fileName);
+    if (!name) {
+        return false;
+    }
+    bool loaded = false;
+    const bool json = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
+    if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+        loaded = mpHost->importMapFile(fileName);
+    } else if (json) {
+        auto [jsonLoaded, reason] = mpHost->mpMap->importJsonMapFile(fileName);
+        loaded = jsonLoaded;
+        if (!loaded) {
+            mpHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
+                                   "reason: %2.")
+                                        .arg(fileName, reason));
+        } else {
+            // As loadJsonMap() does, so the map is drawn again as for the other two
+            mpHost->mpMap->announceMapLoaded(true);
+        }
+    } else {
+        loaded = mpHost->loadMapFile(fileName);
+    }
+    if (!loaded) {
+        //: Error from a frontend with no window whose map file did not load; the main console says why. %1 is the file's name.
+        mErrorString = tr("Could not load map from %1.").arg(*name);
+        return false;
+    }
+    // TMap::audit() is what says "[  OK  ]" in the console for the map's load
+    if (!json) {
+        mpHost->mpMap->audit();
+    }
+    return true;
+}
+
+bool THeadlessSession::saveMapFile(const QString& fileName)
+{
+    const std::optional<QString> name = mapFileUsable(fileName);
+    if (!name) {
+        return false;
+    }
+    bool saved = false;
+    if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+        saved = mpHost->saveMapFile(fileName, 0);
+    } else {
+        auto [jsonSaved, reason] = mpHost->mpMap->writeJsonMapFile(fileName);
+        saved = jsonSaved;
+        if (!saved) {
+            //: %1 is the file the map was being exported to, %2 why it could not be
+            mpHost->postMessage(tr("[ ERROR ] - Unable to save JSON map file: %1\n"
+                                   "reason: %2.")
+                                        .arg(fileName, reason));
+        }
+    }
+    if (!saved) {
+        //: Error from a frontend with no window whose map could not be saved to a file. %1 is the file's name.
+        mErrorString = tr("Could not save map to %1.").arg(*name);
+        return false;
+    }
+    return true;
+}
+
 namespace {
 
 // The combinations TCommandLine::event() acts on without offering them to a binding, or for a keypad key, once

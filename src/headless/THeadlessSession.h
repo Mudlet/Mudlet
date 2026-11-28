@@ -361,6 +361,18 @@ public:
     // and mapDownloadFinished says how it ended. False, with errorString() saying why, with no map offered, while a
     // map download, import or export runs, and where submit() is refused.
     bool downloadOfferedMap();
+    // Loads a map file in place of the profile's map, as the Mapper tab of the GUI's preferences does: a path that ends
+    // in .xml, in any case, as Mudlet's XML map, .json as its JSON map, and anything else as its binary map, each
+    // checked, said in the main console and shown as there. A JSON or XML map's progress is shown with
+    // mapProgressStarted, mapProgressChanged and mapProgressFinished while this runs, and a JSON one's is aborted by
+    // cancelMapOperation() from a handler of them, leaving the profile's map as it was, as a file that is not such a map
+    // does. False, with errorString() saying why, for a path that is not absolute, a map that did not load, an aborted
+    // JSON import, while a map download, import or export runs, and where submit() is refused.
+    bool loadMapFile(const QString& fileName);
+    // Saves the profile's map to a file, as that tab does: a path that ends in .json, in any case, as Mudlet's JSON map,
+    // with its progress as above, and anything else as its binary map in the format the profile saves its maps in.
+    // False, with errorString() saying why, as for loadMapFile(), and for a file that could not be written.
+    bool saveMapFile(const QString& fileName);
     // A key pressed as on the GUI's input line, which offers it to the profile's key bindings where that line
     // would: the first that matches runs, or each one when the profile runs them all. The key and modifiers are
     // those of Qt's key event, which a binding must match exactly, so a key on the keypad carries
@@ -1431,6 +1443,9 @@ private:
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
+    // usable() for loadMapFile() and saveMapFile(), which also refuse a path that is not absolute and a map download,
+    // import or export under way: the file's name, for their errors, or none, with mErrorString saying why
+    std::optional<QString> mapFileUsable(const QString& fileName);
     // Lua's own message, out of what the GUI's error console shows of it
     static QString luaErrorOf(const QString& consoleText);
     static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);

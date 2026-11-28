@@ -254,6 +254,8 @@ public:
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.
     bool mapOperationInProgress() const { return mMapOperationDepth > 0; }
+    // A map download or XML import is under way, which downloadMap() and importMap() refuse a second of
+    bool importRunning() const { return mImportRunning; }
     // Ask an operation that is in progress to stop at its next opportunity, so
     // that a caller waiting on the above does not wait for a whole map. Only the
     // JSON import and export poll this; an XML import or a download runs to its

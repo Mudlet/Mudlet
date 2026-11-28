@@ -371,6 +371,13 @@ steps, where only the session's own signals are delivered, so its start and chan
 the `start()` that loads a JSON map, still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
 through `host()`, carries on after its script returns.
 
+`loadMapFile()` and `saveMapFile()` are the Mapper tab's Load and Save buttons of the GUI's preferences, for an
+app that has no such tab: the file's ending picks Mudlet's XML, JSON or binary map, as the GUI's file dialog does,
+a binary map is saved in the format the profile saves its maps in, and the main console says how it went, as in
+the GUI. They run within their call, as a script's `loadMap()` does, so a JSON or XML map's progress arrives as
+for a script's import, and `cancelMapOperation()` from a handler of it aborts a JSON one, leaving the profile's map
+as it was. They take only a whole path, and refuse while a map download, import or export runs.
+
 A map operation or package download still open when its profile closes, or when `shutdown()` or a later
 `start()` lets the profile go, gets its end there, so every start an app is sent is followed by one end.
 A session that is deleted sends none.
