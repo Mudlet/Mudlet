@@ -702,8 +702,9 @@ public:
     // follows, also when nothing changed. False, with errorString() saying why, where the pointer calls are, and
     // where the last render showed no area.
     bool moveMapView(MapTarget map, const QPointF& pan, qreal zoom, const QPointF& about);
-    // Centres that map on the player's room and has it follow the player again; mapRepaintRequested follows. False,
-    // with errorString() saying why, as moveMapView() is, and with no room the player is in.
+    // Centres that map on the player's room and has it follow the player again; mapRepaintRequested follows. As the
+    // GUI's map does, the map's first room stands in for the player's while the player is in none. False, with
+    // errorString() saying why, as moveMapView() is, and for a map with no rooms.
     bool followPlayerOnMap(MapTarget map);
     // Shows that level of the area the map drew last, about the same point, as the GUI's level buttons do, until the
     // player moves to another room or followPlayerOnMap(); mapRepaintRequested follows. False, with errorString()
@@ -711,8 +712,9 @@ public:
     bool showMapLevel(MapTarget map, int level);
     // Shows that area on the map, as picking it in the GUI's area box does: following the player where they are in
     // it, else about the room nearest the middle of its current level, or of its level with the most rooms where it
-    // has none on the current one; mapRepaintRequested follows. False, with errorString() saying why, where
-    // moveMapView() is but for a last draw that showed no area, and for an area not in the map or with no rooms.
+    // has none on the current one, the script's map raising sysMapAreaChanged as the GUI's does; mapRepaintRequested
+    // follows. False, with errorString() saying why, where moveMapView() is but for a last draw that showed no area,
+    // and for an area not in the map or with no rooms.
     bool showMapArea(MapTarget map, int areaId);
     // Walks the player to the room, as a double-click on it on the GUI's map does, with the profile's doSpeedWalk()
     // or else the shortest path by known exits. False, with errorString() saying why, for a room not in the map, with
@@ -727,8 +729,9 @@ public:
     };
     // What a map's last render laid out, for an app to place what it draws over the map and to keep a gesture in
     // step with it: the area and level drawn, the zoom (rooms across the narrow side) and the most moveMapView()
-    // zooms out to, whether it follows the player, the player's room, a room's cell in pixels, the rooms of that
-    // area and level it drew, at most 500, those nearest the middle where there were more, and the area's levels
+    // zooms out to, whether it follows the player, the player's room as followPlayerOnMap() takes it, a room's cell
+    // in pixels, the rooms of that area and level it drew, at most 500, those nearest the middle where there were
+    // more, and the area's levels
     struct MapView
     {
         int areaId = 0;

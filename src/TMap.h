@@ -457,6 +457,8 @@ public:
     heuristicScale mHeuristicScale;
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
+    // mNewMove as a count, so each TNullMapView follows a move once although the first to see the flag clears it
+    quint64 mNewMoves = 0;
 
     // WARNING: Do not change this value without careful consideration - increasing
     // the default map format makes it difficult for players to share maps with

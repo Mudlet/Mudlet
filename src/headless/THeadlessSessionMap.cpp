@@ -312,7 +312,7 @@ bool THeadlessSession::showRoomOnAppMap(const int roomId)
     if (!usable()) {
         return false;
     }
-    if (!appMap()->showRoom(roomId)) {
+    if (!mpHost->mpMap->mpRoomDB->getRoom(roomId) || !appMap()->showRoom(roomId)) {
         //: Error from a frontend with no window that was asked to show a room on its own 2D map that is not in the map; %1 is the room's id
         mErrorString = tr("There is no room %1 in the map.").arg(roomId);
         return false;
@@ -339,7 +339,11 @@ bool THeadlessSession::centreMapOnRoom(const int roomId)
 
 void THeadlessSession::closeAppMap()
 {
-    delete mpAppMap.data();
+    // Later, as a handler of a signal raised while it draws can call this
+    if (mpAppMap) {
+        mpAppMap->deleteLater();
+        mpAppMap.clear();
+    }
 }
 
 TNullMapView* THeadlessSession::drawnMap(const MapTarget map)
@@ -398,8 +402,8 @@ bool THeadlessSession::followPlayerOnMap(const MapTarget map)
         return false;
     }
     if (!pView->follow()) {
-        //: Error from a frontend with no window that was asked to centre the 2D map on the player while the map has no room for the player
-        mErrorString = tr("The map has no room the player is in.");
+        //: Error from a frontend with no window that was asked to centre the 2D map on the player while the map has no rooms
+        mErrorString = tr("The map has no rooms.");
         return false;
     }
     return true;

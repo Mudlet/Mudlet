@@ -83,14 +83,22 @@ QString shownUrl(const QUrl& url)
 // A reply's error text names its URL, which it shows as shownUrl() does
 QString withShownUrl(QString text, const QNetworkReply& reply)
 {
+    QList<std::pair<QString, QString>> forms;
     for (const QUrl& url : {reply.request().url(), reply.url()}) {
         const QString shown = shownUrl(url);
         for (const QString& form : {url.toString(), url.toString(QUrl::FullyEncoded), url.toDisplayString()}) {
             // An empty one would be replaced between every character
             if (!form.isEmpty() && form != shown) {
-                text.replace(form, shown);
+                forms.append({form, shown});
             }
         }
+    }
+    // Longest first: a redirect can add to the URL asked for, whose replacement would leave what it added behind
+    std::sort(forms.begin(), forms.end(), [](const std::pair<QString, QString>& a, const std::pair<QString, QString>& b) {
+        return a.first.size() > b.first.size();
+    });
+    for (const auto& [form, shown] : forms) {
+        text.replace(form, shown);
     }
     return text;
 }

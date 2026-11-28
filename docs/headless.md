@@ -1112,11 +1112,12 @@ follows each call. A move that leaves the view off the player, as a pan or a zoo
 middle does, stops the map following the player until the player moves to another room, as the GUI's pan
 does, or until `followPlayerOnMap()` centres it on the player again. `mapView()` says what the last draw laid
 out, for an app to keep what it draws over the map, and a gesture still under way, in step with it: the area
-and level, the zoom and its limits, whether it follows the player, the player's room, a room's cell in pixels
+and level, the zoom and its limits, whether it follows the player, the player's room (the map's first room while
+the player is in none, as the GUI's map takes it), a room's cell in pixels
 and the rooms of that area and level it drew, each at its middle, at most 500, those nearest the middle where
 there were more, and the levels of that area that have rooms. Both calls are false, with the reason in `errorString()`, where `mapPointer()` and
-`appMapPointer()` are, and for a map whose last draw showed no area; `followPlayerOnMap()` also with no room
-for the player.
+`appMapPointer()` are, and for a map whose last draw showed no area; `followPlayerOnMap()` also for a map with no
+rooms.
 
 An app that shows the map info box itself, in its own text, calls `setMapInfoPainted(false)`: `renderMap()` and
 `renderAppMap()` then leave the box out, and `mapInfo()` gives what a map's last draw would have painted, the
@@ -1127,7 +1128,8 @@ as before, a script's in Lua, so `mapInfo()` changes only with a draw, and `mapR
 `showMapLevel()` and `showMapArea()` are the GUI's level buttons and area box for those maps. A level is one of
 the area's that has rooms, shown about the same point; an area is shown following the player where they are in
 it, else about the room nearest the middle of the level shown, or of its level with the most rooms where it has
-none on that one. Either leaves the map off the player as a pan does. They are false, with the reason in
+none on that one. Either leaves the map off the player as a pan does, and an area shown on the script's map raises
+`sysMapAreaChanged` as the area box does. They are false, with the reason in
 `errorString()`, where `moveMapView()` is (`showMapArea()` also when the last draw showed no area), and for a level
 or an area with no rooms. `centreMapOnRoom()` centres the script's map on a room as choosing it in the GUI's map
 search does, leaving the map off the player and the selection as it was; it is false before `renderMap()` has drawn

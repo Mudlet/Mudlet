@@ -48,8 +48,6 @@ public:
     // a window shown enlarged is laid out at size times layoutScale, from 1 to 16, and drawn scaled down to size; the
     // positions given to and taken from this view stay in size's pixels
     void render(QPainter&, const QSize&, qreal layoutScale = 1.0);
-    // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
-    // to T2DMap, menus and dragging aside
     // Cleared for an app that shows the map info box itself: render() then leaves the box out and mapInfo() holds
     // what it would have painted
     void setMapInfoPainted(bool painted) { mView.mPaintMapInfo = painted; }
@@ -59,6 +57,8 @@ public:
     QSize renderedSize() const { return mRenderedSize; }
     // Whether the last render() laid out an area's rooms, which a press and a wheel turn act on
     bool showsArea() const;
+    // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
+    // to T2DMap, menus and dragging aside
     void press(const QPoint&, Qt::MouseButton, Qt::KeyboardModifiers);
     void doubleClick(const QPoint&);
     // False for less than half a notch, which T2DMap ignores
@@ -84,8 +84,8 @@ public:
     // about the room nearest the middle of its current level, or of its level with the most rooms where it has no
     // rooms on the current one; false for an area that is not in the map or has no rooms
     bool showArea(int areaId);
-    // Whether the view follows the player: not from a move(), showRoom(), showLevel() or showArea() that left it off
-    // the player, until the player moves to another room or follow()
+    // Whether the view follows the player: not from a move(), showRoom(), showLevel(), showArea() or centerViewOn()
+    // that left it off the player, until the player moves to another room or follow()
     bool following() const { return mFollowing; }
     // The most a move() zooms the area out to: half as much again as fits its widest side, and at least 30 rooms
     // across, or the zoom the area is at where that is more already
@@ -103,11 +103,11 @@ public:
     const QList<DrawnRoom>& drawnRooms() const { return mDrawnRooms; }
     // What the last render() laid out: the area, the level, the zoom (rooms across the narrow side) and a room's
     // cell in the frame's pixels
-    int drawnAreaId() const { return mView.mAreaID; }
-    int drawnLevel() const { return mView.mMapCenterZ; }
+    int drawnAreaId() const { return mDrawnAreaId; }
+    int drawnLevel() const { return mDrawnLevel; }
     // The levels of the area the last render() laid out that have rooms, lowest first
     QList<int> drawnLevels() const;
-    qreal drawnZoom() const { return mView.xyzoom; }
+    qreal drawnZoom() const { return mDrawnZoom; }
     qreal drawnRoomSize() const { return mView.mRoomWidth / mLayoutScale; }
     // The room the map takes as the player's: paint() and TMapPainter take the first room where the player's is gone
     int playerRoomId() const;
@@ -149,6 +149,9 @@ public:
 private:
     void schedulePaint();
     void paint();
+    void followPlayer();
+    bool takeNewMove();
+    void leavePlayer();
     void requestRepaint();
     void raiseAreaChanged(int areaId, int lastViewedAreaId);
     void forgetDeletedRoom(int roomId);
@@ -176,10 +179,14 @@ private:
     int mFollowedAreaId = 0;
     bool mLaidOut = false;
     QList<TMapPainter::MapInfoLine> mMapInfo;
-    // Cleared by a move(), showRoom(), showLevel() or showArea() that leaves the view off the player, set again as it
-    // follows the player
     bool mFollowing = true;
     QList<DrawnRoom> mDrawnRooms;
+    // Of the last render(), as showArea() and the like change mView before the next
+    int mDrawnAreaId = 0;
+    int mDrawnLevel = 0;
+    qreal mDrawnZoom = 0.0;
+    // TMap::mNewMoves as this view last followed or left the player
+    quint64 mNewMovesTaken = 0;
     // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn
     struct PendingZoom
     {

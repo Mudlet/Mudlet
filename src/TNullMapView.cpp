@@ -141,9 +141,13 @@ void TNullMapView::schedulePaint()
 // moves the view, as only a paintEvent() moves T2DMap's, so the pointer acts on what was drawn.
 void TNullMapView::paint()
 {
-    if (!mShown) {
-        return;
+    if (mShown) {
+        followPlayer();
     }
+}
+
+void TNullMapView::followPlayer()
+{
     TMap* pMap = mpHost->mpMap.data();
     TRoomDB* pRoomDB = pMap->mpRoomDB.get();
     int playerRoomId = pMap->mRoomIdHash.value(pMap->mProfileName);
@@ -156,11 +160,32 @@ void TNullMapView::paint()
     if (!pPlayerRoom) {
         return;
     }
-    if ((mRecentre || mView.mShiftMode) && centredRoomId() == playerRoomId && !pMap->mNewMove) {
+    const bool newMove = takeNewMove();
+    if ((mRecentre || mView.mShiftMode) && centredRoomId() == playerRoomId && !newMove) {
         return;
     }
-    pMap->mNewMove = false;
     followRoom(playerRoomId, pPlayerRoom->getArea());
+}
+
+// The script's map and the app's both follow a move, but TMap::mNewMove is one flag, which the first to see clears
+bool TNullMapView::takeNewMove()
+{
+    TMap* pMap = mpHost->mpMap.data();
+    if (pMap->mNewMove) {
+        pMap->mNewMove = false;
+        ++pMap->mNewMoves;
+    }
+    const bool newMove = mNewMovesTaken != pMap->mNewMoves;
+    mNewMovesTaken = pMap->mNewMoves;
+    return newMove;
+}
+
+// Off the player until the player moves again: a move not yet followed was asked for before this
+void TNullMapView::leavePlayer()
+{
+    mRecentre = false;
+    mFollowing = false;
+    takeNewMove();
 }
 
 void TNullMapView::followRoom(const int roomId, const int areaId)
@@ -246,8 +271,7 @@ bool TNullMapView::move(const QPointF& pan, const qreal zoom, const QPointF& abo
     // A zoom about the middle keeps following the player, and a centring the player's move asked for
     if (!pan.isNull() || (zoomed && !fromMiddle.isNull())) {
         // As showRoom(): still in shift mode for the player's room, so the next frame keeps this centre
-        mRecentre = false;
-        mFollowing = false;
+        leavePlayer();
         mView.mShiftMode = true;
         mView.mRoomID = playerRoomId();
     }
@@ -309,9 +333,9 @@ void TNullMapView::raiseAreaChanged(const int areaId, const int lastViewedAreaId
 // With the settings T2DMap::init() and dlgMapper take from the profile and the main window
 void TNullMapView::render(QPainter& painter, const QSize& size, const qreal layoutScale)
 {
-    // The repaint a player's move asks for can come before the paint() it schedules, and TMapPainter would then
-    // centre on the player itself, leaving paint() nothing to follow
-    paint();
+    // The repaint a player's move asks for can come before the paint() it schedules, and a hidden view schedules
+    // none; TMapPainter would then centre on the player itself, clearing the move for the other view
+    followPlayer();
     TMap* pMap = mpHost->mpMap.data();
     const qreal scale = qIsFinite(layoutScale) ? qBound(1.0, layoutScale, 16.0) : 1.0;
     TMapPainter::View view = mView;
@@ -350,6 +374,9 @@ void TNullMapView::render(QPainter& painter, const QSize& size, const qreal layo
     });
     painter.restore();
     mView = result.view;
+    mDrawnAreaId = mView.mAreaID;
+    mDrawnLevel = mView.mMapCenterZ;
+    mDrawnZoom = mView.xyzoom;
     mRenderedSize = size;
     mLayoutScale = scale;
     mMapInfo = result.mapInfo;
@@ -385,8 +412,7 @@ bool TNullMapView::centreOnRoom(const int roomId)
     if (!pRoomDB->getRoom(playerRoomId)) {
         playerRoomId = pRoomDB->getRoomMap().constBegin().key();
     }
-    mRecentre = false;
-    mFollowing = false;
+    leavePlayer();
     mPendingZoom.reset();
     mView.mAreaID = pRoom->getArea();
     mView.mMapCenterX = pRoom->x();
@@ -406,8 +432,7 @@ bool TNullMapView::showLevel(const int level)
         return false;
     }
     // As move(): in shift mode for the player's room, so the next frame keeps this level
-    mRecentre = false;
-    mFollowing = false;
+    leavePlayer();
     mView.mMapCenterZ = level;
     mView.mShiftMode = true;
     mView.mPick = false;
@@ -459,8 +484,7 @@ bool TNullMapView::showArea(const int areaId)
         TMapPainter::pruneSelectionToArea(mpHost->mpMap.data(), mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
     }
     // As showRoom(), without selecting the room
-    mRecentre = false;
-    mFollowing = false;
+    leavePlayer();
     mPendingZoom.reset();
     mView.mAreaID = areaId;
     mView.mMapCenterX = (*nearest)->x();
@@ -469,13 +493,18 @@ bool TNullMapView::showArea(const int areaId)
     mView.mShiftMode = true;
     mView.mPick = false;
     mView.mRoomID = playerRoomId();
+    if (mView.mLastViewedAreaID != areaId) {
+        const int lastViewedAreaId = mView.mLastViewedAreaID;
+        mView.mLastViewedAreaID = areaId;
+        raiseAreaChanged(areaId, lastViewedAreaId);
+    }
     requestRepaint();
     return true;
 }
 
 QList<int> TNullMapView::drawnLevels() const
 {
-    const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID);
+    const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mDrawnAreaId);
     return pArea && mLaidOut ? pArea->zLevels : QList<int>();
 }
 
@@ -634,9 +663,7 @@ std::pair<bool, QString> TNullMapView::centerViewOn(const int roomId)
     if (shownAreaId() != areaId) {
         TMapPainter::pruneSelectionToArea(pMap, mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
     }
-    mRecentre = false;
-    // The pan is the later request, so a recentre on the player still pending from earlier must not undo it
-    pMap->mNewMove = false;
+    leavePlayer();
     mPendingZoom.reset();
     mView.mAreaID = areaId;
     mView.mRoomID = playerRoomId;

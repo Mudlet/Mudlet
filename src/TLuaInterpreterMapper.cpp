@@ -815,7 +815,12 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 
     if (!movePlayer) {
-        if (auto [centered, refusal] = host.mapViewFrontend()->centerViewOn(roomId); !centered) {
+        TMapViewFrontend* pView = host.mapViewFrontend();
+        // An app's own map counts as open but keeps its own centre
+        if (!pView) {
+            return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+        }
+        if (auto [centered, refusal] = pView->centerViewOn(roomId); !centered) {
             return warnArgumentValue(L, __func__, refusal);
         }
         lua_pushboolean(L, true);

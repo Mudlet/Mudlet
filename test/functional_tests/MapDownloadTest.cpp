@@ -149,6 +149,8 @@ public:
         // 200 with a Content-Length far larger than what is ever sent, so the
         // download stays in flight until the client gives up on it
         Stalled,
+        // 302 to the body, as the Location
+        Redirect,
     };
 
     explicit StubMapServer(QObject* parent = nullptr)
@@ -265,6 +267,11 @@ private:
             sendHeader(socket, scmAssumedFileSize);
             socket->write(route.body);
             socket->flush();
+            return;
+        case Answer::Redirect:
+            socket->write("HTTP/1.1 302 Found\r\nLocation: " + route.body + "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            socket->flush();
+            socket->disconnectFromHost();
             return;
         }
     }
@@ -1146,6 +1153,21 @@ private slots:
             offer(location);
             QCOMPARE(pMap->getMmpMapLocation(), location);
         }
+    }
+
+    // The URL a redirect leads to can be the one asked for and more, a token say, which is no more shown than that
+    void test_aRedirectsUrlIsShownAsItsHostToo()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        mpMapServer->serve(qsl("/redirected"), QByteArrayLiteral("/redirected.gone?token=SECRET"), StubMapServer::Answer::Redirect);
+        QSignalSpy finishedSpy(pMap, &TMap::signal_mapDownloadFinished);
+        QVERIFY2(runDownload(mpMapServer->url(qsl("/redirected"))), "the redirected download never finished");
+        QVERIFY2(mpMapServer->requestedPaths().contains(qsl("/redirected.gone?token=SECRET")), "the redirect was not followed");
+        QCOMPARE(finishedSpy.count(), 1);
+        const QString reason = finishedSpy.at(0).at(1).toString();
+        QVERIFY2(reason.contains(qsl("Map download encountered an error")), qPrintable(reason));
+        QVERIFY2(!reason.contains(qsl("SECRET")) && !reason.contains(qsl(".gone")), qPrintable(reason));
+        QVERIFY2(!consoleShows(qsl("SECRET")), qPrintable(consoleTextSinceMark()));
     }
 
     // A location TMap was given directly, past Host's check, is still not fetched
