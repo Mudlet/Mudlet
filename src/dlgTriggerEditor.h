@@ -55,6 +55,7 @@
 
 #include <QDialog>
 #include <QDockWidget>
+#include <QElapsedTimer>
 #include <QFlag>
 #include <QHash>
 #include <QIcon>
@@ -267,6 +268,7 @@ public:
     // On the regions, not the window: Host::setProfileStyleSheet() gives the window the profile's Lua sheet. Reads the
     // application palette: a sheet freezes its widget's palette, and the palette change is undelivered in changeEvent().
     void applyEditorShellStyle();
+    void inkEditorTrees();
     // The options menu hangs off the window, out of the shell sheets' reach, and is built after the first style
     // pass, so both call this
     void styleSearchOptionsMenu();
@@ -750,7 +752,7 @@ private:
         pItem->setData(0, IndexRole, subInstance);
     }
 
-    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& subInstance = 0)
+    void setAllSearchData(QTreeWidgetItem* pItem, const QString& name, const QStringList& id, const SearchDataResultType& what, const int& pos = 0, const int& line = 0, const int& subInstance = 0)
     {
         // Which is it? A Trigger, an alias etc:
         pItem->setData(0, ItemRole, static_cast<int>(EditorViewType::cmVarsView));
@@ -765,8 +767,8 @@ private:
         // How far into the line/string is the start of the match, used to
         // position cursor there when chosen in search results
         pItem->setData(0, PositionRole, pos);
-        // Not used for variables:
-        pItem->setData(0, PatternOrLineRole, 0);
+        // Which line of a multi-line value the match is on (starting at 0):
+        pItem->setData(0, PatternOrLineRole, line);
         // If there is more than one match within what the above specify - which
         // one is it, (not all things support/need to support multiples)
         pItem->setData(0, IndexRole, subInstance);
@@ -806,6 +808,7 @@ private:
     void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+    void paintColorPatternButtons(dlgTriggerPatternEdit* pItem);
     void createPatternItem(int index);
     void showPatternItems(int count);
     void updatePatternPlaceholders();
@@ -1075,6 +1078,8 @@ private:
     uiDesign::SearchResultDelegate* mpSearchResultDelegate = nullptr;
     // Its length is how much of each snippet the marker covers
     QString mSearchTerm;
+    // The second click of a double-click on "Search variables too" lands on whichever result its search put there
+    QElapsedTimer mSearchVariablesOfferTaken;
 
     // This has a menu which the following QActions are inserted into:
     QAction* mpAction_searchOptions = nullptr;
@@ -1131,6 +1136,8 @@ private:
     bool mCleanResetQueued = false;
     // A reset that arrived before the editor was ever shown, run on first show unless a view switch populated the trees first
     bool mCleanResetDeferred = false;
+    // A reset saves an edit nobody asked to commit, so a trigger it does not compile for stays switched on
+    bool mSavingForReset = false;
     // Trigger IDs whose tree row is stale; refreshed in one tree walk on the
     // next event-loop turn, or when the editor is next shown, rather than one
     // O(tree) lookup per Lua toggle.

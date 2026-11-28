@@ -85,8 +85,11 @@ private:
     static void windowWidth(const int width)
     {
         mudlet::self()->resize(width, scmWindowHeight);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
     }
+
+    // A PTB's "Report issue" button makes the bar too long for a scmWindowWidth window
+    static int wideWidth() { return qMax(scmWindowWidth, mudlet::self()->width() - theBar()->width() + theBar()->sizeHint().width()); }
 
     // Tinting goes through premultiplied alpha, which can land a level off
     static bool sameInk(const QColor& first, const QColor& second)
@@ -380,10 +383,10 @@ private slots:
         QToolButton* pMore = overflowButton(pBar);
         QVERIFY2(pMore, "the bar has no overflow button");
         const auto restore = qScopeGuard([]() {
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
 
-        windowWidth(scmWindowWidth);
+        windowWidth(wideWidth());
         QVERIFY2(!pMore->isVisible(), "the overflow button is on show on a window every button fits in");
 
         for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light}) {
@@ -413,7 +416,7 @@ private slots:
             // Wider, not narrower: the window's minimum width can sit just under the folding width
             int wider = scmFoldingWidth;
             int fewer = hidden;
-            while (fewer == hidden && wider < scmWindowWidth) {
+            while (fewer == hidden && wider < wideWidth()) {
                 wider += 20;
                 windowWidth(wider);
                 fewer = hiddenButtons(pBar);
@@ -425,7 +428,7 @@ private slots:
         }
         TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
 
-        windowWidth(scmWindowWidth);
+        windowWidth(wideWidth());
         QVERIFY2(!pMore->isVisible(), "the overflow button stayed after the window grew back");
     }
 
@@ -439,7 +442,7 @@ private slots:
         const auto restore = qScopeGuard([&buttonFont]() {
             QApplication::setFont(buttonFont, "QToolButton");
             mudlet::self()->restyleMainToolBar();
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
 
         QFont smaller = buttonFont;
@@ -461,10 +464,11 @@ private slots:
         QToolBar* pBar = theBar();
         QLayout* pLayout = pBar->layout();
         const auto restore = qScopeGuard([]() {
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
-        windowWidth(scmWindowWidth);
+        windowWidth(wideWidth());
         QVERIFY2(pBar->styleSheet().contains(qsl("QToolBarExtension { padding-left: 0px; padding-right: 0px; }")), "the overflow button has its side padding back");
+        QVERIFY2(!overflowButton(pBar)->isVisible(), "the bar folded on a window wide enough for every button, so the widths below are not its full ones");
 
         QHash<const QWidget*, int> fullWidths;
         for (int i = 0; i < pLayout->count(); ++i) {
@@ -475,7 +479,7 @@ private slots:
         }
 
         int foldedWidths = 0;
-        for (int width = scmWindowWidth; width > 0; width -= 2) {
+        for (int width = wideWidth(); width > 0; width -= 2) {
             mudlet::self()->resize(width, scmWindowHeight);
             // The bar lays out on the posted resize and layout request; no timer is involved
             QCoreApplication::sendPostedEvents();
@@ -533,7 +537,7 @@ private slots:
         QVERIFY(QTest::qWaitForWindowExposed(&window));
 
         window.resize(1, 200);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QVERIFY2(pGroup->isHidden() && pSpacer->isHidden(), "the narrowest window left the tail of the bar on show, so the count below proves nothing");
         int hiddenTools = 0;
         for (QToolButton* pButton : pBar->findChildren<QToolButton*>(QString(), Qt::FindDirectChildrenOnly)) {
@@ -550,7 +554,7 @@ private slots:
             if (pMore->isChecked()) {
                 pMore->click();
             }
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
         windowWidth(scmFoldingWidth);
         QVERIFY2(pMore->popupMode() != QToolButton::InstantPopup, "this window's height left Qt offering a menu rather than a row");
@@ -564,14 +568,14 @@ private slots:
         QVERIFY2(pMore->isChecked(), "the button did not stay lit while the row is open");
         // QMainWindow animates the bar open, and lays the row out as that ends
         QTRY_COMPARE(hiddenButtons(pBar), 0);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->text(), closedWord);
         QVERIFY2(pMore->toolTip() != closedTip, "the tooltip still offers to show buttons that are on show");
 
         pMore->click();
         QVERIFY(!pMore->isChecked());
         QTRY_COMPARE(hiddenButtons(pBar), hidden);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->text(), closedWord);
         QCOMPARE(pMore->toolTip(), closedTip);
     }
@@ -583,18 +587,18 @@ private slots:
         const int was = mudlet::self()->mToolbarIconSize;
         const auto restore = qScopeGuard([was]() {
             mudlet::self()->setToolBarIconSize(was);
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
         windowWidth(scmFoldingWidth);
 
         mudlet::self()->setToolBarIconSize(2);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->toolButtonStyle(), Qt::ToolButtonIconOnly);
         QCOMPARE(pMore->iconSize(), pBar->iconSize());
         const int iconOnlyWidth = pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt();
 
         mudlet::self()->setToolBarIconSize(3);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->toolButtonStyle(), Qt::ToolButtonTextUnderIcon);
         QCOMPARE(pMore->iconSize(), pBar->iconSize());
         QVERIFY2(pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() > iconOnlyWidth, "the button left no more room for a word than for a glyph alone");
@@ -602,8 +606,9 @@ private slots:
 
     void test_coloredIconsTakeTheColorsOfTheOldPictures()
     {
+        mudlet::self()->setColouredIcons(false);
         auto restore = qScopeGuard([]() {
-            mudlet::self()->setColouredIcons(false);
+            mudlet::self()->setColouredIcons(true);
             TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
         });
         const auto icon = [](const QString& objectName) {
@@ -636,7 +641,7 @@ private slots:
             TestPixels::setAppearanceAndWait(appearance);
             const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
             const QString said = appearanceSaidAs(appearance);
-            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map is in color with the switch off").arg(said)));
+            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map is in color with the icons set to grayscale").arg(said)));
 
             mudlet::self()->setColouredIcons(true);
             const Read map = read(icon(qsl("map_action")));
@@ -663,7 +668,7 @@ private slots:
             }
 
             mudlet::self()->setColouredIcons(false);
-            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map kept its color after the switch went off").arg(said)));
+            QVERIFY2(read(icon(qsl("map_action"))).saturation < 0.1, qPrintable(qsl("%1: Map kept its color after the icons were set to grayscale").arg(said)));
         }
     }
 
@@ -714,7 +719,7 @@ private slots:
 
         QToolBar* pDetachedBar = pDetachedWindow->findChild<QToolBar*>(qsl("detachedMainToolBar"));
         const QString sheet = pDetachedBar ? pDetachedBar->styleSheet() : QString();
-        QTest::qWait(20);
+        QCoreApplication::processEvents();
         const int overflowExtent = pDetachedBar ? pDetachedBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() : 0;
         mudlet::self()->slot_tabReattachRequested(mSecondHostname);
 

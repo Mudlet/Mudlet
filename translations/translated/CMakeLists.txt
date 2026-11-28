@@ -23,7 +23,8 @@
 
 message(STATUS "Building translations")
 
-find_package(Qt6LinguistTools 6.8.2 REQUIRED)
+# In a cross build only this form looks for the host tools under QT_HOST_PATH
+find_package(Qt6 6.8.2 REQUIRED COMPONENTS LinguistTools)
 get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
 
 file(GLOB TS_FILES *.ts)
@@ -52,7 +53,40 @@ if(NOT LUA_LOCATION)
   endif()
 endif()
 
-execute_process(
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua)
+set(translation_stats_file "${CMAKE_CURRENT_SOURCE_DIR}/translation-stats.json")
+
+if(LUA_LOCATION)
+  # The generator's output is deliberately not captured: its own warning about a
+  # missing lua-yajl is what explains empty statistics and English-only detection.
+  execute_process(
+          WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+          COMMAND ${LUA_LOCATION} ${CMAKE_CURRENT_SOURCE_DIR}/generate-translation-stats.lua
+          RESULT_VARIABLE stats_result)
+  if(NOT stats_result EQUAL 0)
+    if(stats_result MATCHES "^[0-9]+$")
+      set(stats_failure "with exit code ${stats_result}")
+    else()
+      set(stats_failure "when running ${LUA_LOCATION}: ${stats_result}")
+    endif()
+    message(WARNING
+          "Generating the translation statistics failed ${stats_failure}. "
+          "See the generator output above.")
+  endif()
+endif()
+
+# mudlet.qrc embeds the statistics, so the compile cannot start without the file.
+# With no interpreter the generator cannot run at all: write the same empty
+# statistics the script itself falls back to when it has no lua-yajl, instead of
+# letting configure succeed and the build fail later on a file no rule makes.
+if(NOT EXISTS "${translation_stats_file}")
+  if(LUA_LOCATION)
+    message(FATAL_ERROR
+          "The translation statistics generator did not produce ${translation_stats_file}, "
+          "which mudlet.qrc needs. See its output above.")
+  endif()
+  message(WARNING
+          "No Lua 5.1 interpreter was found, so the translation statistics will be empty. "
+          "Install Lua 5.1, or pass -DLUA_LOCATION=<interpreter>, to get them.")
+  file(WRITE "${translation_stats_file}" "{}")
+endif()
 

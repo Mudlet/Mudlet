@@ -153,8 +153,9 @@ private:
 const QString mainWindowSizeReporterName = qsl("mudlet_mainWindowSizeReporter");
 
 // Keeps the core's copy of TConsole::getMainWindowSize() current. That is the console's size less its
-// toolbars and command line, or its container's while a tab switch hides it, so a resize of any of
-// them, the console being hidden or shown, and its moving to another container all change it. A style
+// toolbars and command line, or the size it comes back to while a tab switch hides it (sizeComingBackTo()),
+// so a resize of any of them or of the window, the console being hidden or shown, and its moving to another
+// container all change it. A style
 // sheet's minimum size resizes a hidden part without a Resize event, hence StyleChange.
 class MainWindowSizeReporter : public QObject
 {
@@ -249,6 +250,7 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
         }
         if (docks > 1) {
             window->resizeDocks({dock.data()}, {total / docks}, orientation);
+            window->noteDockSidesKeepTheirDepth();
         }
     });
 }
@@ -480,6 +482,7 @@ void Host::setMainConsoleView(TMainConsole* view)
         mpNullConsoleFrontend->followView(view);
     } else if (mpConsole) {
         mpNullConsoleFrontend->resumeMainCommandLine();
+        mpNullConsoleFrontend->resumeMainText();
     }
     mpConsole = view;
     mpConsoleFrontend = view;
@@ -1449,6 +1452,10 @@ void TMainConsole::deleteLabel(const QString& name)
             mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
         }
 
+        // Hidden at once: a nested event loop (pumpEvents(), a JSON map import) can hold the deferred delete back, and a
+        // label left showing is painted until then. Its leave callback goes first, as hiding sends one under the mouse
+        pL->model().setLeave(0);
+        pL->hide();
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -2590,7 +2597,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
     return true;
 }
 
-QPoint TMainConsole::mousePosition() const
+std::optional<QPoint> TMainConsole::mousePosition() const
 {
     return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
@@ -3567,8 +3574,8 @@ void TMainConsole::resizeEvent(QResizeEvent* event)
     // MXP frames are positioned by hand against the space the borders leave, so
     // they have to be moved whenever the window or those borders change. The
     // zero width a tab switch gives the console it hides moves none of them,
-    // but is still reported, as the main window size is then measured from the
-    // container the console comes back to.
+    // but is still reported, as the main window size is then predicted from the
+    // size the console comes back to.
     mpMxpFrameWidgets->scheduleSizeReport(event->size().width() != 0);
 
     // Update the record of the text area size for NAWS purposes:
@@ -3692,6 +3699,12 @@ void TMainConsole::disableMapProgressDialogCancel()
         }
         mpMapProgressDialog->setCancelButton(nullptr);
     }
+}
+
+// Runs with the map operation on the stack; see TMap::mapOperationInProgress()
+void TMainConsole::repaintMapProgressDialog()
+{
+    QCoreApplication::processEvents();
 }
 
 void TMainConsole::closeMapProgressDialog()
@@ -3933,12 +3946,12 @@ void TMainConsole::applyBorders()
 {
     // A console put away by a tab switch is zero pixels wide, so the resize
     // event below tells it nothing about the room its new borders leave, and
-    // scripts are told about the container it comes back to instead
+    // scripts are told about the size it comes back to instead
     syncHiddenScreenDimensions();
     const QSize s = size();
     QResizeEvent event(s, s);
     QCoreApplication::sendEvent(this, &event);
-    const QSize reported = isHidden() && parentWidget() ? parentWidget()->size() : s;
+    const QSize reported = isHidden() && parentWidget() ? sizeComingBackTo() : s;
     raiseMudletSysWindowResizeEvent(reported.width(), reported.height());
 }
 
@@ -4264,7 +4277,6 @@ void TMainConsole::showStatistics()
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());
-    ;
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     //: Heading for the system's statistics information displayed in the console

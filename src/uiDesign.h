@@ -34,6 +34,7 @@
 #include <QVariant>
 
 class QAbstractButton;
+class QAbstractScrollArea;
 class QAction;
 class QBoxLayout;
 class QGridLayout;
@@ -104,7 +105,8 @@ ThemeTokens themeTokens();
 // with, read off a fresh one, since a stylesheet freezes the palette of the widget it is set on
 ThemeTokens themeTokens(const QPalette& themePalette);
 
-// The deepest accent wash anything is drawn on: accentText is walked to read on it, so it holds on every lighter one
+// The deepest accent wash anything is drawn on: accentText is walked to read on it, so it holds on every lighter one.
+// A pressed primary button lays the hover wash over it and inks itself with primaryPressedInk()
 inline constexpr qreal scmAccentWashStrength = 0.24;
 
 // Blue rather than green: "running" sits beside "broken" all over the editor, and a red-green colour-blind
@@ -123,6 +125,9 @@ QColor stateColor(const qreal hue, const bool darkPage);
 // with readableOn() against that surface.
 QColor errorInk(const ThemeTokens& tokens);
 
+// The ink on a pressed primary button, walked on from accentText until it reads on the pressed wash over page, pane and card
+QColor primaryPressedInk(const ThemeTokens& tokens);
+
 // Light enough that the words on the wash still read against the surface underneath
 inline constexpr qreal scmSoftWashStrength = 0.14;
 
@@ -133,6 +138,10 @@ inline constexpr qreal scmConsoleFootSeamStrength = 0.20;
 
 // A scroll area's own bars answer only to a descendant selector, hence the prefix. An invalid surface means the page.
 QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& tokens, const QColor& surface = QColor());
+
+// The vertical bar's width is taken from the viewport at all times and only the bar comes and goes, so what the
+// area shows keeps one width whether or not it scrolls
+void keepRoomForVerticalScrollBar(QAbstractScrollArea* pArea);
 
 // The view's delegate must paint the accent bar with paintAccentBar(): a coloured border-left bends into an arc at
 // the corner radius, so the border here is only a transparent gutter. rowGutter includes the bar's width.

@@ -31,7 +31,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
-#include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -81,10 +81,6 @@ static void cleanupSquirrelTempFiles()
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 : QObject(parent)
-#if !defined(Q_OS_MACOS)
-//: Label for the update/restart button in the main toolbar
-, mpInstallOrRestart(new QPushButton(tr("Update")))
-#endif
 , mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
@@ -179,25 +175,26 @@ void Updater::checkUpdatesOnStart()
 
     mPeriodicCheck->setInterval(12h);
     connect(mPeriodicCheck.get(), &QTimer::timeout, this, [this] {
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, this, [this]() {
-            auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-            qWarning() << "Twice-daily check for updates:" << updates.size() << "update(s) available";
-            if (updates.isEmpty()) {
-                return;
-            }
+        onNextFeedAnswer(
+                [this]() {
+                    auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+                    qWarning() << "Twice-daily check for updates:" << updates.size() << "update(s) available";
+                    if (updates.isEmpty()) {
+                        return;
+                    }
 
-            if (!updateAutomatically()) {
-                emit signal_updateAvailable(updates.size());
-                return;
-            }
+                    if (!updateAutomatically()) {
+                        emit signal_updateAvailable(updates.size());
+                        return;
+                    }
 
-            if (!downloadReleaseIfValid(updates.first())) {
-                emit signal_updateAvailable(updates.size());
-            }
-        });
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, this, [](const QString& error) {
-            qWarning() << "Twice-daily update check: failed to load feed:" << error;
-        });
+                    if (!downloadReleaseIfValid(updates.first())) {
+                        emit signal_updateAvailable(updates.size());
+                    }
+                },
+                [](const QString& error) {
+                    qWarning() << "Twice-daily update check: failed to load feed:" << error;
+                });
         feed->load();
     });
     mPeriodicCheck->start();
@@ -243,6 +240,28 @@ bool Updater::updateAutomatically() const
 #endif
 }
 
+// Not two single-shot connections: the one that doesn't fire would answer a later caller's load
+void Updater::onNextFeedAnswer(const std::function<void()>& onReady, const std::function<void(const QString&)>& onError)
+{
+    auto connections = std::make_shared<std::pair<QMetaObject::Connection, QMetaObject::Connection>>();
+    const auto stopListening = [connections]() {
+        disconnect(connections->first);
+        disconnect(connections->second);
+    };
+    connections->first = connect(feed.get(), &dblsqd::Feed::ready, this, [stopListening, onReady]() {
+        stopListening();
+        onReady();
+    });
+    connections->second = connect(feed.get(), &dblsqd::Feed::loadError, this, [this, stopListening, onError](const QString& error) {
+        // Feed::load() refusing to start a second load: the one running still answers
+        if (feed->isLoading()) {
+            return;
+        }
+        stopListening();
+        onError(error);
+    });
+}
+
 void Updater::manuallyCheckUpdates()
 {
 #if defined(Q_OS_MACOS)
@@ -257,14 +276,15 @@ void Updater::manuallyCheckUpdates()
     mManualCheckInProgress = true;
 
     feed->load();
-    KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, this, [this]() {
-        mManualCheckInProgress = false;
-        showDialogManually();
-    });
-    KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, this, [this](const QString& error) {
-        mManualCheckInProgress = false;
-        emit signal_updateCheckFailed(error);
-    });
+    onNextFeedAnswer(
+            [this]() {
+                mManualCheckInProgress = false;
+                showDialogManually();
+            },
+            [this](const QString& error) {
+                mManualCheckInProgress = false;
+                emit signal_updateCheckFailed(error);
+            });
 #endif
 }
 
@@ -285,13 +305,29 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 
-void Updater::showFullChangelog() const
+void Updater::showFullChangelog()
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, feed.get(), [=, this]() {
+        // Asked again while the feed is still loading: the first request will open it
+        if (mChangelogFeedReady) {
+            return;
+        }
+        // Both go once either answers, or the other would answer some later
+        // update check with a changelog or an error box nobody asked for
+        const auto stopWaiting = [this]() {
+            disconnect(std::exchange(mChangelogFeedReady, {}));
+            disconnect(std::exchange(mChangelogFeedError, {}));
+        };
+        mChangelogFeedReady = connect(feed.get(), &dblsqd::Feed::ready, this, [this, stopWaiting]() {
+            stopWaiting();
             showFullChangelog();
         });
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, feed.get(), [](const QString& error) {
+        mChangelogFeedError = connect(feed.get(), &dblsqd::Feed::loadError, this, [this, stopWaiting](const QString& error) {
+            // Feed::load() refusing to start a second load: the one running still answers
+            if (feed->isLoading()) {
+                return;
+            }
+            stopWaiting();
             qWarning() << "Failed to load feed for changelog:" << error;
             //: Error title for dialog shown when changelog fails to load
             QMessageBox::warning(nullptr,
@@ -299,7 +335,9 @@ void Updater::showFullChangelog() const
                                  //: Error message shown when changelog fails to load from the server
                                  tr("Could not load the changelog. Please try again later."));
         });
-        feed->load();
+        if (!feed->isLoading()) {
+            feed->load();
+        }
         return;
     }
 
@@ -424,8 +462,9 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -469,8 +508,9 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -726,14 +766,17 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
-        if (mUpdateInstalled) {
-            //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
-            mpInstallOrRestart->setText(tr("Restart to apply update"));
-        } else {
-            //: Label for the update button shown when the update installation failed
-            mpInstallOrRestart->setText(tr("Update failed"));
+        // Gone with its dialog once the application is quitting
+        if (mpInstallOrRestart) {
+            if (mUpdateInstalled) {
+                //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
+                mpInstallOrRestart->setText(tr("Restart to apply update"));
+            } else {
+                //: Label for the update button shown when the update installation failed
+                mpInstallOrRestart->setText(tr("Update failed"));
+            }
+            mpInstallOrRestart->setEnabled(true);
         }
-        mpInstallOrRestart->setEnabled(true);
         watcher->deleteLater();
     });
     watcher->setFuture(future);

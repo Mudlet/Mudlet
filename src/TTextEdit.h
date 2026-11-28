@@ -81,10 +81,12 @@ public:
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
     void resizeEvent(QResizeEvent* event) override;
+    void moveEvent(QMoveEvent* event) override;
     void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
+    void leaveEvent(QEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void updateScrollBar(int);
@@ -95,6 +97,7 @@ public:
     void endDrag() { mMouseTracking = false; }
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
+    bool hasSelectedText() const;
     int bufferScrollDown(int lines);
     // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b, int a) { mBgColor = QColor(r, g, b, a); }
@@ -121,8 +124,11 @@ public:
     void setCaretPosition(int line, int column);
     // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
     void moveCaretToLink(bool first);
+    QString linkAnnouncement(int linkIndex) const;
     void updateCaret();
     void showKeyboardContextMenu();
+    void showLinkMenuAt(int linkIndex, const QPoint& globalPosition, bool alreadyActivated = false);
+    QPoint caretGlobalPosition();
     void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;
@@ -141,6 +147,7 @@ public:
 
     friend class AnalyseCharactersTest;
     friend class CopyAsImageTest;
+    friend class CommandLineKeyHandlingTest;
     friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
@@ -167,6 +174,8 @@ public:
     int mPopupLinkIndex = 0;
     // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
     qint64 mPopupLinkIssue = 0;
+    // Activating a local: link with a menu opens the menu, so choosing an item must not change its selection a second time
+    bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
@@ -201,12 +210,12 @@ private slots:
     void slot_showSelectionAnalysis();
 
 private:
+    int mainWindowRows() const;
     void applyPendingScrollBarUpdate();
     void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
     QString selectionAnalysisHtml();
-    QPoint caretGlobalPosition();
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
@@ -226,7 +235,6 @@ private:
     void scheduleUpdate(const QRect& rect = QRect());
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex, bool isOutOfbounds);
     bool establishSelectedText();
-    bool hasSelectedText() const;
     std::pair<int, int> visibleLines();
     void expandSelectionToWords();
     void expandSelectionToLine(int);
@@ -286,7 +294,6 @@ private:
     // Owns the timestamp text the layouts' graphemes view; formatTimeStamp()
     // keeps only its latest result, and the line text itself lives in TBuffer.
     mutable std::vector<QString> mLaidOutTimeStamps;
-    std::unique_ptr<TGlyphCache> mpGlyphCache;
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate = false;
@@ -313,6 +320,8 @@ private:
     int mCtrlDragStartY{};
     QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos = 0;
+    // The buffer's linesTrimmedTotal() when mOldScrollPos was taken
+    qint64 mLinesTrimmedAtOldScrollPos = 0;
     // top-left point of the selection
     QPoint mPA;
     // bottom-right point of the selection
@@ -394,8 +403,8 @@ private:
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
 #endif
 
-    // We scroll on the basis that one vertical mouse wheel click is one line
-    // (vertically, not really concerned about horizontal stuff at present).
+    // We scroll on the basis that one mouse wheel click is three lines, or
+    // three columns when the horizontal scroll bar is on.
     // According to Qt: "Most mouse types work in steps of 15 degrees, in which
     // case the delta value is a multiple of 120;
     // i.e., 120 units * 1/8 = 15 degrees.
@@ -406,8 +415,8 @@ private:
     // partially scroll the widget in response to each wheel event. But to
     // provide a more native feel, you should prefer pixelDelta() on platforms
     // where it's available."
-    // We use the following to store the remainder (modulus 120):
-    QPoint mMouseWheelRemainder;
+    // Degrees not yet used up by a whole 15 degree step:
+    QPointF mMouseWheelRemainder;
 
     // skip over the following characters when searching for a word
     const QStringList mCtrlSelectionIgnores = {" ", ".", ",", ";", ":", "\"", "'", "`", "!", "?", "\\", "/", "|", "~", "*", "(", ")", "[", "]", "{", "}", "<", ">"};

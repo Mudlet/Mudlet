@@ -40,9 +40,21 @@
  * a future regression; it is not evidence that the deferred refresh is
  * load-bearing, and #8273 itself is not reproduced here.
  *
+ * A miniconsole's wrap, unlike its columns, is whatever its scripts last set,
+ * and even behind another tab a profile wraps the text it receives at it. So
+ * the window being resized has to reach those scripts, opening another
+ * profile must not squeeze the one in front, as its scripts would lay out for
+ * the squeeze, and a profile's wrap must allow for its own docks, not the
+ * front profile's.
+ *
  * Run with: ctest -R ProfileSwitchMiniconsoleTest -V
  */
 
+#include <QDataStream>
+#include <QDockWidget>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -91,7 +103,9 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mFirstProfile = qsl("ProfileSwitchMiniconsole-First");
     const QString mSecondProfile = qsl("ProfileSwitchMiniconsole-Second");
+    const QString mThirdProfile = qsl("ProfileSwitchMiniconsole-Third");
     const QString mMiniconsoleName = qsl("switchSpecMiniconsole");
+    const QString mWrapMiniconsoleName = qsl("switchSpecWrapMiniconsole");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
@@ -156,6 +170,60 @@ private:
         return true;
     }
 
+    // sized off the main window and wrapped to fit it, as a game's chat window is
+    bool createAutoWrapMiniconsole(Host* pHost) const
+    {
+        const QString error = runLua(pHost,
+                                     qsl("if _wrapMiniconsole then return end\n"
+                                         "_wrapMiniconsole = Geyser.MiniConsole:new({\n"
+                                         "  name = '%1', x = '-40%', y = 0, width = '20%', height = '50%'\n"
+                                         "})\n"
+                                         "_wrapMiniconsole:enableAutoWrap()")
+                                             .arg(mWrapMiniconsoleName));
+        if (!error.isNull()) {
+            qWarning() << "createAutoWrapMiniconsole:" << error;
+            return false;
+        }
+        return true;
+    }
+
+    int autoWrapOf(Host* pHost) const
+    {
+        // assert(): a missing window answers nil and a message, which would read as a wrap of 0 that matches another
+        const QString error = runLua(pHost, qsl("_wrapNow = assert(getWindowWrap('%1'))").arg(mWrapMiniconsoleName));
+        if (!error.isNull()) {
+            qWarning() << "autoWrapOf:" << error;
+            return -1;
+        }
+        return luaGlobalNumber(pHost, qsl("_wrapNow"));
+    }
+
+    // A dock opened in a window too small for it grows the window, and is squeezed until shown again with room
+    void giveTheDocksRoom()
+    {
+        mudlet::self()->resize(1600, 900);
+        QTest::qWait(200ms);
+    }
+
+    // what the toolbar's Map button toggles, for the profile in front
+    QDockWidget* openMapDockOf(Host* pHost)
+    {
+        switchTo(pHost);
+        mudlet::self()->slot_showMapperDialog();
+        QTest::qWait(300ms);
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(pHost->getName()));
+        return pDock && pDock->isVisible() ? pDock : nullptr;
+    }
+
+    void closeMapDockOf(Host* pHost)
+    {
+        switchTo(pHost);
+        if (QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(pHost->getName())); pDock && pDock->isVisible()) {
+            mudlet::self()->slot_showMapperDialog();
+            QTest::qWait(300ms);
+        }
+    }
+
     // the tab bar is what setActiveProfile() drives, and what a player clicks
     void switchTo(Host* pHost)
     {
@@ -186,6 +254,46 @@ private:
         QVERIFY2(reportedColumns == refreshedColumns && reportedRows == refreshedRows,
                  qPrintable(qsl("%1 was left holding %2x%3 by the switch, and a refresh makes that %4x%5")
                                     .arg(QString::fromUtf8(what), QString::number(reportedColumns), QString::number(reportedRows), QString::number(refreshedColumns), QString::number(refreshedRows))));
+    }
+
+    // The profile in front shows its map dock and a user window on the same side, so both share its depth. Whether
+    // that side keeps its depth once the map dock goes with its profile is Qt's call; the hidden profile must match it.
+    void compareAHiddenProfileBesideTheFrontMapDockAndAUserWindow(const bool sideKeepsItsDepth, const bool resizeTheMapDock)
+    {
+        giveTheDocksRoom();
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("if not _hiddenResizeHandler then\n"
+                           "  _hiddenResizeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function() _hiddenResizes = _hiddenResizes + 1 end)\n"
+                           "end"))
+                        .isNull());
+        switchTo(mpSecondHost);
+        // Opened before the map dock: one opened beside it is squeezed, and the resizeDocks() that shares the side would stop Qt
+        // sizing sides from hints
+        QVERIFY(runLua(mpSecondHost, qsl("openUserWindow('_switchDock', false, true, 'right')")).isNull());
+        QTest::qWait(300ms);
+        QDockWidget* pDock = openMapDockOf(mpSecondHost);
+        QVERIFY2(pDock, "the map dock did not open");
+        if (resizeTheMapDock) {
+            mudlet::self()->resizeDocks({pDock}, {380}, Qt::Horizontal);
+            QTest::qWait(300ms);
+        }
+        const int frontWidth = mpSecondHost->mainConsoleView()->getMainWindowSize().width();
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+        QVERIFY(runLua(mpFirstHost, qsl("_widthBehind = getMainWindowSize()")).isNull());
+        const int widthBehind = luaGlobalNumber(mpFirstHost, qsl("_widthBehind"));
+
+        QVERIFY(runLua(mpFirstHost, qsl("_hiddenResizes = 0")).isNull());
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_widthNow = getMainWindowSize()\n_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int widthNow = luaGlobalNumber(mpFirstHost, qsl("_widthNow"));
+        QVERIFY2((widthNow == frontWidth) == sideKeepsItsDepth, qPrintable(qsl("the side is %1 wide now and was %2 behind the map dock").arg(widthNow).arg(frontWidth)));
+        QCOMPARE(widthBehind, widthNow);
+        QCOMPARE(wrapBehind, autoWrapOf(mpFirstHost));
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_hiddenResizes")), 0);
     }
 
 private slots:
@@ -298,6 +406,435 @@ private slots:
         int heightAfter = 0;
         QVERIFY(readGeyserSize(mpFirstHost, widthAfter, heightAfter));
         QVERIFY2(widthAfter > 0 && heightAfter > 0, qPrintable(qsl("the miniconsole reports %1x%2 to Lua after the switching").arg(QString::number(widthAfter), QString::number(heightAfter))));
+    }
+
+    void test_aWindowResizedBehindAnotherTabReachesItsMiniconsoles()
+    {
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QTest::qWait(200ms);
+        const int wrapBefore = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapBefore > 0, "the miniconsole was created with no wrap to speak of");
+        switchTo(mpSecondHost);
+
+        mudlet::self()->resize(mudlet::self()->width() - 200, mudlet::self()->height());
+        QTest::qWait(200ms);
+
+        // Text arriving now is wrapped at this, so it has to be the wrap for the window the profile comes back to
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapNeeded = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapNeeded > 0, "the miniconsole has no wrap after resetting it");
+        QVERIFY2(wrapNeeded != wrapBefore, "the resize did not change the wrap the window needs, so it tests nothing");
+        QCOMPARE(wrapBehind, wrapNeeded);
+    }
+
+    // Each profile shows only its own docks, so one behind another tab must keep the room its map dock takes
+    void test_aHiddenProfileKeepsRoomForItsOwnMapDock()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            closeMapDockOf(mpFirstHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        QVERIFY2(openMapDockOf(mpFirstHost), "the map dock did not open");
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapWithDock = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapWithDock > 0, "the miniconsole has no wrap to compare against");
+
+        switchTo(mpSecondHost);
+        QCOMPARE(autoWrapOf(mpFirstHost), wrapWithDock);
+
+        mudlet::self()->resize(mudlet::self()->width() + 200, mudlet::self()->height());
+        QTest::qWait(200ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        // what the game is told to wrap at, apart from what the scripts lay out
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapNeeded = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapNeeded > 0, "the miniconsole has no wrap after resetting it");
+        QVERIFY2(wrapNeeded != wrapWithDock, "the resize did not change the wrap the window needs, so it tests nothing");
+        QCOMPARE(wrapBehind, wrapNeeded);
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // The profile in front opening its dock narrows only its own share of the window
+    void test_aMapDockInFrontLeavesAHiddenProfileAlone()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            closeMapDockOf(mpSecondHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapBefore = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapBefore > 0, "the miniconsole has no wrap to compare against");
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("if not _hiddenResizeHandler then\n"
+                           "  _hiddenResizeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function() _hiddenResizes = _hiddenResizes + 1 end)\n"
+                           "end"))
+                        .isNull());
+        switchTo(mpSecondHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_hiddenResizes = 0")).isNull());
+
+        QVERIFY2(openMapDockOf(mpSecondHost), "the map dock did not open");
+        closeMapDockOf(mpSecondHost);
+        QVERIFY2(openMapDockOf(mpSecondHost), "the map dock did not open again");
+
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_hiddenResizes")), 0);
+        QCOMPARE(autoWrapOf(mpFirstHost), wrapBefore);
+    }
+
+    // A user window stays docked whichever profile is in front, so one docked in front narrows the hidden profile too
+    void test_aUserWindowDockedInFrontNarrowsAHiddenProfileToo()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("hideWindow('_switchDock')"));
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapBefore = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapBefore > 0, "the miniconsole has no wrap to compare against");
+        switchTo(mpSecondHost);
+
+        QVERIFY(runLua(mpSecondHost, qsl("openUserWindow('_switchDock', false, true, 'right')")).isNull());
+        QTest::qWait(300ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+        QVERIFY(runLua(mpFirstHost, qsl("_widthBehind = getMainWindowSize()")).isNull());
+        const int widthBehind = luaGlobalNumber(mpFirstHost, qsl("_widthBehind"));
+
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_widthNow = getMainWindowSize()\n_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapNeeded = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapNeeded != wrapBefore, "the docked user window did not change the wrap the window needs, so it tests nothing");
+        QCOMPARE(widthBehind, luaGlobalNumber(mpFirstHost, qsl("_widthNow")));
+        QCOMPARE(wrapBehind, wrapNeeded);
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // Docks on one side stack, so that side is as wide as the wider of the hidden profile's map and the user window
+    void test_aHiddenProfilesMapDockAndAUserWindowInFrontShareTheirSide()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("hideWindow('_switchDock')"));
+            closeMapDockOf(mpFirstHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        QVERIFY2(openMapDockOf(mpFirstHost), "the map dock did not open");
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        switchTo(mpSecondHost);
+
+        QVERIFY(runLua(mpSecondHost, qsl("openUserWindow('_switchDock', false, true, 'right')")).isNull());
+        QTest::qWait(300ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+        QVERIFY(runLua(mpFirstHost, qsl("_widthBehind = getMainWindowSize()")).isNull());
+        const int widthBehind = luaGlobalNumber(mpFirstHost, qsl("_widthBehind"));
+
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_widthNow = getMainWindowSize()\n_wrapMiniconsole:resetAutoWrap()")).isNull());
+        QCOMPARE(widthBehind, luaGlobalNumber(mpFirstHost, qsl("_widthNow")));
+        QCOMPARE(wrapBehind, autoWrapOf(mpFirstHost));
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // Before anything resizes a dock or restores a layout: until then, Qt sizes the side from the hints of the docks left on it
+    void test_aUserWindowLeftAloneOnItsSideByTheFrontMapDockShrinksToItsOwnHint()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("hideWindow('_switchDock')"));
+            closeMapDockOf(mpSecondHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        compareAHiddenProfileBesideTheFrontMapDockAndAUserWindow(false, false);
+    }
+
+    // Straight after the one above, while Qt still sizes sides from their hints: a restored layout stops that, as a resize does
+    void test_aRestoredLayoutLeavesAUserWindowAloneOnItsSideAtTheSidesDepth()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("hideWindow('_switchDock')"));
+            closeMapDockOf(mpSecondHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        // Removed once loaded, or opening the map dock restores it again over the user window
+        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
+        QFile layoutFile(layoutPath);
+        QVERIFY(layoutFile.open(QIODevice::WriteOnly));
+        QDataStream out(&layoutFile);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << mudlet::self()->saveState();
+        layoutFile.close();
+        const bool loaded = mudlet::self()->loadWindowLayout();
+        QFile::remove(layoutPath);
+        QVERIFY2(loaded, "the saved layout did not load");
+        compareAHiddenProfileBesideTheFrontMapDockAndAUserWindow(true, false);
+    }
+
+    // A window shrunk below what the docks and the console need squeezes the docks, so the console keeps its least room
+    void test_aHiddenProfileWhoseMapDockIsSqueezedKeepsTheConsolesLeastRoom()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            closeMapDockOf(mpFirstHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        QDockWidget* pDock = openMapDockOf(mpFirstHost);
+        QVERIFY2(pDock, "the map dock did not open");
+        mudlet::self()->resizeDocks({pDock}, {600}, Qt::Horizontal);
+        QTest::qWait(200ms);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        switchTo(mpSecondHost);
+
+        mudlet::self()->resize(960, mudlet::self()->height());
+        QTest::qWait(300ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        QCOMPARE(wrapBehind, autoWrapOf(mpFirstHost));
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // Qt keeps one depth for each side, so a dock resized narrower while a profile is hidden narrows its map dock too
+    void test_aDockSideResizedWhileAProfileIsHiddenResizesItsMapDockToo()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            closeMapDockOf(mpSecondHost);
+            closeMapDockOf(mpFirstHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        QDockWidget* pFirstDock = openMapDockOf(mpFirstHost);
+        QVERIFY2(pFirstDock, "the first profile's map dock did not open");
+        mudlet::self()->resizeDocks({pFirstDock}, {400}, Qt::Horizontal);
+        QTest::qWait(200ms);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QDockWidget* pSecondDock = openMapDockOf(mpSecondHost);
+        QVERIFY2(pSecondDock, "the second profile's map dock did not open");
+        mudlet::self()->resizeDocks({pSecondDock}, {250}, Qt::Horizontal);
+        QTest::qWait(300ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+        QVERIFY(runLua(mpFirstHost, qsl("_widthBehind = getMainWindowSize()")).isNull());
+        const int widthBehind = luaGlobalNumber(mpFirstHost, qsl("_widthBehind"));
+
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_widthNow = getMainWindowSize()\n_wrapMiniconsole:resetAutoWrap()")).isNull());
+        QCOMPARE(widthBehind, luaGlobalNumber(mpFirstHost, qsl("_widthNow")));
+        QCOMPARE(wrapBehind, autoWrapOf(mpFirstHost));
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // Once a dock has been resized, Qt keeps each side as deep as it is
+    void test_aUserWindowLeftAloneOnItsSideByTheFrontMapDockKeepsTheSidesDepth()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("hideWindow('_switchDock')"));
+            closeMapDockOf(mpSecondHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        compareAHiddenProfileBesideTheFrontMapDockAndAUserWindow(true, true);
+    }
+
+    // A user window docked on the map dock's side in front leaves the console in front as it was, but not a hidden profile
+    void test_aUserWindowDockedBelowTheFrontMapDockReachesAHiddenProfile()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("hideWindow('_switchDock')"));
+            closeMapDockOf(mpSecondHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QVERIFY2(openMapDockOf(mpSecondHost), "the map dock did not open");
+        const int frontWidth = mpSecondHost->mainConsoleView()->getMainWindowSize().width();
+        QVERIFY(runLua(mpSecondHost, qsl("openUserWindow('_switchDock', false, true, 'right')")).isNull());
+        QTest::qWait(300ms);
+        QVERIFY2(mpSecondHost->mainConsoleView()->getMainWindowSize().width() == frontWidth, "the user window changed the console in front, so it tests nothing");
+        QVERIFY(runLua(mpFirstHost, qsl("_widthBehind = getMainWindowSize()")).isNull());
+        const int widthBehind = luaGlobalNumber(mpFirstHost, qsl("_widthBehind"));
+        const int columnsBehind = mpFirstHost->mScreenWidth;
+
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_widthNow = getMainWindowSize()")).isNull());
+        QCOMPARE(widthBehind, luaGlobalNumber(mpFirstHost, qsl("_widthNow")));
+        QCOMPARE(columnsBehind, mpFirstHost->mScreenWidth);
+    }
+
+    // The profile in front resizing itself again and again must not hold back a hidden profile's update for long
+    void test_aFrontProfileResizingNonStopStillLetsAHiddenProfileCatchUp()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            runLua(mpSecondHost, qsl("setBorderLeft(0)"));
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        switchTo(mpSecondHost);
+        QTest::qWait(200ms);
+        const int columnsBefore = mpFirstHost->mScreenWidth;
+
+        mudlet::self()->resize(mudlet::self()->width() + 200, mudlet::self()->height());
+        int columnsWhileBusy = -1;
+        QElapsedTimer busy;
+        busy.start();
+        for (int step = 0; busy.elapsed() < 1500; ++step) {
+            QVERIFY(runLua(mpSecondHost, qsl("setBorderLeft(%1)").arg(step % 2)).isNull());
+            QTest::qWait(50ms);
+            if (columnsWhileBusy < 0 && busy.elapsed() >= 600) {
+                columnsWhileBusy = mpFirstHost->mScreenWidth;
+            }
+        }
+        QTest::qWait(300ms);
+        QVERIFY2(mpFirstHost->mScreenWidth != columnsBefore, "the resize did not change the hidden profile's columns, so it tests nothing");
+        QCOMPARE(columnsWhileBusy, mpFirstHost->mScreenWidth);
+    }
+
+    // A drag resizes the window a step at a time, and a profile behind a tab is told at most every 100 ms, not every step
+    void test_aWindowDraggedBehindAnotherTabIsNotToldEveryStep()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([windowSize]() {
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("if not _hiddenResizeHandler then\n"
+                           "  _hiddenResizeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function() _hiddenResizes = _hiddenResizes + 1 end)\n"
+                           "end"))
+                        .isNull());
+        switchTo(mpSecondHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_hiddenResizes = 0")).isNull());
+
+        constexpr int steps = 10;
+        QElapsedTimer drag;
+        drag.start();
+        for (int step = 1; step <= steps; ++step) {
+            mudlet::self()->resize(windowSize.width() + step * 10, windowSize.height());
+            QCoreApplication::processEvents();
+        }
+        const int mostTimesTold = static_cast<int>(drag.elapsed() / 100) + 1;
+        if (mostTimesTold >= steps) {
+            QSKIP("The drag took too long for one report per step to stand out.");
+        }
+        QTest::qWait(500ms);
+        const int timesTold = luaGlobalNumber(mpFirstHost, qsl("_hiddenResizes"));
+        QVERIFY2(timesTold >= 1 && timesTold <= mostTimesTold, qPrintable(qsl("told %1 times over a drag that allows %2").arg(timesTold).arg(mostTimesTold)));
+    }
+
+    // A switch hides the console before the docks change over, so it is not told of the room the other profile's leave
+    void test_switchingTabsWithADockOpenLeavesTheHiddenProfileAlone()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, windowSize]() {
+            closeMapDockOf(mpSecondHost);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        giveTheDocksRoom();
+        QVERIFY2(openMapDockOf(mpSecondHost), "the map dock did not open");
+        QVERIFY(runLua(mpSecondHost,
+                       qsl("if not _hiddenResizeHandler then\n"
+                           "  _hiddenResizeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function() _hiddenResizes = _hiddenResizes + 1 end)\n"
+                           "end"))
+                        .isNull());
+
+        for (int round = 0; round < 2; ++round) {
+            QVERIFY(runLua(mpSecondHost, qsl("_hiddenResizes = 0")).isNull());
+            switchTo(mpFirstHost);
+            QCOMPARE(luaGlobalNumber(mpSecondHost, qsl("_hiddenResizes")), 0);
+            switchTo(mpSecondHost);
+        }
+    }
+
+    // Leaving multi-view hides the other profiles while each still has only its share of the window
+    void test_leavingMultiViewSizesAHiddenProfileForTheWholeWindow()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([windowSize]() {
+            mudlet::self()->slot_multiView(false);
+            mudlet::self()->resize(windowSize);
+            QTest::qWait(200ms);
+        });
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        switchTo(mpSecondHost);
+        mudlet::self()->slot_multiView(true);
+        QTest::qWait(300ms);
+        QVERIFY2(!mpFirstHost->mainConsoleView()->isHidden(), "multi-view did not show both profiles");
+        mudlet::self()->slot_multiView(false);
+        QTest::qWait(300ms);
+        QVERIFY2(mpFirstHost->mainConsoleView()->isHidden(), "leaving multi-view did not put the other profile behind a tab");
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sizeNow = getMainWindowSize()")).isNull());
+        QVERIFY(runLua(mpSecondHost, qsl("_sizeNow = getMainWindowSize()")).isNull());
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_sizeNow")), luaGlobalNumber(mpSecondHost, qsl("_sizeNow")));
+
+        // and resized while still behind the tab, it wraps for the window it comes back to
+        mudlet::self()->resize(mudlet::self()->width() + 150, mudlet::self()->height());
+        QTest::qWait(200ms);
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        switchTo(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapNeeded = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapNeeded > 0, "the miniconsole has no wrap after resetting it");
+        QCOMPARE(wrapBehind, wrapNeeded);
+    }
+
+    void test_openingAProfileDoesNotSqueezeTheOneInFront()
+    {
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QTest::qWait(200ms);
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("_narrowestResize = getMainWindowSize()\n"
+                           "registerAnonymousEventHandler('sysWindowResizeEvent', function()\n"
+                           "  _narrowestResize = math.min(_narrowestResize, (getMainWindowSize()))\n"
+                           "end)"))
+                        .isNull());
+        const int widthBefore = luaGlobalNumber(mpFirstHost, qsl("_narrowestResize"));
+        const int wrapBefore = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapBefore > 0, "the miniconsole has no wrap to compare against");
+
+        QVERIFY(provisionProfileOnDisk(mThirdProfile));
+        QVERIFY(runLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(mThirdProfile)).isNull());
+        QTRY_VERIFY_WITH_TIMEOUT(hostFor(mThirdProfile), csmConnectBudgetMs);
+        QTest::qWait(300ms);
+
+        // The end wrap alone can't show a squeeze, as scripts are told the full size again once the profile is hidden
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_narrowestResize")), widthBefore);
+        QCOMPARE(autoWrapOf(mpFirstHost), wrapBefore);
     }
 };
 

@@ -812,6 +812,9 @@ function Geyser.Gauge:new (cons, container)
   -- Set whether this gauge is strict about its max value being 100 or not
   if cons.strict then me.strict = true else me.strict = false end
 
+  -- the front label starts out full, so a value given here has to be laid out
+  if type(cons.value) == "number" then me:setValue(cons.value) end
+
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
 

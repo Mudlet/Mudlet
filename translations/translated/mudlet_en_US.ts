@@ -57,6 +57,18 @@
     </message>
 </context>
 <context>
+    <name>TDetachedWindow</name>
+    <message numerus="yes">
+        <location filename="../../src/TDetachedWindow.cpp" line="1463"/>
+        <source>Mudlet (%n profiles) - %1 (Detached)</source>
+        <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has several profiles opened in this window (or none, briefly, while it closes). %n is the number of profiles, never 1, and %1 is the name of the profile currently shown.</extracomment>
+        <translation>
+            <numerusform>{unused}Mudlet (%n profile) - %1 (Detached)</numerusform>
+            <numerusform>Mudlet (%n profiles) - %1 (Detached)</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>THyperlinkVisibilityManager</name>
     <message numerus="yes">
         <location filename="../../src/THyperlinkVisibilityManager.cpp" line="758"/>
@@ -209,6 +221,18 @@ they have been removed.</numerusform>
         <translation>
             <numerusform>%n day, %1</numerusform>
             <numerusform>%n days, %1</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>dlgNotepad</name>
+    <message numerus="yes">
+        <location filename="../../src/dlgNotepad.cpp" line="924"/>
+        <source>Stopped after %1 of %n lines</source>
+        <extracomment>Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %n how many there were in all.</extracomment>
+        <translation>
+            <numerusform>Stopped after %1 of %n line</numerusform>
+            <numerusform>Stopped after %1 of %n lines</numerusform>
         </translation>
     </message>
 </context>
@@ -368,6 +392,18 @@ they have been removed.</numerusform>
  • an existing symbol from the list,
  • enter one or more characters to set a new symbol,
  • clear to unset.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>QObject</name>
+    <message numerus="yes">
+        <location filename="../../src/ircmessageformatter.cpp" line="256"/>
+        <source>! %1 has %n users</source>
+        <extracomment>Shown in the IRC window when the server lists a channel&apos;s users, on joining it or after /NAMES. %1 is the channel, %n how many users are in it.</extracomment>
+        <translation>
+            <numerusform>! %1 has %n user</numerusform>
+            <numerusform>! %1 has %n users</numerusform>
         </translation>
     </message>
 </context>

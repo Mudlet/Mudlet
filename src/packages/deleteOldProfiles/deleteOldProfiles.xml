@@ -25,8 +25,11 @@
   Deletes old profiles/maps/modules in the "current"/"map"/"moduleBackups" folders of the Mudlet home directory.
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
-  - One file for every month before that. Specifically: The first available file of every month prior to this.
-  Setting the second argument to true will delete maps instead of profiles. (e.g. deleteOldProfiles(10, true))
+  - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted profile or map save does not count. For module backups, every module name keeps its own; profiles with a module of the same name share it.
+  - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet tries first, however old it is. Module backups are never loaded, so there it is the newest backup of every module.
+  - A leftover from an interrupted save, when there is no save Mudlet would load.
+  - Folders, which are left alone.
+  The second argument picks the folder: "profiles", "maps" or "modules". (e.g. deleteOldProfiles(10, "maps"))
   --]]
 
   -- Ensure correct value is passed for second argument
@@ -55,12 +58,22 @@
     return
   end
 
-  -- Traverse the profiles folder and create a table of files:
+  -- Every module's backups share one folder, so each module is kept as a series of its own.
+  -- Older Mudlet versions put the date as dd-MM-yyyy; files named neither way share a series.
+  local function moduleSeries(filename)
+    return filename:match("^(.-)%d%d%d%d%-%d%d%-%d%d#%d%d%-%d%d%-%d%d$")
+      or filename:match("^(.-)%d%d%-%d%d%-%d%d%d%d#%d%d%-%d%d%-%d%d$")
+      or ""
+  end
+
   for filename in lfs.dir(dirpath) do
-    if filename~="." and filename~=".." then
+    local attributes = lfs.attributes(dirpath..slash..filename)
+    -- folders are not backups; attributes can be nil if a save renames the file meanwhile
+    if attributes and attributes.mode == "file" then
       profile_table[#profile_table+1] = {
         name = filename,
-        last_mod = lfs.attributes(dirpath..slash..filename, "modification")
+        last_mod = attributes.modification,
+        series = delete_folder == "modules" and moduleSeries(filename) or ""
       }
     end
   end
@@ -69,21 +82,45 @@
   table.sort(profile_table, function (a,b) return a.last_mod &lt; b.last_mod end)
 
   echo(string.format(
-    "\nDeleting old %s. Files newer than %d days and one for every month before that will be kept.",
+    "\nDeleting old %s. Files newer than %d days, one for every month before that and the newest one%s will be kept.",
     delete_folder,
-    keepdays
+    keepdays,
+    delete_folder == "modules" and " of each module" or ""
   ))
 
-  for i, v in ipairs(profile_table) do
+  -- An interrupted save can leave a temporary file behind, which is not a save and does
+  -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map; lfs
+  -- times are whole seconds, so which of several tied saves that is can't be told: all stay.
+  -- XML maps load only from Map history, never on startup. Module backups are never
+  -- loaded, so every file there counts as a save.
+  local savedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true, xml = true}}
+  local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
+  local function hasExtension(name, extensions)
+    if not extensions[delete_folder] then
+      return true
+    end
+    local extension = name:match("%.([^.]+)$")
+    return extension ~= nil and extensions[delete_folder][extension:lower()] == true
+  end
+  local newestLoadedTime = {}
+  for _, v in ipairs(profile_table) do
+    if hasExtension(v.name, loadedExtensions) then
+      newestLoadedTime[v.series] = v.last_mod
+    end
+  end
+
+  for _, v in ipairs(profile_table) do
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
-    local last_mod_month = os.date("%Y/%m", v.last_mod)
+    local last_mod_month = v.series .. "|" .. os.date("%Y/%m", v.last_mod)
     if days &gt; keepdays then
-      -- For profiles older than X days, check if we already kept a table for this month:
-      if not table.contains(used_last_mod_months, last_mod_month) then
-        -- If not, do nothing and mark this month as "kept".
+      local saved = hasExtension(v.name, savedExtensions)
+      if saved and not table.contains(used_last_mod_months, last_mod_month) then
         used_last_mod_months[#used_last_mod_months+1] = last_mod_month
+      elseif v.last_mod == newestLoadedTime[v.series] and hasExtension(v.name, loadedExtensions) then
+        -- Keep every file tied for the newest; for profiles and maps that is what Mudlet loads.
+      elseif not saved and not newestLoadedTime[v.series] then
+        -- With no save Mudlet would load, a leftover may be all that is left to recover by hand.
       else
-        -- Otherwise remove the file:
         local success, errorstring = os.remove(dirpath..slash..v.name)
         if success then
           delnum = delnum + 1

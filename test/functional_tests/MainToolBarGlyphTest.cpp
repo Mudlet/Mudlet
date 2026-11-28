@@ -20,7 +20,8 @@
 /*
  * The main and detached toolbars draw the editor's glyph files, inked from the palette and
  * retinted when it moves. The Sound button's caption comes from iconText() and stays "Sound", so
- * its glyph alone says whether media is muted.
+ * its glyph alone says whether media is muted. The cases reading an ink set the icons to
+ * grayscale first, as in colour a glyph takes its old picture's colour instead.
  *
  * Run with: ctest -R MainToolBarGlyphTest -V
  */
@@ -30,6 +31,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPalette>
+#include <QScopeGuard>
 #include <QSvgRenderer>
 #include <QToolButton>
 #include <QtTest/QtTest>
@@ -43,8 +45,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class MainToolBarGlyphTest : public QObject
 {
@@ -142,6 +142,10 @@ private slots:
 
     void test_theSoundButtonKeepsItsCaptionWhileItsGlyphSaysTheState()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         QToolButton* pButton = mudlet::self()->findChild<QToolButton*>(qsl("mute"));
         QVERIFY2(pButton, "the main window has no 'mute' toolbar button");
         QAction* pAction = mudlet::self()->findChild<QAction*>(qsl("muteMedia"));
@@ -183,6 +187,10 @@ private slots:
 
     void test_theTriggersButtonCarriesTheEditorsGlyph()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         QAction* pAction = mainWindowTriggersAction();
         QVERIFY2(pAction, "the main window has no 'triggers_action' on its toolbar");
         const QImage onTheToolbar = TestPixels::drawnAt(pAction->icon(), scmComparisonSize);
@@ -198,6 +206,10 @@ private slots:
     // Nothing re-derives a QIcon once it is set on an action
     void test_aPaletteChangeRetintsTheToolbar()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         QAction* pAction = mainWindowTriggersAction();
         QVERIFY2(pAction, "the main window has no 'triggers_action' on its toolbar");
         const QPalette savedPalette = QApplication::palette();
@@ -208,14 +220,14 @@ private slots:
         movedPalette.setColor(QPalette::Window, wasDark ? QColor(0xec, 0xec, 0xec) : QColor(0x2c, 0x2c, 0x2e));
         movedPalette.setColor(QPalette::WindowText, wasDark ? QColor(Qt::black) : QColor(Qt::white));
         QApplication::setPalette(movedPalette);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         const QImage after = TestPixels::drawnAt(pAction->icon(), scmComparisonSize);
         const QImage expectedAfter = expectedTriggersGlyph();
         qInfo().noquote() << qsl("  the Triggers button was inked %1 and is now %2").arg(TestPixels::inkOf(before), TestPixels::inkOf(after));
 
         QApplication::setPalette(savedPalette);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         // Checked first: a restyle that did nothing at all could leave the pair below agreeing
         QVERIFY2(before != after, qPrintable(qsl("the palette moved and the toolbar's picture did not: it is still inked %1").arg(TestPixels::inkOf(after))));
