@@ -32,6 +32,11 @@ jobs:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
+      # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+      - name: Note the folder above the checkout
+        shell: bash
+        run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v7
         with:
           submodules: recursive
@@ -40,7 +45,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.11.3'
-          dir: ${{ runner.workspace }}
+          dir: ${{env.WORK_ROOT}}
           cache: false
           modules: qt5compat qtmultimedia qtspeech
 

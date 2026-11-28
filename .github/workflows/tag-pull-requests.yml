@@ -1,7 +1,8 @@
 name: Pull request
 
 on:
-  pull_request_target:
+  # Needs the write token to set the milestone on fork pull requests; only the base branch is checked out
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
 
 # issues covers reading the milestone list and setting the milestone on the
 # pull request, which the REST API treats as an issue; pull-requests is granted
