@@ -50,9 +50,11 @@
 #include <QRadialGradient>
 #include <QSettings>
 #include <QSetIterator>
+#include <QVarLengthArray>
 #include <QVector3D>
 
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cmath>
 #include <numbers>
@@ -133,18 +135,93 @@ bool TMapPainter::directionalExitLinesEnabled()
     return !settings || settings->value(qsl("directionalExitLines"), true).toBool();
 }
 
-bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
+// The compass exits of to that lead back to from, the reverse of direction first
+static QVarLengthArray<int, 8> exitsLeadingBack(const TRoom& from, const int direction, const TRoom& to)
 {
-    if (!exit.destination) {
+    QVarLengthArray<int, 8> exits;
+    const int reverse = TMap::scmReverseDirections.value(direction);
+    if (reverse && to.getExit(reverse) == from.getId()) {
+        exits.append(reverse);
+    }
+    for (int back = DIR_NORTH; back <= DIR_SOUTHWEST; ++back) {
+        if (back != reverse && to.getExit(back) == from.getId()) {
+            exits.append(back);
+        }
+    }
+    return exits;
+}
+
+int TMapPainter::wayBack(const TRoom& room, const ExitToPaint& exit)
+{
+    if (!exit.destination || exit.direction < DIR_NORTH || exit.direction > DIR_SOUTHWEST) {
+        return 0;
+    }
+    // A loop is no way back from itself: it pairs only with the reverse exit, and only if that loops too
+    if (exit.destination->getId() == room.getId()) {
+        const int reverse = TMap::scmReverseDirections.value(exit.direction);
+        return room.getExit(reverse) == room.getId() ? reverse : 0;
+    }
+    // Worked out from the room with the lower ID, so that both rooms come to the same pairs whichever one asks
+    const bool roomFirst = room.getId() <= exit.destination->getId();
+    const TRoom& first = roomFirst ? room : *exit.destination;
+    const TRoom& second = roomFirst ? *exit.destination : room;
+    QVarLengthArray<int, 8> firstExits;
+    QVarLengthArray<int, 8> secondExits;
+    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+        if (first.getExit(direction) == second.getId()) {
+            firstExits.append(direction);
+        }
+        if (second.getExit(direction) == first.getId()) {
+            secondExits.append(direction);
+        }
+    }
+    std::array<int, DIR_SOUTHWEST + 1> partnerOfFirst{};
+    std::array<int, DIR_SOUTHWEST + 1> partnerOfSecond{};
+    // An exit and its reverse pair first, then the others in direction order, each exit back taken once
+    for (const int direction : std::as_const(firstExits)) {
+        const int reverse = TMap::scmReverseDirections.value(direction);
+        if (secondExits.contains(reverse)) {
+            partnerOfFirst[direction] = reverse;
+            partnerOfSecond[reverse] = direction;
+        }
+    }
+    auto itSecond = secondExits.cbegin();
+    for (const int direction : std::as_const(firstExits)) {
+        if (partnerOfFirst[direction]) {
+            continue;
+        }
+        while (itSecond != secondExits.cend() && partnerOfSecond[*itSecond]) {
+            ++itSecond;
+        }
+        if (itSecond == secondExits.cend()) {
+            break;
+        }
+        partnerOfFirst[direction] = *itSecond;
+        partnerOfSecond[*itSecond] = direction;
+    }
+    return roomFirst ? partnerOfFirst[exit.direction] : partnerOfSecond[exit.direction];
+}
+
+bool TMapPainter::exitIsOneWay(const TRoom& room, const ExitToPaint& exit, const bool directionalExitLines)
+{
+    const int reverse = TMap::scmReverseDirections.value(exit.direction);
+    if (reverse && exit.destination->getExit(reverse) == room.getId()) {
         return false;
     }
-    const int reverse = TMap::scmReverseDirections.value(exit.direction);
-    if (!reverse || exit.destination->getExit(reverse) != room.getId()) {
+    // An exit back that pairs with it makes it two-way: north to a room whose west exit returns is walkable both ways
+    // and is drawn as one solid line, not two arrows
+    return !directionalExitLines || !wayBack(room, exit);
+}
+
+bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
+{
+    const int back = wayBack(room, exit);
+    if (!back) {
         return false;
     }
     // Only a line that gets back here draws the connection; one that stops short leaves the plain line needed. Within
     // the tolerance customLineRunsStraightTo() allows
-    const QList<QPointF> points = exit.destination->customLines.value(TRoom::dirCodeToShortString(reverse));
+    const QList<QPointF> points = exit.destination->customLines.value(TRoom::dirCodeToShortString(back));
     return !points.isEmpty() && QLineF(points.last(), QPointF(room.x(), room.y())).length() <= 0.1;
 }
 
@@ -1606,19 +1683,15 @@ QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint&
         return QPointF(center.x() + unit.x() * mRoomWidth / 2.0, center.y() + unit.y() * mRoomHeight / 2.0);
     };
 
-    // The way back in, preferring the reverse direction, so both rooms of a two-way exit draw the same path
-    int backDirection = 0;
-    const int reverse = TMap::scmReverseDirections.value(exit.direction);
-    if (destination.getExit(reverse) == room.getId()) {
-        backDirection = reverse;
-    } else {
-        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
-            if (destination.getExit(direction) == room.getId()) {
-                backDirection = direction;
-                break;
-            }
+    // Into the exit back it pairs with, so that both lines of a pair take one path; an exit with no pair goes in as it
+    // always did, through the reverse exit or else the first exit back
+    const int backDirection = [&] {
+        if (const int paired = wayBack(room, exit)) {
+            return paired;
         }
-    }
+        const QVarLengthArray<int, 8> exitsBack = exitsLeadingBack(room, exit.direction, destination);
+        return exitsBack.isEmpty() ? 0 : exitsBack.first();
+    }();
 
     // One end bending turns the line off the other end's axis too, so then both leave through their stubs
     if (liesAhead(room, exit.direction, destination) && (!backDirection || liesAhead(destination, backDirection, room))) {
@@ -1884,6 +1957,9 @@ void TMapPainter::paintRoomExits(QPainter& painter,
         // line would land on top of it or under it, whichever room paints last. Only where that line is painted.
         for (ExitToPaint& exit : exitList) {
             const TRoom* pDestination = exit.destination;
+            if (exit.oneWay) {
+                exit.oneWay = exitIsOneWay(*room, exit, mDirectionalExitLines);
+            }
             exit.drawnByCustomLine = !exit.oneWay
                                      && (customLineRunsStraightTo(*room, *pDestination)
                                          || (customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && customLineRunsStraightTo(*pDestination, *room)));
@@ -3895,26 +3971,14 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                     roomExitList.push_back({exitRoomId, dirKey});
                     TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
                     if (exitRoom) {
-                        // Check if it's a one-way exit (return direction doesn't point back)
-                        bool isOneWay = false;
-                        if (dirKey == "n" && exitRoom->getSouth() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "s" && exitRoom->getNorth() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "e" && exitRoom->getWest() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "w" && exitRoom->getEast() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "ne" && exitRoom->getSouthwest() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "nw" && exitRoom->getSoutheast() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "se" && exitRoom->getNorthwest() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "sw" && exitRoom->getNortheast() != roomId)
-                            isOneWay = true;
-
-                        if (isOneWay) {
+                        // Decided as paintRoomExits() decides it, so the image shows the arrows the map does
+                        ExitToPaint exit{exitRoom, exitRoomId, true, false, 0};
+                        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+                            if (TRoom::dirCodeToShortString(direction) == dirKey) {
+                                exit.direction = direction;
+                            }
+                        }
+                        if (exitIsOneWay(*room, exit, mDirectionalExitLines)) {
                             roomOneWayExits.push_back({exitRoomId, dirKey});
                         }
                     }

@@ -556,6 +556,206 @@ private slots:
         QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, exit), "a custom line stopping a room short of the west room stood in for its exit");
     }
 
+    // The west room's exits east and north both lead to the east room, whose one way back, west, pairs with the exit
+    // east: so the east room's custom line west stands in for that exit only, not for the one north as well
+    void aCustomLineBackStandsInOnlyForTheExitItPairsWith()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        pEastRoom->customLines[qsl("w")] = {QPointF(1, 1), QPointF(0, 0)};
+        TMapPainter::ExitToPaint east;
+        east.destination = pEastRoom;
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint north = east;
+        north.direction = DIR_NORTH;
+
+        QVERIFY(TMapPainter::returnExitHasCustomLine(*pWestRoom, east));
+        QCOMPARE(TMapPainter::wayBack(*pWestRoom, north), 0);
+        QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, north), "the custom line for the exit east hid the exit north");
+    }
+
+    // Each exit back pairs with one exit, and both rooms come to the same pairs: otherwise one room draws a two-way line
+    // the other draws again as a one-way arrow, or a pair both rooms could walk is left with two arrows
+    void bothRoomsComeToTheSamePairs()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        const auto exitTo = [](TRoom* pDestination, const int direction) {
+            TMapPainter::ExitToPaint exit;
+            exit.destination = pDestination;
+            exit.destinationId = pDestination->getId();
+            exit.direction = direction;
+            return exit;
+        };
+        const auto checkPairs = [&](const QList<int>& westExits, const QList<int>& eastExits) {
+            for (const int direction : {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST}) {
+                QVERIFY(map()->setExit(scmWestRoom, westExits.contains(direction) ? scmEastRoom : -1, direction));
+                QVERIFY(map()->setExit(scmEastRoom, eastExits.contains(direction) ? scmWestRoom : -1, direction));
+            }
+            for (const int direction : westExits) {
+                const int back = TMapPainter::wayBack(*pWestRoom, exitTo(pEastRoom, direction));
+                QVERIFY2(back, qPrintable(qsl("west exit %1 has no pair").arg(direction)));
+                QCOMPARE(TMapPainter::wayBack(*pEastRoom, exitTo(pWestRoom, back)), direction);
+            }
+            for (const int direction : eastExits) {
+                const int back = TMapPainter::wayBack(*pEastRoom, exitTo(pWestRoom, direction));
+                QVERIFY2(back, qPrintable(qsl("east exit %1 has no pair").arg(direction)));
+                QCOMPARE(TMapPainter::wayBack(*pWestRoom, exitTo(pEastRoom, back)), direction);
+            }
+        };
+        checkPairs({DIR_NORTH, DIR_SOUTHWEST}, {DIR_NORTHEAST, DIR_NORTHWEST});
+        checkPairs({DIR_NORTH, DIR_EAST}, {DIR_NORTHEAST, DIR_NORTHWEST});
+    }
+
+    // An exit looping back into its own room is not its own way back: it keeps its arrow unless the reverse exit loops
+    // there too
+    void aLoopIsOneWayUnlessTheReverseExitLoopsToo()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_NORTH));
+        TMapPainter::ExitToPaint north;
+        north.destination = pWestRoom;
+        north.destinationId = scmWestRoom;
+        north.direction = DIR_NORTH;
+
+        QVERIFY2(TMapPainter::exitIsOneWay(*pWestRoom, north, true), "a loop alone was drawn as two-way, with no arrow");
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_SOUTH));
+        QVERIFY(!TMapPainter::exitIsOneWay(*pWestRoom, north, true));
+        QCOMPARE(TMapPainter::wayBack(*pWestRoom, north), DIR_SOUTH);
+    }
+
+    // With several pairs between two rooms, each line goes in through the exit back it pairs with, so both lines of a
+    // pair take one path: the west room's exit east pairs with the east room's exit northwest, not its first exit back
+    void bothLinesOfAPairTakeOnePath()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        QVERIFY(map()->setExit(scmEastRoom, scmWestRoom, DIR_NORTHEAST));
+        QVERIFY(map()->setExit(scmEastRoom, scmWestRoom, DIR_NORTHWEST));
+        TMapPainter::View pathView = view();
+        pathView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(pathView);
+        TMapPainter::ExitToPaint east;
+        east.destination = pEastRoom;
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint northwest;
+        northwest.destination = pWestRoom;
+        northwest.destinationId = scmWestRoom;
+        northwest.direction = DIR_NORTHWEST;
+        QCOMPARE(TMapPainter::wayBack(*pWestRoom, east), DIR_NORTHWEST);
+        const QPointF westCentre = onImage(QPointF(0, 0));
+        const QPointF eastCentre = onImage(QPointF(2, 0));
+
+        const QVector<QPointF> eastPath = painter.exitLinePath(*pWestRoom, east, westCentre, eastCentre);
+        const QVector<QPointF> northwestPath = painter.exitLinePath(*pEastRoom, northwest, eastCentre, westCentre);
+
+        // Out of the west room's east stub and in through the east room's northwest stub, and the same path back
+        const QVector<QPointF> expected{westCentre, onImage(QPointF(0.5, 0)), onImage(QPointF(1.5, 0.5)), eastCentre};
+        QCOMPARE(eastPath, expected);
+        QCOMPARE(northwestPath, QVector<QPointF>(expected.crbegin(), expected.crend()));
+    }
+
+    // The map and its exported image decide one-way alike: with the east room's one way back, west, paired with the
+    // exit east, the exit north is one-way there too
+    void anExitNoExitBackPairsWithIsOneWay()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::ExitToPaint east;
+        east.destination = roomDB()->getRoom(scmEastRoom);
+        east.destinationId = scmEastRoom;
+        east.direction = DIR_EAST;
+        TMapPainter::ExitToPaint north = east;
+        north.direction = DIR_NORTH;
+        const TRoom& westRoom = *roomDB()->getRoom(scmWestRoom);
+
+        QVERIFY(!TMapPainter::exitIsOneWay(westRoom, east, true));
+        QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, true));
+        QVERIFY(TMapPainter::exitIsOneWay(westRoom, north, false));
+    }
+
+    // The export's own drawing, not only the decision it shares: with the east room's one way back paired with the exit
+    // east, the exit north is one-way there, dashed, as the map draws it with an arrow
+    void anExportDrawsAnExitNoExitBackPairsWithAsOneWay()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::View exportView = view();
+        exportView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(exportView);
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/one-way-north.png").arg(mConfigDir.path());
+        const auto [started, message] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+        QVERIFY2(started, qPrintable(message));
+        const QImage image = exported(&saveOwner, exportFile);
+        // Three rooms across at 50 pixels each, with two rooms' padding around: the west room's centre at 100,100 and
+        // the east room's at 200,100
+        QCOMPARE(image.size(), QSize(350, 250));
+        const QColor background = image.pixelColor(5, 5);
+        // The bent stretch from the west room's north stub to the east room's west stub, clear of both rooms
+        const QPointF from(100, 75);
+        const QPointF to(175, 100);
+        // Pixel by pixel along it: a dash's gap is only a few pixels long
+        int samples = 0;
+        int gaps = 0;
+        const int steps = qRound(QLineF(from, to).length() * 2);
+        for (int step = steps / 5; step <= steps * 4 / 5; ++step) {
+            const QPointF point = from + (to - from) * (static_cast<qreal>(step) / steps);
+            ++samples;
+            gaps += image.pixelColor(point.toPoint()) == background;
+        }
+        QVERIFY2(gaps < samples, qPrintable(qsl("the exit north was not drawn at all. %1").arg(saved(image, qsl("export-one-way")))));
+        QVERIFY2(gaps > samples / 10, qPrintable(qsl("the exit north was drawn solid, as two-way. %1").arg(saved(image, qsl("export-one-way")))));
+    }
+
+    // A line keeps the shape it had: unpaired, the exit north still bends into the east room through its exit back
+    void anUnpairedExitStillBendsInThroughAnExitBack()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TMapPainter::View pathView = view();
+        pathView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(pathView);
+        TMapPainter::ExitToPaint north;
+        north.destination = roomDB()->getRoom(scmEastRoom);
+        north.destinationId = scmEastRoom;
+        north.direction = DIR_NORTH;
+        const QPointF from = onImage(QPointF(0, 0));
+        const QPointF to = onImage(QPointF(2, 0));
+
+        const QVector<QPointF> path = painter.exitLinePath(*roomDB()->getRoom(scmWestRoom), north, from, to);
+
+        // Out of the west room's north stub, in through the east room's west stub
+        QCOMPARE(path.size(), 4);
+        QCOMPARE(path.at(2), onImage(QPointF(1.5, 0)));
+    }
+
+    // The export decides alike: the exit north is drawn there, so the export with it differs from one without it
+    void anExportDrawsAnExitTheCustomLineBackDoesNotPairWith()
+    {
+        roomDB()->getRoom(scmEastRoom)->customLines[qsl("w")] = {QPointF(1, 1), QPointF(0, 0)};
+        const auto exportedMap = [this](const QString& name) {
+            TMapPainter::View exportView = view();
+            exportView.mDirectionalExitLines = true;
+            TMapPainter painter;
+            painter.setView(exportView);
+            QObject saveOwner;
+            const QString exportFile = qsl("%1/%2.png").arg(mConfigDir.path(), name);
+            const auto [started, message] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+            return started ? exported(&saveOwner, exportFile) : QImage();
+        };
+        const QImage without = exportedMap(qsl("without-north"));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        const QImage with = exportedMap(qsl("with-north"));
+        QVERIFY(!without.isNull() && !with.isNull());
+        QVERIFY2(with != without, qPrintable(qsl("the exit north was left out of the export: ") + saved(with, qsl("export-with-north"))));
+    }
+
     // Two rooms just left of the view, whose east exits lead to each other: their bent line runs through their east
     // stubs half a cell to the right, inside the view, though both rooms' centres are outside it
     void aBentLineFromRoomsJustOutsideTheViewIsDrawn()
@@ -588,7 +788,7 @@ private slots:
             painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
         }
 
-        // Along the stretch joining the two east stubs; dotted, as neither exit's reverse leads back
+        // Along the stretch joining the two east stubs, solid since each east exit is the other's way back
         const int stubX = originX + qRound(scmRoomPixels / 2);
         int drawn = 0;
         for (int y = scmOriginY + 10; y < scmOriginY + 2 * qRound(scmRoomPixels) - 10; ++y) {
@@ -597,6 +797,57 @@ private slots:
             }
         }
         QVERIFY2(drawn > 20, qPrintable(qsl("%1 pixels drawn. %2").arg(drawn).arg(saved(image, qsl("edge-bent")))));
+    }
+
+    // North from the west room leads to the east room, whose west exit leads back: walkable both ways, so with
+    // directional lines it is one solid line without an arrow, the way back drawing the same bent path. Straight
+    // lines keep calling it one-way, as the east room's south exit does not lead back.
+    void aWayBackThroughAnotherExitIsTwoWayWithDirectionalLines()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, -1, DIR_EAST));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        const auto paintedExits = [&](const bool directional) {
+            TMapPainter::View exitsView = view();
+            exitsView.mDirectionalExitLines = directional;
+            TMapPainter painter;
+            painter.setView(exitsView);
+            QImage image = blankImage();
+            QPainter imagePainter(&image);
+            QPen pen(Qt::white);
+            const float exitWidth = 3.0f;
+            pen.setWidthF(exitWidth);
+            imagePainter.setPen(pen);
+            const QRect roomBounds = TMapPainter::viewportRoomBounds(scmOriginX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+            const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+            QList<TMapPainter::ExitToPaint> exitList;
+            QMap<int, QPointF> areaExitsMap;
+            painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+            return image;
+        };
+        const auto arrowPixels = [](const QImage& image) {
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    count += image.pixelColor(x, y) == ExitAppearance::oneWayArrowColor();
+                }
+            }
+            return count;
+        };
+
+        const QImage straight = paintedExits(false);
+        QVERIFY2(arrowPixels(straight) > 0, qPrintable(saved(straight, qsl("way-back-straight"))));
+        const QImage bent = paintedExits(true);
+        QVERIFY2(arrowPixels(bent) == 0, qPrintable(saved(bent, qsl("way-back-bent"))));
+        // The west room's north stub, which only the bent line draws
+        QVERIFY2(bent.pixelColor(onImage(QPointF(0, 0.4)).toPoint()) == QColor(Qt::white), qPrintable(saved(bent, qsl("way-back-bent"))));
+
+        // With no way back at all it stays one-way either way
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        const QImage oneWay = paintedExits(true);
+        QVERIFY2(arrowPixels(oneWay) > 0, qPrintable(saved(oneWay, qsl("way-back-none"))));
     }
 
     // An image label is scaled to fill the rectangle it is given
