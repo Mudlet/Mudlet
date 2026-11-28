@@ -35,6 +35,7 @@
  */
 
 #include "PortableModeTestHelper.h"
+#include "CredentialManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -50,6 +51,14 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QTimer>
+#include <algorithm>
+
+#if defined(INCLUDE_OWN_QT6_KEYCHAIN)
+#include <qtkeychain/keychain.h>
+#else
+#include <qt6keychain/keychain.h>
+#endif
 
 #include "GroupedTest.h"
 
@@ -104,6 +113,44 @@ private:
 
     bool savedAtAll(const QString& profile, const QString& item) const { return QFileInfo::exists(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item)); }
 
+    bool passwordLoadScheduled() const
+    {
+        return std::ranges::any_of(dialog()->findChildren<QTimer*>(), [](const QTimer* timer) {
+            return timer->isActive() && timer->property("profileName").isValid();
+        });
+    }
+
+    QStringList profileDirsOnDisk() const { return QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot); }
+
+    QStringList profileDirsMadeSince(const QStringList& before) const
+    {
+        QStringList made;
+        for (const QString& name : profileDirsOnDisk()) {
+            if (!before.contains(name)) {
+                made << name;
+            }
+        }
+        return made;
+    }
+
+    // what each case that queues a copy leaves behind, should it fail before the copy is made
+    void releaseQueuedCopy() const
+    {
+        dialog()->mKeychainOperationProfile.clear();
+        dialog()->dropPendingCopy(dialog()->mPendingCopyProfile);
+        dialog()->clearKeychainWait();
+        mudlet::self()->setStorePasswordsSecurely(false);
+    }
+
+    bool waitForPasswordReadsToSettle() const
+    {
+        return QTest::qWaitFor(
+                [this]() {
+                    return dialog()->mKeychainOperationProfile.isEmpty() && !passwordLoadScheduled();
+                },
+                5s);
+    }
+
     bool waitForTheCopy() const
     {
         return QTest::qWaitFor(
@@ -111,6 +158,42 @@ private:
                     return !dialog()->mCopyingProfile;
                 },
                 10s);
+    }
+
+    // A copy chosen before the keychain has answered for the source's password has to wait for it, as
+    // the password it copies is the one in the field
+    void copyDuringThePasswordRead(const QString& profile, void (dlgConnectionProfiles::*copy)())
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString copiedProfile = profile + qsl("1");
+        const QString password = qsl("pending-read-secret");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([this, profile, copiedProfile]() {
+            releaseQueuedCopy();
+            CredentialManager::removeCredential(profile, qsl("character"));
+            CredentialManager::removeCredential(copiedProfile, qsl("character"));
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), password));
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("url"), qsl("example.org")).first);
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("4000")).first);
+        dialog()->fillout_form();
+        selectTestProfile();
+        QVERIFY(waitForPasswordReadsToSettle());
+        selectProfile(profile);
+        // stands in for the read slot_loadPasswordAsync() starts, which then finds this one in flight and leaves it be
+        dialog()->mKeychainOperationProfile = profile;
+        QVERIFY2(dialog()->character_password_entry->text().isEmpty(), "the password is already in the field, so this proves nothing");
+
+        (dialog()->*copy)();
+        QTest::qWait(50ms);
+        dialog()->passwordRetrieved(profile, true, password, QString());
+
+        QVERIFY2(waitForTheCopy(), "the copy never finished");
+        QTRY_COMPARE(dialog()->profile_name_entry->text(), copiedProfile);
+        QCOMPARE(dialog()->character_password_entry->text(), password);
+        QTRY_COMPARE(CredentialManager::retrieveCredential(copiedProfile, qsl("character")), password);
+        QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
     }
 
 private slots:
@@ -381,6 +464,336 @@ private slots:
         const QString settingsCopy = mSavedProfile + qsl("1");
         QCOMPARE(saved(settingsCopy, qsl("port")), qsl("4000"));
         QCOMPARE(saved(settingsCopy, qsl("ssl_tsl")), QString::number(Qt::Checked));
+    }
+
+    // With passwords stored securely the "password" file a settings copy takes is empty, so the copy has to be given the password itself
+    void test_aSettingsCopyKeepsASecurelyStoredPassword()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("SecurePassword-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString password = qsl("settings-copy-secret");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile, settingsCopy]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+            CredentialManager::removeCredential(settingsCopy, qsl("character"));
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), password));
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("url"), qsl("example.org")).first);
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("4000")).first);
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), password);
+        // an invalid port is not saved, so the copy does not have it and must not keep its error
+        dialog()->port_entry->setText(qsl("70000"));
+        QVERIFY(dialog()->notificationAreaMessageBox->text().contains(qsl("65535")));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QCOMPARE(dialog()->profile_name_entry->text(), settingsCopy);
+        QCOMPARE(dialog()->character_password_entry->text(), password);
+        QTRY_COMPARE(CredentialManager::retrieveCredential(settingsCopy, qsl("character")), password);
+        QVERIFY2(!dialog()->mCopyingProfile, "the settings copy left the copying flag up");
+        QCOMPARE(saved(settingsCopy, qsl("port")), qsl("4000"));
+        QVERIFY2(!dialog()->notificationAreaMessageBox->text().contains(qsl("65535")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+
+        // a copy that cannot be made, here for want of a name, must lower the flag too
+        selectProfile(profile);
+        dialog()->profile_name_entry->clear();
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(!dialog()->mCopyingProfile, "a settings copy that was not made left the copying flag up");
+    }
+
+    void test_aSettingsCopyMadeDuringThePasswordReadGetsThePassword()
+    {
+        copyDuringThePasswordRead(qsl("PendingReadSettings-ConnDialogOffline"), &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
+    }
+
+    void test_aCopyMadeDuringThePasswordReadGetsThePassword() { copyDuringThePasswordRead(qsl("PendingReadCopy-ConnDialogOffline"), &dlgConnectionProfiles::slot_copyProfile); }
+
+    // The games tabs stay out of reach while a copy waits, as switching them picks another profile, which the copy would take instead
+    void test_aQueuedCopyKeepsItsSourceAcrossTheGamesTabs()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString game = qsl("ZombieMUD");
+        const QString password = qsl("tab-switch-secret");
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileHomePath, game)).exists());
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const int shownTab = dialog()->mpTabBar->currentIndex();
+        const QStringList listedBefore = profileDirsOnDisk();
+        const auto restore = qScopeGuard([this, game, shownTab, listedBefore]() {
+            releaseQueuedCopy();
+            CredentialManager::removeCredential(game, qsl("character"));
+            for (const QString& made : profileDirsMadeSince(listedBefore)) {
+                CredentialManager::removeCredential(made, qsl("character"));
+                QDir(MudletApp::getMudletPath(enums::profileHomePath, made)).removeRecursively();
+            }
+            dialog()->mpTabBar->setCurrentIndex(shownTab);
+        });
+        dialog()->mpTabBar->setCurrentIndex(dlgConnectionProfiles::scmAllGamesTab);
+        selectTestProfile();
+        QVERIFY(waitForPasswordReadsToSettle());
+        selectProfile(game);
+        dialog()->mKeychainOperationProfile = game;
+
+        dialog()->slot_copyProfile();
+        // what a click on the other tab does, if it can be clicked
+        if (dialog()->mpTabBar->isEnabled()) {
+            dialog()->mpTabBar->setCurrentIndex(dlgConnectionProfiles::scmMyGamesTab);
+        }
+        QTest::qWait(50ms);
+        dialog()->passwordRetrieved(game, true, password, QString());
+        QVERIFY2(waitForTheCopy(), "the copy never finished");
+        QTest::qWait(50ms);
+
+        QCOMPARE(profileDirsMadeSince(listedBefore), QStringList{game + qsl("1")});
+        QTRY_COMPARE(CredentialManager::retrieveCredential(game + qsl("1"), qsl("character")), password);
+        QVERIFY2(!dialog()->mKeychainWaitShown, "the dialog was left waiting for the keychain");
+    }
+
+    // A read that never answered leaves nothing to copy, and the player has to be told rather than handed a copy without its password
+    void test_aCopyWaitingOnAReadThatTimesOutSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("TimedOutRead-ConnDialogOffline");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([this]() {
+            releaseQueuedCopy();
+        });
+        dialog()->fillout_form();
+        selectTestProfile();
+        QVERIFY(waitForPasswordReadsToSettle());
+        selectProfile(profile);
+        dialog()->mKeychainOperationProfile = profile;
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        dialog()->passwordRetrieved(profile, false, QString(), qsl("Operation timed out"), true);
+
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("1"))).exists(), "a copy was made without the password that could not be read");
+        QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(qsl("copied")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+        QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
+    }
+
+    // Another profile's read answering first must neither unlock the form nor run a copy waiting on its own profile's deferred read
+    void test_aCopyWaitsForItsDeferredPasswordLoad()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("DeferredReadCopy-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString password = qsl("deferred-copy-secret");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([this, profile, settingsCopy]() {
+            dialog()->mDeferredPasswordLoadProfile.clear();
+            releaseQueuedCopy();
+            CredentialManager::removeCredential(profile, qsl("character"));
+            CredentialManager::removeCredential(settingsCopy, qsl("character"));
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), password));
+        dialog()->fillout_form();
+        selectTestProfile();
+        QVERIFY(waitForPasswordReadsToSettle());
+        dialog()->mKeychainOperationProfile = qsl("profile-being-read");
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->mDeferredPasswordLoadProfile, profile);
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(dialog()->mKeychainWaitShown, "the copy did not wait for the deferred read");
+        dialog()->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QVERIFY2(dialog()->mKeychainWaitShown && !dialog()->listWidget_profiles->isEnabled(), "the other profile's answer unlocked the form under the queued copy");
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, settingsCopy)).exists(), "the copy ran before its own profile's password was read");
+
+        QTRY_COMPARE(dialog()->profile_name_entry->text(), settingsCopy);
+        QTRY_COMPARE(CredentialManager::retrieveCredential(settingsCopy, qsl("character")), password);
+        QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
+    }
+
+    // An unreadable saved password is not copied as an empty one, and the dialog says why there is no copy
+    void test_aCopyWaitingOnAnUnreadablePasswordSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("UnreadableRead-ConnDialogOffline");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([this]() {
+            releaseQueuedCopy();
+        });
+        dialog()->fillout_form();
+        selectTestProfile();
+        QVERIFY(waitForPasswordReadsToSettle());
+        selectProfile(profile);
+        dialog()->mKeychainOperationProfile = profile;
+
+        dialog()->slot_copyProfile();
+        dialog()->passwordRetrieved(profile, false, QString(), CredentialManager::unreadableFileError(profile));
+
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("1"))).exists(), "a copy was made without the password that could not be read");
+        QVERIFY2(dialog()->notificationAreaMessageBox->text().contains(qsl("copied")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+        QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
+    }
+
+    // A keychain refusing the read, as when its prompt is dismissed, leaves no password to copy either
+    void test_aCopyWaitingOnARefusedKeychainReadSaysSo()
+    {
+#if defined(Q_OS_ANDROID)
+        QSKIP("the KeyStore never refuses a read outright");
+#endif
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("RefusedRead-ConnDialogOffline");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        const QByteArray testMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restore = qScopeGuard([this, testMode]() {
+            CredentialManager::jobStartHookForTesting() = nullptr;
+            CredentialManager::forgetStoreRefusal();
+            if (testMode.isNull()) {
+                qunsetenv("MUDLET_TEST_MODE");
+            } else {
+                qputenv("MUDLET_TEST_MODE", testMode);
+            }
+            releaseQueuedCopy();
+        });
+        mudlet::self()->setStorePasswordsSecurely(true);
+        dialog()->fillout_form();
+        selectTestProfile();
+        QVERIFY(waitForPasswordReadsToSettle());
+        // in test mode the credential store never asks the keychain
+        qunsetenv("MUDLET_TEST_MODE");
+        CredentialManager::jobStartHookForTesting() = [](QKeychain::Job* job) {
+            const QKeychain::Error error = qobject_cast<QKeychain::ReadPasswordJob*>(job) ? QKeychain::AccessDenied : QKeychain::NoError;
+            QTimer::singleShot(100ms, job, [job, error]() {
+                job->emitFinishedWithError(error, qsl("synthetic: refused"));
+            });
+            return false;
+        };
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->mKeychainOperationProfile, profile);
+
+        dialog()->slot_copyProfile();
+        QTRY_VERIFY_WITH_TIMEOUT(dialog()->mKeychainOperationProfile.isEmpty(), 10000);
+
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("1"))).exists(), "a copy was made without the password the keychain would not give");
+        QVERIFY2(dialog()->notificationAreaMessageBox->text().contains(qsl("copied")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+        QVERIFY2(!dialog()->mKeychainWaitShown && dialog()->listWidget_profiles->isEnabled(), "the dialog was left waiting for the keychain");
+    }
+
+    // A copy whose folder cannot be made must not be left listed, showing a password nothing saved
+    void test_aSettingsCopyWithNoFolderSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("NoFolderCopy-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString blocker = MudletApp::getMudletPath(enums::profileHomePath, settingsCopy);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile, blocker]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+            QFile::remove(blocker);
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("no-folder-secret")));
+        // a file where the copy's folder belongs makes it impossible to create
+        QFile blockingFile(blocker);
+        QVERIFY(blockingFile.open(QIODevice::WriteOnly));
+        blockingFile.close();
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("no-folder-secret"));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(dialog()->findData(*dialog()->listWidget_profiles, settingsCopy, dlgConnectionProfiles::csmNameRole).isEmpty(), "the copy that was not made is still listed");
+        QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(qsl("folder")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+        QVERIFY(!dialog()->mCopyingProfile);
+    }
+
+    // A password the copy could not be given has to say so, not be cleared by the copy's own validation
+    void test_aSettingsCopyThatCannotSaveThePasswordSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("UnsavablePassword-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString keyDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), settingsCopy);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile, keyDir]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+            QDir(keyDir).removeRecursively();
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("unsavable-secret")));
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("unsavable-secret"));
+        // a directory where the copy's key file belongs makes it impossible to write
+        QVERIFY(QDir().mkpath(keyDir + qsl("/encryption_key")));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(settingsCopy), qPrintable(dialog()->notificationAreaMessageBox->text()));
+    }
+
+    // Without secure storage the copy's password is the "password" file it took, so that is what its field has to show
+    void test_aSettingsCopyShowsThePasswordItSaved()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("FilePassword-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("password"), qsl("saved-secret")).first);
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("saved-secret"));
+        // an edit still waiting for its debounced save when the copy is made
+        dialog()->character_password_entry->setText(qsl("unsaved-secret"));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QCOMPARE(dialog()->profile_name_entry->text(), settingsCopy);
+        QCOMPARE(saved(settingsCopy, qsl("password")), qsl("saved-secret"));
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("saved-secret"));
+    }
+
+    // A settings copy of a game with no folder yet must leave a running full copy's flag up, as every other settings copy does
+    void test_aSettingsCopyOfAnUnopenedGameKeepsAFullCopyRunning()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("FullCopyRunning-ConnDialogOffline");
+        // not one the other cases use, as its copy will match the game's address
+        const QString unopenedGame = qsl("Clessidra");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame)).exists());
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+
+        dialog()->slot_copyProfile();
+        QVERIFY(dialog()->mCopyingProfile);
+        const int shownTab = dialog()->mpTabBar->currentIndex();
+        const auto restore = qScopeGuard([this, shownTab, unopenedGame]() {
+            // the button, not the flag: should this case fail, the flag is already down while the copy still runs
+            QTest::qWaitFor(
+                    [this]() {
+                        return dialog()->mpCopyProfile->isEnabled();
+                    },
+                    10s);
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame + qsl("1"))).removeRecursively();
+            dialog()->mpTabBar->setCurrentIndex(shownTab);
+        });
+        // only "All games" lists a game that has no folder
+        dialog()->mpTabBar->setCurrentIndex(dlgConnectionProfiles::scmAllGamesTab);
+        selectProfile(unopenedGame);
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame + qsl("1"))).exists(), "the settings copy was not made");
+        QVERIFY2(dialog()->mCopyingProfile, "the settings copy cleared the flag of the full copy still running");
+        // and so must one of a profile that has a folder
+        selectProfile(profile);
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("2"))).exists(), "the settings copy was not made");
+        QVERIFY2(dialog()->mCopyingProfile, "the settings copy cleared the flag of the full copy still running");
+        QVERIFY2(waitForTheCopy(), "the copy never finished");
     }
 
     // A renamed catalog game's new name is not in the catalog either

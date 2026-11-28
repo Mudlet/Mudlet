@@ -41,10 +41,11 @@ bool drawnAsOnePath(const QPainter& painter, const QRawFont& font)
 } // namespace
 
 TGlyphCache::TGlyphCache()
-: mFontDatabaseConnection(QObject::connect(qGuiApp, &QGuiApplication::fontDatabaseChanged, [this]() {
-    mEntries.clear();
-    mQueuedFont = QRawFont();
-}))
+: mFontDatabaseConnection(QObject::connect(qGuiApp,
+                                           &QGuiApplication::fontDatabaseChanged,
+                                           [this]() {
+                                               mEntries.clear();
+                                               mQueuedFont = QRawFont();}))
 {
 }
 
@@ -57,7 +58,7 @@ void TGlyphCache::setFont(const QFont& font, const QPaintDevice& device)
 {
     const int dpiX = device.logicalDpiX();
     const int dpiY = device.logicalDpiY();
-    if (font == mFont && dpiX == mDpiX && dpiY == mDpiY) {
+    if (Q_LIKELY(font == mFont && dpiX == mDpiX && dpiY == mDpiY)) {
         return;
     }
     mEntries.clear();
