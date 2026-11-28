@@ -150,6 +150,21 @@ private:
         return pTreeItem;
     }
 
+    QTreeWidgetItem* scriptItemWithId(const int scriptId) const
+    {
+        QList<QTreeWidgetItem*> pending{mpEditor->mpScriptsBaseItem};
+        while (!pending.isEmpty()) {
+            QTreeWidgetItem* pItem = pending.takeFirst();
+            if (pItem->data(0, Qt::UserRole).toInt() == scriptId) {
+                return pItem;
+            }
+            for (int i = 0; i < pItem->childCount(); ++i) {
+                pending.append(pItem->child(i));
+            }
+        }
+        return nullptr;
+    }
+
     QTreeWidgetItem* findEventHandlerSearchResult() const
     {
         QList<QTreeWidgetItem*> pending;
@@ -466,6 +481,9 @@ private slots:
         QVERIFY2(pScript->isActive(), "undoing the switch off left the script switched off");
         QCOMPARE(luaGlobalInt("editorSwitchedOnRuns"), 2);
 
+        // The undo rebuilt the scripts tree, freeing pTreeItem
+        pTreeItem = scriptItemWithId(pScript->getID());
+        QVERIFY(pTreeItem);
         removeScripts({pTreeItem});
     }
 };
