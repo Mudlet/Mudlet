@@ -2222,7 +2222,6 @@ private slots:
             widget.mouseMoveEvent(&move);
         };
         moveTo(card.rect.center().toPoint());
-        QCOMPARE(widget.mOpenPortal, card.portal);
         // Pointing at it does not raise the room under it
         QCOMPARE(widget.roomUnderPointer(), 0);
         const QList<ModernGLWidget::PortalCard> open = widget.portalCards();
@@ -2231,13 +2230,22 @@ private slots:
         QVERIFY(open.first().rect.height() > 44.0);
         QVERIFY(open.first().rect.contains(card.rect.center()));
         // It stays open while the pointer moves onto the rooms it shows, and closes once it leaves
-        const QPoint onTheRooms = QPointF(card.rect.center().x(), open.first().rect.top() + 2.0).toPoint();
+        const QRectF& openRect = open.first().rect;
+        const QPoint onTheRooms = QPointF(card.rect.center().x(), card.rect.top() > openRect.top() + 4.0 ? openRect.top() + 2.0 : openRect.bottom() - 2.0).toPoint();
         QVERIFY(!card.rect.contains(onTheRooms));
         moveTo(onTheRooms);
-        QCOMPARE(widget.mOpenPortal, card.portal);
         QVERIFY(widget.portalCards().first().open);
         moveTo(QPoint(card.rect.left() - 20, open.first().rect.top() - 20));
-        QCOMPARE(widget.mOpenPortal, -1);
+        QVERIFY(!widget.portalCards().first().open);
+        // Coming back onto where the rooms were shown does not open it again, only its name does
+        moveTo(onTheRooms);
+        QVERIFY(!widget.portalCards().first().open);
+        moveTo(card.rect.center().toPoint());
+        QVERIFY(widget.portalCards().first().open);
+        QEvent leave(QEvent::Leave);
+        widget.leaveEvent(&leave);
+        QVERIFY(!widget.portalCards().first().open);
+        moveTo(onTheRooms);
         QVERIFY(!widget.portalCards().first().open);
         widget.mPointerInView = false;
 
@@ -2256,6 +2264,130 @@ private slots:
         const TRoom* pWayIn = map()->mpRoomDB->getRoom(wayIn);
         QCOMPARE(widget.mCameraController.getTarget(), QVector3D(pWayIn->x(), pWayIn->y(), 0.0f));
         QCOMPARE(widget.mCameraController.getScale(), scaleBefore);
+    }
+
+    static void movePointerTo(ModernGLWidget& widget, const QPoint& position)
+    {
+        QMouseEvent move(QEvent::MouseMove, QPointF(position), widget.mapToGlobal(QPointF(position)), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        widget.mouseMoveEvent(&move);
+    }
+
+    static QList<ModernGLWidget::PortalCard> openPortalCards(ModernGLWidget& widget)
+    {
+        QList<ModernGLWidget::PortalCard> open = widget.portalCards();
+        open.removeIf([](const ModernGLWidget::PortalCard& card) {
+            return !card.open;
+        });
+        return open;
+    }
+
+    void test_onlyOnePortalPreviewIsOpenAtATimeWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(20);
+        const int next = 1 + 20 * 20;
+        // A second way in, from the room north of the first, so its name sits just above the first one's
+        map()->setExit(1 + 20, next + 20, DIR_EAST);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrameAt(widget, westId, 2.0f, QPoint(-8, -8));
+        const QList<ModernGLWidget::PortalCard> cards = widget.portalCards();
+        QCOMPARE(cards.size(), 2);
+        int covering = 0;
+        for (const ModernGLWidget::PortalCard& first : cards) {
+            const ModernGLWidget::PortalCard& second = first.portal == cards.first().portal ? cards.last() : cards.first();
+            movePointerTo(widget, first.nameRect.center().toPoint());
+            const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
+            QCOMPARE(opened.size(), 1);
+            if (!opened.first().rect.contains(second.nameRect.center())) {
+                movePointerTo(widget, QPoint(5, 5));
+                continue;
+            }
+            ++covering;
+            movePointerTo(widget, second.nameRect.center().toPoint());
+            const QList<ModernGLWidget::PortalCard> stillOpen = openPortalCards(widget);
+            QCOMPARE(stillOpen.size(), 1);
+            // What a click there goes to is the preview drawn on top
+            QCOMPARE(widget.portalAt(second.nameRect.center().toPoint()), stillOpen.first().portal);
+            movePointerTo(widget, QPoint(5, 5));
+            QVERIFY(openPortalCards(widget).isEmpty());
+        }
+        QVERIFY2(covering > 0, "neither open preview reaches the other name, so the test proves nothing");
+        widget.mPointerInView = false;
+    }
+
+    void test_anOpenPortalPreviewCoversItsNameWhicheverWayTheExitGoesWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(20);
+        const int next = 1 + 20 * 20;
+        map()->setExit(1, -1, DIR_EAST);
+        map()->setExit(1, next, DIR_NORTHEAST);
+        map()->setExit(20 * 20, next, DIR_SOUTHWEST);
+        map()->setExit(20 * 19 + 1, next, DIR_NORTHWEST);
+        map()->setExit(20, next, DIR_SOUTHEAST);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 4.0f);
+        const QList<ModernGLWidget::PortalCard> cards = widget.portalCards();
+        QCOMPARE(cards.size(), 4);
+        for (const ModernGLWidget::PortalCard& card : cards) {
+            movePointerTo(widget, card.nameRect.center().toPoint());
+            const QList<ModernGLWidget::PortalCard> opened = openPortalCards(widget);
+            QCOMPARE(opened.size(), 1);
+            QVERIFY2(opened.first().rect.contains(card.nameRect),
+                     qPrintable(qsl("the open preview %1,%2 %3x%4 leaves out part of its name at %5,%6 %7x%8")
+                                        .arg(opened.first().rect.x())
+                                        .arg(opened.first().rect.y())
+                                        .arg(opened.first().rect.width())
+                                        .arg(opened.first().rect.height())
+                                        .arg(card.nameRect.x())
+                                        .arg(card.nameRect.y())
+                                        .arg(card.nameRect.width())
+                                        .arg(card.nameRect.height())));
+            // Nor does it cover the tip of the exit it hangs from
+            QVERIFY(!opened.first().rect.contains(card.anchor));
+        }
+        widget.mPointerInView = false;
+    }
+
+    void test_aPortalPreviewOpensOnlyFromItsNameAfterTheViewChangesWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(20);
+        const int next = 1 + 20 * 20;
+        map()->setExit(next, 1, DIR_WEST);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        // Where on the east area's preview the pointer can rest without being on its name
+        queueFrameAt(widget, eastId, 2.0f, QPoint(-8, -8));
+        QCOMPARE(widget.portalCards().size(), 1);
+        const ModernGLWidget::PortalCard east = widget.portalCards().first();
+        movePointerTo(widget, east.nameRect.center().toPoint());
+        QCOMPARE(openPortalCards(widget).size(), 1);
+        const QRectF eastOpen = openPortalCards(widget).first().rect;
+        const QPoint onTheRooms = QPointF(east.nameRect.center().x(), east.nameRect.top() > eastOpen.top() + 4.0 ? eastOpen.top() + 2.0 : eastOpen.bottom() - 2.0).toPoint();
+        QVERIFY(!east.nameRect.contains(onTheRooms));
+        movePointerTo(widget, QPoint(5, 5));
+        QVERIFY(openPortalCards(widget).isEmpty());
+
+        // The west area's preview opened, then the view taken east with no move of the pointer, which rests there
+        queueFrameAt(widget, westId, 2.0f, QPoint(-8, -8));
+        QCOMPARE(widget.portalCards().size(), 1);
+        QCOMPARE(widget.portalCards().first().portal, east.portal);
+        movePointerTo(widget, widget.portalCards().first().nameRect.center().toPoint());
+        QCOMPARE(openPortalCards(widget).size(), 1);
+        queueFrameAt(widget, eastId, 2.0f, QPoint(-8, -8));
+        widget.mPointerPosition = onTheRooms;
+        QVERIFY(openPortalCards(widget).isEmpty());
+        QCOMPARE(widget.portalAt(onTheRooms), -1);
+
+        // As after a zoom: the preview that was open is no longer under the pointer where it was
+        movePointerTo(widget, east.nameRect.center().toPoint());
+        movePointerTo(widget, onTheRooms);
+        QCOMPARE(openPortalCards(widget).size(), 1);
+        queueFrameAt(widget, eastId, 2.2f, QPoint(-8, -8));
+        if (!widget.portalCards().isEmpty() && !widget.portalCards().first().nameRect.contains(onTheRooms)) {
+            QVERIFY(openPortalCards(widget).isEmpty());
+        }
+        widget.mPointerInView = false;
     }
 
     void test_stitchingTurnedOffLeavesTheViewAsItWasWithoutGL()
