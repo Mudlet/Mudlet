@@ -113,9 +113,7 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // Switching an open 3D view from the modern renderer to the classic one leaves the classic view without a context
-    // of its own, as it cannot share with the window's core profile one, and a press on it then picked a room in
-    // whichever context was current, which crashed in the driver
+    // Switching an open 3D view to the classic renderer can leave it without a context, and a press must then draw nowhere
     void test_aPressBeforeTheMapHasAContextLeavesOtherContextsAlone()
     {
         QOffscreenSurface surface;
