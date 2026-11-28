@@ -37,8 +37,9 @@ jobs:
     name: ubuntu / gcc / lua tests with no main window
     runs-on: ubuntu-22.04
     if: ${{ github.repository_owner == 'Mudlet' }}
+    # Per run outside pull requests: a group shared by every push cancels each queued push's job
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       LUA_VERSION: '5.1.5'
@@ -46,6 +47,11 @@ jobs:
       CCACHE_COMPRESSLEVEL: 1
       GCC_VERSION: 12
     steps:
+    # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+    - name: Note the folder above the checkout
+      shell: bash
+      run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
     - name: Checkout Mudlet source code
       uses: actions/checkout@v7
       with:
@@ -61,7 +67,7 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.11.3'
-        dir: ${{runner.workspace}}
+        dir: ${{env.WORK_ROOT}}
         # Uncached for the reason build-mudlet-pr.yml gives
         cache: false
         modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
@@ -117,7 +123,7 @@ jobs:
         sudo update-alternatives --set gcc /usr/bin/gcc-${GCC_VERSION}
         sudo update-alternatives --set g++ /usr/bin/g++-${GCC_VERSION}
 
-        echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${WORK_ROOT}/ccache" >> $GITHUB_ENV
 
         # lua-yajl generates the translation statistics during the build
         ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
@@ -128,9 +134,9 @@ jobs:
     - name: Install mold linker
       timeout-minutes: 5
       env:
-        MOLD_VERSION: '2.41.0'
+        MOLD_VERSION: '3.0.0'
         # Kept in step with build-mudlet-pr.yml, which says how it was taken
-        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+        MOLD_SHA256: '6c90d4a474c7c0409dfb575be03a5345878ac14fdba18de8b40fa58c60121189'
       run: |
         curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
           "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"
@@ -143,7 +149,7 @@ jobs:
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
-        path: ${{runner.workspace}}/ccache
+        path: ${{env.WORK_ROOT}}/ccache
         key: ccache-ubuntu-gcc-asan-sha-
         restore-keys: ccache-ubuntu-gcc-asan-sha-
 
@@ -180,7 +186,7 @@ jobs:
       run: |
         log="${{runner.temp}}/headless-lua-tests.log"
         mkdir -p "${XDG_CONFIG_HOME}/mudlet/profiles"
-        cp ${{runner.workspace}}/b/ninja/src/mudlet-headless ${{github.workspace}}/src
+        cp ${WORK_ROOT}/b/ninja/src/mudlet-headless ${{github.workspace}}/src
         status=0
         ${{github.workspace}}/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
           2>&1 | tee "${log}" || status=$?

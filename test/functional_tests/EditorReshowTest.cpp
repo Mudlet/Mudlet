@@ -48,6 +48,10 @@
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
+#include "edbee/models/textautocompleteprovider.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/textrange.h"
+
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
@@ -76,7 +80,7 @@ private:
         QVERIFY2(pHost, "no host for the profile");
         QSignalSpy connected(&(pHost->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
-        dlgTriggerEditor* pEditor = HostDialogs::of(pHost).mpEditorDialog;
+        dlgTriggerEditor* pEditor = HostDialogs::editor(pHost);
         QVERIFY2(pEditor && !pEditor->isVisible(), "setup: the profile needs an editor nothing has opened");
 
         // Hidden, or the view's introduction would replace the notice anyway
@@ -165,11 +169,26 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // Runs first, as it needs an editor nothing has shown: its trees stay empty until an entry point opens it,
+    // Runs first, so the editor's own build is the only thing that can have given it the Lua completions,
+    // which it shares with the preferences preview
+    void test_anEditorBuiltBeforeThePreferencesCompletesLua()
+    {
+        QVERIFY2(!dlgTriggerEditor::smAutoCompleteInitialized, "setup: the Lua completions were set up before any editor was built");
+        dlgTriggerEditor* pEditor = HostDialogs::editor(mpHost);
+        QVERIFY2(pEditor, "the profile has no editor to show");
+        edbee::TextDocument* pDocument = pEditor->mpSourceEditorEdbeeDocument;
+        QStringList labels;
+        for (const edbee::TextAutoCompleteItem* pItem : pDocument->autoCompleteProviderList()->findAutoCompleteItemsForRange(pDocument, edbee::TextRange(), qsl("sendAl"))) {
+            labels << pItem->label();
+        }
+        QVERIFY2(labels.contains(qsl("sendAll")), qPrintable(labels.join(qsl(", "))));
+    }
+
+    // Runs next, as it needs an editor nothing has shown: its trees stay empty until an entry point opens it,
     // which then has to find them filled and stay on its own view rather than the triggers one
     void test_anUnopenedEditorFillsItsTreesWhenFirstOpened()
     {
-        dlgTriggerEditor* pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+        dlgTriggerEditor* pEditor = HostDialogs::editor(mpHost);
         QVERIFY2(pEditor, "the profile has no editor to show");
         QVERIFY2(!pEditor->isVisible(), "setup: the editor has to start out never opened");
         auto* pTriggers = pEditor->findChild<QTreeWidget*>(qsl("treeWidget_triggers"));
@@ -206,7 +225,7 @@ private slots:
     // un-maximized the next time the user toggled to it.
     void test_theEditorComesBackMaximized()
     {
-        dlgTriggerEditor* pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+        dlgTriggerEditor* pEditor = HostDialogs::editor(mpHost);
         QVERIFY2(pEditor, "the profile has no editor to show");
 
         mudlet::self()->slot_showTriggerDialog();
@@ -228,7 +247,7 @@ private slots:
     // without checking it; they now build an editor when the profile has none.
     void test_theErrorsMenuItemRebuildsAMissingEditor()
     {
-        QVERIFY(HostDialogs::of(mpHost).mpEditorDialog);
+        QVERIFY(HostDialogs::editor(mpHost));
         delete HostDialogs::of(mpHost).mpEditorDialog.data();
         QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog.isNull(), "the profile is still holding an editor, so nothing here has to be rebuilt");
         QVERIFY2(mudlet::self()->dactionShowErrors->isEnabled(), "the Errors menu item is disabled, so triggering it proves nothing");
@@ -241,21 +260,19 @@ private slots:
     }
 
     // The Script Editor button opens an unopened editor on the triggers view its first build sets up, and a
-    // notice posted before that build was put off is gone, as when the build ran at load
+    // notice posted before that build was put off is gone
     void test_theScriptEditorButtonOpensAnUnopenedEditorOnItsTriggers()
     {
         Host* pSecondHost = TestProfile::create(mSecondProfileName, mLocalhost, mPort);
         QVERIFY2(pSecondHost, "no host for the second profile");
         QSignalSpy connected(&(pSecondHost->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connected.wait(2s), "could not connect the second profile to the stub server");
-        dlgTriggerEditor* pEditor = HostDialogs::of(pSecondHost).mpEditorDialog;
+        dlgTriggerEditor* pEditor = HostDialogs::editor(pSecondHost);
         QVERIFY2(pEditor && !pEditor->isVisible(), "setup: the second profile needs an editor nothing has opened");
 
         // Hidden, or the triggers introduction would replace the notice anyway
         pEditor->setBannerPermanentlyHidden(EditorViewType::cmTriggerView, qsl("intro"), true);
         pEditor->showWarning(qsl("qaNoticeBeforeTheBuild"), false);
-        // Filled in by the triggers view's own setup, which a bare switch to the view skips
-        pEditor->mTriggerEditorSplitterState.clear();
         pEditor->doCleanReset();
         QTest::qWait(50ms);
         QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
@@ -264,9 +281,12 @@ private slots:
 
         QVERIFY2(pEditor->isVisible(), "the Script Editor button did not open the editor");
         QVERIFY2(pEditor->mCurrentView == EditorViewType::cmTriggerView, "the editor did not open on the triggers view");
-        QVERIFY2(!pEditor->mTriggerEditorSplitterState.isEmpty(), "the triggers view was switched to without its layout being set up");
+        // A bare switch to the view shows the trigger form; the view's own setup hides it while no trigger is chosen
+        const QTreeWidgetItem* pChosen = pEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(!pChosen || pChosen == pEditor->treeWidget_triggers->topLevelItem(0), "setup: a trigger is chosen, so its form would show either way");
+        QVERIFY2(pEditor->mpTriggersMainArea->isHidden(), "the triggers view was switched to without its own setup");
         QVERIFY2(pEditor->mpSystemMessageArea->isHidden() || !pEditor->mpSystemMessageArea->notificationAreaMessageBox->text().contains(qsl("qaNoticeBeforeTheBuild")),
-                 "a notice the build would have cleared at load is still showing");
+                 "a notice the reset should have cleared is still showing");
 
         pSecondHost->forceClose();
         QVERIFY2(pSecondHost->requestClose(), "Closing the second profile was refused");

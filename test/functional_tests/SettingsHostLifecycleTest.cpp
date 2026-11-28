@@ -291,7 +291,8 @@ private slots:
         mpPreferences->setTab(qsl("accessibility"));
 
         QWidget* pNextStop = TestSettings::sidebar(mpPreferences)->nextInFocusChain();
-        while (!(pNextStop->isVisible() && pNextStop->isEnabled() && (pNextStop->focusPolicy() & Qt::TabFocus))) {
+        // The sidebar's own collapse chevron, drawn on its seam, is the sidebar's last stop rather than one after it
+        while (!(pNextStop->isVisible() && pNextStop->isEnabled() && (pNextStop->focusPolicy() & Qt::TabFocus)) || pNextStop->objectName() == qsl("settingsSidebarToggle")) {
             pNextStop = pNextStop->nextInFocusChain();
         }
         QCOMPARE(pNextStop->objectName(), qsl("settingsNoProfileNotice"));

@@ -30,6 +30,7 @@
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
+#include "TGlyphCache.h"
 #include "TPrintSink.h"
 #include "enums.h"
 
@@ -50,6 +51,7 @@ class QLineEdit;
 class QScrollBar;
 class QShortcut;
 class QSplitter;
+class QTimer;
 class QToolButton;
 class QVideoWidget;
 
@@ -82,7 +84,8 @@ public:
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    // A model handed in keeps its own name, and may already hold lines
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr, std::unique_ptr<TConsoleModel> handedModel = {});
     ~TConsole() override;
 
     void reset();
@@ -128,9 +131,14 @@ public:
     THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
+    int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
-    void scrollDown(int lines);
-    void scrollUp(int lines);
+    // Whether a wheel turn that way is the console's: never with scrolling disabled; always while scrolled back, so it
+    // keeps the wheel until back at its bottom; otherwise only up, with lines above the screen. False lets it go on to the parent
+    bool usesWheel(bool up);
+    // Return what usesWheel() did before the scroll; scrollUp() also does nothing when that was false
+    bool scrollDown(int lines);
+    bool scrollUp(int lines);
     // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
     void scrollTo(int line);
     void print(const QString& msg);
@@ -179,6 +187,10 @@ public:
     QSize getMainWindowSize() const;
     // For a MainConsole hidden by a tab switch, which gets no resize events: NAWS-reports its restored size.
     void syncHiddenScreenDimensions();
+    // Not pushed back by a later call, so changes that never stop still reach a hidden console every 100 ms
+    void syncHiddenScreenDimensionsSoon();
+    // What a MainConsole hidden by a tab switch will measure when it comes back
+    QSize sizeComingBackTo() const;
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     void setCaretMode(bool enabled);
@@ -221,6 +233,7 @@ public:
     std::unique_ptr<TConsoleModel> mpOwnModel;
     TConsoleModel* mpModel = nullptr;
     TBuffer& buffer;
+    std::unique_ptr<TGlyphCache> mpGlyphCache;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
 
@@ -335,20 +348,25 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
-    // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
-    int upperPaneWidthFor(const int containerWidth) const;
-    int upperPaneHeightFor(const int containerHeight) const;
+    // MainConsole only: subtract the profile's main window borders. The height spans a
+    // scrollback split as well, since that is what the game is told.
+    int upperPaneWidthFor(const int consoleWidth) const;
+    int upperPaneHeightFor(const int consoleHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    void applyFootSeamColour();
+    int footSeamHeightShown() const;
     // Returns whether the lower pane was hidden
     bool showLowerPane();
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
     QSize mOldSize;
+    // MainConsole only: a hidden profile is resized at most every 100 ms, however fast a drag steps
+    QTimer* mpHiddenSyncTimer = nullptr;
     // only ever written from a size that was really measured, so what
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had
@@ -366,6 +384,9 @@ private:
     QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning
     bool mWindowBgCoverScaleFailed = false;
+    // In the main console the search box shares commandSplitter, so the seam must span mpFoot
+    QWidget* mpFootSeam = nullptr;
+    QWidget* mpFoot = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

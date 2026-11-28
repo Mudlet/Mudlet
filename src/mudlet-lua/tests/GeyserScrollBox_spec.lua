@@ -133,6 +133,54 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.same({x = 0, y = 0, width = mainWidth - 60, height = mainHeight - 60}, geometry("gsbNegativeChild"))
       assert.are.equal(mainWidth - 60, box:get_width())
       assert.are.equal(mainHeight - 60, box:get_height())
+      box:reposition()
+      assert.are.same({x = 50, y = 40, width = mainWidth - 60, height = mainHeight - 60}, geometry("gsbNegative"))
+    end)
+
+    it("is placed by constraints that read its own size and origin", function()
+      local mainWidth = getMainWindowSize()
+      local box
+      local function centred()
+        return box and (mainWidth - box:get_width()) / 2 or 0
+      end
+      local function halfX()
+        return box and box:get_x() / 2 or 0
+      end
+      local function twiceHeight()
+        return box and box:get_height() * 2 or 0
+      end
+      box = track(Geyser.ScrollBox:new({name = "gsbCentred", x = centred, y = halfX, width = twiceHeight, height = 100}))
+      box:reposition()
+      local x = (mainWidth - 200) / 2
+      local function edge(value)
+        return math.floor(value + 0.5)
+      end
+      assert.are.same({x = edge(x), y = edge(x / 2), width = edge(x + 200) - edge(x), height = edge(x / 2 + 100) - edge(x / 2)}, geometry("gsbCentred"))
+    end)
+
+    it("is placed by constraints that read its unrounded size through a helper", function()
+      local mainWidth = getMainWindowSize()
+      local box
+      local function widthOf(window)
+        return window:get_width()
+      end
+      local function heightOf(window)
+        return window:get_height()
+      end
+      local function lowered()
+        return box and heightOf(box) / 100 or 0
+      end
+      local function twiceWidth()
+        return box and widthOf(box) * 2 or 0
+      end
+      box = track(Geyser.ScrollBox:new({name = "gsbProportioned", x = 0, y = lowered, width = "-10.5px", height = twiceWidth}))
+      box:reposition()
+      local width = mainWidth - 10.5
+      local y = width * 2 / 100
+      local function edge(value)
+        return math.floor(value + 0.5)
+      end
+      assert.are.same({x = 0, y = edge(y), width = edge(width), height = edge(y + width * 2) - edge(y)}, geometry("gsbProportioned"))
     end)
 
     it("leaves room for the next child when it is a fixed size child of an HBox", function()
@@ -230,12 +278,270 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.same({x = 5, y = 5, width = 50, height = 40}, geometry("gsbRepositionChild"))
     end)
 
+    it("places itself through a pixel_geometry override", function()
+      local scrollBox = track(Geyser.ScrollBox:new({name = "gsbOverridden", x = 30, y = 40, width = 100, height = 80}))
+      scrollBox.pixel_geometry = function(self)
+        local x, y, width, height = Geyser.Container.pixel_geometry(self)
+        self.placedAt = x
+        return x + 5, y, width - #self.name, height
+      end
+      scrollBox:reposition()
+      assert.are.same({x = 35, y = 40, width = 100 - #"gsbOverridden", height = 80}, geometry("gsbOverridden"))
+      assert.are.equal(30, scrollBox.placedAt)
+    end)
+
     it("puts its own origin back to zero after repositioning", function()
       local scrollBox = track(Geyser.ScrollBox:new({name = "gsbOriginKept", x = 30, y = 40, width = 100, height = 80}))
       scrollBox:reposition()
       assert.are.equal(0, scrollBox.get_x())
       assert.are.equal(0, scrollBox.get_y())
       assert.are.same({x = 30, y = 40, width = 100, height = 80}, geometry("gsbOriginKept"))
+    end)
+  end)
+
+  describe("Geyser.ScrollBox after one of its constraints raised", function()
+    for _, dimension in ipairs({"width", "height"}) do
+      it("places a child from its own origin after measuring its " .. dimension .. " for a child raised an error", function()
+        local size = 300
+        local cons = {name = "gsbRaised", x = 100, y = 50, width = 300, height = 200}
+        cons[dimension] = function() return size end
+        local box = track(Geyser.ScrollBox:new(cons))
+        local label = track(Geyser.Label:new({name = "gsbRaisedChild", x = 0, y = 0, width = 50, height = 50}, box))
+        size = nil
+        local raised = not pcall(label.resize, label, dimension == "width" and "50%" or 50, dimension == "height" and "50%" or 50)
+        size = 300
+        label:resize(50, 50)
+        label:move(10, 20)
+        assert.is_true(raised)
+        assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbRaisedChild"))
+        assert.are.equal(0, box:get_x())
+        assert.are.equal(0, box:get_y())
+      end)
+    end
+
+    -- a direct reposition finds the box's getters framed, a move to a new place has just replaced them
+    local relayouts = {
+      {"reposition", function(box) box:reposition() end, 100},
+      {"move", function(box) box:move(120) end, 120},
+    }
+    for _, entry in ipairs(relayouts) do
+      local name, relayout, boxX = entry[1], entry[2], entry[3]
+      it("lays a child out inside it after its own " .. name .. " raised an error", function()
+        local mainWidth = getMainWindowSize()
+        local height = 200.4
+        local box = track(Geyser.ScrollBox:new({name = "gsbRaisedBox", x = 100, y = "50.3px", width = "-10px", height = function() return height end}))
+        local label = track(Geyser.Label:new({name = "gsbRaisedBoxChild", x = 0, y = 0, width = 50, height = 50}, box))
+        height = nil
+        local raised = not pcall(relayout, box)
+        height = 200.4
+        label:resize("100%", "100%")
+        label:move(10, 20)
+        assert.is_true(raised)
+        -- the far edge width still needs the box's real x while the box measures itself,
+        -- and the height is the whole pixels its widget spans, 50 to 251
+        assert.are.same({x = 10, y = 20, width = mainWidth - 10 - boxX, height = 201}, geometry("gsbRaisedBoxChild"))
+      end)
+    end
+
+    it("measures itself as before after its own reposition raised an error", function()
+      local failing = false
+      local box
+      local function tripleWidth()
+        if failing then
+          error("not ready")
+        end
+        return box and box:get_width() * 3 or 0
+      end
+      box = track(Geyser.ScrollBox:new({name = "gsbRemeasured", x = "100.4px", y = 0, width = "-10px", height = tripleWidth}))
+      local before = box:get_height()
+      failing = true
+      local raised = not pcall(box.reposition, box)
+      failing = false
+      assert.is_true(raised)
+      assert.are.equal(before, box:get_height())
+    end)
+
+    it("raises exactly what the constraint raised", function()
+      local raising, failure = false, nil
+      local function size()
+        if raising then
+          error(failure)
+        end
+        return 100
+      end
+      local function raisedBy(raise, value)
+        raising, failure = true, value
+        local ok, raised = pcall(raise)
+        raising = false
+        assert.is_false(ok)
+        return raised
+      end
+      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedError", x = 0, y = 0, width = size, height = size}))
+      local raisers = {
+        function() return box.get_width() end,
+        function() return box.get_height() end,
+        function() box:reposition() end,
+      }
+      local object = {}
+      for _, raise in ipairs(raisers) do
+        assert.are.equal(raisedBy(size, "not ready"), raisedBy(raise, "not ready"))
+        assert.are.equal(object, raisedBy(raise, object))
+        assert.is_nil(raisedBy(raise, nil))
+      end
+    end)
+
+    it("hands a traceback the frame its constraint raised in", function()
+      local failing = false
+      local function width()
+        if failing then
+          error("not ready")
+        end
+        return 300
+      end
+      local box = track(Geyser.ScrollBox:new({name = "gsbTraced", x = 0, y = 0, width = width, height = 200}))
+      local raisers = {
+        function() return box.get_width() end,
+        function() box:reposition() end,
+      }
+      for _, raise in ipairs(raisers) do
+        failing = true
+        local _, traceback = xpcall(raise, debug.traceback)
+        failing = false
+        local origin = traceback:match("^(.-): not ready")
+        assert.is_truthy(traceback:match("stack traceback:(.*)"):find(origin .. ":", 1, true), traceback)
+      end
+    end)
+  end)
+
+  describe("Geyser.ScrollBox measured inside a coroutine", function()
+    it("lets its constraint yield, and lays children out from its own origin afterwards", function()
+      local mainWidth = getMainWindowSize()
+      local pausing = false
+      local function height()
+        if pausing then
+          coroutine.yield()
+        end
+        return 200
+      end
+      local box = track(Geyser.ScrollBox:new({name = "gsbYielding", x = 100, y = 50, width = "-10px", height = height}))
+      local label = track(Geyser.Label:new({name = "gsbYieldingChild", x = 0, y = 0, width = 50, height = 50}, box))
+      local measures = {
+        function() return box.get_height() end,
+        function() box:reposition() end,
+      }
+      for _, measure in ipairs(measures) do
+        pausing = true
+        local co = coroutine.create(measure)
+        local yielded, yieldFailure = coroutine.resume(co)
+        pausing = false
+        assert.is_true(yielded, yieldFailure)
+        assert.are.equal("suspended", coroutine.status(co))
+        local finished, failure = coroutine.resume(co)
+        assert.is_true(finished, failure)
+        assert.are.equal("dead", coroutine.status(co))
+      end
+      label:resize("100%", 50)
+      label:move(10, 20)
+      assert.are.same({x = 10, y = 20, width = mainWidth - 110, height = 50}, geometry("gsbYieldingChild"))
+    end)
+
+    -- runs on the main thread, or inside a coroutine of its own
+    local function runOn(where, work)
+      if where == "the main thread" then
+        work()
+      else
+        coroutine.wrap(work)()
+      end
+    end
+
+    for _, where in ipairs({"the main thread", "a coroutine"}) do
+      it("gives its own origin to a coroutine its constraint resumes, laid out on " .. where, function()
+        local box
+        local seen = {}
+        local function width()
+          if box then
+            seen[#seen + 1] = coroutine.wrap(function() return box:get_x() end)()
+          end
+          return 300
+        end
+        box = track(Geyser.ScrollBox:new({name = "gsbNestedRead", x = 100, y = 50, width = width, height = 200}))
+        runOn(where, function()
+          track(Geyser.Label:new({name = "gsbNestedReadChild", x = 0, y = 0, width = "50%", height = 50}, box))
+          box:reposition()
+        end)
+        assert.is_true(#seen >= 2)
+        for _, x in ipairs(seen) do
+          assert.are.equal(100, x)
+        end
+      end)
+    end
+
+    for _, dimension in ipairs({"width", "height"}) do
+      it("places a child from its own origin inside a coroutine after measuring its " .. dimension, function()
+        local box = track(Geyser.ScrollBox:new({name = "gsbLaidOutInCoroutine", x = 100, y = 50, width = "-10px", height = 200}))
+        local cons = {name = "gsbLaidOutInCoroutineChild", x = 0, y = 0, width = 50, height = 50}
+        cons[dimension] = "50%"
+        local label = track(Geyser.Label:new(cons, box))
+        box:reposition()
+        label:resize(50, 50)
+        coroutine.wrap(function() label:move(10, 20) end)()
+        assert.are.same({x = 10, y = 20, width = 50, height = 50}, geometry("gsbLaidOutInCoroutineChild"))
+      end)
+    end
+
+    local raisers = {
+      {"its width", "width", function(_, label) label:resize("50%", 50) end},
+      {"its height", "height", function(_, label) label:resize(50, "50%") end},
+      {"its own reposition", "height", function(box) box:reposition() end},
+    }
+    for _, raiser in ipairs(raisers) do
+      local what, dimension, raise = raiser[1], raiser[2], raiser[3]
+      for _, where in ipairs({"the main thread", "another coroutine"}) do
+        it("places a child from its own origin on " .. where .. " after " .. what .. " raised inside a coroutine", function()
+          local size = 300
+          local cons = {name = "gsbRaisedInCoroutine", x = 100, y = 50, width = "-10px", height = 200}
+          cons[dimension] = function() return size end
+          local box = track(Geyser.ScrollBox:new(cons))
+          local label = track(Geyser.Label:new({name = "gsbRaisedInCoroutineChild", x = 0, y = 0, width = 50, height = 50}, box))
+          size = nil
+          local raising = coroutine.create(function() raise(box, label) end)
+          local finished = coroutine.resume(raising)
+          size = 300
+          local placed, widened
+          runOn(where, function()
+            label:resize(50, 50)
+            label:move(10, 20)
+            placed = geometry("gsbRaisedInCoroutineChild")
+            label:resize("100%", 50)
+            widened = geometry("gsbRaisedInCoroutineChild")
+          end)
+          assert.is_false(finished)
+          assert.are.equal("dead", coroutine.status(raising))
+          assert.are.same({x = 10, y = 20, width = 50, height = 50}, placed)
+          -- the far edge width needs the box's real x while it measures itself
+          local width = dimension == "width" and 300 or getMainWindowSize() - 110
+          assert.are.same({x = 10, y = 20, width = width, height = 50}, widened)
+        end)
+      end
+    end
+
+    it("does not keep alive a coroutine a measure raised in", function()
+      local size = 300
+      local box = track(Geyser.ScrollBox:new({name = "gsbRaisedCoroutineGone", x = 100, y = 50, width = function() return size end, height = 200}))
+      local label = track(Geyser.Label:new({name = "gsbRaisedCoroutineGoneChild", x = 0, y = 0, width = 50, height = 50}, box))
+      local alive = setmetatable({}, {__mode = "k"})
+      local function raiseInCoroutine()
+        local co = coroutine.create(function() label:resize("50%", 50) end)
+        alive[co] = true
+        return coroutine.resume(co)
+      end
+      size = nil
+      local finished = raiseInCoroutine()
+      size = 300
+      collectgarbage()
+      collectgarbage()
+      assert.is_false(finished)
+      assert.is_nil(next(alive))
     end)
   end)
 

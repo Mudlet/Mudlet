@@ -29,6 +29,7 @@
  */
 
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -287,6 +288,56 @@ private slots:
         QVERIFY(createCountingKey(qsl("Ctrl+Tab binding"), Qt::Key_Tab, nextProfileModifier, qsl("_testCtrlTab")) > 0);
 
         QVERIFY2(overrideClaimed(Qt::Key_Tab, nextProfileModifier), "A user key binding on Ctrl+Tab did not claim the key");
+    }
+
+    // The caret mode key wins over the next profile shortcut while the input line or main window has the keyboard,
+    // so the balloon a second game opens with must not offer it as the way to switch
+    void test_theTipLeavesOutTheNextProfileKeyWhenItIsTheCaretKey()
+    {
+        const auto savedChoice = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedChoice]() {
+            mpHost->mCaretShortcut = savedChoice;
+        });
+        const QString nextKey = mudlet::keySequenceForProse(QKeySequence(nextProfileModifier | Qt::Key_Tab));
+        const QString firstKey = mudlet::keySequenceForProse(QKeySequence(Qt::CTRL | Qt::Key_1));
+
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+        QVERIFY2(mudlet::self()->profileSwitchingTip(mpHost).contains(nextKey), qPrintable(mudlet::self()->profileSwitchingTip(mpHost)));
+
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        const QString tip = mudlet::self()->profileSwitchingTip(mpHost);
+        QVERIFY2(!tip.contains(nextKey), qPrintable(qsl("the tip offers %1, the caret mode key: %2").arg(nextKey, tip)));
+        QVERIFY2(tip.contains(firstKey), qPrintable(tip));
+
+        // The Ctrl+Tab caret key takes Ctrl+Tab with Alt held too
+        QKeySequence* pNext = mudlet::self()->mpShortcutsManager->getSequence(qsl("Next profile"));
+        QVERIFY(pNext);
+        const QKeySequence savedNext = *pNext;
+        const auto restoreNext = qScopeGuard([pNext, savedNext]() {
+            *pNext = savedNext;
+        });
+        *pNext = QKeySequence(nextProfileModifier | Qt::AltModifier | Qt::Key_Tab);
+        const QString altKey = mudlet::keySequenceForProse(*pNext);
+        const QString altTip = mudlet::self()->profileSwitchingTip(mpHost);
+        QVERIFY2(!altTip.contains(altKey), qPrintable(qsl("the tip offers %1, which the caret mode key takes: %2").arg(altKey, altTip)));
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to run the binding
+    void test_userBindingOnCtrlTabRunsWhenTheKeyArrivesOnlyAsAShortcut()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        QVERIFY(createCountingKey(qsl("Ctrl+Tab binding"), Qt::Key_Tab, nextProfileModifier, qsl("_testCtrlTabShortcutOnly")) > 0);
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent event(QEvent::ShortcutOverride, Qt::Key_Tab, nextProfileModifier, 0, 0x30, 0, qsl("\t"));
+        event.ignore();
+        QApplication::sendEvent(commandLine(), &event);
+        QVERIFY(event.isAccepted());
+
+        QTRY_COMPARE(luaCounter(qsl("_testCtrlTabShortcutOnly")), 1);
+#endif
     }
 
     // Shift+Tab reaches the widget as Key_Backtab while the sequence is spelt

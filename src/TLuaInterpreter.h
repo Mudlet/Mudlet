@@ -98,6 +98,10 @@ public:
     void handleIreComposerEdit(const QByteArray& jsonData);
     void msdp2Lua(const char*);
     void initLuaGlobals();
+    // A Lua C module linked into the program, which require() then finds under that name ahead of any on
+    // disk, in every Lua state made afterwards. The last one given for a name is the one found; one with
+    // no name or no function is refused.
+    static void preloadModule(const QByteArray& name, lua_CFunction open);
     void abortAllDownloads();
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();
@@ -216,7 +220,7 @@ public:
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, const QString&);
+    std::pair<int, QString> startTempKey(int&, int&, const QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -244,6 +248,8 @@ public:
     static int auditAreas(lua_State*);
     static int getAreaExits(lua_State*);
     static int getAreaGraph(lua_State*);
+    static int getAreaExploration(lua_State*);
+    static int getAreaConnections(lua_State*);
     static int setMergeTables(lua_State*);
     static int addSupportedTelnetOption(lua_State*);
     static int setDoor(lua_State*);
@@ -371,6 +377,7 @@ public:
     static int setRoomIDbyHash(lua_State*);
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
+    static int connectFromGameLink(lua_State*);
     static int getRoomsByPosition(lua_State*);
     static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);
@@ -402,6 +409,7 @@ public:
     static int getRoomName(lua_State*);
     static int setRoomEnv(lua_State*);
     static int setCustomEnvColor(lua_State*);
+    static int unsetCustomEnvColor(lua_State*);
     static int roomLocked(lua_State*);
     static int setAreaName(lua_State*);
     static int setAreaGraphPosition(lua_State*);
@@ -658,6 +666,7 @@ public:
     static int pauseMusic(lua_State*);
     static int pauseVideos(lua_State*);
     static int updateSounds(lua_State*);
+    static int updateMusic(lua_State*);
     static int setMediaListener(lua_State*);
     static int getMediaListener(lua_State*);
     static int purgeMediaCache(lua_State*);
@@ -978,6 +987,8 @@ private:
     static bool checkCommandsOrFunctionsTable(lua_State*, const char* functionName, const int index);
     static bool checkHintsTable(lua_State*, const char* functionName, const int index);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static int getVerifiedGeometry(lua_State*, const char* functionName, const int pos, const char* publicName);
+    static int boundedGeometry(double);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static std::pair<bool, QString> getVerifiedStringOrInteger(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -1001,6 +1012,7 @@ private:
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
     static int loadMediaFileAsOrderedArguments(lua_State*, const char*, const TMediaData::MediaType);
     static int loadMediaFileAsTableArgument(lua_State*, const char*, const TMediaData::MediaType);
+    static int updateMediaAsTableArgument(lua_State*, const char*, const TMediaData::MediaType);
     static int playMusicFileAsOrderedArguments(lua_State*, const char*);
     static int playMusicFileAsTableArgument(lua_State*, const char*);
     static int playSoundFileAsOrderedArguments(lua_State*, const char*);
@@ -1070,6 +1082,8 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
+    int pushHttpRequestResult(lua_State*, QNetworkReply*);
+    static void appendHttpRequestId(TEvent&, const QNetworkReply*);
     void stopSpawnedProcesses();
 #if defined(Q_OS_WINDOWS)
     void loadUtf8Filenames();
@@ -1156,6 +1170,8 @@ private:
     // a line, though not one made while a script is running. The fifth slot
     // is rawget(), which puts a name still left out in place before reading.
     lua_CFunction mStockMetatableFunctions[5] = {};
+    // yajl.to_value as loaded, which parseJSON() stands in for while json_to_value is still it
+    lua_CFunction mStockJsonToValue = nullptr;
     bool mGlobalsMetatableTouched = false;
     // Once both handlers are seen in place with no script running, the next
     // lines do not look for them again until a script runs. Lua can also run
@@ -1223,6 +1239,9 @@ private:
     // dropped whenever it is replaced.
     QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
+    static constexpr const char* csmHttpRequestIdProperty = "mudletHttpRequestId";
+    // Lives as long as the Host, so an id from before a resetProfile() is never reused
+    qint64 mLastHttpRequestId = 0;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
     // so it has to be unref'd once the waiter has read it.

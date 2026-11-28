@@ -106,6 +106,11 @@ as what CI passes — set them to match the job being reproduced:
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
 | `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and the Linux build that ships (Windows passes it with `-D`); see below |
 
+The Linux build that ships also takes the `PATH`, `CC`, `CXX`, `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
+that the *(Linux) Install Clang for the profile-guided build* step in `build-mudlet.yml` sets, and
+passes `-DUSE_ALTERNATE_LINKER=lld` in place of the preset's `mold`, plus
+`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
+
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
 ```
@@ -160,10 +165,10 @@ setup or teardown needs one should pend instead, as the checker will not accept 
 
 ## Sanitizers and static analysis
 
-Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a
-Release build type does not turn them off on its own - `<platform>-release` clears the variable
-explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake
-list — semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
+Sanitizers are enabled on every non-Windows build but Android; `USE_SANITIZER` defaults to `address`,
+and a Release build type does not turn them off on its own - `<platform>-release` clears the variable
+explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake list —
+semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
 A comma-separated value is read as a single name, which silently skips the per-sanitizer options
 such as `-fno-omit-frame-pointer`.
 
@@ -236,14 +241,19 @@ the mapper too - with it, those came out at 0.97, 0.99 and 0.97. Hand-placed `Q_
 hints are not a substitute - removing all of Mudlet's, or adding more to the hottest branches,
 measured as noise.
 
-CI builds all three releases this way: macOS and Windows with Clang, Linux with the GCC 12 it
-already uses. Switching Linux to Clang would trade one for the other: with PipelineBenchmark as the
-only training, profile-guided Clang beat plain GCC on the trained paths (triggers 0.90, text 0.86)
-but not on svof (0.98, noise), and was slower at 2D map rendering (1.08 to 1.24), plain Clang being
-slower than GCC there to begin with. Measured end to end on the Linux release configuration
-rather than through PipelineBenchmark's slots, GCC 12 with the profile took 0.89 of the time on a
-replayed session with 46 triggers, 0.89 on the same session with none and 0.94 on svof, drew the
-Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for paths on four maps.
+CI builds all three releases this way with Clang, and links the Windows and Linux ones with ThinLTO.
+Linux takes Clang 23 from apt.llvm.org but compiles against GCC 12's libstdc++, so the AppImage
+still runs on Ubuntu 22.04; the workflow fails if Clang would pick another GCC's. It also passes the
+hardening flags Ubuntu's GCC adds by default and Clang does not, which cost Clang 1 to 4%. Measured
+end to end on the Linux release configuration, 16 interleaved rounds at each of three code layouts,
+Clang 23 with the profile, ThinLTO and that hardening took 0.85 of the time GCC 12 with the profile
+did on a replayed session with 46 triggers, 0.93 on the same session with none and 0.93 on svof.
+Full LTO was no faster than ThinLTO and needs 6.4 GB per link; adding LTO to GCC 12 with the profile
+took 0.91, 0.95 and 0.99. GCC 12's profile alone took 0.89, 0.89 and 0.94 of the time of a plain
+GCC 12 build, drew the Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for
+paths on four maps. Map drawing and path searches have not been measured on the Clang build; with
+PipelineBenchmark as the only training, profile-guided Clang without LTO took 1.08 to 1.24 of plain
+GCC's time at 2D map rendering.
 
 The first pass builds only the instrumented benchmarks - building `mudlet` would send the
 instrumented binary's debug files to Sentry - and the second builds everything against the profile,
@@ -269,7 +279,8 @@ accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UP
 environment. A `USE_*` value already in the cache - from `-D` or an earlier configure of the same
 build tree - takes precedence over the `WITH_*` environment variable, so changing the environment
 of an existing build tree has no effect; pass `-DUSE_*` instead. Shader hot-reloading and memory
-tracking default to OFF, the rest to ON.
+tracking default to OFF, the rest to ON, except that for Android the 3D mapper, MCP server and
+build-type splash screen default to OFF (see "Leaving out what a mobile build cannot use").
 
 This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
@@ -279,8 +290,8 @@ This applies only to those seven. Other `WITH_*` names are ordinary options: `WI
 The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it
 is the one that fails at configure time rather than silently doing nothing when they are missing:
 `src/CMakeLists.txt` does `find_package(Qt6 COMPONENTS HttpServer REQUIRED)` only under
-`USE_MCPSERVER`, which is on by default. Qt HttpServer in turn pulls in Qt WebSockets, and
-distributions package the two separately, so install both:
+`USE_MCPSERVER`, which is on by default except for Android. Qt HttpServer in turn pulls in Qt
+WebSockets, and distributions package the two separately, so install both:
 
 | Environment | Packages |
 | --- | --- |
@@ -289,7 +300,7 @@ distributions package the two separately, so install both:
 | Fedora | `qt6-qthttpserver-devel` `qt6-qtwebsockets-devel` |
 | MSYS2 (CLANG64) | `${MINGW_PACKAGE_PREFIX}-qt6-httpserver` `${MINGW_PACKAGE_PREFIX}-qt6-websockets` — `CI/setup-windows-sdk.sh` installs both |
 | macOS (Homebrew) | included in the `qt` formula, nothing extra to install |
-| Flatpak (KDE runtime) | the runtime has Qt WebSockets; `CI/org.mudlet.mudlet.yml` builds Qt HttpServer from source |
+| Flatpak (KDE runtime) | included in the KDE runtime that `CI/org.mudlet.mudlet.yml` uses, nothing extra to install |
 | aqtinstall (what CI uses) | `-m qthttpserver qtwebsockets` alongside the existing modules |
 
 To build without it, and so without either package, turn it off:
@@ -331,14 +342,154 @@ above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environm
 | `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
 | `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
 
-The `linux-core-minimal` preset turns these off, along with `USE_MCPSERVER`, `USE_UPDATER`,
-`USE_3DMAPPER` and `WITH_SENTRY`, and builds only `mudlet-headless`. CI builds it on every pull
+For Android they default to OFF, as do `USE_MCPSERVER`, `USE_3DMAPPER`, `USE_GUI` and
+`USE_VARIABLE_SPLASH_SCREEN`, and `USE_SANITIZER` defaults to none instead of `address`, so a
+configure with the NDK's toolchain file needs none of them named. Each can still be turned on
+there but `USE_GUI` and `USE_3DMAPPER`: Android has no Qt DBus for the desktop GUI, and no desktop
+OpenGL or GLU for the 3D mapper. `USE_MCPSERVER` needs Qt HttpServer for Android installed.
+With `USE_GUI` off, as on Android, `USE_VARIABLE_SPLASH_SCREEN` has no effect, and configure says
+so: its images go into the desktop GUI, not `mudlet_core` or `mudlet-headless`.
+
+`USE_BUILTIN_MUDLET_LUA` and `USE_BUNDLED_LUA_MODULES` go the other way: off by default except for
+Android and a browser, they build Mudlet's own Lua files and the Lua C modules those need into
+`mudlet_core`, for an app with no Mudlet installed beside it to load them from; see "Embedding it:
+Mudlet's own Lua files" in `headless.md`. The modules need SQLite3 (`libsqlite3-dev`) to build.
+
+The `linux-core-minimal` preset turns the options in the table off, along with `USE_MCPSERVER`,
+`USE_UPDATER`, `USE_3DMAPPER` and `WITH_SENTRY`, turns those two on, and builds only
+`mudlet-headless`. CI builds it on every pull
 request that touches the sources (`.github/workflows/core-mobile-build.yml`), and fails if
-`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry:
+`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry. It then
+opens a profile with the checkout's Lua files moved away and nowhere for Lua to find a C module, which
+only a `mudlet_core` that carries both can do, and runs `CI/core-mobile-smoke.lua` in it, which uses each
+module:
 
 ```bash
 cmake --preset linux-core-minimal
 cmake --build --preset linux-core-minimal
+```
+
+## WebAssembly
+
+`mudlet-headless` builds for the browser (#9011) with Emscripten 3.1.70 against Qt 6.9.0's
+`wasm_singlethread` kit (Qt for WebAssembly without threads), with the `qt5compat`, `qtmultimedia`
+and `qtspeech` modules. It takes its tools (moc, rcc, lrelease) from the desktop Qt of the same
+version, the host kit. The build also runs host tools: a Lua 5.1 that can load the `lua-yajl` rock
+(`CI/install-lua-rocks.sh lua-yajl`; without it the translation statistics come out empty),
+`ninja`, `make`, `cmake`, `curl` and `git`, a host C++ compiler (Boost's bootstrap builds `b2` with
+it), and Node for the smoke test and specs below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
+
+```bash
+aqt install-qt all_os wasm 6.9.0 wasm_singlethread -m qt5compat qtmultimedia qtspeech -O ~/Qt
+aqt install-qt linux desktop 6.9.0 linux_gcc_64 -m qt5compat qtmultimedia qtspeech -O ~/Qt
+```
+
+`CI/build-wasm-dependencies.sh` builds the libraries Mudlet and its bundled Lua C modules link,
+SQLite among them, from pinned and checksummed sources, into a prefix of your choosing, and skips
+any that this same script, yajl patch and emcc already built there. The prefix must hold these
+libraries alone, as a desktop build may search one such as `~/.local`: the script refuses a
+directory holding anything it did not build, and a non-Emscripten configure fails if it finds zlib
+or PCRE2 there through `CMAKE_PREFIX_PATH` (cache or environment). The `wasm-headless` preset reads
+the wasm kit from `QT_ROOT_DIR`, the host kit from `QT_HOST_PATH` and that prefix, as an absolute
+path, from `MUDLET_WASM_DEPS`, and fails to configure without them or with a prefix the script has
+not finished. A build directory keeps the toolchain and the libraries it was first configured with,
+so after correcting `QT_ROOT_DIR` or changing `MUDLET_WASM_DEPS`, configure with
+`cmake --fresh --preset wasm-headless`. It warns when another version of the script built the
+prefix; rerun the script then. From scratch:
+
+```bash
+/path/to/emsdk/emsdk install 3.1.70
+/path/to/emsdk/emsdk activate 3.1.70
+source /path/to/emsdk/emsdk_env.sh
+export QT_ROOT_DIR=~/Qt/6.9.0/wasm_singlethread QT_HOST_PATH=~/Qt/6.9.0/gcc_64
+export MUDLET_WASM_DEPS=~/mudlet-wasm-deps
+CI/build-wasm-dependencies.sh "$MUDLET_WASM_DEPS"
+cmake --preset wasm-headless
+cmake --build --preset wasm-headless
+```
+
+The preset turns off what `linux-core-minimal` does (see the previous section), keeps the bundled
+Lua C modules and mudlet-lua, and builds only `mudlet-headless`, in Release, into
+`build-wasm-headless/src/` as `mudlet-headless.js`, `mudlet-headless.wasm` and `qtloader.js`.
+
+Qt for WebAssembly needs a DOM, so the result runs in a browser rather than in Node.
+`CI/wasm-headless-smoke.js` serves it to headless Chromium through Playwright and exits 0 two
+seconds after the program prints the expected line, if the page still answers then, as a hung page
+prints nothing. It fails on an error line before then, any of the script's `failureMarkers`: a Lua C
+module or mudlet-lua that does not load, a Lua error, or a package or module that did not load whole
+or has a script or pattern that does not work.
+
+Given only the build directory, it runs a probe that exercises mudlet-lua, PCRE2's Unicode tables,
+SQLite, yajl, LPeg and Hunspell (through the profile's own dictionary, as the browser has no system
+one), saves the profile, downloads a file the page serves and unzips an archive it serves through
+lua-zip (see the script). As this is the one 32-bit build CI runs, the probe also checks that a
+function refuses an integer argument an int cannot hold, then loads a map desktop Mudlet saved, and
+its own save of that map, and fails unless both export the JSON desktop did and the reloaded map
+gives the routes `Mapper_spec.lua` expects of it; a change to the default map format version means
+making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md` says. Last, the page moves
+its clocks 2200 seconds on and the probe checks that `os.clock()` moved on with them, which
+Emscripten's own `clock()` stops doing 2147 seconds after its first call:
+
+```bash
+npm install --prefix ~/mudlet-playwright playwright@1.63.0
+~/mudlet-playwright/node_modules/.bin/playwright install chromium
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-smoke.js build-wasm-headless/src
+```
+
+Given an expected line after the directory, which must not be blank, it passes the rest of its
+arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loading` instead, it feeds
+the game a line from an `-e` step while standard output has gone, as a pipe's has once its reader
+exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked for
+before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
+error, and passes once the run ends with status 1. With `--game-connection`, the page makes the
+profile's connection, as "Embedding it: the game connection" in `headless.md` has a page do, over a
+WebSocket to `CI/wasm-telnet-relay.js` and on to `CI/telnet-fixture-server.py`, which asks for the
+terminal type, offers GMCP, sends a line a trigger answers and hangs up once the answer arrives; it
+passes once the profile has seen all of that and the game received the terminal type, whose NUL byte
+must cross the page's connection, and the answer. The page's first four connections fail on purpose,
+in this order: one with a `write()` that throws, one handing `received()` a `Blob`, one whose
+`dial()` returns a promise that rejects and one whose `write()` does. The run also wants Mudlet to
+have reported each, in the browser's console and as the reason on its own, and closed each before
+the next dial. The first connection hands `received()` a view into a padded buffer, whose padding
+must never reach the profile, and the one that plays the game hands it a bare `ArrayBuffer`. Its
+header lists its exit codes; 3 means it could not run the program at all, not that the build failed.
+
+The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
+keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the
+browser's keychain waits on a nested event loop that Qt for WebAssembly cannot run without
+asyncify. `mudlet-headless` ends in a browser as it does on the desktop, which the page reports as
+an `[exit]` line, so a run that ends before the line fails, and one that never prints it fails
+after `WASM_SMOKE_TIMEOUT` seconds (120 by default).
+
+`CI/wasm-headless-lua-tests.js` runs the Lua specs in the browser as `headless-lua-tests.yml` runs
+them on the desktop, with the same arguments and environment, and writes what the run printed to a
+log. `CI/fetch-wasm-busted.sh` fetches busted and the pure-Lua modules it needs, pinned and
+checksummed; `CI/wasm-busted-shims/system.lua` stands in for its one C module. The runner copies
+those, the specs and the package one of them installs into the page. It exits 0 once the run ends
+with busted's summary, whatever failed; `CI/check-headless-lua-failures.py` then checks the failures
+against the desktop's list and `CI/wasm-lua-known-failures.txt`, which adds the browser's own and
+takes off desktop ones that do not get as far as failing there:
+
+```bash
+CI/fetch-wasm-busted.sh ~/mudlet-wasm-busted
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-lua-tests.js build-wasm-headless/src ~/mudlet-wasm-busted /tmp/wasm-lua-tests.log
+python3 CI/check-headless-lua-failures.py /tmp/wasm-lua-tests.log CI/headless-lua-known-failures.txt CI/wasm-lua-known-failures.txt
+```
+
+Most of the browser's own failures wait for a timer. Without asyncify Qt for WebAssembly fires its
+timers only once the page hands the browser its thread back, and busted runs every spec in one call,
+so `pumpEvents()` and `waitForEvent()` deliver posted events but never a timer, a network reply or a
+media event. `WASM_LUA_TESTS_TRACE=1` prints each test's name as it starts, which names the one a
+hang is in, and `WASM_LUA_TESTS_ONLY=<spec file>` runs that file alone.
+
+`.github/workflows/wasm-build.yml` builds and runs both on every push to `development` and every
+pull request that touches the sources, caching the dependency prefix, and once a week builds that
+prefix from scratch. It links with Emscripten's runtime checks, which the preset leaves out, so that
+a stack overflow or a read or write through a null pointer aborts the run instead of going
+unnoticed; they make the module about a tenth larger. To do the same, configure with:
+
+```bash
+cmake --preset wasm-headless -DCMAKE_EXE_LINKER_FLAGS="-sASSERTIONS=1 -sSTACK_OVERFLOW_CHECK=2 -sSAFE_HEAP=1"
 ```
 
 ## Debugging options

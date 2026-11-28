@@ -949,7 +949,8 @@ end
 
 --- Sets whether a screen reader announces the label's new text when it changes, for a label
 -- showing something the player should hear about, such as a status or an alert. Only heard
--- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated, and
+-- text that changes more than once a second is heard as its latest value, once a second.
 -- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
 -- @return true, or nil and why the label refused it
 function Geyser.Label:setLiveRegion(mode)
@@ -1512,30 +1513,23 @@ function Geyser.Label:new (cons, container)
   -- applies it, or a value the label refused would stay on the object
   local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
   me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
-  if accessibleName then
-    local ok, err = me:setAccessibleName(accessibleName)
-    if not ok then
-      debugc(string.format("Geyser.Label:new(): accessibleName refused for '%s': %s", me.name, tostring(err)))
-    end
-  end
-
-  if accessibleRole then
-    local ok, err = me:setAccessibleRole(accessibleRole)
-    if not ok then
-      debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
-    end
-  end
-
-  if liveRegion then
-    -- setLabelLiveRegion raises on a non-string, which would leave this label half built
-    local ok, err
-    if type(liveRegion) == "string" then
-      ok, err = me:setLiveRegion(liveRegion)
-    else
-      err = string.format("liveRegion must be a string, got %s", type(liveRegion))
-    end
-    if not ok then
-      debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
+  for _, setting in ipairs({
+    {"accessibleName", accessibleName, me.setAccessibleName},
+    {"accessibleRole", accessibleRole, me.setAccessibleRole},
+    {"liveRegion", liveRegion, me.setLiveRegion},
+  }) do
+    local key, value, setter = setting[1], setting[2], setting[3]
+    if value then
+      -- The setter raises on anything Lua cannot read as a string, which would leave this label half built
+      local ok, err
+      if type(value) == "string" or type(value) == "number" then
+        ok, err = setter(me, value)
+      else
+        err = string.format("%s must be a string, got %s", key, type(value))
+      end
+      if not ok then
+        debugc(string.format("Geyser.Label:new(): %s refused for '%s': %s", key, me.name, tostring(err)))
+      end
     end
   end
 
@@ -1581,9 +1575,11 @@ end
 -- @param auto true when the label is shown because its container was shown
 function Geyser.Label:show(auto)
   -- the nest parent's container may still be hidden when this label's own one comes
-  -- back; showing the parent again brings this label back with it
+  -- back; showing the parent again brings this label back with it. A parent that is
+  -- only closed is not waited on: its nest is closed too and stays hidden, but must
+  -- drop auto_hidden, or opening the parent later could never show it
   local parent = self.nestParent
-  if auto and parent and (parent.hidden or parent.auto_hidden) then
+  if auto and parent and parent.auto_hidden then
     return false
   end
   if Geyser.Container.show(self, auto) == false then

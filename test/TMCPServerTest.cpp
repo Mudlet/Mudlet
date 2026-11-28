@@ -469,6 +469,76 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
     }
 
+    void testABatchIsAnInvalidRequestRatherThanAParseError()
+    {
+        // The body parses fine, so a parse error would send the client hunting for broken
+        // JSON that is not there - and its message read "JSON parse error: no error occurred".
+        const QByteArray batch = '[' + bodyFor(qsl("tools/list")) + ']';
+
+        const MCPReply reply = server->handleMessage(batch, headersFor(qsl("tools/list")));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
+    void testARequestWithoutAMethodIsAnInvalidRequest_data()
+    {
+        QTest::addColumn<QJsonValue>("method");
+        QTest::newRow("missing") << QJsonValue(QJsonValue::Undefined);
+        QTest::newRow("number") << QJsonValue(5);
+        QTest::newRow("null") << QJsonValue(QJsonValue::Null);
+    }
+
+    void testARequestWithoutAMethodIsAnInvalidRequest()
+    {
+        QFETCH(QJsonValue, method);
+        QJsonObject message = QJsonDocument::fromJson(bodyFor(qsl("tools/list"), QJsonObject(), QJsonValue(7))).object();
+        message.remove(qsl("method"));
+        if (!method.isUndefined()) {
+            message[qsl("method")] = method;
+        }
+
+        const MCPReply reply = server->handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headersFor(QString()));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QCOMPARE(reply.body.value(qsl("id")).toInt(), 7);
+    }
+
+    void testAnIdThatIsNeitherAStringNorANumberIsAnInvalidRequest_data()
+    {
+        QTest::addColumn<QJsonValue>("id");
+        QTest::newRow("boolean") << QJsonValue(true);
+        QTest::newRow("object") << QJsonValue(QJsonObject{{qsl("n"), 1}});
+        QTest::newRow("array") << QJsonValue(QJsonArray{1});
+    }
+
+    void testAnIdThatIsNeitherAStringNorANumberIsAnInvalidRequest()
+    {
+        QFETCH(QJsonValue, id);
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list"), QJsonObject(), id), headersFor(qsl("tools/list")));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        // An id that cannot be one is not echoed: the client never sent a usable one.
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
+    void testANonJsonRpc2MessageDoesNotEchoAnUnusableId()
+    {
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("1.0");
+        message[qsl("id")] = QJsonObject{{qsl("n"), 1}};
+        message[qsl("method")] = qsl("tools/list");
+
+        const MCPReply reply = server->handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headersFor(qsl("tools/list")));
+
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
     void testNotificationIsAcknowledgedWithoutABody()
     {
         const MCPReply reply = server->handleMessage(bodyFor(qsl("notifications/whatever"), QJsonObject(), QJsonValue()), headersFor(qsl("notifications/whatever")));
@@ -1000,6 +1070,103 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QVERIFY(result.success);
         QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+    }
+
+    void testATableCutShortByItsStringsSaysSo()
+    {
+        // The last string rendered can be what overdraws the budget; it comes back whole,
+        // so the table has to say it stopped there or the missing entries vanish unnoticed.
+        const MCPToolResult object = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t['k' .. i] = string.rep('x', 99999) end return t"));
+        const MCPToolResult array = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[i] = string.rep('x', 99999) end return t"));
+
+        QVERIFY(object.success);
+        QVERIFY(array.success);
+        QVERIFY2(object.text.contains(qsl("the rest was left out")), qPrintable(object.text.right(300)));
+        QVERIFY2(array.text.contains(qsl("the rest was left out")), qPrintable(array.text.right(300)));
+        QCOMPARE(array.text.count(qsl("the rest was left out")), 1);
+    }
+
+    void testAMarkerSitsInTheTableThatLostEntries()
+    {
+        // The child is complete, but its last string runs the budget out, so it is the
+        // parent's own entry that goes missing and the parent that has to say so.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local c = {} for i = 1, 16 do c[i] = string.rep('x', 99999) end return {c, extra = 'tail'}"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+        QVERIFY2(result.text.contains(qsl("\"<too much data, the rest was left out>\":null")), qPrintable(result.text.right(300)));
+    }
+
+    void testATableWhoseLastStringRunsTheBudgetOutIsNotMarked()
+    {
+        const MCPToolResult array = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 16 do t[i] = string.rep('x', 99999) end return t"));
+        const MCPToolResult object = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 16 do t['k' .. i] = string.rep('x', 99999) end return t"));
+
+        QVERIFY(array.success);
+        QVERIFY(object.success);
+        QVERIFY2(!array.text.contains(qsl("left out")), qPrintable(array.text.right(300)));
+        QVERIFY2(!object.text.contains(qsl("left out")), qPrintable(object.text.right(300)));
+    }
+
+    void testALongListOfNumbersIsMarkedOnce()
+    {
+        // The element where the budget runs out is the marker itself, so the list must not
+        // add a second one after it.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 300000 do t[i] = i end return t"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+    }
+
+    void testAKeyThatRunsTheBudgetOutIsMarkedOnce()
+    {
+        // The key's own charge leaves the marker as its value, which already says it.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[string.rep('k', 99999) .. i] = 1 end return t"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+    }
+
+    void testANestedTableCutShortIsMarkedOnce()
+    {
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[i] = string.rep('x', 99999) end return {t}"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+    }
+
+    void testANumberKeyOfTheLongestSpellingIsBracketedBesideItsStringTwin()
+    {
+        // numberKey()'s longest spelling is 24 characters; a string key that long must still
+        // be looked at for clashes, so the number is bracketed rather than given a #2 suffix.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} t[-2.2250738585072014e-308] = 'fromNumber' t['-2.2250738585072014e-308'] = 'fromString' return t"));
+
+        QVERIFY2(result.text.contains(qsl("\"[-2.2250738585072014e-308]\":\"fromNumber\"")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("\"-2.2250738585072014e-308\":\"fromString\"")), qPrintable(result.text));
+    }
+
+    void testATableOfLongKeysCostsNoMoreForHavingMoreOfThem()
+    {
+        // Both run out of budget after the same few keys, so the larger one should cost no
+        // more; copying every key to look for number clashes cost ten times the table's size.
+        const QString selfReferencing = qsl("t = {} for i = 1, %1 do t[string.rep('k', 100000) .. i] = t end ");
+        const WalkTimings walks = compareWalks(selfReferencing.arg(30), selfReferencing.arg(300));
+
+        QVERIFY(walks.ok);
+        QVERIFY2(walks.largerMs < 3 * walks.smallerMs + 100, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(walks.largerMs).arg(walks.smallerMs)));
+    }
+
+    void testATableOfLongKeysIsBoundedByHowMuchTextItCarries()
+    {
+        // Each level of a self-referencing table repeats every one of its keys, so keys
+        // have to be charged like values; uncharged, this reply was 205MB.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 10 do t[string.rep('k', 1000) .. i] = t end return t"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+        // A key costs what a string value of its length does, so roughly 1.6MB fits.
+        QVERIFY2(result.text.size() > 500000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+        QVERIFY2(result.text.contains(qsl("the rest was left out")), qPrintable(result.text.right(300)));
     }
 
     void testAWideKeyedTableIsCutShortQuickly()

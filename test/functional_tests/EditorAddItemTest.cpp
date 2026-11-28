@@ -24,8 +24,8 @@
  * finished item behind the editor's back.
  */
 
+#include <QAction>
 #include <QTemporaryDir>
-#include <QToolBar>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QtTest/QtTest>
@@ -428,9 +428,10 @@ private slots:
         const int keyID = pItem->data(0, Qt::UserRole).toInt();
         mpEditor->mpKeysMainArea->lineEdit_key_name->clear();
         mpEditor->slot_saveEdits();
-        // saved unbound, a key is named after the binding box's "no key chosen" text
+        // saved unbound, a key is named after the binding box's "no key chosen" text, its placeholder while it is empty
         const QString savedName = mpHost->getKeyUnit()->getKey(keyID)->getName();
-        QCOMPARE(savedName, mpEditor->mpKeysMainArea->lineEdit_key_binding->text());
+        const QLineEdit* pBindingField = mpEditor->mpKeysMainArea->lineEdit_key_binding;
+        QCOMPARE(savedName, pBindingField->text().isEmpty() ? pBindingField->placeholderText() : pBindingField->text());
         const Qt::Key codeBefore = mpHost->getKeyUnit()->getKey(keyID)->getKeyCode();
 
         mpEditor->keyGrabCallback(Qt::Key_F4, Qt::NoModifier);
@@ -556,7 +557,7 @@ private slots:
     {
         QFETCH(int, key);
         mpEditor->slot_showKeys();
-        QList<QAction*> actions = mpEditor->toolBar->actions() + mpEditor->toolBar2->actions();
+        const QList<QAction*> actions = mpEditor->toolbarActions();
         QHash<QAction*, QList<QKeySequence>> before;
         for (auto* pAction : actions) {
             before.insert(pAction, pAction->shortcuts());
@@ -579,8 +580,8 @@ private slots:
         QCOMPARE(mpEditor->mAddItem->shortcut(), QKeySequence(QKeySequence::New));
     }
 
-    // The steps from #7812, by keyboard only: a grab leaves focus on the grab
-    // button, outside the tree that Ctrl+N is scoped to
+    // The steps from #7812, by keyboard only: a grab leaves focus on the binding
+    // field, outside the tree that Ctrl+N is scoped to
     void test_ctrlNAddsAnotherKeyStraightAfterGrabbingOne()
     {
         // counts rows, not "New key"s: adding the second key saves the first under its binding's name
@@ -601,12 +602,12 @@ private slots:
         QTest::keyClick(QApplication::focusWidget(), Qt::Key_N, Qt::ControlModifier);
         QCOMPARE(countKeys(), before + 1);
 
-        auto* pGrab = mpEditor->mpKeysMainArea->pushButton_key_grabKey;
-        pGrab->setFocus(Qt::TabFocusReason);
-        QTRY_VERIFY(pGrab->hasFocus());
-        QTest::keyClick(pGrab, Qt::Key_Space);
-        QVERIFY2(mpEditor->mIsGrabKey, "pressing the grab button did not start a grab");
-        QTest::keyClick(pGrab, Qt::Key_F10);
+        auto* pField = mpEditor->mpKeysMainArea->lineEdit_key_binding;
+        pField->setFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(pField->hasFocus());
+        QTest::keyClick(pField, Qt::Key_Space);
+        QVERIFY2(mpEditor->mIsGrabKey, "pressing Space on the binding field did not start a grab");
+        QTest::keyClick(pField, Qt::Key_F10);
         QVERIFY2(!mpEditor->mIsGrabKey, "the key press did not end the grab");
         QCOMPARE(mpEditor->mpKeysMainArea->lineEdit_key_binding->text(), qsl("F10"));
 

@@ -54,6 +54,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
+#include "CredentialManager.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
@@ -370,6 +371,26 @@ private slots:
         QCOMPARE(mpHost->mLogDir, QString());
     }
 
+    // Saving never deletes a stored proxy password, so clearing the field must, or the next load brings it back
+    void test_clearingTheProxyPasswordDeletesTheStoredOne()
+    {
+        QVERIFY(CredentialManager::storeCredential(mProfileName, qsl("proxy"), qsl("secret")));
+        mpHost->mProxyPassword = qsl("secret");
+        auto restore = qScopeGuard([this] {
+            CredentialManager::removeCredential(mProfileName, qsl("proxy"));
+            mpHost->mProxyPassword.clear();
+        });
+        openPreferences();
+        QCOMPARE(mpPreferences->lineEdit_proxyPassword->text(), qsl("secret"));
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->lineEdit_proxyPassword->clear();
+        emit mpPreferences->lineEdit_proxyPassword->editingFinished();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "clearing the proxy password never wrote the settings back");
+        QVERIFY(mpHost->mProxyPassword.isEmpty());
+        QVERIFY2(CredentialManager::retrieveCredential(mProfileName, qsl("proxy")).isEmpty(), "the cleared password would be loaded again");
+    }
+
     // Same shape for the shortcuts page: the reset button writes through
     // currentShortcuts rather than through a control, and it is a tool button,
     // which instant apply deliberately does not listen to.
@@ -417,6 +438,30 @@ private slots:
         QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
 
         QCOMPARE(dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme, qsl("PhaseDProbe"));
+    }
+
+    // Every instant apply reads the settings back into the dialog, the Editor page included. Refilling an unchanged
+    // theme list there threw a list the user had open back to wherever the chosen theme then landed.
+    void test_anApplyLeavesAnUnchangedThemeListAlone()
+    {
+        writeEditorThemesFile(R"([{"Title": "Alpha", "FileName": "Alpha.tmTheme"}, {"Title": "Beta", "FileName": "Beta.tmTheme"}])");
+        openPreferences();
+        selectCategory(qsl("editor"));
+        QComboBox* pThemes = mpPreferences->code_editor_theme_selection_combobox;
+        QVERIFY2(pThemes->findText(qsl("Beta")) >= 0, "SETUP: the theme list does not offer the themes file's themes");
+
+        QSignalSpy removed(pThemes->model(), &QAbstractItemModel::rowsRemoved);
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_announceIncomingText->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(removed.isEmpty(), "an apply emptied and refilled a theme list whose themes had not changed");
+
+        // ...while a list whose themes did change is still refilled
+        writeEditorThemesFile(R"([{"Title": "Alpha", "FileName": "Alpha.tmTheme"}, {"Title": "Beta", "FileName": "Beta.tmTheme"}, {"Title": "Gamma", "FileName": "Gamma.tmTheme"}])");
+        applySpy.clear();
+        mpPreferences->checkBox_announceIncomingText->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the second debounce never wrote the settings back");
+        QVERIFY2(pThemes->findText(qsl("Gamma")) >= 0, "an apply after the themes file gained a theme did not offer it");
     }
 
     // The protocol checkboxes are snapshotted like any control, so a protocol a

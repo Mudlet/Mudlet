@@ -48,6 +48,7 @@ class TMxpFrameWidgets;
 class TPasswordEntry;
 class TScrollBox;
 class TTextBox;
+class TTextEdit;
 class TToolBar;
 class QDialog;
 class QDockWidget;
@@ -260,7 +261,7 @@ public:
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
-    QPoint mousePosition() const override;
+    std::optional<QPoint> mousePosition() const override;
     bool hasKeyboardFocus() const override;
     bool showPlainWindow(const QString& name) override;
     bool hidePlainWindow(const QString& name) override;
@@ -279,6 +280,7 @@ public:
     void setMapProgressDialogValue(int value);
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
+    void repaintMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName) override;
     void showNewMapperDock() override;
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) override;
@@ -362,13 +364,15 @@ public:
     // nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
+    // The game window, miniconsole or user window pane the player last selected in: miniconsoles and user
+    // windows hand their focus to the main command line, and older highlights elsewhere are left in place,
+    // so a command line's Ctrl+C cannot otherwise tell which selection is the newest.
+    QPointer<TTextEdit> mpLastSelectedPane;
 
 
 public slots:
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
+    // From "Copy Map" in another profile; mapFileName is a bare name in this profile's map folder
+    void slot_reloadMap(QList<QString>, const QString& mapFileName);
 
 
 private slots:

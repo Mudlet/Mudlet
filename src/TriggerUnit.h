@@ -57,6 +57,7 @@ public:
     ~TriggerUnit();
 
     std::list<TTrigger*> getTriggerRootNodeList() { return mTriggerRootNodeList; }
+    QMap<int, TTrigger*> getTriggerList() { return mTriggerMap; }
 
     void resetStats();
     TTrigger* getTrigger(int id);
@@ -75,6 +76,7 @@ public:
     void reParentTrigger(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void processDataStream(const QString&, int);
     void compileAll();
+    void refreshColorPatterns();
     void setTriggerStayOpen(const QString&, int);
     void stopAllTriggers();
     void reenableAllTriggers();

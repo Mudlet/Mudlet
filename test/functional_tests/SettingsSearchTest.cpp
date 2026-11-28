@@ -29,6 +29,7 @@
  * Run with: ctest -R SettingsSearchTest -V
  */
 
+#include <QAccessible>
 #include <QDir>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -54,6 +55,7 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -196,6 +198,16 @@ private slots:
     {
         delete mpPreferences;
         mpPreferences = nullptr;
+    }
+
+    // A placeholder is not a name: without one a screen reader reads the field as just "edit"
+    void test_theSearchFieldHasAScreenReaderName()
+    {
+        auto* pField = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        QVERIFY(pField);
+        QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pField);
+        QVERIFY(pInterface);
+        QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), "the settings search field has no name for a screen reader to announce");
     }
 
     // The invariant behind lending cards out: after any number of searches,
@@ -460,8 +472,9 @@ private slots:
         QImage carried;
         QVERIFY(carried.loadFromData(QByteArray::fromBase64(mainDisplayGlyph.toLatin1()), "PNG"));
         // Tinting replaces the colour and keeps the alpha, so the shape is what
-        // survives out of the file and into the header
-        const QImage expected(qsl(":/icons/settings-display.png"));
+        // survives out of the file and into the header. Read via glyphPixmap():
+        // the raw SVG renders at its file's size and Lucide's stroke width.
+        const QImage expected = uiDesign::glyphPixmap(qsl(":/icons/settings-display.svg")).toImage();
         QCOMPARE(carried.size(), expected.size());
         QImage carriedShape = carried.convertToFormat(QImage::Format_Alpha8);
         QImage expectedShape = expected.convertToFormat(QImage::Format_Alpha8);

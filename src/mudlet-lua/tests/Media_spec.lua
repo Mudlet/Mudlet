@@ -401,7 +401,9 @@ describe("Media functions refuse a wrongly typed value in every position", funct
     getPlayingSounds = {name = text, key = text, tag = text, priority = number},
     getPlayingMusic = {name = text, key = text, tag = text},
     getPlayingVideos = {name = text, key = text, tag = text},
-    getPausedSounds = {name = text, key = text, tag = text},
+    getPausedSounds = {name = text, key = text, tag = text, priority = number},
+    updateSounds = {name = text, key = text, tag = text, volume = number, duration = number, pan = number},
+    updateMusic = {name = text, key = text, tag = text, volume = number, duration = number},
     getPausedMusic = {name = text, key = text, tag = text},
     getPausedVideos = {name = text, key = text, tag = text},
     pauseSounds = {name = text, key = text, tag = text},
@@ -707,6 +709,70 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("sound", finishedType)
     assert.equals("busted-key", finishedKey)
     assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("playSoundFile refuses an MP3 that turns from stereo to mono, which crashes Qt's FFmpeg backend", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- Silent 128 kbps MPEG-1 layer III frames, about 40 to a second, cycling through the given channel modes, at
+    -- 44.1 kHz or, given rate 1, 48 kHz
+    local function frames(modes, count, rate)
+      rate = rate or 0
+      local out = {}
+      for i = 1, count do
+        out[i] = string.char(0xFF, 0xFB, 0x90 + rate * 4, modes[(i - 1) % #modes + 1] * 64) .. string.rep("\0", rate == 0 and 413 or 380)
+      end
+      return table.concat(out)
+    end
+    local stereo, jointStereo, mono = 0, 1, 3
+    local tagged = frames({stereo}, 80)
+    -- a frame header inside the last frame's data, which no frame follows, then an ID3v1 tag
+    tagged = tagged:sub(1, -21) .. string.char(0xFF, 0xFB, 0x90, mono * 64) .. string.rep("\0", 16) .. "TAG" .. string.rep("\0", 125)
+    local files = {
+      ["busted-turns-mono.mp3"] = frames({stereo, jointStereo}, 40) .. frames({mono}, 40),
+      ["busted-turns-mono-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 40, 1),
+      ["busted-turns-mono-last.mp3"] = frames({stereo}, 40) .. frames({mono}, 1),
+      ["busted-turns-mono-last-48k.mp3"] = frames({stereo}, 40) .. frames({mono}, 1, 1),
+      -- playback can start in the stereo part
+      ["busted-mono-stereo-mono.mp3"] = frames({mono}, 20) .. frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-a.mp3"] = frames({stereo}, 20) .. frames({mono}, 20),
+      ["busted-wildcard-b.mp3"] = frames({stereo}, 40),
+      ["busted-turns-stereo.mp3"] = frames({mono}, 40) .. frames({stereo}, 40),
+      ["busted-stereo-tagged.mp3"] = tagged,
+    }
+    lfs.mkdir(mediaDirectory)
+    for name, contents in pairs(files) do
+      local path = mediaDirectory .. "/" .. name
+      local handle = io.open(path, "wb")
+      handle:write(contents)
+      handle:close()
+      onCleanup(function() os.remove(path) end)
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    for _, name in ipairs({"busted-turns-mono.mp3", "busted-turns-mono-48k.mp3", "busted-turns-mono-last.mp3", "busted-turns-mono-last-48k.mp3",
+                          "busted-mono-stereo-mono.mp3"}) do
+      playSoundFile({name = name})
+    end
+    -- past the first second, where the mono frames would reach the resampler
+    pumpEvents(2000)
+    assert.equals(0, #started)
+
+    for i, name in ipairs({"busted-turns-stereo.mp3", "busted-stereo-tagged.mp3"}) do
+      playSoundFile({name = name})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals(i, #started)
+      assert.equals(name, started[i].file)
+    end
+
+    -- a wildcard passes over a refused match to one that plays
+    for i = 3, 6 do
+      playSoundFile({name = "busted-wildcard-*.mp3"})
+      assert.equals("sysMediaFinished", (waitForEvent("sysMediaFinished", 5000)))
+      assert.equals("busted-wildcard-b.mp3", started[i].file)
+    end
   end)
 
   it("playSoundFile plays a file given in the ordered argument form", function()
@@ -1248,6 +1314,80 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(fixtureBody, readFile(downloaded))
   end)
 
+  describe("media download events take the shape of downloadFile's", function()
+    -- Every argument of each event for a file whose path contains name, packed so a trailing nil still counts
+    local function captureFor(eventName, name)
+      local captured = {}
+      local handler = registerAnonymousEventHandler(eventName, function(...)
+        local args = {n = select("#", ...), ...}
+        if contains(tostring(args[eventName == "sysDownloadDone" and 2 or 3]), name) then
+          captured[#captured + 1] = args
+        end
+      end)
+      onCleanup(function() killAnonymousEventHandler(handler) end)
+      return captured
+    end
+
+    it("sysDownloadDone carries file, bytes, response and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local downloaded = mediaDirectory .. "/" .. fixtureFile
+      lfs.mkdir(mediaDirectory)
+      preserveMediaDirectory()
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
+
+      local done = captureFor("sysDownloadDone", fixtureFile)
+      assert.is_true(loadSoundFile({name = fixtureFile, url = fixtureUrl()}))
+      waitForCount("sysDownloadDone", done, 1)
+
+      assert.equals(1, #done)
+      local args = done[1]
+      assert.equals(5, args.n)
+      assert.equals(#fixtureBody, args[3])
+      assert.equals("table", type(args[4]))
+      assert.equals(200, args[4].status)
+      assert.equals("1", args[4].cookies["mudlet-fixture"])
+      assert.is_nil(args[5])
+    end)
+
+    it("a failed download carries message, file, url, response, body and a nil request id", function()
+      if noFixtureServer() then
+        return
+      end
+      local name = "busted-media-missing.wav"
+      local errors = captureFor("sysDownloadError", name)
+      -- /missing is not below /media, so the fixture server answers 404
+      assert.is_true(loadSoundFile({name = name, url = fixtureUrl() .. "/missing"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals(fixtureUrl() .. "/missing/" .. name, args[4])
+      assert.equals("table", type(args[5]))
+      assert.equals(404, args[5].status)
+      assert.equals("string", type(args[6]))
+      assert.is_nil(args[7])
+    end)
+
+    it("a refused url carries message, file, url and nil for the response, body and request id", function()
+      local name = "busted-media-refused-shape.wav"
+      local errors = captureFor("sysDownloadError", name)
+      assert.is_true(loadSoundFile({name = name, url = "ftp://example.invalid/sounds"}))
+      waitForCount("sysDownloadError", errors, 1)
+
+      assert.equals(1, #errors)
+      local args = errors[1]
+      assert.equals(7, args.n)
+      assert.equals("ftp://example.invalid/sounds/" .. name, args[4])
+      assert.is_nil(args[5])
+      assert.is_nil(args[6])
+      assert.is_nil(args[7])
+    end)
+  end)
+
   it("a preload from a url keeps the file without playing it", function()
     if noFixtureServer() then
       return
@@ -1701,6 +1841,32 @@ describe("Media playback effects with a generated sound file", function()
     -- not observable from here.
     pumpEvents(quietMilliseconds)
     assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
+  end)
+
+  it("a video asked to close leaves the miniconsole it played in on screen", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- close = true takes back only a label: the gate on it reads which kind of
+    -- widget the video went to, so it has to be told a miniconsole is not one.
+    local videoWindow = "busted-media-video-window"
+    createMiniConsole(videoWindow, 0, 0, 40, 40)
+    showWindow(videoWindow)
+    onCleanup(function() hideWindow(videoWindow) end)
+    writeSoundFiles()
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(windowVisible(videoWindow))
+    -- Asked again while it plays, the request's own settings replace the player's
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
+    assert.equals(1, #getPlayingVideos())
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    pumpEvents(quietMilliseconds)
+    assert.is_true(windowVisible(videoWindow), "a video asked to close took the miniconsole it played in off screen")
   end)
 
   it("the closing caption of a stop is printed a turn after the call, not inside it", function()
@@ -2505,6 +2671,218 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a finish position ends each pass of a loop count, not the whole request", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-loops"}))
+    waitForCount("sysMediaFinished", finished, 3)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(3, #started)
+    assert.equals(3, #finished)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a finish position with endless loops repeats the stretch before it until stopped", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- Each pass is 300ms from 8000ms in, so three starts fit inside waitForCount's
+    -- five seconds only if every later pass also seeks to the start: one from the
+    -- top of the file plays 8300ms before the next begins.
+    assert.is_true(playMusicFile({name = longSoundFile, start = 8000, finish = 8300, loops = -1, key = "busted-finish-forever"}))
+    waitForCount("sysMediaStarted", started, 3)
+    assert.is_true(#started >= 3)
+    assert.equals(1, #getPlayingMusic({key = "busted-finish-forever"}))
+    assert.is_true(stopMusic({key = "busted-finish-forever"}))
+    local startedBeforeStop = #started
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(startedBeforeStop, #started, "a pass started after the loop was stopped")
+    assert.equals(0, #getPlayingMusic({key = "busted-finish-forever"}))
+  end)
+
+  it("a sysMediaFinished handler between finish-ended passes can stop the rest", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-stopped" then
+        stopSounds({key = "busted-finish-stopped"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-stopped"}))
+    waitForCount("sysMediaFinished", finished, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(1, #started, "a pass started after the handler stopped the sound")
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-stopped"}))
+  end)
+
+  it("a sound a sysMediaFinished handler plays between finish-ended passes leaves the loop its passes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-handed-over" then
+        killAnonymousEventHandler(handler)
+        playSoundFile({name = soundFile, loops = 2, key = "busted-finish-taken-over"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-handed-over"}))
+    waitForCount("sysMediaFinished", finished, 5)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    local counts = {}
+    for _, event in ipairs(finished) do
+      counts["finished " .. event.key] = (counts["finished " .. event.key] or 0) + 1
+    end
+    for _, event in ipairs(started) do
+      counts["started " .. event.key] = (counts["started " .. event.key] or 0) + 1
+    end
+    assert.same({
+      ["started busted-finish-handed-over"] = 3,
+      ["finished busted-finish-handed-over"] = 3,
+      ["started busted-finish-taken-over"] = 2,
+      ["finished busted-finish-taken-over"] = 2,
+    }, counts)
+  end)
+
+  it("another file a sysMediaFinished handler plays under the key replaces the rest of a finish-ended loop", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-replaced" then
+        killAnonymousEventHandler(handler)
+        playSoundFile({name = soundFile, key = "busted-finish-replaced"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-replaced"}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started, "the loop started another pass after it was replaced")
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-replaced"}))
+  end)
+
+  it("the same music a sysMediaFinished handler plays under the key replaces a finish-ended loop", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-replayed" then
+        killAnonymousEventHandler(handler)
+        playMusicFile({name = longSoundFile, key = "busted-finish-replayed"})
+      end
+    end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+      stopMusic({key = "busted-finish-replayed"})
+    end)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-replayed"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started, "the loop started another pass beside the replayed track")
+    assert.equals(1, #getPlayingMusic({key = "busted-finish-replayed"}))
+  end)
+
+  it("a finish-ended loop stays stoppable when a handler crowds the player list between passes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-crowded" then
+        killAnonymousEventHandler(handler)
+        for i = 1, 30 do
+          playSoundFile({name = soundFile, key = "busted-finish-crowd-" .. i})
+        end
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-crowded"}))
+    local loopStarts = function()
+      local count = 0
+      for _, event in ipairs(started) do
+        if event.key == "busted-finish-crowded" then
+          count = count + 1
+        end
+      end
+      return count
+    end
+    for _ = 1, 10 do
+      if loopStarts() >= 3 then
+        break
+      end
+      waitForEvent("sysMediaStarted", 1000)
+    end
+    assert.is_true(loopStarts() >= 3, "the loop did not carry on past the crowding handler")
+    stopSounds({key = "busted-finish-crowded"})
+    local startedBeforeStop = loopStarts()
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(startedBeforeStop, loopStarts(), "a pass started after the loop was stopped")
+  end)
+
+  it("a finish at or before the start ends an endless loop after one pass", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 4000, loops = -1, key = "busted-finish-backwards"}))
+    waitForCount("sysMediaFinished", finished, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(1, #started)
+    assert.equals(1, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-backwards"}))
+
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 5000, loops = -1, key = "busted-finish-at-start"}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-at-start"}))
+  end)
+
   it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2772,6 +3150,32 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(receiveMSP("!!SOUND(_profile/busted-msp-reserved.wav U=ftp://example.invalid/)"))
     pumpEvents(250)
     assert.equals(1, #errors, "an MSP sound naming the folder kept for scripts' copies reached the download")
+  end)
+
+  -- The MSP spec separates parameters by "one or more spaces" and lets the url be quoted. An ftp
+  -- url raises sysDownloadError carrying the url it was asked for, so each message that is parsed
+  -- rather than dropped shows up as one error naming that url.
+  it("an MSP sound is played whatever the spacing, and with a quoted url or one that has a query", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function()
+      receiveMSP("!!SOUND(Off U=ftp://example.invalid/)")
+      feedTelnet("<T_IAC><T_DONT><O_MSP>")
+    end)
+
+    local messages = {
+      {"!!SOUND(busted-msp-spaced.wav  V=50   U=ftp://example.invalid/spaced/)", "ftp://example.invalid/spaced/busted-msp-spaced.wav"},
+      {'!!SOUND(busted-msp-quoted.wav U="ftp://example.invalid/quoted/")', "ftp://example.invalid/quoted/busted-msp-quoted.wav"},
+      {"!!SOUND(busted-msp-query.wav U=ftp://example.invalid/query?set=1&v=2/)", "ftp://example.invalid/query?set=1&v=2/busted-msp-query.wav"},
+    }
+    for _, message in ipairs(messages) do
+      local before = #errors
+      assert.is_true(receiveMSP(message[1]))
+      pumpEvents(250)
+      assert.equals(before + 1, #errors, "this MSP message was dropped rather than played: " .. message[1])
+      assert.is_truthy(tostring(errors[#errors].file):find('"' .. message[2] .. '"', 1, true), tostring(errors[#errors].file))
+    end
   end)
 
   it("a Client.Media.Play message that names a type is played as that type", function()
@@ -3934,6 +4338,71 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(stopSounds())
   end)
 
+  it("updateMusic changes the volume of the music it names, and updateSounds leaves that music alone", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = {}
+    collect("sysMediaStarted", started)
+    assert.is_true(playMusicFile({name = longSoundFile, key = "busted-update-music", volume = 60}))
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-update-music", volume = 60}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+
+    assert.is_true(updateMusic({key = "busted-update-music", volume = 20}))
+    local music = getPlayingMusic({key = "busted-update-music"})
+    assert.equals(1, #music)
+    assert.equals(20, music[1].volume)
+    assert.equals(60, getPlayingSounds({key = "busted-update-music"})[1].volume, "updating the music by key changed a sound")
+
+    assert.is_true(updateMusic({name = longSoundFile, volume = 30}))
+    assert.equals(30, getPlayingMusic({key = "busted-update-music"})[1].volume, "updating the music by name left it where it was")
+    assert.equals(60, getPlayingSounds({key = "busted-update-music"})[1].volume, "updating the music by name changed a sound")
+
+    assert.is_true(updateSounds({key = "busted-update-music", volume = 40}))
+    assert.equals(40, getPlayingSounds({key = "busted-update-music"})[1].volume)
+    assert.equals(30, getPlayingMusic({key = "busted-update-music"})[1].volume, "updating the sound changed the music")
+    assert.is_true(stopMusic())
+    assert.is_true(stopSounds())
+  end)
+
+  it("getPausedSounds takes the priority filter that getPlayingSounds takes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = {}
+    collect("sysMediaStarted", started)
+    -- Starting a sound ends any paused one, and a prioritised sound stops the lower ones playing,
+    -- so a sound with a priority and one with none are the most that can be paused together
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-paused-prioritised", priority = 30}))
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-paused-unset"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+    assert.is_true(pauseSounds())
+    pumpEvents(250)
+    assert.equals(2, #getPausedSounds())
+
+    local function pausedKeys(filter)
+      local keys = {}
+      for _, sound in ipairs(getPausedSounds(filter)) do
+        keys[sound.key] = true
+      end
+      return keys
+    end
+    -- a ceiling, as for the playing sounds: a sound played with no priority is under any
+    local belowIt = pausedKeys({priority = 20})
+    assert.is_nil(belowIt["busted-paused-prioritised"])
+    assert.is_true(belowIt["busted-paused-unset"])
+    -- the ceiling itself is under it, as for the playing sounds
+    assert.is_true(pausedKeys({priority = 30})["busted-paused-prioritised"])
+    local aboveIt = pausedKeys({priority = 50})
+    assert.is_true(aboveIt["busted-paused-prioritised"])
+    assert.is_true(aboveIt["busted-paused-unset"])
+    assert.is_true(stopSounds())
+  end)
+
   it("a paused placed sound reports where it was placed, and can still be moved", function()
     if mediaPlaybackUnavailable() then
       return
@@ -4038,6 +4507,24 @@ describe("Client.Media 2 functions validate their parameters", function()
     assertArgError(function() playSoundFile({name = "x.wav", pan = 0/0}) end, "playSoundFile: bad argument value for pan")
     -- nothing to update is not an error, as stopping nothing is not
     assert.is_true(updateSounds({key = "busted-nothing-playing", pan = 20}))
+  end)
+
+  it("updateMusic needs a table and a name, key or tag, and refuses a negative duration", function()
+    assertArgError(function() updateMusic() end, "updateMusic: needs to be a table")
+    assertArgError(function() updateMusic({key = "busted-nothing-playing", duration = -1}) end, "updateMusic: bad argument range for duration")
+    local ok, err = updateMusic({volume = 10})
+    assert.is_nil(ok)
+    assert.equals("no key, name or tag to choose the music to update by", err)
+    -- nothing to update is not an error, as stopping nothing is not
+    assert.is_true(updateMusic({key = "busted-nothing-playing", volume = 20}))
+    -- music is never placed, so a pan or direction is a key it does not take and is not checked; given
+    -- alone, as a call copied from updateSounds would be, there is nothing to change and it says so
+    assert.is_true(updateMusic({key = "busted-nothing-playing", volume = 20, pan = "left", direction = "sideways"}))
+    ok, err = updateMusic({key = "busted-nothing-playing", pan = 40})
+    assert.is_nil(ok)
+    assert.equals("nothing to change (give a volume)", err)
+    -- updateSounds shipped returning true for a call that changes nothing
+    assert.is_true(updateSounds({key = "busted-nothing-playing", duration = 500}))
   end)
 
   it("setMediaListener turns to a compass direction or degrees and refuses anything else", function()
@@ -4165,6 +4652,29 @@ describe("Tests the text-to-speech Lua API", function()
         cleanups = {}
       end)
 
+      -- Checked from a build with TTS, the only place the real functions can be
+      -- listed: a script calling one that Other.lua has no shim for errors on a
+      -- build without TTS instead of carrying on.
+      it("Other.lua has a shim for every tts function, for builds without TTS", function()
+        if ttsUnsupported() then
+          return
+        end
+        local path = debug.getinfo(packageUrlDrop, "S").source:gsub("^@", "")
+        local file = assert(io.open(path, "r"))
+        local source = file:read("*a")
+        file:close()
+        local list = assert(source:match("if not ttsSpeak then.-local funcs = (%b{})"))
+        local shimmed = {}
+        for name in list:gmatch('"(tts%w+)"') do
+          shimmed[name] = true
+        end
+        for name, value in pairs(_G) do
+          if type(value) == "function" and name:match("^tts%u") then
+            assert.is_true(shimmed[name] == true, name .. " has no shim")
+          end
+        end
+      end)
+
       it("ttsSpeak rejects whitespace-only text", function()
         if ttsUnsupported() then
           return
@@ -4181,6 +4691,24 @@ describe("Tests the text-to-speech Lua API", function()
         local ok, err = ttsQueue("\t \n")
         assert.is_nil(ok)
         assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
+      end)
+
+      -- Only the brackets are dropped, so these would otherwise reach the
+      -- engine as nothing at all, which stalls the queue (#4688).
+      it("ttsSpeak and ttsQueue reject text that is nothing but angle brackets", function()
+        if ttsUnsupported() then
+          return
+        end
+        ttsClearQueue()
+        for _, markup in ipairs({"<>", "< >", "&lt;&gt;", " <<>> "}) do
+          local ok, err = ttsSpeak(markup)
+          assert.is_nil(ok, markup)
+          assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
+          ok, err = ttsQueue(markup)
+          assert.is_nil(ok, markup)
+          assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
+        end
+        assert.equals(0, #ttsGetQueue())
       end)
 
       it("ttsSpeak and ttsQueue raise a Lua error for a non-string argument", function()
@@ -4719,3 +5247,48 @@ describe("Tests the text-to-speech Lua API", function()
       end)
     end)
   end)
+
+describe("FFmpeg's hardware device types", function()
+  local variables = {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}
+
+  it("are named on Linux and Windows, unless already set, so Qt does not try each one when the first sound plays", function()
+    local named = "vaapi,vdpau,qsv,drm"
+    if getOS() == "windows" then
+      for _, variable in ipairs(variables) do
+        assert.equals("d3d11va,dxva2", os.getenv(variable))
+      end
+      return
+    end
+    if getOS() ~= "linux" then
+      -- Qt's own list there holds the platform's decoders, such as VideoToolbox
+      for _, variable in ipairs(variables) do
+        assert.are_not.equals(named, os.getenv(variable))
+        assert.are_not.equals("cuda," .. named, os.getenv(variable))
+      end
+      return
+    end
+    local nvidiaDriver = io.open("/proc/driver/nvidia/version")
+    if nvidiaDriver then
+      nvidiaDriver:close()
+      -- "init": the library loaded, and only the made-up symbol was missing
+      local _, _, failedAt = package.loadlib("libnvcuvid.so", "noSuchSymbol")
+      if failedAt == "init" then
+        named = "cuda," .. named
+      end
+    end
+    -- The environment Mudlet was started with, which setenv() leaves alone
+    local environ = io.open("/proc/self/environ", "rb")
+    local inherited = "\0" .. environ:read("*a")
+    environ:close()
+    for _, variable in ipairs(variables) do
+      local key = "\0" .. variable .. "="
+      local at = inherited:find(key, 1, true)
+      local expected = named
+      if at then
+        local valueStart = at + #key
+        expected = inherited:sub(valueStart, (inherited:find("\0", valueStart, true) or #inherited + 1) - 1)
+      end
+      assert.equals(expected, os.getenv(variable))
+    end
+  end)
+end)

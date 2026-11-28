@@ -128,8 +128,7 @@ private:
     {
         OpenWindows windows;
 
-        // loading the profile opened this one already
-        windows.editor = HostDialogs::of(pHost).mpEditorDialog;
+        windows.editor = HostDialogs::editor(pHost);
 
         mudlet::self()->slot_notes();
         windows.notePad = HostDialogs::of(pHost).mpNotePad;
@@ -331,12 +330,21 @@ private slots:
         deleteProfileDirectory(profileName);
     }
 
+    void test_appendLogTextFromTheExitEventReachesTheLog_data()
+    {
+        QTest::addColumn<bool>("html");
+        QTest::newRow("text") << false;
+        QTest::newRow("HTML") << true;
+    }
+
     // log() holds the latest line back until another arrives, and appendLog() text waits behind it
     void test_appendLogTextFromTheExitEventReachesTheLog()
     {
+        QFETCH(bool, html);
         const QString profileName = qsl("HostChildTeardown-ExitEventLog");
         Host* pHost = startProfile(profileName);
         QVERIFY2(pHost, "Profile took too long to load");
+        pHost->mIsNextLogFileInHtmlFormat = html;
         auto cleanUp = qScopeGuard([&]() {
             if (HostManager::self()->getHost(profileName)) {
                 HostManager::self()->deleteHost(profileName);
@@ -361,6 +369,12 @@ private slots:
         QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), "The log file is not readable");
         const QString contents = QString::fromUtf8(logFile.readAll());
         QVERIFY2(contents.contains(qsl("teardown-exit-event-text\n")), qPrintable(qsl("The text sysExitEvent appended never reached the log:\n%1").arg(contents)));
+        QVERIFY2(contents.indexOf(qsl("Log session ending at ")) > contents.indexOf(qsl("teardown-exit-event-text\n")),
+                 qPrintable(qsl("Closing the profile did not end the log session after its last text:\n%1").arg(contents)));
+        if (html) {
+            QVERIFY2(contents.endsWith(qsl("</div></body>\n</html>\n")), qPrintable(qsl("Closing the profile left the HTML log unterminated:\n%1").arg(contents)));
+        }
+        QVERIFY2(QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("autolog"))), "Closing the profile stopped logging from resuming on its next load");
     }
 
     // closeChildren() disposes of these windows through deleteLater(), and
@@ -567,9 +581,9 @@ private slots:
         QTRY_VERIFY2(HostManager::self()->getHost(secondName), "The second profile did not load");
         Host* pSecond = HostManager::self()->getHost(secondName);
 
-        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::of(pFirst).mpEditorDialog;
-        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::of(pSecond).mpEditorDialog;
-        QVERIFY2(firstEditor && secondEditor, "Loading a profile did not open its editor");
+        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::editor(pFirst);
+        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::editor(pSecond);
+        QVERIFY2(firstEditor && secondEditor, "A profile built no editor");
         QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
 
         Host* pActive = mudlet::self()->getActiveHost();

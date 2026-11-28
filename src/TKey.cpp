@@ -57,12 +57,11 @@ TKey::~TKey()
     if (mpHost) {
         mpHost->getKeyUnit()->unregisterKey(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Key0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Key%1").arg(mID)) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 
@@ -230,8 +229,7 @@ bool TKey::setScript(const QString& script)
     // Switching from a registered anonymous Lua function (set up by tempKey with a
     // function argument) to a script string: release the old function from the Lua
     // registry and leave callback mode. Otherwise execute() keeps calling the stale
-    // function so the new script never runs, and the registry entry leaks - the
-    // destructor would take its mScript-based branch and delete the compiled function.
+    // function so the new script never runs.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
@@ -246,7 +244,7 @@ bool TKey::setScript(const QString& script)
 
 bool TKey::compileScript()
 {
-    mFuncName = qsl("Key%1").arg(QString::number(mID));
+    mFuncName = qsl("Key%1").arg(mID);
     const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
     if (mpHost->mLuaInterpreter.compile(code, error, qsl("Key: %1").arg(getName()))) {
@@ -264,7 +262,7 @@ void TKey::validateKeyBinding()
     if (!isFolder() && (mKeyCode == Qt::Key_unknown || mKeyCode == Qt::Key(0))) {
         mOK_init = false;
         //: Error shown in the editor when a key item has no key binding assigned
-        setError(QObject::tr("No key binding set. Click \"Grab New Key\" to assign one."));
+        setError(QObject::tr("No key binding set. Click the key field and press the keys to assign one."));
     } else {
         mOK_init = true;
     }

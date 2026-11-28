@@ -39,11 +39,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
+          - os: windows-2025
             buildname: 'windows64'
             ccache_id: windows64
 
     steps:
+    # upload-artifact and cache refuse a path with '..' in it, so the folder above the checkout gets a name
+    - name: Note the folder above the checkout
+      shell: bash
+      run: echo "WORK_ROOT=${RUNNER_WORKSPACE}" >> "$GITHUB_ENV"
+
     - name: Checkout Mudlet source code
       uses: actions/checkout@v7
       with:
@@ -70,14 +75,14 @@ jobs:
     - name: Restore ccache
       uses: actions/cache/restore@v6
       with:
-        path: ${{runner.workspace}}/ccache
+        path: ${{env.WORK_ROOT}}/ccache
         key: ccache-${{matrix.ccache_id}}-sha-
         restore-keys: ccache-${{matrix.ccache_id}}-sha-
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
       env:
-        CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_DIR: ${{env.WORK_ROOT}}/ccache
       run: |
         ccache --zero-stats --show-stats -v
         ccache --show-compression
@@ -100,7 +105,7 @@ jobs:
     - name: check ccache stats post build
       shell: msys2 {0}
       env:
-        CCACHE_DIR: ${{runner.workspace}}/ccache
+        CCACHE_DIR: ${{env.WORK_ROOT}}/ccache
       run: |
         ccache --show-stats -v
         ccache --show-compression

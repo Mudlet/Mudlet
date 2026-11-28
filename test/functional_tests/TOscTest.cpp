@@ -29,6 +29,7 @@
 
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -39,6 +40,8 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
+#include "TCommandLine.h"
+#include "THyperlinkSelectionManager.h"
 #include "THyperlinkStyling.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
@@ -72,6 +75,10 @@ private:
     QByteArray data = (message + qsl("\r\n")).toUtf8();
     mpHost->mTelnet.loopbackTest(data);
     QTest::qWait(50ms);
+  }
+
+  static QString connects(const QString &address) {
+    return qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(address));
   }
 
   // Scans backward through the buffer to find the first hyperlink and returns
@@ -708,8 +715,8 @@ private slots:
     QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
   }
 
-  // Items without send: or prompt: that are not web links go to the game
-  // verbatim, since games may use bare commands that parse as URIs.
+  // Items without send: or prompt: that are not web or mail links go to the
+  // game verbatim, since games may use bare commands that parse as URIs.
   void test_Osc8MenuItemCommand_data() {
     QTest::addColumn<QString>("item");
     QTest::addColumn<QString>("expectedCommand");
@@ -721,6 +728,9 @@ private slots:
       return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
     };
 
+    QTest::newRow("a mailto with a field hidden in its address")
+        << qsl("mailto:x%253Fattachment=/etc/hostname%2526@b.com")
+        << sends(qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com"));
     QTest::newRow("https") << qsl("https://wiki.mudlet.org/w/Main_Page")
                            << opens(qsl("https://wiki.mudlet.org/w/Main_Page"));
     QTest::newRow("http") << qsl("http://example.com/")
@@ -736,9 +746,14 @@ private slots:
     QTest::newRow("bare command") << qsl("flee") << sends(qsl("flee"));
     QTest::newRow("file is not opened")
         << qsl("file:///etc/passwd") << sends(qsl("file:///etc/passwd"));
+    QTest::newRow("mailto")
+        << qsl("mailto:someone@example.com?subject=Hello")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
+    QTest::newRow("mailto keeps only its message fields")
+        << qsl("mailto:someone@example.com?subject=Hello&attach=/etc/hostname")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
     QTest::newRow("other scheme sent verbatim")
-        << qsl("mailto:someone@example.com")
-        << sends(qsl("mailto:someone@example.com"));
+        << qsl("steam://run/1") << sends(qsl("steam://run/1"));
   }
 
   void test_Osc8MenuItemCommand() {
@@ -817,8 +832,7 @@ private slots:
     const QStringList commands = console->getLinkStore().getLinksConst(linkId);
     QVERIFY(!commands.isEmpty());
     QString command = commands.first();
-    console->mUpperPane->applyHyperlinkSelectionGroupState(
-        linkId, command, styling.selection, "TOscTest");
+    console->model().applyLinkSelection(linkId, command, styling.selection);
     QCOMPARE(command, expectedCommand);
   }
 
@@ -988,6 +1002,775 @@ private slots:
     QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
     QApplication::sendEvent(console->mUpperPane, &activate);
     QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
+  }
+
+  void test_Osc8TelnetLinkAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;telnet://games.example:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(connects(qsl("telnet://games.example:4000"))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId),
+             qsl("Connect to: telnet://games.example:4000"));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        console->getLinkStore().getLinksConst(linkId).at(0));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+    QVERIFY2(!mudlet::self()->profileExists(qsl("Games")),
+             "declining still made a profile");
+  }
+
+  void test_Osc8TelnetMenuItemAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://games.example:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), connects(qsl("telnet://games.example:4000")));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(commands.at(1));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+  }
+
+  // Typed at the game, an address it could never connect to would be sent as a
+  // command, so the item has nothing to run and shows greyed out
+  void test_Osc8TelnetMenuItemWithoutAHostDoesNothing() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), QString());
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("IPv6 with a zone") << qsl("telnet://[fe80::1%252]:4000") << qsl("Connect to [fe80::1%2]:4000?");
+    QTest::newRow("IPv6") << qsl("telnet://[2001:db8::1]:4000") << qsl("Connect to [2001:db8::1]:4000?");
+    QTest::newRow("a lookalike Unicode host") << qsl("telnet://xn--pple-43d.com:4000") << qsl("Connect to аpple.com:4000 (xn--pple-43d.com)?");
+    QTest::newRow("an ASCII host") << qsl("telnet://games.example:4000") << qsl("Connect to games.example:4000?");
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(uri);
+    QCOMPARE(asked, expected);
+  }
+
+  // One that could never connect would otherwise say "Connect to" and then do
+  // nothing when clicked
+  void test_Osc8TelnetLinkWithoutAHostIsNotMade() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;telnet://:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("IPv4") << qsl("telnets://127.0.0.1:4000");
+    QTest::newRow("IPv6") << qsl("telnets://[::1]:4000");
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade() {
+    QFETCH(QString, uri);
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  // A profile already connected is only brought forward, so the link cannot
+  // set TLS for some later reconnection the player never asked for
+  void test_AGameLinkToAConnectedProfileLeavesItsTlsAlone() {
+    QVERIFY(mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return true;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost, mPort));
+
+    QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost, mPort, mHostname));
+    QVERIFY(!mpHost->mUseTlsThisSession);
+    QVERIFY(!mpHost->mSslTsl);
+    QVERIFY2(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")).isEmpty(),
+             "the link changed the profile's saved TLS setting");
+  }
+
+  // The question runs an event loop, which carries on running clicks
+  void test_AGameLinkClickedWhileAskingIsNotAskedAgain() {
+    int questions = 0;
+    mudlet::self()->mConfirmGameLink = [&questions](const QString &) {
+      if (++questions == 1) {
+        mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+      }
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+    QCOMPARE(questions, 1);
+  }
+
+  // A mailto: link keeps its own query, whatever case its scheme is in, losing
+  // only Mudlet's config; its default tooltip says it writes an email
+  void test_Osc8MailtoLink_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("with a config")
+        << qsl("mailto:admin@example.com?subject=Hello&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello") << qsl("Write to us");
+    QTest::newRow("scheme in capitals")
+        << qsl("MAILTO:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("scheme in capitals with a body and a config")
+        << qsl("MAILTO:admin@example.com?subject=Hello&body=Hi&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello&body=Hi") << qsl("Write to us");
+    QTest::newRow("default tooltip")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("only the recipients and message fields survive")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+    QTest::newRow("recipients only in the query")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("Write an email to: mailto:?to=c@example.com");
+    QTest::newRow("field names in capitals")
+        << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
+        << qsl("mailto:admin@example.com?SUBJECT=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?SUBJECT=Hi");
+    QTest::newRow("an encoded field name")
+        << qsl("mailto:admin@example.com?subject=Hi&%61ttach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+    QTest::newRow("a field hidden behind another separator")
+        << qsl("mailto:admin@example.com?subject=Hi;attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname");
+    QTest::newRow("nothing left of the query")
+        << qsl("mailto:admin@example.com?attach=/etc/hostname")
+        << qsl("mailto:admin@example.com")
+        << qsl("Write an email to: mailto:admin@example.com");
+    QTest::newRow("a fragment")
+        << qsl("mailto:admin@example.com?subject=Hi#&attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+  }
+
+  void test_Osc8MailtoLink() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("in the address") << qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("a fragment in the address") << qsl("mailto:x%23y@b.com");
+    QTest::newRow("in a to field") << qsl("mailto:?to=x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("in a bcc field") << qsl("mailto:a@b.com?bcc=x%26attachment=/etc/hostname@b.com");
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused() {
+    QFETCH(QString, uri);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int line = console->buffer.getLastLineNumber();
+    while (line >= 0 && !console->buffer.lineBuffer.at(line).contains(qsl("Email"))) {
+      --line;
+    }
+    QVERIFY2(line >= 0, "the link's text was not printed");
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
+  }
+
+  // The message is checked when the link arrives, and what was checked is what a click sends
+  void test_Osc8GmcpLink_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedMessage");
+
+    QTest::newRow("name only") << qsl("gmcp:Game.UI.Close") << qsl("Game.UI.Close");
+    QTest::newRow("string") << qsl("gmcp:IRE.Target.Set%20%22rat%22") << qsl("IRE.Target.Set \"rat\"");
+    QTest::newRow("number") << qsl("gmcp:Char.Items.Contents%2012345") << qsl("Char.Items.Contents 12345");
+    QTest::newRow("object") << qsl("gmcp:Char.Skills.Get%20%7B%22group%22%3A%22Perception%22%7D") << qsl("Char.Skills.Get {\"group\":\"Perception\"}");
+    QTest::newRow("array") << qsl("gmcp:Game.List%20%5B1%2C2%5D") << qsl("Game.List [1,2]");
+    QTest::newRow("true") << qsl("gmcp:Game.Flag%20true") << qsl("Game.Flag true");
+    QTest::newRow("null") << qsl("gmcp:Game.Flag%20null") << qsl("Game.Flag null");
+    QTest::newRow("empty string") << qsl("gmcp:Char.Items.Inv%20%22%22") << qsl("Char.Items.Inv \"\"");
+    QTest::newRow("spaces around the JSON") << qsl("gmcp:Game.Flag%20%20true%20") << qsl("Game.Flag true");
+    QTest::newRow("config is not part of it") << qsl("gmcp:Game.Flag%20true?config={\"tooltip\":\"Flag it\"}") << qsl("Game.Flag true");
+    QTest::newRow("raw JSON") << qsl("gmcp:Game.Pref {\"a\":1}") << qsl("Game.Pref {\"a\":1}");
+    QTest::newRow("a name a package only starts like") << qsl("gmcp:Char.Loginish.Get") << qsl("Char.Loginish.Get");
+    QTest::newRow("Core as a later part") << qsl("gmcp:Game.Core.Set") << qsl("Game.Core.Set");
+    QTest::newRow("longest name") << qsl("gmcp:A.") + QString(126, QLatin1Char('b')) << qsl("A.") + QString(126, QLatin1Char('b'));
+  }
+
+  void test_Osc8GmcpLink() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedMessage);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "the link was refused");
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedMessage))));
+  }
+
+  void test_Osc8GmcpDefaultTooltipNamesTheMessage() {
+    injectData(qsl("\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\a rat\x1b]8;;\x1b\\"));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(mpHost->mainConsoleView()->buffer.getLinkTooltip(std::get<2>(*pos)), qsl("Send GMCP: IRE.Target.Set \"rat\""));
+  }
+
+  void test_Osc8GmcpLinkThatIsNotValidIsPlainText_data() {
+    QTest::addColumn<QString>("uri");
+    // What the warning says failed, so the game's developer can tell
+    QTest::addColumn<QString>("why");
+
+    QTest::newRow("no name") << qsl("gmcp:") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("one part") << qsl("gmcp:Target") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("empty part") << qsl("gmcp:Game..Set") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("trailing dot") << qsl("gmcp:Game.Set.") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("part starts with a digit") << qsl("gmcp:Game.1Set") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("hyphen") << qsl("gmcp:Game.Set-It") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("name too long") << qsl("gmcp:A.") + QString(127, QLatin1Char('b')) << qsl("its message name is longer than 128 characters");
+    QTest::newRow("space and nothing") << qsl("gmcp:Game.Set%20") << qsl("its data is not a single JSON value");
+    QTest::newRow("not JSON") << qsl("gmcp:Game.Set%20rat") << qsl("its data is not a single JSON value");
+    QTest::newRow("two values") << qsl("gmcp:Game.Set%201%2C2") << qsl("its data is not a single JSON value");
+    QTest::newRow("closes the wrapper") << qsl("gmcp:Game.Set%201%5D%5B2") << qsl("its data is not a single JSON value");
+    QTest::newRow("trailing comma") << qsl("gmcp:Game.Set%201%2C") << qsl("its data is not a single JSON value");
+    QTest::newRow("a raw query mark cuts the JSON") << qsl("gmcp:Game.Set%20%22a?b%22") << qsl("its data is not a single JSON value");
+    QTest::newRow("NUL in the JSON") << qsl("gmcp:Game.Set%20%22a%00b%22") << qsl("it holds a control character");
+    QTest::newRow("newline in the name") << qsl("gmcp:Game.Set%0A") << qsl("it holds a control character");
+    QTest::newRow("newline in the JSON") << qsl("gmcp:Game.Set%20%22a%0Ab%22") << qsl("it holds a control character");
+    QTest::newRow("DEL in the JSON") << qsl("gmcp:Game.Set%20%22a%7Fb%22") << qsl("it holds a control character");
+    QTest::newRow("C1 control in the JSON") << qsl("gmcp:Game.Set%20%22a%C2%85b%22") << qsl("it holds a control character");
+    QTest::newRow("Core") << qsl("gmcp:Core.Hello") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Core in another case") << qsl("gmcp:cORE.sUPPORTS.Set%20%5B%5D") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Char.Login message") << qsl("gmcp:Char.Login.Credentials%20%7B%7D") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Char.Login in another case") << qsl("gmcp:CHAR.LOGIN.Reconnect") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Char.Login itself") << qsl("gmcp:char.login%20%7B%7D") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("encoded Core") << qsl("gmcp:%43ore.Hello") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("a selection with data that is not an object") << qsl("gmcp:Game.Set%20%22rat%22?config={\"selection\":{\"group\":\"g\",\"value\":\"v\"}}") << qsl("a selection link's data has to be a JSON object");
+    QTest::newRow("scheme in capitals") << qsl("GMCP:Game.Set") << qsl("unsupported URI scheme");
+  }
+
+  void test_Osc8GmcpLinkThatIsNotValidIsPlainText() {
+    QFETCH(QString, uri);
+    QFETCH(QString, why);
+
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QRegularExpression::escape(why)));
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+
+    QVERIFY2(!findFirstLinkPositionWithId().has_value(), "a link was made");
+    QVERIFY(bufferShows(qsl("Text")));
+  }
+
+  void test_Osc8GmcpMenuItem_data() {
+    QTest::addColumn<QString>("item");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("valid") << qsl("gmcp:IRE.Target.Set%20%22rat%22") << qsl("sendGMCP(%1)").arg(LuaLiteral::quote(qsl("IRE.Target.Set \"rat\"")));
+    QTest::newRow("not valid shows greyed out") << qsl("gmcp:Target") << QString();
+    QTest::newRow("refused shows greyed out") << qsl("gmcp:Core.Hello") << QString();
+    QTest::newRow("capitals are not typed at the game") << qsl("GMCP:Target") << QString();
+    // Encoded once, as a send: item's would be, so it arrives as a '?' that an item has no parameters to start
+    QTest::newRow("a question mark in its data") << qsl("gmcp:Game.Say%20%22why%3F%22") << qsl("sendGMCP(%1)").arg(LuaLiteral::quote(qsl("Game.Say \"why?\"")));
+  }
+
+  void test_Osc8GmcpMenuItem() {
+    QFETCH(QString, item);
+    QFETCH(QString, expected);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Pick\":\"%1\"},{\"Look\":\"send:look\"}]}\x1b\\Text\x1b]8;;\x1b\\").arg(QString(item).replace(qsl("%22"), qsl("%2522")).replace(qsl("%20"), qsl("%2520"))));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.first(), expected);
+  }
+
+  void test_Osc8GmcpSelectionAddsItsState_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedSelected");
+    QTest::addColumn<QString>("expectedCleared");
+
+    QTest::newRow("no data") << qsl("gmcp:Game.Pref.Set") << qsl("Game.Pref.Set {\"selected\":true}") << qsl("Game.Pref.Set {\"selected\":false}");
+    QTest::newRow("an object") << qsl("gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D") << qsl("Game.Pref.Set {\"pref\":\"hints\",\"selected\":true}") << qsl("Game.Pref.Set {\"pref\":\"hints\",\"selected\":false}");
+    QTest::newRow("replaces selected") << qsl("gmcp:Game.Pref.Set%20%7B%22selected%22%3A%22x%22%7D") << qsl("Game.Pref.Set {\"selected\":true}") << qsl("Game.Pref.Set {\"selected\":false}");
+    // The parser refuses these raw, so rewriting the object must not turn their escapes into them
+    QTest::newRow("escaped DEL and C1 stay escaped") << qsl("gmcp:Game.Pref.Set%20%7B%22a%22%3A%22x%5Cu0085y%5Cu007fz%22%7D") << qsl("Game.Pref.Set {\"a\":\"x\\u0085y\\u007fz\",\"selected\":true}") << qsl("Game.Pref.Set {\"a\":\"x\\u0085y\\u007fz\",\"selected\":false}");
+  }
+
+  void test_Osc8GmcpSelectionAddsItsState() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedSelected);
+    QFETCH(QString, expectedCleared);
+
+    THyperlinkSelectionManager &manager = mpHost->mainConsoleView()->getHyperlinkSelectionManager();
+    const QString group = qsl("gmcpSelection%1").arg(QTest::currentDataTag());
+    injectData(qsl("\x1b]8;;%1?config={\"selection\":{\"group\":\"%2\",\"value\":\"v\",\"exclusive\":false}}\x1b\\Text\x1b]8;;\x1b\\").arg(uri, group));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "the link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.actionScheme, Mudlet::HyperlinkStyling::ActionGmcp);
+
+    manager.setSelected(group, qsl("v"), true);
+    QCOMPARE(manager.modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, qsl("v")), qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedSelected)));
+    manager.setSelected(group, qsl("v"), false);
+    QCOMPARE(manager.modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, qsl("v")), qsl("sendGMCP(%1)").arg(LuaLiteral::quote(expectedCleared)));
+  }
+
+  void test_Osc8LocalLinkDoesNothingOutsideTheClient_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("bare") << qsl("local:") << QString();
+    QTest::newRow("a tooltip") << qsl("local:?config={\"tooltip\":\"It needs a silver key\"}") << qsl("It needs a silver key");
+    QTest::newRow("reserved text before the query is ignored") << qsl("local:later?config={\"tooltip\":\"Note\"}") << qsl("Note");
+    QTest::newRow("a spoiler") << qsl("local:?config={\"spoiler\":true}") << qsl("Click to reveal");
+  }
+
+  void test_Osc8LocalLinkDoesNothingOutsideTheClient() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "the link was refused");
+    QCOMPARE(findFirstLinkCommands(), QStringList(QString()));
+    QCOMPARE(mpHost->mainConsoleView()->buffer.getLinkTooltip(std::get<2>(*pos)), expectedTooltip);
+  }
+
+  void test_Osc8LocalSchemeInCapitalsIsPlainText() {
+    injectData(qsl("\x1b]8;;LOCAL:\x1b\\Text\x1b]8;;\x1b\\"));
+    QVERIFY(!findFirstLinkPositionWithId().has_value());
+    QVERIFY(bufferShows(qsl("Text")));
+  }
+
+  void test_Osc8LocalMenuItemIsLeftOut_data() {
+    QTest::addColumn<QString>("item");
+    QTest::newRow("lower case") << qsl("local:");
+    QTest::newRow("capitals") << qsl("LOCAL:");
+  }
+
+  void test_Osc8LocalMenuItemIsLeftOut() {
+    QFETCH(QString, item);
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Nothing\":\"%1\"},{\"Look\":\"send:look\"}]}\x1b\\Text\x1b]8;;\x1b\\").arg(item));
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+  }
+
+  void test_Osc8AMenuOfOnlyLocalItemsLeavesTheLinksOwnAction() {
+    injectData(qsl("\x1b]8;;send:look?config={\"tooltip\":\"Look\",\"menu\":[{\"Nothing\":\"local:\"}]}\x1b\\Text\x1b]8;;\x1b\\"));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    QCOMPARE(mpHost->mainConsoleView()->buffer.getLinkTooltip(std::get<2>(*pos)), qsl("Look"));
+  }
+
+  void test_Osc8LocalNoteOrControl_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<bool>("isNote");
+
+    QTest::newRow("bare") << qsl("local:") << true;
+    QTest::newRow("a tooltip") << qsl("local:?config={\"tooltip\":\"Note\"}") << true;
+    QTest::newRow("style only") << qsl("local:?config={\"style\":{\"color\":\"red\"}}") << true;
+    QTest::newRow("reveals by itself") << qsl("local:?config={\"visibility\":{\"action\":\"reveal\",\"delay\":100}}") << true;
+    QTest::newRow("a spoiler") << qsl("local:?config={\"spoiler\":true}") << false;
+    QTest::newRow("a selection") << qsl("local:?config={\"selection\":{\"group\":\"notes\",\"value\":\"a\"}}") << false;
+    QTest::newRow("a menu") << qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}") << false;
+    QTest::newRow("a click hides it") << qsl("local:?config={\"visibility\":{\"action\":\"conceal\"}}") << false;
+    QTest::newRow("a click hides it after showing") << qsl("local:?config={\"visibility\":{\"action\":\"reveal-then-conceal\"}}") << false;
+    QTest::newRow("a send link") << qsl("send:look") << false;
+  }
+
+  // A note is skipped by Tab in both directions; anything a click acts on stays a stop
+  void test_Osc8LocalNoteOrControl() {
+    QFETCH(QString, uri);
+    QFETCH(bool, isNote);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\First\x1b]8;;\x1b\\ then \x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto first = findNthDistinctLinkPosition(1);
+    auto second = findNthDistinctLinkPosition(2);
+    QVERIFY(first.has_value() && second.has_value());
+    QCOMPARE(console->buffer.linkIsNote(std::get<2>(*first)), isNote);
+
+    int line = -1;
+    int column = -1;
+    QVERIFY(console->buffer.findNextLink(0, -1, line, column));
+    const auto &expected = isNote ? *second : *first;
+    QCOMPARE(line, std::get<0>(expected));
+    QCOMPARE(column, std::get<1>(expected));
+
+    // Backwards from the link after it, a note is passed over, which leaves that link the only stop
+    const bool found = console->buffer.findPreviousLink(std::get<0>(*second), std::get<1>(*second), line, column);
+    QCOMPARE(found && std::make_pair(line, column) == std::make_pair(std::get<0>(*first), std::get<1>(*first)), !isNote);
+
+    // Forward from the last link the search wraps to the top, where a note is passed over too
+    bool wrapped = false;
+    const bool wrappedTo = console->buffer.findNextLink(std::get<0>(*second), std::get<1>(*second), line, column, &wrapped);
+    QCOMPARE(wrappedTo && wrapped && std::make_pair(line, column) == std::make_pair(std::get<0>(*first), std::get<1>(*first)), !isNote);
+  }
+
+  void activateLink(TTextEdit *pane, const std::tuple<int, int, int> &pos, const bool withMouse) {
+    pane->setCaretPosition(std::get<0>(pos), std::get<1>(pos));
+    if (withMouse) {
+      // The caret's position is the bottom left of its cell
+      const QPoint global = pane->caretGlobalPosition() + QPoint(1, -1);
+      const QPointF local = pane->mapFromGlobal(global);
+      QMouseEvent press(QEvent::MouseButtonPress, local, QPointF(global), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+      QApplication::sendEvent(pane, &press);
+    } else {
+      QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+      QApplication::sendEvent(pane, &activate);
+    }
+  }
+
+  void test_Osc8LocalLinkWithAMenuOpensItWhenActivated_data() {
+    QTest::addColumn<bool>("withMouse");
+    QTest::newRow("Return") << false;
+    QTest::newRow("left click") << true;
+  }
+
+  void test_Osc8LocalLinkWithAMenuOpensItWhenActivated() {
+    QFETCH(bool, withMouse);
+    injectData(qsl("\x1b]8;;local:?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}],\"style\":{\"active\":{\"color\":\"red\"}}}\x1b\\Word\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("Click for menu"));
+    QVERIFY(console->buffer.linkOpensItsMenu(linkId));
+
+    // Only the keyboard path uses caret mode
+    if (!withMouse) {
+      mpHost->setCaretEnabled(true);
+    }
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    // The popup takes the pane's focus, and without it the checks that caret mode survives would pass regardless
+    if (!withMouse) {
+      pane->setFocus();
+      QTRY_VERIFY(pane->hasFocus());
+    }
+    const QByteArray sentBefore = mpServer->receivedSoFar();
+    activateLink(pane, *pos, withMouse);
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY2(menu && menu->isVisible(), "activating the link did not open its menu");
+    const auto closeMenu = qScopeGuard([&] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QStringList labels;
+    for (QAction *action : menu->actions()) {
+      labels << action->text();
+    }
+    QCOMPARE(labels, QStringList({qsl("Look"), qsl("Wield")}));
+    QVERIFY2(withMouse || mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+    QVERIFY2(console->buffer.getLinkState(linkId) != Mudlet::HyperlinkStyling::StateActive, "the popup takes the release, leaving the link active");
+    QTest::qWait(50);
+    QCOMPARE(mpServer->receivedSoFar(), sentBefore);
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(withMouse || mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+  }
+
+  // Activating changes the selection, and choosing an item from the menu it opened must not change it back
+  void test_Osc8LocalMenuAndSelectionTogglesOnce_data() {
+    QTest::addColumn<bool>("withMouse");
+    QTest::newRow("Return") << false;
+    QTest::newRow("left click") << true;
+  }
+
+  void test_Osc8LocalMenuAndSelectionTogglesOnce() {
+    QFETCH(bool, withMouse);
+    const QString group = qsl("menuAndSelection%1").arg(withMouse);
+    injectData(qsl("\x1b]8;;local:?config={\"selection\":{\"group\":\"%1\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Word\x1b]8;;\x1b\\").arg(group));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+
+    // Only the keyboard path uses caret mode
+    if (!withMouse) {
+      mpHost->setCaretEnabled(true);
+    }
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    activateLink(pane, *pos, withMouse);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY(menu);
+    const QByteArray sentBefore = mpServer->receivedSoFar();
+    menu->actions().first()->trigger();
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(console->buffer.isLinkSelected(linkId), "choosing an item changed the selection a second time");
+    QTRY_VERIFY2(mpServer->receivedSoFar().mid(sentBefore.size()).contains("look"), "choosing an item did not run it");
+    QVERIFY(!mpServer->receivedSoFar().mid(sentBefore.size()).contains("wield"));
+  }
+
+  // A player who closes the menu without a pick has done nothing, so the link stays until an item is picked
+  void test_Osc8LocalMenuThatConcealsWaitsForAPick() {
+    injectData(qsl("\x1b]8;;local:?config={\"visibility\":{\"action\":\"conceal\"},\"menu\":[{\"Look\":\"send:look\"}]}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    TTextEdit *pane = console->mUpperPane;
+    for (QMenu *stale : pane->findChildren<QMenu *>()) {
+      delete stale;
+    }
+
+    activateLink(pane, *pos, true);
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY(menu);
+    QVERIFY2(!console->getHyperlinkVisibilityManager().isLinkConcealed(linkId), "opening the menu concealed the link");
+    menu->actions().first()->trigger();
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(console->getHyperlinkVisibilityManager().isLinkConcealed(linkId), "picking an item did not conceal the link");
+  }
+
+  // The tooltip shares a list with the menu's labels, so revealing must not take them with it
+  void test_Osc8RevealingASpoilerKeepsItsMenu_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("menu");
+    QTest::addColumn<int>("items");
+    QTest::addColumn<bool>("opensOnClick");
+    QTest::addColumn<QString>("tooltip");
+    QTest::newRow("two items") << qsl("local:") << qsl("[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]") << 2 << true << qsl("Click for menu");
+    QTest::newRow("one item") << qsl("local:") << qsl("[{\"Look\":\"send:look\"}]") << 1 << true << qsl("Click for menu");
+    QTest::newRow("send link") << qsl("send:look") << qsl("[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]") << 2 << false << qsl("Right-click for menu");
+  }
+
+  void test_Osc8RevealingASpoilerKeepsItsMenu() {
+    QFETCH(QString, uri);
+    QFETCH(QString, menu);
+    QFETCH(int, items);
+    QFETCH(bool, opensOnClick);
+    QFETCH(QString, tooltip);
+    injectData(qsl("\x1b]8;;%1?config={\"spoiler\":true,\"menu\":%2}\x1b\\Word\x1b]8;;\x1b\\").arg(uri, menu));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QVERIFY(console->buffer.isSpoilerUnrevealed(linkId));
+    console->buffer.revealSpoilerLink(linkId);
+
+    QCOMPARE(console->buffer.linkOpensItsMenu(linkId), opensOnClick);
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), tooltip);
+    const QStringList hints = console->getLinkStore().getHintsConst(linkId);
+    QCOMPARE(hints.size(), items + 1);
+    QCOMPARE(hints.at(1), qsl("Look"));
+  }
+
+  void test_Osc8RevealedLocalSpoilerBecomesANote() {
+    injectData(qsl("\x1b]8;;local:?config={\"spoiler\":true}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QVERIFY(!console->buffer.linkIsNote(linkId));
+    console->buffer.revealSpoilerLink(linkId);
+    QVERIFY(console->buffer.linkIsNote(linkId));
+  }
+
+  // Nothing happened, so a note does not take the visited style
+  void test_Osc8ActivatingANoteDoesNothing_data() {
+    QTest::addColumn<bool>("withMouse");
+    QTest::newRow("Return") << false;
+    QTest::newRow("left click") << true;
+  }
+
+  void test_Osc8ActivatingANoteDoesNothing() {
+    QFETCH(bool, withMouse);
+    injectData(qsl("\x1b]8;;local:?config={\"tooltip\":\"Note\"}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+
+    // Only the keyboard path uses caret mode
+    if (!withMouse) {
+      mpHost->setCaretEnabled(true);
+    }
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    activateLink(console->mUpperPane, *pos, withMouse);
+    QVERIFY(!console->buffer.isLinkVisited(std::get<2>(*pos)));
+  }
+
+  // The caret can still land on a note, where the Menu key opens what it would on any other text
+  void test_Osc8TheMenuKeyOnANoteOpensTheConsolesMenu() {
+    injectData(qsl("\x1b]8;;local:?config={\"tooltip\":\"Note\"}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    auto [line, col, linkId] = *pos;
+    TTextEdit *pane = console->mUpperPane;
+    for (QMenu *stale : pane->findChildren<QMenu *>()) {
+      delete stale;
+    }
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    pane->setCaretPosition(line, col);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+
+    QTest::keyClick(pane, Qt::Key_Menu);
+    const auto closeMenu = qScopeGuard([&] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QVERIFY2(!console->buffer.isLinkVisited(linkId), "the Menu key activated the note");
+    QVERIFY2(pane->findChild<QMenu *>(), "the Menu key on a note opened no menu");
+  }
+
+  void test_Osc8RightClickingANoteOpensTheConsolesMenu() {
+    injectData(qsl("\x1b]8;;local:?config={\"tooltip\":\"Note\"}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    auto [line, col, linkId] = *pos;
+    TTextEdit *pane = console->mUpperPane;
+    for (QMenu *stale : pane->findChildren<QMenu *>()) {
+      delete stale;
+    }
+    pane->setCaretPosition(line, col);
+    // The caret's position is the bottom left of its cell
+    const QPoint global = pane->caretGlobalPosition() + QPoint(1, -1);
+    const QPointF local = pane->mapFromGlobal(global);
+    QMouseEvent release(QEvent::MouseButtonRelease, local, QPointF(global), Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    QApplication::sendEvent(pane, &release);
+    const auto closeMenu = qScopeGuard([&] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QVERIFY2(!console->buffer.isLinkVisited(linkId), "right-clicking activated the note");
+    QVERIFY2(pane->findChild<QMenu *>(), "right-clicking a note opened no menu");
+  }
+
+  void test_Osc8AMenuOfOnlySeparatorsLeavesTheLinksOwnAction() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[\"-\",{\"Nothing\":\"local:\"}]}\x1b\\Text\x1b]8;;\x1b\\"));
+    QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+  }
+
+  // A checklist's state lives in the client, so ticking it has no message to build
+  void test_Osc8LocalSelectionTogglesAndSendsNothing() {
+    injectData(qsl("\x1b]8;;local:?config={\"selection\":{\"group\":\"recipe\",\"value\":\"flour\",\"exclusive\":false}}\x1b\\flour\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    QVERIFY(!console->buffer.isLinkSelected(linkId));
+
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(console->getHyperlinkSelectionManager().modifyUriForSelection(styling.actionScheme, styling.baseCommand, qsl("recipe"), qsl("flour")), QString());
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId), QStringList(QString()));
+  }
+
+  void test_LinkAnnouncementSaysWhatItDoes_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("send") << qsl("send:look") << qsl("Send: look, link");
+    QTest::newRow("gmcp") << qsl("gmcp:Game.UI.Close?config={\"tooltip\":\"Close\"}") << qsl("Close, link");
+    QTest::newRow("note") << qsl("local:?config={\"tooltip\":\"It needs a silver key\"}") << qsl("It needs a silver key, note");
+    QTest::newRow("note with no tooltip") << qsl("local:") << qsl("note");
+    QTest::newRow("spoiler") << qsl("local:?config={\"spoiler\":true}") << qsl("Click to reveal, button");
+    QTest::newRow("radio button") << qsl("local:?config={\"selection\":{\"group\":\"announceA\",\"value\":\"a\"}}") << qsl("radio button, not checked");
+    QTest::newRow("radio button checked") << qsl("local:?config={\"selection\":{\"group\":\"announceB\",\"value\":\"a\",\"selected\":true}}") << qsl("radio button, checked");
+    QTest::newRow("checkbox") << qsl("local:?config={\"selection\":{\"group\":\"announceC\",\"value\":\"a\",\"exclusive\":false}}") << qsl("checkbox, not checked");
+    QTest::newRow("checkbox checked") << qsl("local:?config={\"selection\":{\"group\":\"announceD\",\"value\":\"a\",\"exclusive\":false,\"selected\":true}}") << qsl("checkbox, checked");
+    QTest::newRow("menu") << qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}") << qsl("Click for menu, link, has menu");
+    QTest::newRow("disabled") << qsl("send:look?config={\"disabled\":true,\"tooltip\":\"Locked\"}") << qsl("Locked, link, disabled");
+  }
+
+  void test_LinkAnnouncementSaysWhatItDoes() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QCOMPARE(mpHost->mainConsoleView()->mUpperPane->linkAnnouncement(std::get<2>(*pos)), expected);
   }
 
   // A "config" parameter carrying something that is not an object is not a
@@ -1516,6 +2299,848 @@ private slots:
                 .arg(attrsAfter)));
   }
 
+  // The style has to be on the text from the start, not wait for a click, and
+  // to come back after anything that gives the link another state for a moment.
+  void test_DisabledLinkHasItsStyleFromTheStart() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\",\"strikethrough\":true}}}\x1b\\Off\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto showsDisabledStyle = [&, line = linkLine, col = linkCol]() {
+      const TChar &ch = console->buffer.buffer.at(line).at(col);
+      return ch.foreground() == QColor(0x80, 0x80, 0x80) && (ch.allDisplayAttributes() & TChar::StrikeOut);
+    };
+
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style is not on the text as printed");
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setHoveredLink(0);
+
+    console->buffer.setFocusedLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setFocusedLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style did not come back");
+  }
+
+  // A game that styles only :focus still sees it, since focus-visible falls back to focus
+  void test_KeyboardFocusShowsTheFocusStyle_data() {
+    QTest::addColumn<QString>("style");
+
+    QTest::newRow("focus") << qsl("{\"color\":\"#ffffff\",\"focus\":{\"color\":\"#00ff00\"}}");
+    QTest::newRow("focus-visible") << qsl("{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}");
+    QTest::newRow("focus-visible over focus") << qsl("{\"color\":\"#ffffff\",\"focus\":{\"color\":\"#ff0000\"},\"focus-visible\":{\"color\":\"#00ff00\"}}");
+  }
+
+  void test_KeyboardFocusShowsTheFocusStyle() {
+    QFETCH(QString, style);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":%1}\x1b\\Look\x1b]8;;\x1b\\ around").arg(style));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+
+    console->buffer.setHoveredLink(linkId);
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(shownColor() == QColor(0x00, 0xff, 0x00), "the focus style went when the pointer passed over the link");
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QVERIFY2(shownColor() == QColor(0x00, 0xff, 0x00), "the focus style went when the link was pressed");
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+  }
+
+  void test_ALinkWithoutAFocusStyleKeepsItsFormatting_data() {
+    QTest::addColumn<QString>("link");
+
+    QTest::newRow("bold from the link's style") << qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"bold\":true,\"italic\":true}}\x1b\\Look\x1b]8;;\x1b\\ around");
+    QTest::newRow("bold from the game's text") << qsl("\x1b[0m\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\"}}\x1b\\\x1b[1;3mLook\x1b[22;23m\x1b]8;;\x1b\\ around");
+  }
+
+  void test_ALinkWithoutAFocusStyleKeepsItsFormatting() {
+    QFETCH(QString, link);
+
+    injectData(link);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::Bold);
+    QVERIFY(attributes() & TChar::Italic);
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QVERIFY2(attributes() & TChar::Bold, "focus took the bold off the link");
+    QVERIFY2(attributes() & TChar::Italic, "focus took the italics off the link");
+
+    console->buffer.setHoveredLink(linkId);
+    console->buffer.setHoveredLink(0);
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QVERIFY2(attributes() & TChar::Bold, "losing focus took the bold off the link");
+  }
+
+  void test_ToggledSelectionWithoutAFocusStyleShowsAtOnce() {
+    injectData(qsl("\x1b]8;;send:channel%20newbie?config={\"selection\":{\"group\":\"channels\",\"value\":\"newbie\",\"exclusive\":false},\"style\":{\"color\":\"#ffffff\",\"selected\":{\"color\":\"#ff0000\"}}}\x1b\\Newbie\x1b]8;;\x1b\\ channel"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0xff, 0x00, 0x00));
+  }
+
+  void test_ALinkActivatedFromTheKeyboardIsVisitedOnceFocusLeaves() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"visited\":{\"color\":\"#ff00ff\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkVisited(linkId));
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(shownColor(), QColor(0xff, 0x00, 0xff));
+  }
+
+  // With no base color to draw, leaving a state has to bring back the color the game sent
+  void test_LeavingAStateRestoresTheGamesColor_data() {
+    QTest::addColumn<QString>("state");
+
+    QTest::newRow("focus-visible") << qsl("focus-visible");
+    QTest::newRow("hover") << qsl("hover");
+  }
+
+  void test_LeavingAStateRestoresTheGamesColor() {
+    QFETCH(QString, state);
+
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"%1\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around\x1b[0m").arg(state));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    const QColor printed = shownColor();
+    QVERIFY(printed != QColor(0x00, 0xff, 0x00));
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+
+    if (state == qsl("hover")) {
+      console->buffer.setHoveredLink(linkId);
+    } else {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    }
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+    if (state == qsl("hover")) {
+      console->buffer.setHoveredLink(0);
+    } else {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    }
+    QCOMPARE(shownColor(), printed);
+  }
+
+  // A state the game gave no style leaves the link showing the one below it
+  void test_AnUnstyledPointerStateKeepsTheStyleBelowIt() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+    injectData(qsl("\x1b]8;;send:vote?config={\"selection\":{\"group\":\"poll\",\"value\":\"a\",\"selected\":true},\"style\":{\"color\":\"#ffffff\",\"selected\":{\"color\":\"#ff0000\"}}}\x1b\\Vote\x1b]8;;\x1b\\ here"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto focusLink = findNthDistinctLinkPosition(1);
+    auto voteLink = findNthDistinctLinkPosition(2);
+    QVERIFY2(focusLink.has_value() && voteLink.has_value(), "Expected to find two links in the buffer");
+    auto [line, col, linkId] = *focusLink;
+    auto [voteLine, voteCol, voteId] = *voteLink;
+    const auto colorAt = [&](int atLine, int atCol) {
+      return console->buffer.buffer.at(atLine).at(atCol).foreground();
+    };
+
+    console->buffer.setHoveredLink(voteId);
+    QVERIFY2(colorAt(voteLine, voteCol) == QColor(0xff, 0x00, 0x00), "hovering a link with no hover style hid its selection");
+    console->buffer.setHoveredLink(0);
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(line, col + qsl("Look ").size());
+    console->buffer.setHoveredLink(linkId);
+    console->mUpperPane->setCaretPosition(line, col);
+    QVERIFY2(colorAt(line, col) == QColor(0x00, 0xff, 0x00), "a pointer with no hover style kept focus from showing");
+    console->buffer.setHoveredLink(0);
+    console->buffer.setHoveredLink(linkId);
+    QVERIFY2(colorAt(line, col) == QColor(0x00, 0xff, 0x00), "hovering with no hover style hid the focus");
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(colorAt(line, col) == QColor(0x00, 0xff, 0x00), "pressing with no pressed style hid the focus");
+    console->buffer.setActiveLink(0);
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(colorAt(line, col), QColor(0x00, 0xff, 0x00));
+  }
+
+  void test_ToggledSelectionKeepsAHoverStyle() {
+    injectData(qsl("\x1b]8;;send:channel%20newbie?config={\"selection\":{\"group\":\"channels\",\"value\":\"newbie\",\"exclusive\":false},\"style\":{\"color\":\"#ffffff\",\"hover\":{\"color\":\"#0000ff\"},\"selected\":{\"color\":\"#ff0000\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Newbie\x1b]8;;\x1b\\ channel"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    console->buffer.setHoveredLink(linkId);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).foreground() == QColor(0x00, 0x00, 0xff), "toggling took the hover style off the link under the pointer");
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x00, 0xff, 0x00));
+  }
+
+  void test_LeavingCaretModeEndsTheFocusStyle() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+
+    mpHost->setCaretEnabled(false);
+    caretOff.dismiss();
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+    console->buffer.setHoveredLink(linkId);
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+  }
+
+  // A link the game gave no focus style still shows the keyboard player where the caret is
+  void test_ALinkWithoutAFocusStyleShowsMudletsFocusCue_data() {
+    QTest::addColumn<QString>("link");
+    QTest::addColumn<bool>("underlinedByTheGame");
+
+    QTest::newRow("no configuration") << qsl("\x1b[0m\x1b]8;;send:look\x1b\\\x1b[1mLook\x1b[22m\x1b]8;;\x1b\\ around") << false;
+    QTest::newRow("a color") << qsl("\x1b[0m\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\"}}\x1b\\\x1b[1mLook\x1b[22m\x1b]8;;\x1b\\ around") << false;
+    QTest::newRow("underlined by the game") << qsl("\x1b[0m\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\"}}\x1b\\\x1b[1;4mLook\x1b[22;24m\x1b]8;;\x1b\\ around") << true;
+  }
+
+  void test_ALinkWithoutAFocusStyleShowsMudletsFocusCue() {
+    QFETCH(QString, link);
+    QFETCH(bool, underlinedByTheGame);
+
+    injectData(link);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    const QColor printed = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QVERIFY2(attributes() & TChar::Underline, "a focused link without a focus style showed no cue");
+    QVERIFY2(attributes() & TChar::Bold, "the focus cue took the game's bold off the link");
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), printed);
+    const Mudlet::HyperlinkStyling focused = console->buffer.getEffectiveHyperlinkStyling(linkId);
+    QVERIFY(focused.hasUnderlineColor);
+    QCOMPARE(focused.underlineColor, QColor(0, 120, 215));
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(static_cast<bool>(attributes() & TChar::Underline), underlinedByTheGame);
+    QVERIFY2(attributes() & TChar::Bold, "losing focus took the game's bold off the link");
+  }
+
+  void test_AColorOnlyFocusStyleKeepsTheGamesBoldAndItalics() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"style\":{\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\\x1b[1;3mLook\x1b[22;23m\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    for (int pass = 0; pass < 2; ++pass) {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol);
+      QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x00, 0xff, 0x00));
+      QVERIFY2((attributes() & TChar::Bold) && (attributes() & TChar::Italic), "the focus style took the game's bold or italics off the link");
+      console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+      QVERIFY2((attributes() & TChar::Bold) && (attributes() & TChar::Italic), "losing focus took the game's bold or italics off the link");
+    }
+  }
+
+  void test_LeavingAStateKeepsEachCharactersOwnColor_data() {
+    QTest::addColumn<QString>("config");
+    QTest::addColumn<bool>("byHover");
+
+    QTest::newRow("focus") << qsl("{\"style\":{\"focus-visible\":{\"color\":\"#00ff00\"}}}") << false;
+    QTest::newRow("hover over a selected link") << qsl("{\"selection\":{\"selected\":true},\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}") << true;
+  }
+
+  void test_LeavingAStateKeepsEachCharactersOwnColor() {
+    QFETCH(QString, config);
+    QFETCH(bool, byHover);
+
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config=%1\x1b\\R\x1b[32mG\x1b]8;;\x1b\\\x1b[0m end").arg(config));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto colorAt = [&, line = linkLine](int col) {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    const QColor printedR = colorAt(linkCol);
+    const QColor printedG = colorAt(linkCol + 1);
+    QVERIFY(printedR != printedG);
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("RG ").size());
+
+    if (byHover) {
+      console->buffer.setHoveredLink(linkId);
+    } else {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    }
+    QCOMPARE(colorAt(linkCol + 1), QColor(0x00, 0xff, 0x00));
+    if (byHover) {
+      console->buffer.setHoveredLink(0);
+    } else {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("RG ").size());
+    }
+    QCOMPARE(colorAt(linkCol), printedR);
+    QCOMPARE(colorAt(linkCol + 1), printedG);
+  }
+
+  void test_RedrawingALinkKeepsItsTextSelected() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    for (TChar &character : console->buffer.buffer[linkLine].expand()) {
+      if (character.linkIndex() == linkId) {
+        character.select();
+      }
+    }
+
+    console->buffer.setHoveredLink(linkId);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).isSelected(), "drawing the hover style deselected the text");
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).isSelected(), "taking the hover style off deselected the text");
+  }
+
+  void test_AScriptRemovingPartOfALinkLeavesTheRestItsColors() {
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\R\x1b[34mB\x1b]8;;\x1b\\\x1b[0m end"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor printedR = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+    QVERIFY(printedR != console->buffer.buffer.at(linkLine).at(linkCol + 1).foreground());
+
+    // While the hover style is drawn, so the colors under it are the saved ones
+    console->buffer.setHoveredLink(linkId);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("moveCursor(%1, %2)\nselectSection(%3, 1)\nreplace(\"\")").arg(linkCol).arg(linkLine).arg(linkCol + 1));
+    QCOMPARE(console->buffer.line(linkLine).mid(linkCol, 2), qsl("R "));
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), printedR);
+  }
+
+  void test_ALinkWhoseTextNeedsTwoCharactersKeepsEachLookInLine() {
+    injectData(qsl("\x1b[0;31mx\x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\AB\U0001F5E1\x1b]8;;\x1b\\\x1b[0m end"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor gameColor = console->buffer.buffer.at(linkLine).at(linkCol - 1).foreground();
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x00, 0xff, 0x00));
+
+    console->buffer.markLinkAsVisited(linkId);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).foreground() == gameColor, "the first character kept the unvisited style");
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol + 1).foreground(), gameColor);
+  }
+
+  void test_ALinkActivatedFromTheKeyboardWithoutAFocusStyleShowsVisitedAtOnce() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"visited\":{\"color\":\"#ff00ff\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkVisited(linkId));
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0xff, 0x00, 0xff));
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).allDisplayAttributes() & TChar::Underline, "the focus cue went when the link was visited");
+  }
+
+  void test_AScriptMovingPartOfALinkIntoAnotherLeavesTheRestItsColors() {
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\R\x1b[34mB\x1b]8;;\x1b\\\x1b[0m end"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor printedR = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+
+    console->buffer.setHoveredLink(linkId);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("moveCursor(%1, %2)\nselectSection(%3, 1)\nsetLink([[send('other')]], 'Other')").arg(linkCol).arg(linkLine).arg(linkCol + 1));
+    QVERIFY(console->buffer.getLinkIndexAt(linkLine, linkCol + 1) != linkId);
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), printedR);
+  }
+
+  void test_AWrappedLinkKeepsEachCharactersOwnColor() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int wrapAt = console->buffer.mWrapAt;
+    const int hangingIndent = console->buffer.mWrapHangingIndent;
+    const auto unwrap = qScopeGuard([console, wrapAt, hangingIndent] {
+      console->buffer.setWrapAt(wrapAt);
+      console->buffer.setWrapHangingIndent(hangingIndent);
+    });
+    console->buffer.setWrapAt(10);
+    console->buffer.setWrapHangingIndent(2);
+    injectData(qsl("wrapped \x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\RRRR \x1b[34mBBBB\x1b]8;;\x1b\\\x1b[0m"));
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.line(linkLine), qsl("  RRRR "));
+    QCOMPARE(console->buffer.line(linkLine + 1), qsl("  BBBB"));
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(2).foreground(), QColor(0x00, 0xff, 0x00));
+    const QColor gameColor = console->buffer.buffer.at(linkLine - 1).at(0).foreground();
+
+    // With no visited style, the game's own colors show again
+    console->buffer.markLinkAsVisited(linkId);
+    for (int column = 0; column < 6; ++column) {
+      QVERIFY2(console->buffer.buffer.at(linkLine).at(column).foreground() != QColor(0x00, 0xff, 0x00), qPrintable(qsl("column %1 kept the unvisited style").arg(column)));
+      QVERIFY(console->buffer.buffer.at(linkLine).at(column).foreground() != gameColor);
+      QCOMPARE(console->buffer.buffer.at(linkLine + 1).at(column).foreground(), console->buffer.buffer.at(linkLine + 1).at(2).foreground());
+    }
+    QVERIFY(console->buffer.buffer.at(linkLine).at(2).foreground() != console->buffer.buffer.at(linkLine + 1).at(2).foreground());
+  }
+
+  void test_ALinkEndingWithHeldTextKeepsItsColors() {
+    undoServerWrap();
+    const QString padding(63, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b[31mr\x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\alpha\n"));
+    feedFromServer(qsl("\x1b[34m- a list entry\x1b[0m\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(padding);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held line is missing: '%1'").arg(allBufferText())));
+    const int linkId = console->buffer.getLinkIndexAt(heldLine, 65);
+    QVERIFY(linkId > 0);
+    QCOMPARE(console->buffer.buffer.at(heldLine).at(65).foreground(), QColor(0x00, 0xff, 0x00));
+    const QColor red = console->buffer.buffer.at(heldLine).at(64).foreground();
+
+    // With no visited style, the game's own red shows again
+    console->buffer.markLinkAsVisited(linkId);
+    QCOMPARE(console->buffer.buffer.at(heldLine).at(65).foreground(), red);
+    QCOMPARE(console->buffer.buffer.at(heldLine).at(69).foreground(), red);
+  }
+
+  void test_AStateThatTurnsBoldOffGivesTheTextsBoldBackAfter() {
+    injectData(qsl("\x1b[1m\x1b]8;;send:look?config={\"style\":{\"hover\":{\"bold\":false}}}\x1b\\Bold\x1b]8;;\x1b\\\x1b[0m plain"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto bold = [&, line = linkLine, column = linkCol] {
+        return static_cast<bool>(console->buffer.buffer.at(line).at(column).allDisplayAttributes() & TChar::Bold);
+    };
+    QVERIFY(bold());
+
+    console->buffer.setHoveredLink(linkId);
+    QVERIFY2(!bold(), "\"bold\": false left the game's bold on");
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(bold(), "the game's bold did not come back");
+  }
+
+  void test_ATriggerCopyingItsLineGetsTheLinksStyleAtRest() {
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        qsl("createMiniConsole('oscTriggerCopy', 0, 0, 300, 100)\noscCopyTrigger = tempRegexTrigger('^Copied ', [[selectCurrentLine()\ncopy()\nappendBuffer('oscTriggerCopy')]])"));
+    const auto removeTrigger = qScopeGuard([this] { mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(oscCopyTrigger)")); });
+    injectData(qsl("Copied \x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("Copied "));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.buffer.at(line).at(7).foreground(), QColor(0x00, 0xff, 0x00));
+    TConsole *mini = console->subConsoleWidget(qsl("oscTriggerCopy"));
+    QVERIFY(mini);
+    int copiedLine = -1;
+    for (int i = 0; i <= mini->buffer.getLastLineNumber(); ++i) {
+      if (mini->buffer.line(i).startsWith(qsl("Copied "))) {
+        copiedLine = i;
+      }
+    }
+    QVERIFY2(copiedLine >= 0, "the trigger did not copy its line");
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(7).foreground(), QColor(0x00, 0xff, 0x00));
+  }
+
+  void test_ALinkOnALineATriggerFedKeepsItsColorsOnceVisited() {
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(
+        "oscFeedTrigger = tempRegexTrigger('^Feeding$', [[feedTriggers('\\27[34mFed \\27]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\\27\\\\Look\\27]8;;\\27\\\\\\27[0m\\n')]])"));
+    const auto removeTrigger = qScopeGuard([this] { mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(oscFeedTrigger)")); });
+    injectData(qsl("Feeding"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("Fed "));
+    QVERIFY2(line >= 0, qPrintable(qsl("the fed line is missing: '%1'").arg(allBufferText())));
+    const int linkId = console->buffer.getLinkIndexAt(line, 4);
+    QVERIFY(linkId > 0);
+    QCOMPARE(console->buffer.buffer.at(line).at(4).foreground(), QColor(0x00, 0xff, 0x00));
+    const QColor blue = console->buffer.buffer.at(line).at(0).foreground();
+
+    console->buffer.markLinkAsVisited(linkId);
+    QCOMPARE(console->buffer.buffer.at(line).at(4).foreground(), blue);
+  }
+
+  void test_ATriggersColorOnALinkStaysOnceTheLineIsCommitted() {
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("oscRecolorTrigger = tempRegexTrigger('^Recolor ', [[selectString('Look', 1)\nsetFgColor(0, 0, 255)\nresetFormat()]])"));
+    const auto removeTrigger = qScopeGuard([this] { mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(oscRecolorTrigger)")); });
+    injectData(qsl("Recolor \x1b]8;;send:look?config={\"style\":{\"color\":\"#00ff00\"}}\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("Recolor "));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.buffer.at(line).at(9).foreground(), QColor(0x00, 0x00, 0xff));
+  }
+
+  void test_ALinkConcealedWhileHoveredLeavesNoHoverLook() {
+    injectData(qsl("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}},\"style\":{\"hover\":{\"bg\":\"#00ff00\"}}}\x1b\\Hint\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor background = console->buffer.buffer.at(linkLine).at(linkCol).background();
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).background(), QColor(0x00, 0xff, 0x00));
+    console->getHyperlinkVisibilityManager().onLinkClicked(linkId);
+    QVERIFY(!bufferShows(qsl("Hint")));
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).background(), background);
+  }
+
+  void test_ACopiedLinkLosesItsFocusStyleWhenFocusLeaves() {
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around\x1b[0m"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor printed = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("createMiniConsole('oscCopyFocus', 0, 0, 300, 100)\nmoveCursor(%1, %2)\nselectSection(%1, 4)\ncopy()\nappendBuffer('oscCopyFocus')").arg(linkCol).arg(linkLine));
+    TConsole *mini = console->subConsoleWidget(qsl("oscCopyFocus"));
+    QVERIFY(mini);
+    int copiedLine = -1;
+    for (int i = 0; i <= mini->buffer.getLastLineNumber(); ++i) {
+      if (mini->buffer.line(i).startsWith(qsl("Look"))) {
+        copiedLine = i;
+      }
+    }
+    QVERIFY2(copiedLine >= 0, "the link was not copied");
+    const int copiedLink = mini->buffer.getLinkIndexAt(copiedLine, 0);
+    QVERIFY(copiedLink > 0);
+
+    mini->buffer.setFocusedLink(copiedLink);
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(0).foreground(), QColor(0x00, 0xff, 0x00));
+    mini->buffer.setFocusedLink(0);
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(0).foreground(), printed);
+  }
+
+  // A script's color on a link survives its states: one without a color leaves it, one with a color gives it back as it ends
+  void test_AScriptsColorOnALinkSurvivesItsStates() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    for (TChar &character : console->buffer.buffer[linkLine].expand()) {
+      if (character.linkIndex() == linkId) {
+        character.setForeground(QColor(0x00, 0x00, 0xff));
+      }
+    }
+
+    console->buffer.markLinkAsVisited(linkId);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).foreground() == QColor(0x00, 0x00, 0xff), "marking the link visited undid the script's color");
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x00, 0xff, 0x00));
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).foreground() == QColor(0x00, 0x00, 0xff), "leaving hover undid the script's color");
+  }
+
+  // The rest of a link arriving while the caret is on it is part of the same link, and loses the focus style with it
+  void test_FocusLeavesAllOfALinkSplitByAFlush() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    feedFromServer(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\FLUSHED \r"));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    const int linkId = console->buffer.getLinkIndexAt(flushedLine, 0);
+    QVERIFY(linkId > 0);
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(flushedLine, 0);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\ after\n"));
+    const int restLine = lineStartingWith(qsl("REST"));
+    QVERIFY2(restLine >= 0, qPrintable(allBufferText()));
+    console->mUpperPane->setCaretPosition(restLine, qsl("REST ").size());
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    const int newFlushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(console->buffer.buffer.at(newFlushedLine).at(0).foreground() == QColor(0xff, 0xff, 0xff), "the part before the flush kept the focus style");
+    QVERIFY2(console->buffer.buffer.at(restLine).at(0).foreground() == QColor(0xff, 0xff, 0xff), "the part after the flush kept the focus style");
+  }
+
+  void test_ALinkCopiedWhileFocusedIsCopiedWithoutTheFocusStyle() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("createMiniConsole('oscFocusCopy', 0, 0, 300, 100)\nmoveCursor(%1, %2)\nselectSection(%1, 4)\ncopy()\nappendBuffer('oscFocusCopy')").arg(linkCol).arg(linkLine));
+    mpHost->setCaretEnabled(false);
+    caretOff.dismiss();
+    TConsole *mini = console->subConsoleWidget(qsl("oscFocusCopy"));
+    QVERIFY(mini);
+    int copiedLine = -1;
+    for (int i = 0; i <= mini->buffer.getLastLineNumber(); ++i) {
+      if (mini->buffer.line(i).startsWith(qsl("Look"))) {
+        copiedLine = i;
+      }
+    }
+    QVERIFY2(copiedLine >= 0, "the link was not copied");
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(0).foreground(), QColor(0xff, 0xff, 0xff));
+  }
+
+  void test_HoverOutranksKeyboardFocus() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"hover\":{\"color\":\"#0000ff\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    console->buffer.setHoveredLink(linkId);
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QVERIFY2(shownColor() == QColor(0x00, 0x00, 0xff), "the caret arriving took the hover style off the link under the pointer");
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QVERIFY2(shownColor() == QColor(0x00, 0x00, 0xff), "the caret leaving took the hover style off the link under the pointer");
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+  }
+
+  // Enter in caret mode toggles a selection without moving the caret off the link
+  void test_ToggledSelectionKeepsTheFocusStyle() {
+    injectData(qsl("\x1b]8;;send:channel%20newbie?config={\"selection\":{\"group\":\"channels\",\"value\":\"newbie\",\"exclusive\":false},\"style\":{\"color\":\"#ffffff\",\"selected\":{\"color\":\"#ff0000\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Newbie\x1b]8;;\x1b\\ channel"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QVERIFY2(shownColor() == QColor(0x00, 0xff, 0x00), "toggling the selection took the focus style off the focused link");
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Newbie ").size());
+    QCOMPARE(shownColor(), QColor(0xff, 0x00, 0x00));
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart_data() {
+    QTest::addColumn<QString>("selection");
+
+    QTest::newRow("in a group") << qsl("{\"group\":\"ranks\",\"value\":\"a\",\"selected\":true,\"disabled\":true}");
+    QTest::newRow("no group") << qsl("{\"selected\":true,\"disabled\":true}");
+    QTest::newRow("disabled without a group") << qsl("{\"disabled\":true}");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart() {
+    QFETCH(QString, selection);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"selection\":%1,\"style\":{\"selected\":{\"color\":\"#00ff00\"},\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Off\x1b]8;;\x1b\\").arg(selection));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  // The flush marker splits the link's text, and held text commits apart from the link's own line
+  void test_DisabledStyleSurvivesTheLinkBeingSplit() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const QString link = qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\");
+
+    feedFromServer(link + qsl("FLUSHED \r"));
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\\n"));
+    int line = lineStartingWith(qsl("REST"));
+    QVERIFY2(line >= 1, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(flushedLine).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+
+    undoServerWrap();
+    feedFromServer(QString(64, QLatin1Char('x')) + qsl(" alpha\n"));
+    feedFromServer(qsl("- ") + link + qsl("listed\x1b]8;;\x1b\\\n"));
+    line = lineStartingWith(qsl("- listed"));
+    QVERIFY2(line >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
+  void test_PressingADisabledLinkLeavesItAsPrinted() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"strikethrough\":true}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::StrikeOut);
+
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(attributes() & TChar::StrikeOut, "pressing the link dropped its disabled style");
+    console->buffer.setActiveLink(0);
+    QVERIFY2(attributes() & TChar::StrikeOut, "releasing the link dropped its disabled style");
+    QVERIFY2(attributes() & TChar::Bold, "releasing the link cleared the game's bold");
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+  }
+
+  void test_DisabledLinkInAGroupKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"selection\":{\"group\":\"boldgroup\",\"value\":\"off\",\"disabled\":true},\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+    injectData(qsl("after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the group's restyle cleared the game's bold");
+  }
+
+  void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDefault);
+  }
+
   void test_LinkAttributes_DisabledState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Disabled Link\x1b]8;;\x1b\\"));
 
@@ -1956,6 +3581,79 @@ private slots:
     QCOMPARE(console->buffer.getLinkIndexAt(outLine, outCol), linkId);
   }
 
+  // A closing popup can leave the window inactive, and only the active window's focus widget hears a popup open
+  bool focusPaneInActiveWindow(TTextEdit *pane) {
+    mudlet::self()->show();
+    pane->window()->activateWindow();
+    pane->setFocus();
+    return QTest::qWaitFor([pane] { return QApplication::activeWindow() == pane->window() && pane->hasFocus(); }, 3000);
+  }
+
+  // The pane's own menu only borrows the focus, so caret mode stays on, and the menu must still get the keys
+  void test_ALinkMenuLeavesCaretModeOn() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Sword\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+    pane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent menuKey(QEvent::KeyPress, Qt::Key_Menu, Qt::NoModifier);
+    QApplication::sendEvent(pane, &menuKey);
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY2(menu && menu->isVisible(), "the Menu key did not open the link's menu");
+    const auto closeMenu = qScopeGuard([pane] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QVERIFY2(mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+
+    // Through the window, as a real key arrives: caret mode's keyboard grab would otherwise beat the menu to it
+    const int caretLine = pane->mCaretLine;
+    QTest::keyClick(pane->window()->windowHandle(), Qt::Key_Down);
+    QVERIFY2(menu->activeAction(), "the menu did not get the key");
+    QCOMPARE(pane->mCaretLine, caretLine);
+
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+    QVERIFY2(pane->hasFocus() || !QApplication::activeWindow(), "the pane did not get the focus back");
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // The test platform leaves the window inactive when a popup closes, so never hands the focus back itself
+    QFocusEvent focusBack(QEvent::FocusIn, Qt::PopupFocusReason);
+    QApplication::sendEvent(pane, &focusBack);
+    QCOMPARE(QWidget::keyboardGrabber(), pane);
+#endif
+  }
+
+  // A menu that isn't the pane's, such as the menu bar's, may open a dialog, which the keyboard grab would keep keys from
+  void test_AnotherWidgetsMenuStillEndsCaretMode() {
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = mpHost->mainConsoleView()->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+
+    QMenu menu(pane->window());
+    menu.addAction(qsl("Elsewhere"));
+    menu.popup(pane->mapToGlobal(QPoint(1, 1)));
+    const auto closeMenu = qScopeGuard([&menu] { menu.close(); });
+    QVERIFY2(!mpHost->caretEnabled(), "a menu that was not the pane's left caret mode on");
+  }
+
   void test_KeyNav_CtrlBracketRight_MovesToNextLink() {
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
@@ -2314,6 +4012,252 @@ private slots:
     const int linkId = console->buffer.getLinkIndexAt(joinedLine, 71);
     QVERIFY2(linkId > 0, "the link text is no longer a link");
     QVERIFY(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+  }
+
+  bool bufferShows(const QString &text) {
+    TBuffer &buffer = mpHost->mainConsoleView()->buffer;
+    for (int line = 0; line <= buffer.getLastLineNumber(); ++line) {
+      if (buffer.line(line).contains(text)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  QString expireLink(const QString &action, const QString &settings) {
+    return qsl("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"%1\",%2}}\x1b\\Hint\x1b]8;;\x1b\\").arg(action, settings);
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<QString>("event");
+
+    for (const QString &action : {qsl("conceal"), qsl("reveal"), qsl("reveal-then-conceal")}) {
+      for (const QString &event : {qsl("input"), qsl("prompt"), qsl("output")}) {
+        QTest::addRow("%s on %s", qPrintable(action), qPrintable(event)) << action << event;
+      }
+    }
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted() {
+    QFETCH(QString, action);
+    QFETCH(QString, event);
+    const bool startsVisible = action == qsl("conceal");
+
+    injectData(expireLink(action, qsl("\"expire\":{\"%1\":true,\"outputDelay\":30}").arg(event)));
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+    QCOMPARE(bufferShows(qsl("Hint")), startsVisible);
+
+    if (event == qsl("input")) {
+      manager.onUserInput();
+    } else if (event == qsl("prompt")) {
+      manager.onPromptReceived();
+      QVERIFY2(bufferShows(qsl("Hint")) == startsVisible, "the prompt ending the link's own output counted");
+      manager.onPromptReceived();
+    } else {
+      QTest::qWait(60ms);
+      manager.onDataReceived();
+    }
+    QCOMPARE(bufferShows(qsl("Hint")), !startsVisible);
+  }
+
+  void test_Osc8ExpiredRevealThenConcealHidesWhenClicked() {
+    injectData(expireLink(qsl("reveal-then-conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+
+    QVERIFY2(!bufferShows(qsl("Hint")), "a link waiting for an event showed at once");
+    manager.onUserInput();
+    QVERIFY(bufferShows(qsl("Hint")));
+    manager.onLinkClicked(linkId);
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8ClickingAConcealLinkWithExpireHidesItAtOnce() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QVERIFY(bufferShows(qsl("Hint")));
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onLinkClicked(std::get<2>(*pos));
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<bool>("showsAfterwards");
+
+    QTest::newRow("conceal") << qsl("conceal") << false;
+    QTest::newRow("reveal") << qsl("reveal") << true;
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay() {
+    QFETCH(QString, action);
+    QFETCH(bool, showsAfterwards);
+
+    injectData(expireLink(action, qsl("\"delay\":60000,\"expire\":{\"input\":true}")));
+    QCOMPARE(bufferShows(qsl("Hint")), !showsAfterwards);
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+    QCOMPARE(bufferShows(qsl("Hint")), showsAfterwards);
+  }
+
+  // A game's prompt arrives in the same read as the text before it, or in a
+  // later one, and either way it is the next prompt that hides the link.
+  void test_Osc8PromptExpiryWithARealGoAhead_data() {
+    QTest::addColumn<bool>("promptInTheSameRead");
+    QTest::addColumn<bool>("forceGaOff");
+    QTest::newRow("same read") << true << false;
+    QTest::newRow("later read") << false << false;
+    QTest::newRow("same read, GA interpretation forced off") << true << true;
+    QTest::newRow("later read, GA interpretation forced off") << false << true;
+  }
+
+  void test_Osc8PromptExpiryWithARealGoAhead() {
+    QFETCH(bool, promptInTheSameRead);
+    QFETCH(bool, forceGaOff);
+    const bool wasGaDriver = mpHost->mTelnet.mGA_Driver;
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const auto restoreFlags = qScopeGuard([this, wasGaDriver, wasForceGaOff] {
+      mpHost->mTelnet.mGA_Driver = wasGaDriver;
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = forceGaOff;
+
+    const QByteArray prompt = QByteArray("> ") + QByteArray("\xff\xf9", 2);
+    QByteArray link = (expireLink(qsl("conceal"), qsl("\"expire\":{\"prompt\":true}")) + qsl("\r\n")).toUtf8();
+    if (promptInTheSameRead) {
+      QByteArray read = link + prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    } else {
+      mpHost->mTelnet.loopbackTest(link);
+      QTest::qWait(50ms);
+      QByteArray read = prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    }
+    QTest::qWait(50ms);
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own prompt hid it");
+
+    QByteArray next = prompt;
+    mpHost->mTelnet.loopbackTest(next);
+    QTest::qWait(50ms);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the next prompt did not hide it");
+  }
+
+  // A trigger reading gmcp has to see the GMCP that came in the same read, as it always has
+  void test_ForcedOffGoAheadLeavesScriptsTheirOrder() {
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const bool wasGmcpEnabled = mpHost->mEnableGMCP;
+    const auto restoreFlags = qScopeGuard([this, wasForceGaOff, wasGmcpEnabled] {
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+      mpHost->mEnableGMCP = wasGmcpEnabled;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = true;
+    mpHost->mEnableGMCP = true;
+
+    TLuaInterpreter &lua = mpHost->mLuaInterpreter;
+    lua.compileAndExecuteScript(qsl(R"(
+      forcedOffOrder = ""
+      forcedOffHandler = registerAnonymousEventHandler("gmcp.ForcedOffOrder", function() forcedOffOrder = forcedOffOrder .. "gmcp," end)
+      forcedOffTrigger = tempRegexTrigger("^forcedofftext", function() forcedOffOrder = forcedOffOrder .. "trigger," end)
+    )"));
+    const auto removeHandlers = qScopeGuard([&lua] {
+      lua.compileAndExecuteScript(qsl("killAnonymousEventHandler(forcedOffHandler); killTrigger(forcedOffTrigger)"));
+    });
+
+    QByteArray read = QByteArray("forcedofftext") + QByteArray("\xff\xf9", 2) + QByteArray("\xff\xfa\xc9", 3) + QByteArray("ForcedOffOrder 1") + QByteArray("\xff\xf0", 2);
+    mpHost->mTelnet.loopbackTest(read);
+    QTest::qWait(50ms);
+
+    QCOMPARE(lua.getLuaString(qsl("forcedOffOrder")), qsl("gmcp,trigger,"));
+  }
+
+  void test_Osc8OutputExpiryWaitsForAQuietGap() {
+    // Wide enough that a stalled machine can't turn the burst into a gap
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    feedFromServer(qsl("the same burst\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own burst of text hid it");
+
+    QTest::qWait(1100ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY2(!bufferShows(qsl("Hint")), "text after a quiet gap did not hide it");
+  }
+
+  void test_Osc8OutputExpiryIgnoresSteadyOutput() {
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    for (int i = 0; i < 8; ++i) {
+      QTest::qWait(150ms);
+      feedFromServer(qsl("steady %1\n").arg(i));
+    }
+    QVERIFY2(bufferShows(qsl("Hint")), "output with no gap in it hid the link once the delay had passed since it was printed");
+  }
+
+  void test_Osc8OutputExpiryCountsFromAScriptPrintedLink() {
+    std::string printed = (expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":2000}")) + qsl("\n")).toStdString();
+    mpHost->printOnDisplay(printed, false);
+    QVERIFY(bufferShows(qsl("Hint")));
+    feedFromServer(qsl("the game speaks at once\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the first data after a script printed the link hid it");
+  }
+
+  void test_Osc8OutputDelayBelongsToEachLink() {
+    const QString shortDelay = qsl("\x1b]8;;send:a?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":30}}}\x1b\\Brief\x1b]8;;\x1b\\");
+    const QString longDelay = qsl("\x1b]8;;send:b?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":60000}}}\x1b\\Lasting\x1b]8;;\x1b\\");
+    feedFromServer(shortDelay + qsl("\n") + longDelay + qsl("\n"));
+    QTest::qWait(60ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY(!bufferShows(qsl("Brief")));
+    QVERIFY2(bufferShows(qsl("Lasting")), "one link's outputDelay decided another's");
+  }
+
+  // cTelnet posts these with no game text in them, and script output isn't the game's
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput_data() {
+    QTest::addColumn<QByteArray>("posted");
+    QTest::addColumn<bool>("fromServer");
+
+    QTest::newRow("bare flush marker") << QByteArray("\r") << true;
+    QTest::newRow("empty post at a disconnect") << QByteArray() << true;
+    QTest::newRow("prompt marker alone") << QByteArray("\xff") << true;
+    QTest::newRow("prompt read as a newline") << QByteArray("\n") << true;
+    QTest::newRow("script output") << QByteArray("printed by a script\n") << false;
+  }
+
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput() {
+    QFETCH(QByteArray, posted);
+    QFETCH(bool, fromServer);
+
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":30}")) + qsl("\n"));
+    QTest::qWait(60ms);
+    std::string data = posted.toStdString();
+    mpHost->printOnDisplay(data, fromServer);
+    QVERIFY2(bufferShows(qsl("Hint")), "something that is not game output hid the link");
+  }
+
+  void test_Osc8ExpiryRemovesWholeLinesInABatch() {
+    const QString wholeLine = qsl("\x1b]8;;send:%1?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true,\"expire\":{\"input\":true}}}\x1b\\%2\x1b]8;;\x1b\\");
+    feedFromServer(wholeLine.arg(qsl("a"), qsl("FirstGone")) + qsl("\n") + wholeLine.arg(qsl("b"), qsl("SecondGone")) + qsl("\n") + wholeLine.arg(qsl("c"), qsl("ThirdGone")) + qsl(" ") + wholeLine.arg(qsl("d"), qsl("SameLine")) + qsl("\nThe text that stays\n"));
+    QVERIFY(bufferShows(qsl("SecondGone")));
+
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+
+    for (const QString &gone : {qsl("FirstGone"), qsl("SecondGone"), qsl("ThirdGone"), qsl("SameLine")}) {
+      QVERIFY2(!bufferShows(gone), qPrintable(gone));
+    }
+    QVERIFY2(bufferShows(qsl("The text that stays")), "a neighbouring line went with the links");
+  }
+
+  void test_Osc8InputExpiryHearsTheInputLine() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    QVERIFY(bufferShows(qsl("Hint")));
+
+    QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("send('from a script', false)")), "the script did not run");
+    QVERIFY2(bufferShows(qsl("Hint")), "a script's send() counted as the player's input");
+
+    TCommandLine *commandLine = mpHost->mainConsoleView()->mpCommandLine;
+    QVERIFY(commandLine);
+    QTest::keyClicks(commandLine, qsl("look"));
+    QTest::keyClick(commandLine, Qt::Key_Return);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the player's command did not hide the link");
   }
 
   // Every link with visibility settings that closes while text is held keeps

@@ -19,6 +19,7 @@
 
 #include "TMCPBridge.h"
 
+#include "SecureStringUtils.h"
 #include "TMCPServer.h"
 #include "utils.h"
 
@@ -37,6 +38,7 @@
 #include <QStandardPaths>
 #include <QTcpServer>
 
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <limits>
@@ -405,14 +407,28 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     // portable install, say) the restriction cannot be applied; the file is written
     // anyway, since refusing would break the feature there entirely, but it is worth
     // a trace.
-    if (!file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) {
-        qWarning() << "TMCPBridge::writeDiscoveryFile(...) WARNING - could not make" << file.fileName() << "private to this user; other users of this machine may be able to read the MCP access token";
-    }
+    const bool narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
     QJsonObject contents;
     contents[qsl("port")] = static_cast<int>(port);
     contents[qsl("token")] = token;
     file.write(QJsonDocument(contents).toJson(QJsonDocument::Compact));
-    return file.commit();
+    if (!file.commit()) {
+        return false;
+    }
+
+#if defined(Q_OS_UNIX)
+    // Some file systems refuse owner-only on the open file but take it by path; either way, a file
+    // left readable by others is warned about once per path
+    if (narrowAfterCommit) {
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    } else {
+        SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
+    }
+#else
+    // Not confirmFileIsOwnerOnly(): off Unix it only warns, and calls this file a saved password
+    Q_UNUSED(narrowAfterCommit)
+#endif
+    return true;
 }
 
 void TMCPBridge::removeDiscoveryFile(const QString& configDir)
@@ -916,7 +932,7 @@ QString tomlBasicString(const QString& value)
             escaped += u'\\';
             escaped += c;
         } else if (c.unicode() < 0x20 || c.unicode() == 0x7f) {
-            escaped += qsl("\\u%1").arg(int(c.unicode()), 4, 16, QLatin1Char('0'));
+            escaped += qsl("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QLatin1Char('0'));
         } else {
             escaped += c;
         }
@@ -1096,6 +1112,12 @@ QByteArray TMCPBridge::mergeCodexConfig(const QByteArray& existingConfig, const 
         bool envDottedSeen = false;
         bool envDottedXdgSeen = false;
         bool droppingValue = false;
+        // TOML allows a sub-table before its parent, but the rebuilt block opens with the
+        // parent's header, so the parent's keys must come before any sub-table header or
+        // they would be read as the sub-table's.
+        std::stable_partition(family.begin(), family.end(), [](const TomlLine& line) {
+            return line.section.size() == 2;
+        });
         for (const TomlLine& line : family) {
             if (line.continuation) {
                 if (!droppingValue) {

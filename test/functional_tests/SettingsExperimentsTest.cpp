@@ -32,10 +32,13 @@
 
 #include <QDir>
 #include <QTemporaryDir>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
+#include <QAction>
 #include <QCheckBox>
 #include <QGroupBox>
+#include <QListWidget>
 #include <QScrollArea>
 #include <QSignalSpy>
 
@@ -182,11 +185,7 @@ private slots:
         QVERIFY2(pCard, "there is no Experiments card");
         QScrollArea* pAdvanced = TestSettings::pageOf(mpPreferences, qsl("advanced"));
         QVERIFY2(pAdvanced && pAdvanced->isAncestorOf(pCard), "the Experiments card is not on the Advanced page");
-#if defined(INCLUDE_3DMAPPER)
-        QVERIFY2(!pCard->isHidden(), "the Experiments card is hidden");
-#else
-        QVERIFY2(pCard->isHidden(), "the Experiments card is offered in a build where none of them does anything");
-#endif
+        QVERIFY2(!pCard->isHidden(), "the Experiments card is hidden, and with it the app-wide grayscale icons switch");
 
         const QStringList keys = mpHost->getValidExperiments();
         QVERIFY(!keys.isEmpty());
@@ -196,8 +195,71 @@ private slots:
             QVERIFY2(pCard->isAncestorOf(pBox), qPrintable(qsl("%1's checkbox is not on the Experiments card").arg(key)));
             QVERIFY2(!pBox->text().isEmpty(), qPrintable(qsl("%1's checkbox has no label").arg(key)));
             QVERIFY2(pBox->isEnabled(), qPrintable(qsl("%1's checkbox is greyed out with a profile loaded").arg(key)));
+#if !defined(INCLUDE_3DMAPPER)
+            QVERIFY2(pBox->isHidden(), qPrintable(qsl("%1 is offered in a build without the 3D map it changes").arg(key)));
+#endif
         }
-        QCOMPARE(pCard->findChildren<QCheckBox*>().size(), keys.size());
+        // The app-wide grayscale icons switch besides the profile's own
+        QCOMPARE(pCard->findChildren<QCheckBox*>().size(), keys.size() + 1);
+    }
+
+    void test_theGrayscaleIconsSwitchIsTheAppsNotTheProfiles()
+    {
+        openPreferences();
+        auto* pBox = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_greyscaleIcons"));
+        QVERIFY2(pBox, "there is no grayscale icons checkbox");
+        auto* pCard = mpPreferences->findChild<QGroupBox*>(qsl("card_experiments"));
+        QVERIFY2(pCard && pCard->isAncestorOf(pBox), "the grayscale icons checkbox is not on the Experiments card");
+        QVERIFY(!pBox->text().isEmpty());
+        QVERIFY2(mudlet::self()->colouredIcons(), "SETUP: the icons were already grey before the box was touched");
+        QVERIFY2(!pBox->isChecked(), "the grayscale icons box opened ticked while the icons are in color");
+        auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
+
+        // The sidebar and the toolbar follow the switch, without the dialog being opened again
+        auto* pSidebar = mpPreferences->findChild<QListWidget*>(qsl("settingsCategoryList"));
+        QVERIFY2(pSidebar, "there is no settings sidebar to read");
+        const auto strongestSaturation = [](const QIcon& icon) {
+            const QImage image = icon.pixmap(QSize(48, 48)).toImage().convertToFormat(QImage::Format_ARGB32);
+            qreal strongest = 0.0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    if (image.pixelColor(x, y).alphaF() > 0.95) {
+                        strongest = std::max<qreal>(strongest, image.pixelColor(x, y).hslSaturationF());
+                    }
+                }
+            }
+            return strongest;
+        };
+        const auto saturationOf = [pSidebar, &strongestSaturation](const QString& page) {
+            for (int row = 0; row < pSidebar->count(); ++row) {
+                if (pSidebar->item(row)->text() == page) {
+                    return strongestSaturation(pSidebar->item(row)->icon());
+                }
+            }
+            return -1.0;
+        };
+        const auto toolBarMapSaturation = [&strongestSaturation]() {
+            const QAction* pMap = mudlet::self()->findChild<QAction*>(qsl("map_action"));
+            return pMap ? strongestSaturation(pMap->icon()) : -1.0;
+        };
+        QVERIFY2(saturationOf(qsl("Mapper")) > 0.3, "the Mapper page is not in the map's blue with the box unticked");
+        QVERIFY2(saturationOf(qsl("General")) >= 0.0 && saturationOf(qsl("General")) < 0.1, "the General page took a colour; it is the settings themselves");
+        QVERIFY2(saturationOf(qsl("Appearance")) > 0.3, "the Appearance page's palette carries no paint with the box unticked");
+        QVERIFY2(toolBarMapSaturation() > 0.3, "Map on the toolbar is not in color with the box unticked");
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(!mudlet::self()->colouredIcons(), "ticking the box did not turn the toolbar grey");
+        QVERIFY2(toolBarMapSaturation() >= 0.0 && toolBarMapSaturation() < 0.1, "Map on the toolbar kept its color with the box ticked");
+        QVERIFY2(saturationOf(qsl("Mapper")) >= 0.0 && saturationOf(qsl("Mapper")) < 0.1, "the Mapper page kept its color with the box ticked");
+        QVERIFY2(saturationOf(qsl("Appearance")) >= 0.0 && saturationOf(qsl("Appearance")) < 0.1, "the Appearance page's palette kept its paint with the box ticked");
+
+        mudlet::self()->setColouredIcons(true);
+        QVERIFY2(!pBox->isChecked(), "the box did not follow the toolbar being switched back to color from elsewhere");
+        QVERIFY2(saturationOf(qsl("Mapper")) > 0.3, "the Mapper page did not take its color back when the icons were switched back from elsewhere");
     }
 
     void test_anExperimentSwitchedByAScriptShowsInTheDialog()

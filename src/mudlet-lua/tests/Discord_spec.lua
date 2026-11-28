@@ -889,6 +889,8 @@ describe("presence the game sends over GMCP", function()
   -- empty-table test out of the totals with it
   teardown(function()
     gmcp.External = nil
+    gmcp.external = nil
+    gmcp.EXTERNAL = nil
   end)
 
   local function feedDiscordStatus(json)
@@ -906,6 +908,43 @@ describe("presence the game sends over GMCP", function()
     assert.equals("spec large tooltip", getDiscordLargeIconText())
     assert.equals("", getDiscordSmallIcon())
     assert.equals("", getDiscordSmallIconText())
+  end)
+
+  it("takes an icon key the game sent as a plain string rather than an array", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": "spec-string-large", "smallimage": "spec-string-small"}')
+
+    assert.equals("spec-string-large", getDiscordLargeIcon())
+    assert.equals("spec-string-small", getDiscordSmallIcon())
+  end)
+
+  it("leaves the icons alone when the game sends an icon value that is not a key", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": ["spec-kept-large"], "smallimage": ["spec-kept-small"]}')
+    for index, value in ipairs({"[]", "null", "5", '{"key": "spec-object"}'}) do
+      feedDiscordStatus(string.format('{"largeimage": %s, "smallimage": %s, "smallimagetext": "spec payload %d"}', value, value, index))
+
+      assert.equals("spec payload " .. index, getDiscordSmallIconText(), "the payload was dropped, so this spec proves nothing")
+      assert.equals("spec-kept-large", getDiscordLargeIcon(), "largeimage " .. value)
+      assert.equals("spec-kept-small", getDiscordSmallIcon(), "smallimage " .. value)
+    end
+  end)
+
+  it("takes the presence from a package name in any letter case, as GMCP allows", function()
+    if not readyForDiscord() then
+      return
+    end
+    local ok, message = feedTelnet('<T_IAC><T_SB><O_GMCP>external.discord.status {"state": "lower case package"}<T_IAC><T_SE>')
+    assert.is_true(ok, tostring(message))
+    assert.equals("lower case package", getDiscordState())
+
+    ok, message = feedTelnet('<T_IAC><T_SB><O_GMCP>EXTERNAL.DISCORD.STATUS {"state": "upper case package"}<T_IAC><T_SE>')
+    assert.is_true(ok, tostring(message))
+    assert.equals("upper case package", getDiscordState())
   end)
 
   it("reads an elapsed start time the game sent as a string (#9100)", function()

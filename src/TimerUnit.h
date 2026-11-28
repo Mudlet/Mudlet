@@ -64,6 +64,7 @@ public:
     void resetStats();
     void removeAllTempTimers();
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
+    QMap<int, TTimer*> getTimerList() { return mTimerMap; }
     TTimer* getTimer(int id);
     TTimer* findFirstTimer(const QString&) const;
     std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);

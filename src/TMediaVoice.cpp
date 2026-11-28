@@ -28,6 +28,7 @@
 #include <QDataStream>
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QMediaPlayer>
 #include <QTemporaryFile>
 #include <QTimer>
@@ -45,6 +46,7 @@ namespace {
 // with none is a stall, and the sound is better heard through an output of its own
 constexpr auto silentPlayLimit = 500ms;
 constexpr auto probeLimit = 5s;
+constexpr auto probeTick = 100ms;
 constexpr int minimumGlideMilliseconds = 20;
 
 bool otherBackendNamed()
@@ -136,33 +138,44 @@ bool TMediaVoice::unsupported()
     if (otherBackendNamed()) {
         return true;
     }
-    if (qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty() && !smProbePassed) {
-        probeUnnamedBackend();
+    // Audio can arrive after the check timed out, when the main thread was held up past it
+    if (smProbePassed) {
+        return false;
+    }
+    if (smProbeFailed) {
         return true;
     }
-    return false;
+    startProbe();
+    // FFmpeg named is trusted until the check says otherwise, so the first sounds are mixed
+    return qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty();
 }
 
 void TMediaVoice::probeBackend()
 {
-    if (qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-        probeUnnamedBackend();
+    if (!otherBackendNamed()) {
+        startProbe();
     }
 }
 
 // Plays the probe sound once, through a buffer output alone: if any audio comes out, the backend
-// feeds the shared output and later players are mixed. Until then they keep outputs of their own.
-void TMediaVoice::probeUnnamedBackend()
+// feeds the shared output and later players are mixed; if none does in time, every player keeps an
+// output of its own. Until then a backend nobody named keeps them on outputs of their own.
+void TMediaVoice::startProbe()
 {
     if (smProbeStarted.exchange(true)) {
         return;
     }
+#if defined(Q_OS_WASM)
+    // The browser plays the sound itself and hands Qt no audio to mix, and Qt 6.9's player there crashes on a sound
+    // given no QAudioOutput, so it never passes
+    return;
+#endif
 
     auto* player = new QMediaPlayer(QCoreApplication::instance());
     // A file, not a QBuffer: Qt before 6.12.1 never frees the 32 KB it reads a device through
     auto* source = new QTemporaryFile(QDir::temp().filePath(qsl("mudlet-media-probe-XXXXXX.wav")), player);
     if (!source->open() || source->write(probeWav()) == -1 || !source->flush()) {
-        qWarning().noquote() << "TMediaVoice WARNING - could not write the sound that checks the media backend, so each sound plays through an output of its own.";
+        qWarning().noquote() << "TMediaVoice WARNING - could not write the sound that checks the media backend, so it goes unchecked.";
         player->deleteLater();
         return;
     }
@@ -175,10 +188,22 @@ void TMediaVoice::probeUnnamedBackend()
             player->deleteLater();
         }
     });
-    QTimer::singleShot(probeLimit, player, [player]() {
+    // Counts only time the main thread was free to take the audio: a stall, such as a slow login, would
+    // otherwise use the limit up and fail the check for the whole session
+    auto* clock = new QTimer(player);
+    clock->setInterval(probeTick);
+    QElapsedTimer sinceTick;
+    sinceTick.start();
+    connect(clock, &QTimer::timeout, player, [player, sinceTick, waited = 0ms]() mutable {
+        waited += std::min(std::chrono::milliseconds(sinceTick.restart()), 2 * probeTick);
+        if (waited < probeLimit) {
+            return;
+        }
+        smProbeFailed = true;
         qWarning().noquote() << "TMediaVoice WARNING - this media backend hands over no audio to mix, so each sound plays through an output of its own.";
         player->deleteLater();
     });
+    clock->start();
     player->setSource(QUrl::fromLocalFile(source->fileName()));
     player->play();
 }

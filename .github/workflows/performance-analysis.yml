@@ -26,7 +26,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Use CMake 3.30.3
+    - name: Use the latest CMake
       uses: lukka/get-cmake@v4.4.5
 
     - name: Install dependencies
@@ -72,7 +72,7 @@ jobs:
 
     - name: Get commit date
       id: commitdate
-      run: echo "::set-output name=date::$(TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%S' --format='%cd' ${{ env.GIT_COMMIT_SHA }})"
+      run: echo "date=$(TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%S' --format='%cd' "${GIT_COMMIT_SHA:-HEAD}")" >> "$GITHUB_OUTPUT"
 
     - name: Run display benchmark 1
       timeout-minutes: 3
