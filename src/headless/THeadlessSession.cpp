@@ -1924,14 +1924,16 @@ bool THeadlessSession::playReplay(const QString& path)
         mErrorString = tr("A replay is playing already; stop it or wait until it has finished.");
         return false;
     }
+    // Whole, as load() would take a relative path as the profile's log folder's and not the file just checked
+    const QString filePath = QFileInfo(path).absoluteFilePath();
     // Read here for the reason, as load() without an error string gives it only to the main console
-    if (QFile file(path); !file.open(QIODevice::ReadOnly)) {
+    if (QFile file(filePath); !file.open(QIODevice::ReadOnly)) {
         //: Error from a frontend with no window that was asked to play a replay file it cannot read; %1 is the file's path, %2 the system's reason
         mErrorString = tr("The replay file \"%1\" cannot be read: %2").arg(path, file.errorString());
         return false;
     }
     // No error string, as the GUI's replay button calls it, so the replay plays as the player's and not a script's
-    if (!pReplay->load(mpHost, path)) {
+    if (!pReplay->load(mpHost, filePath)) {
         //: Error from a frontend with no window that was asked to play a file that is not a replay Mudlet can read; %1 is the file's path
         mErrorString = tr("The file \"%1\" is not a replay that can be played.").arg(path);
         return false;
