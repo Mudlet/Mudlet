@@ -160,11 +160,12 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 TTextEdit::~TTextEdit()
 {
     if (mIsBlinkClientRegistered) {
+        // Cleared first: the last unregister emits the blink tick, which would reach this pane's
+        // own slot while the console it lays out - and for a miniconsole its buffer - is gone
+        mIsBlinkClientRegistered = false;
         if (auto* pMudlet = mudlet::self()) {
             pMudlet->unregisterBlinkClient();
         }
-
-        mIsBlinkClientRegistered = false;
     }
 }
 
