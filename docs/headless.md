@@ -1495,7 +1495,8 @@ The first profile to load in a run reads every file for the hash, and on the fir
 install unpacks them too, which can take a few hundred milliseconds on a phone. An app with time to
 spare before a profile opens, as while the player picks one, can have that done then, on a thread of
 Qt's pool, with `THeadlessSession::prepareBuiltinLua()`. A profile that starts to load meanwhile
-waits for it.
+waits for it. Where Qt has no threads, as in the browser, it does nothing and the profile's load
+unpacks them as before.
 
 With the option on, a change to a file in `src/mudlet-lua/lua` takes a rebuild to reach a profile,
 which is why a desktop build leaves it off.

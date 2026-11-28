@@ -83,7 +83,9 @@
 #include <QStringConverter>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#if QT_CONFIG(thread)
 #include <QThreadPool>
+#endif
 #include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
@@ -7518,10 +7520,12 @@ void TLuaInterpreter::prepareBuiltinLua()
 #if defined(INCLUDE_BUILTIN_MUDLET_LUA)
     Q_INIT_RESOURCE(mudlet_lua);
 #endif
+#if QT_CONFIG(thread)
     // Read on this thread, as Qt on Android keeps the folders it has looked up in a map it does not lock
     QThreadPool::globalInstance()->start([cacheLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)] {
         unpackedBuiltinLuaGlobal(cacheLocation);
     });
+#endif
 }
 
 void TLuaInterpreter::preloadModule(const QByteArray& name, lua_CFunction open)
