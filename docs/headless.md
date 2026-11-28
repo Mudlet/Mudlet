@@ -1086,6 +1086,21 @@ does, and it is refused where `renderMap()` is. Once the map is drawn, and while
 is taken as that point of the `mapper` window among `scriptWindows()`, which the GUI's map fills from its
 top left, so the app draws the map at that window's size for the two to agree.
 
+`moveMapView()` is a drag and a pinch on a touch screen, which the GUI's mouse has no way to give: it moves
+what the script's map (`MapTarget::script`) or the app's own (`MapTarget::app`) last drew by a distance in
+its pixels, then zooms it by a factor about a point, which stays under the fingers, from 3 rooms across the
+narrow side to `mapView()`'s `maxZoom` (half as much again as the area's widest side, at least 30 rooms), as
+the area's zoom, as the wheel sets it. The next draw lays it out, as for the wheel, and `mapRepaintRequested`
+follows each call. A move that leaves the view off the player, as a pan or a zoom about a point other than the
+middle does, stops the map following the player until the player moves to another room, as the GUI's pan
+does, or until `followPlayerOnMap()` centres it on the player again. `mapView()` says what the last draw laid
+out, for an app to keep what it draws over the map, and a gesture still under way, in step with it: the area
+and level, the zoom and its limits, whether it follows the player, the player's room, a room's cell in pixels
+and the rooms of that area and level it drew, each at its middle, at most 500, those nearest the middle where
+there were more. Both calls are false, with the reason in `errorString()`, where `mapPointer()` and
+`appMapPointer()` are, and for a map whose last draw showed no area; `followPlayerOnMap()` also with no room
+for the player.
+
 `setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
 `mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear
 `mapModeChangeEvent` with `"viewing"` or `"editing"` before the call returns, then the session emits

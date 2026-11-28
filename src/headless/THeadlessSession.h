@@ -665,6 +665,45 @@ public:
     bool showRoomOnAppMap(int roomId);
     // Lets the app's map go, as for an app that no longer shows it; a later call makes it again
     void closeAppMap();
+    // Which map a call acts on: the one a script opened (renderMap()), or the app's own (renderAppMap())
+    enum class MapTarget { script, app };
+    // A drag and a pinch on that map, as on a touch screen: what it last drew moved by pan, in its pixels, then zoomed
+    // by zoom (above 0; 2 shows the rooms twice as large) about the point about of it, as the pinch's middle stays
+    // under the fingers, from 3 rooms across the narrow side to MapView::maxZoom, as the area's zoom, which the
+    // next render draws. A move that leaves the view off the player stops it following the player, until the player
+    // moves to another room or followPlayerOnMap(); a zoom about the middle alone does not. mapRepaintRequested
+    // follows, also when nothing changed. False, with errorString() saying why, where the pointer calls are, and
+    // where the last render showed no area.
+    bool moveMapView(MapTarget map, const QPointF& pan, qreal zoom, const QPointF& about);
+    // Centres that map on the player's room and has it follow the player again; mapRepaintRequested follows. False,
+    // with errorString() saying why, as moveMapView() is, and with no room the player is in.
+    bool followPlayerOnMap(MapTarget map);
+    // A room a map's last render drew, at its middle in the frame's pixels
+    struct MapRoom
+    {
+        int id = 0;
+        QPointF position;
+        QString name;
+    };
+    // What a map's last render laid out, for an app to place what it draws over the map and to keep a gesture in
+    // step with it: the area and level drawn, the zoom (rooms across the narrow side) and the most moveMapView()
+    // zooms out to, whether it follows the player, the player's room, a room's cell in pixels, and the rooms of that
+    // area and level it drew, at most 500, those nearest the middle where there were more
+    struct MapView
+    {
+        int areaId = 0;
+        QString areaName;
+        int level = 0;
+        qreal zoom = 0.0;
+        qreal minZoom = 0.0;
+        qreal maxZoom = 0.0;
+        bool following = true;
+        int playerRoomId = 0;
+        qreal roomSize = 0.0;
+        QList<MapRoom> rooms;
+    };
+    // None before that map has drawn an area, or with no such map
+    std::optional<MapView> mapView(MapTarget map) const;
     // A room findRooms() found
     struct RoomMatch
     {
@@ -1285,6 +1324,9 @@ private:
     bool pointView(TNullMapView& view, const MapPointerEvent& event, Qt::MouseButtons buttons, const std::optional<QSize>& windowSize, bool scriptMap);
     // The app's map, made for the open profile if there is none; null with no profile open
     TNullMapView* appMap();
+    // The script's or the app's map that has been drawn, as the pointer calls take it; null, with errorString()
+    // saying why, otherwise
+    TNullMapView* drawnMap(MapTarget map);
 
     QPointer<Host> mpHost;
     QString mProfileName;

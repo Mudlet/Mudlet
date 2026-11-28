@@ -156,20 +156,136 @@ void TNullMapView::paint()
     if ((mRecentre || mView.mShiftMode) && centredRoomId() == playerRoomId && !pMap->mNewMove) {
         return;
     }
-    const int playerAreaId = pPlayerRoom->getArea();
-    if (shownAreaId() != playerAreaId) {
-        TMapPainter::pruneSelectionToArea(pMap, mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, playerAreaId);
+    pMap->mNewMove = false;
+    followRoom(playerRoomId, pPlayerRoom->getArea());
+}
+
+void TNullMapView::followRoom(const int roomId, const int areaId)
+{
+    if (shownAreaId() != areaId) {
+        TMapPainter::pruneSelectionToArea(mpHost->mpMap.data(), mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
     }
     mRecentre = true;
-    pMap->mNewMove = false;
-    mFollowedRoomId = playerRoomId;
-    mFollowedAreaId = playerAreaId;
-    if (mView.mLastViewedAreaID == playerAreaId) {
+    mFollowing = true;
+    mFollowedRoomId = roomId;
+    mFollowedAreaId = areaId;
+    if (mView.mLastViewedAreaID == areaId) {
         return;
     }
     const int lastViewedAreaId = mView.mLastViewedAreaID;
-    mView.mLastViewedAreaID = playerAreaId;
-    raiseAreaChanged(playerAreaId, lastViewedAreaId);
+    mView.mLastViewedAreaID = areaId;
+    raiseAreaChanged(areaId, lastViewedAreaId);
+}
+
+int TNullMapView::playerRoomId() const
+{
+    const TMap* pMap = mpHost->mpMap.data();
+    TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+    const int playerRoomId = pMap->mRoomIdHash.value(pMap->mProfileName);
+    if (pRoomDB->getRoom(playerRoomId) || pRoomDB->isEmpty()) {
+        return playerRoomId;
+    }
+    return pRoomDB->getRoomMap().constBegin().key();
+}
+
+bool TNullMapView::follow()
+{
+    const int roomId = playerRoomId();
+    const TRoom* pRoom = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        return false;
+    }
+    const QPointer<TNullMapView> self(this);
+    followRoom(roomId, pRoom->getArea());
+    // A handler of sysMapAreaChanged may have closed the map
+    if (self) {
+        requestRepaint();
+    }
+    return true;
+}
+
+qreal TNullMapView::maxZoom() const
+{
+    qreal most = 30.0;
+    if (const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID)) {
+        most = qMax(most, 1.5 * (qMax(pArea->max_x - pArea->min_x, pArea->max_y - pArea->min_y) + 1));
+    }
+    return qMax(most, mPendingZoom ? mPendingZoom->xyzoom : mView.xyzoom);
+}
+
+// T2DMap's PanInteractionHandler moves the centre by the drag over the room size; zoomAtPoint() keeps the point under
+// the pointer in place, here worked out for any factor rather than in 7% notches
+bool TNullMapView::move(const QPointF& pan, const qreal zoom, const QPointF& about)
+{
+    TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID);
+    if (!pArea || !mLaidOut || !(zoom > 0.0) || !qIsFinite(zoom)) {
+        return false;
+    }
+    const qreal side = qMin(mView.mSize.width(), mView.mSize.height());
+    PendingZoom pending = mPendingZoom.value_or(PendingZoom{mView.xyzoom, mView.mMapCenterX, mView.mMapCenterY});
+    const qreal roomSize = side / pending.xyzoom;
+    pending.centreX -= pan.x() / roomSize;
+    pending.centreY -= pan.y() / roomSize;
+    const qreal newZoom = qBound(TMap::scmMinXYZoom, pending.xyzoom / zoom, maxZoom());
+    const QPointF fromMiddle = about - QPointF(mView.mSize.width() / 2.0, mView.mSize.height() / 2.0);
+    const bool zoomed = !qFuzzyCompare(newZoom, pending.xyzoom);
+    if (zoomed) {
+        const qreal newRoomSize = side / newZoom;
+        pending.centreX += fromMiddle.x() / roomSize - fromMiddle.x() / newRoomSize;
+        pending.centreY += fromMiddle.y() / roomSize - fromMiddle.y() / newRoomSize;
+        pending.xyzoom = newZoom;
+        pArea->set2DMapZoom(newZoom);
+        mPainter.flushSymbolPixmapCache();
+        mPainter.flushTextLabelPixmapCache();
+    }
+    mPendingZoom = pending;
+    mView.mPick = false;
+    // A zoom about the middle keeps following the player, and a centring the player's move asked for
+    if (!pan.isNull() || (zoomed && !fromMiddle.isNull())) {
+        // As showRoom(): still in shift mode for the player's room, so the next frame keeps this centre
+        mRecentre = false;
+        mFollowing = false;
+        mView.mShiftMode = true;
+        mView.mRoomID = playerRoomId();
+    }
+    requestRepaint();
+    return true;
+}
+
+void TNullMapView::collectDrawnRooms()
+{
+    mDrawnRooms.clear();
+    TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
+    const TArea* pArea = mLaidOut ? pRoomDB->getArea(mView.mAreaID) : nullptr;
+    if (!pArea) {
+        return;
+    }
+    // As roomsAtPoint() places a room
+    const qreal fx = ((mView.xspan / 2.0) - mView.mMapCenterX) * mView.mRoomWidth;
+    const qreal fy = ((mView.yspan / 2.0) - mView.mMapCenterY) * mView.mRoomHeight;
+    const QRectF frame = QRectF(QPointF(0, 0), QSizeF(mView.mSize)).adjusted(-mView.mRoomWidth, -mView.mRoomHeight, mView.mRoomWidth, mView.mRoomHeight);
+    for (const int roomId : pArea->getRoomsForZ(mView.mMapCenterZ)) {
+        const TRoom* pRoom = pRoomDB->getRoom(roomId);
+        if (!pRoom) {
+            continue;
+        }
+        const QPointF position(pRoom->x() * mView.mRoomWidth + fx, -pRoom->y() * mView.mRoomHeight + fy);
+        if (frame.contains(position)) {
+            mDrawnRooms.append(DrawnRoom{.id = roomId, .position = position, .name = pRoom->name});
+        }
+    }
+    if (mDrawnRooms.size() <= maxDrawnRooms) {
+        return;
+    }
+    const QPointF middle(mView.mSize.width() / 2.0, mView.mSize.height() / 2.0);
+    const auto fromMiddle = [&middle](const DrawnRoom& room) {
+        const QPointF offset = room.position - middle;
+        return QPointF::dotProduct(offset, offset);
+    };
+    std::partial_sort(mDrawnRooms.begin(), mDrawnRooms.begin() + maxDrawnRooms, mDrawnRooms.end(), [&fromMiddle](const DrawnRoom& a, const DrawnRoom& b) {
+        return fromMiddle(a) < fromMiddle(b);
+    });
+    mDrawnRooms.resize(maxDrawnRooms);
 }
 
 void TNullMapView::raiseAreaChanged(const int areaId, const int lastViewedAreaId)
@@ -190,6 +306,9 @@ void TNullMapView::raiseAreaChanged(const int areaId, const int lastViewedAreaId
 // With the settings T2DMap::init() and dlgMapper take from the profile and the main window
 void TNullMapView::render(QPainter& painter, const QSize& size)
 {
+    // The repaint a player's move asks for can come before the paint() it schedules, and TMapPainter would then
+    // centre on the player itself, leaving paint() nothing to follow
+    paint();
     TMap* pMap = mpHost->mpMap.data();
     TMapPainter::View view = mView;
     view.mpMap = pMap;
@@ -225,6 +344,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     });
     mView = result.view;
     mLaidOut = mView.mRoomWidth > 0.0f;
+    collectDrawnRooms();
     if (result.areaChanged) {
         raiseAreaChanged(result.areaChanged->first, result.areaChanged->second);
     }
@@ -246,6 +366,7 @@ bool TNullMapView::showRoom(const int roomId)
         playerRoomId = pRoomDB->getRoomMap().constBegin().key();
     }
     mRecentre = false;
+    mFollowing = false;
     mPendingZoom.reset();
     mView.mAreaID = pRoom->getArea();
     mView.mMapCenterX = pRoom->x();
@@ -344,6 +465,11 @@ bool TNullMapView::wheel(const QPointF& position, const QPoint& angleDelta, cons
     }
     mView.mPick = false;
     if (*zoomed) {
+        // zoomAtPoint() keeps the point under the pointer, so a turn off the middle leaves the player, unless the
+        // player's move has asked for a centring the next render() does
+        if (!mRecentre && position != QPointF(mView.mSize.width() / 2.0, mView.mSize.height() / 2.0)) {
+            mFollowing = false;
+        }
         mPendingZoom = pending;
         mPainter.flushSymbolPixmapCache();
         mPainter.flushTextLabelPixmapCache();

@@ -273,6 +273,93 @@ void THeadlessSession::closeAppMap()
     delete mpAppMap.data();
 }
 
+TNullMapView* THeadlessSession::drawnMap(const MapTarget map)
+{
+    if (map == MapTarget::app) {
+        if (!mpAppMap || mpAppMap->parent() != mpHost || !mpAppMap->rendered()) {
+            //: Error from a frontend with no window that was asked to move its own 2D map before it had drawn that map
+            mErrorString = tr("The app's map has not been drawn yet; it moves what renderAppMap() drew.");
+            return nullptr;
+        }
+        return mpAppMap;
+    }
+    auto* pView = dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend());
+    if (!pView) {
+        //: Error from a frontend with no window that was asked to move the 2D map before a script opened one
+        mErrorString = tr("No map is open; a script opens one, as with openMapWidget().");
+        return nullptr;
+    }
+    if (!pView->rendered()) {
+        //: Error from a frontend with no window that was asked to move the 2D map before it had drawn the map
+        mErrorString = tr("The map has not been drawn yet; it moves what renderMap() drew.");
+        return nullptr;
+    }
+    return pView;
+}
+
+bool THeadlessSession::moveMapView(const MapTarget map, const QPointF& pan, const qreal zoom, const QPointF& about)
+{
+    if (!usable()) {
+        return false;
+    }
+    TNullMapView* pView = drawnMap(map);
+    if (!pView) {
+        return false;
+    }
+    if (!(zoom > 0.0) || !qIsFinite(zoom) || !qIsFinite(pan.x()) || !qIsFinite(pan.y()) || !qIsFinite(about.x()) || !qIsFinite(about.y())) {
+        //: Error from a frontend with no window that was asked to zoom the 2D map by a factor that is not a number above 0, or to move it by a distance that is not a number
+        mErrorString = tr("The map moves by a distance and zooms by a factor above 0, both numbers.");
+        return false;
+    }
+    if (!pView->showsArea() || !pView->move(pan, zoom, about)) {
+        //: Error from a frontend with no window that was asked to move the 2D map while the map it last drew showed no area, as for a map with no rooms
+        mErrorString = tr("The map drawn last shows no area to move.");
+        return false;
+    }
+    return true;
+}
+
+bool THeadlessSession::followPlayerOnMap(const MapTarget map)
+{
+    if (!usable()) {
+        return false;
+    }
+    TNullMapView* pView = drawnMap(map);
+    if (!pView) {
+        return false;
+    }
+    if (!pView->follow()) {
+        //: Error from a frontend with no window that was asked to centre the 2D map on the player while the map has no room for the player
+        mErrorString = tr("The map has no room the player is in.");
+        return false;
+    }
+    return true;
+}
+
+std::optional<THeadlessSession::MapView> THeadlessSession::mapView(const MapTarget map) const
+{
+    if (!mpHost || !mpHost->mpMap || !mpHost->mpMap->mpRoomDB) {
+        return std::nullopt;
+    }
+    const TNullMapView* pView = map == MapTarget::app ? (mpAppMap && mpAppMap->parent() == mpHost ? mpAppMap.data() : nullptr) : dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend());
+    if (!pView || !pView->showsArea()) {
+        return std::nullopt;
+    }
+    MapView view{.areaId = pView->drawnAreaId(),
+                 .areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(pView->drawnAreaId()),
+                 .level = pView->drawnLevel(),
+                 .zoom = pView->drawnZoom(),
+                 .minZoom = TMap::scmMinXYZoom,
+                 .maxZoom = pView->maxZoom(),
+                 .following = pView->following(),
+                 .playerRoomId = pView->playerRoomId(),
+                 .roomSize = pView->drawnRoomSize()};
+    for (const TNullMapView::DrawnRoom& room : pView->drawnRooms()) {
+        view.rooms.append(MapRoom{.id = room.id, .position = room.position, .name = room.name});
+    }
+    return view;
+}
+
 QList<THeadlessSession::RoomMatch> THeadlessSession::findRooms(const QString& text) const
 {
     QList<RoomMatch> found;

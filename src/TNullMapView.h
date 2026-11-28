@@ -58,6 +58,39 @@ public:
     // Centres the next render() on the room and selects it, as a pan and a click on T2DMap do, until the player
     // moves or the map is centred again; false for a room that is not in the map
     bool showRoom(int roomId);
+    // What a drag and a pinch on T2DMap do, for a touch screen: what was drawn moved by pan, in its pixels, then
+    // zoomed by zoom (2 shows the rooms twice as large) about the point about, which stays where it is, within
+    // [scmMinXYZoom, maxZoom()], as the area's zoom; the next render() lays it out. A move that leaves the view off
+    // the player stops following, until the player moves to another room or follow(). False while the last render()
+    // laid out no area
+    bool move(const QPointF& pan, qreal zoom, const QPointF& about);
+    // Centres the next render() on the player's room and follows the player again; false with no room to follow
+    bool follow();
+    // Whether the view follows the player: not from a move() or showRoom() that left it off the player, until the
+    // player moves to another room or follow()
+    bool following() const { return mFollowing; }
+    // The most a move() zooms the area out to: half as much again as fits its widest side, and at least 30 rooms
+    // across, or the zoom the area is at where that is more already
+    qreal maxZoom() const;
+    // A room the last render() drew, at its middle in the frame's pixels
+    struct DrawnRoom
+    {
+        int id = 0;
+        QPointF position;
+        QString name;
+    };
+    // The rooms of the area and level the last render() laid out, at most maxDrawnRooms of them, those nearest the
+    // middle where it drew more; none where it laid out no area
+    static constexpr int maxDrawnRooms = 500;
+    const QList<DrawnRoom>& drawnRooms() const { return mDrawnRooms; }
+    // What the last render() laid out: the area, the level, the zoom (rooms across the narrow side) and a room's
+    // cell in the frame's pixels
+    int drawnAreaId() const { return mView.mAreaID; }
+    int drawnLevel() const { return mView.mMapCenterZ; }
+    qreal drawnZoom() const { return mView.xyzoom; }
+    qreal drawnRoomSize() const { return mView.mRoomWidth; }
+    // The room the map takes as the player's: paint() and TMapPainter take the first room where the player's is gone
+    int playerRoomId() const;
     // As T2DMap::slot_toggleMapViewOnly(), which raises mapModeChangeEvent
     void setViewOnly(bool viewOnly);
     // As T2DMap::init() switches a new map to editing where the profile was saved so, which raises the event too:
@@ -99,6 +132,9 @@ private:
     void requestRepaint();
     void raiseAreaChanged(int areaId, int lastViewedAreaId);
     void forgetDeletedRoom(int roomId);
+    // What paint() does once the player is in another room, or follow() asks: the next render() centres on it
+    void followRoom(int roomId, int areaId);
+    void collectDrawnRooms();
     int centredRoomId() const { return mRecentre ? mFollowedRoomId : mView.mRoomID; }
 
     Host* mpHost = nullptr;
@@ -114,6 +150,9 @@ private:
     int mFollowedRoomId = 0;
     int mFollowedAreaId = 0;
     bool mLaidOut = false;
+    // Cleared by a move() or showRoom() that leaves the view off the player, set again as it follows the player
+    bool mFollowing = true;
+    QList<DrawnRoom> mDrawnRooms;
     // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn
     struct PendingZoom
     {
