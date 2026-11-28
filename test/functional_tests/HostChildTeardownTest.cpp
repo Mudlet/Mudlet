@@ -626,13 +626,17 @@ private slots:
         QVERIFY2(moduleManager && moduleManager->isVisible(), "The module manager did not open");
 
         QStringList shownWithTheHostGone;
-        connect(pHost, &QObject::destroyed, this, [&]() {
+        const QMetaObject::Connection hostGoing = connect(pHost, &QObject::destroyed, this, [&]() {
             if (packageManager && packageManager->isVisible()) {
                 shownWithTheHostGone << qsl("the package manager");
             }
             if (moduleManager && moduleManager->isVisible()) {
                 shownWithTheHostGone << qsl("the module manager");
             }
+        });
+        // A failed check leaves the Host for cleanup(), after these locals are gone
+        auto stopWatching = qScopeGuard([hostGoing]() {
+            disconnect(hostGoing);
         });
 
         const QPointer<Host> hostGuard(pHost);
