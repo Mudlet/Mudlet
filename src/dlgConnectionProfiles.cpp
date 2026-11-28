@@ -215,19 +215,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 {
     setupUi(this);
 
-    mDateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
-    if (mDateTimeFormat.contains(QLatin1Char('t'))) {
-        // There is a timezone identifier in there - which (apart from perhaps
-        // the period around DST changes) we don't really need and which takes
-        // up space:
-        if (mDateTimeFormat.contains(QLatin1String(" t"))) {
-            // Deal with the space if the time zone is appended to the end of
-            // the string:
-            mDateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
-        } else {
-            mDateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
-        }
-    }
+    mDateTimeFormat = utils::dateTimeFormatWithoutZone(mudlet::self()->getUserLocale().dateTimeFormat());
     // Undoes the sizing the .ui pins for 64px bitmaps; done here rather than in the file so
     // its object names and connections stay where the rest of this window expects them
     if (QLayout* pNoticeLayout = notificationArea->layout()) {

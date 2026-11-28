@@ -6593,19 +6593,7 @@ void dlgProfilePreferences::fillOutMapHistory()
     const QIcon icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
     const QIcon icon_xmlFile{QIcon::fromTheme(qsl("application-xml"), QIcon(qsl(":/icons/application-xml.png")))};
     const QIcon icon_jsonFile{QIcon::fromTheme(qsl("application-json"), QIcon(qsl(":/icons/application-json.png")))};
-    QString dateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
-    if (dateTimeFormat.contains(QLatin1Char('t'))) {
-        // There is a timezone identifier in there - which (apart from perhaps
-        // the period around DST changes) we don't really need and which takes
-        // up space:
-        if (dateTimeFormat.contains(QLatin1String(" t"))) {
-            // Deal with the space if the time zone is appended to the end of
-            // the string:
-            dateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
-        } else {
-            dateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
-        }
-    }
+    const QString dateTimeFormat = utils::dateTimeFormatWithoutZone(locale.dateTimeFormat());
     const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
     QDir mapSaveDir(MudletApp::getMudletPath(enums::profileMapsPath, profile_name).append(QLatin1Char('/')));
     mapSaveDir.setSorting(QDir::Time);
