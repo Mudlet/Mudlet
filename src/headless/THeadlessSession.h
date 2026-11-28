@@ -685,6 +685,11 @@ public:
     // the player moves or a script centres the map; mapRepaintRequested follows. False, with errorString() saying
     // why, for a room not in the map and where submit() is refused.
     bool showRoomOnAppMap(int roomId);
+    // Centres the script's map on the room, as choosing it in the GUI's map search does, until the player moves or a
+    // script centres the map: the selection stays and no event is raised; mapRepaintRequested follows. False, with
+    // errorString() saying why, before renderMap() has drawn a map a script opened, where submit() is refused, and
+    // for a room not in the map.
+    bool centreMapOnRoom(int roomId);
     // Lets the app's map go, as for an app that no longer shows it; a later call makes it again
     void closeAppMap();
     // Which map a call acts on: the one a script opened (renderMap()), or the app's own (renderAppMap())

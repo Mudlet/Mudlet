@@ -364,6 +364,16 @@ void TNullMapView::render(QPainter& painter, const QSize& size, const qreal layo
 // centred on it, the room selected, and still in shift mode for the player's room, so the next frame keeps it
 bool TNullMapView::showRoom(const int roomId)
 {
+    if (!centreOnRoom(roomId)) {
+        return false;
+    }
+    mView.mMultiSelectionSet = {roomId};
+    mView.mMultiSelectionHighlightRoomId = roomId;
+    return true;
+}
+
+bool TNullMapView::centreOnRoom(const int roomId)
+{
     TMap* pMap = mpHost->mpMap.data();
     TRoomDB* pRoomDB = pMap->mpRoomDB.get();
     const TRoom* pRoom = pRoomDB->getRoom(roomId);
@@ -385,8 +395,6 @@ bool TNullMapView::showRoom(const int roomId)
     mView.mShiftMode = true;
     mView.mPick = false;
     mView.mRoomID = playerRoomId;
-    mView.mMultiSelectionSet = {roomId};
-    mView.mMultiSelectionHighlightRoomId = roomId;
     requestRepaint();
     return true;
 }

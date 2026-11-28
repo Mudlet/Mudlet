@@ -66,6 +66,8 @@ public:
     // Centres the next render() on the room and selects it, as a pan and a click on T2DMap do, until the player
     // moves or the map is centred again; false for a room that is not in the map
     bool showRoom(int roomId);
+    // What showRoom() does but for the selection, which it leaves, as the GUI's map search does
+    bool centreOnRoom(int roomId);
     // What a drag and a pinch on T2DMap do, for a touch screen: what was drawn moved by pan, in its pixels, then
     // zoomed by zoom (2 shows the rooms twice as large) about the point about, which stays where it is, within
     // [scmMinXYZoom, maxZoom()], as the area's zoom; the next render() lays it out. A move that leaves the view off

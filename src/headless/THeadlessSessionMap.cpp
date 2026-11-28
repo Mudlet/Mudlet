@@ -320,6 +320,23 @@ bool THeadlessSession::showRoomOnAppMap(const int roomId)
     return true;
 }
 
+bool THeadlessSession::centreMapOnRoom(const int roomId)
+{
+    if (!usable()) {
+        return false;
+    }
+    TNullMapView* pView = drawnMap(MapTarget::script);
+    if (!pView) {
+        return false;
+    }
+    if (!pView->centreOnRoom(roomId)) {
+        //: Error from a frontend with no window that was asked to centre the 2D map on a room that is not in the map; %1 is the room's id
+        mErrorString = tr("There is no room %1 in the map.").arg(roomId);
+        return false;
+    }
+    return true;
+}
+
 void THeadlessSession::closeAppMap()
 {
     delete mpAppMap.data();
