@@ -10297,6 +10297,7 @@ static void setPlayerRoomMarker(Host& host, const PlayerRoomMarker& marker)
     pMap->mPlayerRoomInnerDiameterPercentage = marker.innerDiameter;
     pMap->mPlayerRoomOuterColor = marker.outerColor;
     pMap->mPlayerRoomInnerColor = marker.innerColor;
+    emit pMap->signal_playerRoomStyleChanged();
     pMap->requestMapRepaint();
 }
 
@@ -10428,7 +10429,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
                 return warnArgumentValue(L, __func__, qsl("mapRoomBorderSize must be a number of at least 1, got %1").arg(size));
             }
             host.mRoomBorderSize = size;
-            host.mpMap->requestMapRepaint();
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BorderSize);
             return success();
         }
         if (key == qsl("mapLargeAreaExitArrows")) {
@@ -10716,11 +10717,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (QColor Host::* member = consoleColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
         const QString name = getVerifiedString(L, __func__, 2, "value");
-        static const QRegularExpression hexColor(qsl("^#[0-9A-Fa-f]{6}$"));
-        if (!hexColor.match(name).hasMatch()) {
+        const QColor color = hexColorKeepingAlpha(name, host.*member);
+        if (!color.isValid()) {
             return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
         }
-        host.*member = QColor::fromString(name);
+        host.*member = color;
         host.applyMainConsoleColors();
         host.updateAnsi16ColorsInTable();
         return success();
@@ -10967,13 +10968,19 @@ int TLuaInterpreter::setConfig(lua_State* L)
         if (value < 100) {
             return warnArgumentValue(L, __func__, qsl("consoleBufferSize %1 is below the least of 100 lines").arg(value));
         }
-        host.setConsoleBufferSize(value);
-        host.applyConsoleBufferSize();
+        // As the preferences: only a change resets the console's limit, and the batch a script gave it
+        if (value != host.getConsoleBufferSize()) {
+            host.setConsoleBufferSize(value);
+            host.applyConsoleBufferSize();
+        }
         return success();
     }
     if (key == qsl("useMaxConsoleBufferSize")) {
-        host.setUseMaxConsoleBufferSize(getVerifiedBool(L, __func__, 2, "value"));
-        host.applyConsoleBufferSize();
+        const bool useMax = getVerifiedBool(L, __func__, 2, "value");
+        if (useMax != host.getUseMaxConsoleBufferSize()) {
+            host.setUseMaxConsoleBufferSize(useMax);
+            host.applyConsoleBufferSize();
+        }
         return success();
     }
     if (key == qsl("controlCharacterHandling")) {
@@ -11059,7 +11066,11 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("enableOSC8Hyperlinks")) {
-        host.mEnableOSC8Hyperlinks = getVerifiedBool(L, __func__, 2, "value");
+        const bool enabled = getVerifiedBool(L, __func__, 2, "value");
+        if (enabled != host.mEnableOSC8Hyperlinks) {
+            host.mEnableOSC8Hyperlinks = enabled;
+            host.mTelnet.sendInfoNewEnvironOSCHyperlinks();
+        }
         return success();
     }
     if (key == qsl("alertOnNewData")) {

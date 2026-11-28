@@ -757,6 +757,23 @@ private slots:
         }
     }
 
+    void test_aScriptTurningHyperlinksOffTellsTheGameOnce()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('enableOSC8Hyperlinks', false)")));
+        QVERIFY(!mpHost->mEnableOSC8Hyperlinks);
+        QString problem;
+        const EnvironVariable sent = infoVariableNamed("OSC_HYPERLINKS", problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(sent.value, QByteArray("0"));
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('enableOSC8Hyperlinks', false)")));
+        QVERIFY2(newEnvironReplies().isEmpty(), "setting the preference to what it already was sent the game an update");
+    }
+
     // A server must see these before it sends the scheme, even in a menu, where an older client types it at the game
     void test_gmcpAndLocalLinksAreAdvertisedWithTheOtherHyperlinkFeatures_data()
     {

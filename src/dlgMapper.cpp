@@ -284,6 +284,9 @@ void dlgMapper::connectMapCues()
             mp2dMap->setExitSize(mpHost->mLineSize);
             repaintMaps();
             break;
+        case TMap::MapperSetting::BorderSize:
+            mp2dMap->setBorderSize(mpHost->mRoomBorderSize);
+            break;
         case TMap::MapperSetting::RoundRooms:
             slot_toggleRoundRooms(mpHost->mBubbleMode);
             break;
