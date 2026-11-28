@@ -307,6 +307,7 @@ set(mudlet_app_SRCS
     TFlipButton.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
+    TLinkInteraction.cpp
     TMainConsole.cpp
     TMapView.cpp
     TMapViewManager.cpp
@@ -661,6 +662,7 @@ set(mudlet_app_HDRS
     TFlipButton.h
     TKeySequenceEdit.h
     TLabel.h
+    TLinkInteraction.h
     TMainConsole.h
     TMapView.h
     TMapViewManager.h

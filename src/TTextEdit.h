@@ -46,6 +46,7 @@ class TBuffer;
 class TConsole;
 class TChar;
 class TGlyphCache;
+class TLinkInteraction;
 class TPaintPacer;
 class TTextSelection;
 
@@ -130,7 +131,6 @@ public:
     void showKeyboardContextMenu();
     void showLinkMenuAt(int linkIndex, const QPoint& globalPosition, bool alreadyActivated = false);
     QPoint caretGlobalPosition();
-    void announceLinkFocus(int linkIndex);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer. The upper
@@ -171,12 +171,6 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode = true;
-    // The link whose menu is showing, 0 for none; its actions carry the item's index plus one
-    int mPopupLinkIndex = 0;
-    // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
-    qint64 mPopupLinkIssue = 0;
-    // Activating a local: link with a menu opens the menu, so choosing an item must not change its selection a second time
-    bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     std::unique_ptr<TTextSelection> mpSelection;
@@ -187,7 +181,6 @@ public slots:
     void slot_selectAll();
     void slot_scrollBarMoved(int);
     void slot_hScrollBarMoved(int);
-    void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
     void slot_analyseSelection();
@@ -352,6 +345,7 @@ private:
     QPointer<QTimer> mpScrollStoppedTimer;
     // One repaint per frame at most for what new output drives, through scheduleUpdate()
     TPaintPacer* mpPacer = nullptr;
+    TLinkInteraction* mpLinks = nullptr;
     // Set while updateScrollBar() is moving the bar itself, which
     // slot_scrollBarMoved() must not mistake for the user dragging it.
     bool mUpdatingScrollBar = false;

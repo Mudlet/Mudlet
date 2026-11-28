@@ -52,6 +52,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     CommandLineKeyHandlingTest.cpp
     PaintPacerTest.cpp
     TextSelectionTest.cpp
+    LinkInteractionTest.cpp
     PasswordEntryTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
