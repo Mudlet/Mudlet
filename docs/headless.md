@@ -1097,9 +1097,21 @@ does, or until `followPlayerOnMap()` centres it on the player again. `mapView()`
 out, for an app to keep what it draws over the map, and a gesture still under way, in step with it: the area
 and level, the zoom and its limits, whether it follows the player, the player's room, a room's cell in pixels
 and the rooms of that area and level it drew, each at its middle, at most 500, those nearest the middle where
-there were more. Both calls are false, with the reason in `errorString()`, where `mapPointer()` and
+there were more, and the levels of that area that have rooms. Both calls are false, with the reason in `errorString()`, where `mapPointer()` and
 `appMapPointer()` are, and for a map whose last draw showed no area; `followPlayerOnMap()` also with no room
 for the player.
+
+`showMapLevel()` and `showMapArea()` are the GUI's level buttons and area box for those maps. A level is one of
+the area's that has rooms, shown about the same point; an area is shown following the player where they are in
+it, else about the room nearest the middle of the level shown, or of its level with the most rooms where it has
+none on that one. Either leaves the map off the player as a pan does. They are false, with the reason in
+`errorString()`, where `moveMapView()` is (`showMapArea()` also when the last draw showed no area), and for a level
+or an area with no rooms. `walkToRoom()` walks to a room as a double-click on it does, with no map drawn: it is
+false for a room not in the map and with no room for the player. `roomInfo()` gives a room's name, area,
+coordinates and exits (the twelve directions, then the special exits, each with the room it leads to and whether it
+is locked), and `steps`, the fewest exits from the player's room by rooms and exits that are not locked, as the
+speedwalk goes, or -1 for none; `findRooms()` gives each room found its `steps` too, and whether it is in the
+player's area. `mapAreas()` lists the areas that have rooms, by name.
 
 `setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
 `mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear

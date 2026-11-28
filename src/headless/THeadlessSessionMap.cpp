@@ -20,6 +20,7 @@
 #include "THeadlessSession.h"
 
 #include "Host.h"
+#include "TArea.h"
 #include "TMap.h"
 #include "TMapViewsFrontend.h"
 #include "TNullConsoleFrontend.h"
@@ -28,9 +29,58 @@
 #include "TRoomDB.h"
 
 #include <QPainter>
+#include <QQueue>
 #include <QStringMatcher>
 
 #include <algorithm>
+
+namespace {
+
+// The room the map takes as the player's, as paint() and TMapPainter take it; 0 for none
+int playerRoomOf(const TMap* pMap)
+{
+    const int roomId = pMap->mRoomIdHash.value(pMap->mProfileName);
+    return pMap->mpRoomDB->getRoom(roomId) ? roomId : 0;
+}
+
+// The fewest exits from the room to each it reaches, as TMap::findPath() goes: by no locked exit and into no
+// locked room
+QHash<int, int> stepsFrom(TRoomDB* pRoomDB, const int fromId)
+{
+    QHash<int, int> steps;
+    if (!pRoomDB->getRoom(fromId)) {
+        return steps;
+    }
+    steps.insert(fromId, 0);
+    QQueue<int> queue;
+    queue.enqueue(fromId);
+    while (!queue.isEmpty()) {
+        const int roomId = queue.dequeue();
+        const TRoom* pRoom = pRoomDB->getRoom(roomId);
+        const int next = steps.value(roomId) + 1;
+        const auto reach = [&](const int toId) {
+            const TRoom* pTo = pRoomDB->getRoom(toId);
+            if (pTo && !pTo->isLocked && !steps.contains(toId)) {
+                steps.insert(toId, next);
+                queue.enqueue(toId);
+            }
+        };
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            if (!pRoom->hasExitLock(direction)) {
+                reach(pRoom->getExit(direction));
+            }
+        }
+        const QMap<QString, int>& specialExits = pRoom->getSpecialExits();
+        for (auto it = specialExits.cbegin(); it != specialExits.cend(); ++it) {
+            if (!pRoom->hasSpecialExitLock(it.key())) {
+                reach(it.value());
+            }
+        }
+    }
+    return steps;
+}
+
+} // namespace
 
 bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
 {
@@ -336,6 +386,66 @@ bool THeadlessSession::followPlayerOnMap(const MapTarget map)
     return true;
 }
 
+bool THeadlessSession::showMapLevel(const MapTarget map, const int level)
+{
+    if (!usable()) {
+        return false;
+    }
+    TNullMapView* pView = drawnMap(map);
+    if (!pView) {
+        return false;
+    }
+    if (!pView->showsArea()) {
+        //: Error from a frontend with no window that was asked to show another level of the 2D map while the map it last drew showed no area, as for a map with no rooms
+        mErrorString = tr("The map drawn last shows no area to move.");
+        return false;
+    }
+    if (!pView->showLevel(level)) {
+        //: Error from a frontend with no window that was asked to show a level of the 2D map's area that has no rooms; %1 is the level
+        mErrorString = tr("The area shown has no rooms on level %1.").arg(level);
+        return false;
+    }
+    return true;
+}
+
+bool THeadlessSession::showMapArea(const MapTarget map, const int areaId)
+{
+    if (!usable()) {
+        return false;
+    }
+    TNullMapView* pView = drawnMap(map);
+    if (!pView) {
+        return false;
+    }
+    if (!pView->showArea(areaId)) {
+        //: Error from a frontend with no window that was asked to show an area on the 2D map that is not in the map or has no rooms; %1 is the area's id
+        mErrorString = tr("There is no area %1 with rooms in the map.").arg(areaId);
+        return false;
+    }
+    return true;
+}
+
+bool THeadlessSession::walkToRoom(const int roomId)
+{
+    if (!usable()) {
+        return false;
+    }
+    TMap* pMap = mpHost->mpMap.data();
+    if (!pMap->mpRoomDB->getRoom(roomId)) {
+        //: Error from a frontend with no window that was asked to walk to a room that is not in the 2D map; %1 is the room's id
+        mErrorString = tr("There is no room %1 in the map.").arg(roomId);
+        return false;
+    }
+    const int playerRoomId = playerRoomOf(pMap);
+    if (!playerRoomId) {
+        //: Error from a frontend with no window that was asked to walk to a room while the 2D map has no room the player is in
+        mErrorString = tr("The map has no room the player is in.");
+        return false;
+    }
+    TMapPainter::startSpeedWalk(mpHost, pMap, playerRoomId, roomId);
+    return true;
+}
+
 std::optional<THeadlessSession::MapView> THeadlessSession::mapView(const MapTarget map) const
 {
     if (!mpHost || !mpHost->mpMap || !mpHost->mpMap->mpRoomDB) {
@@ -357,6 +467,7 @@ std::optional<THeadlessSession::MapView> THeadlessSession::mapView(const MapTarg
     for (const TNullMapView::DrawnRoom& room : pView->drawnRooms()) {
         view.rooms.append(MapRoom{.id = room.id, .position = room.position, .name = room.name});
     }
+    view.levels = pView->drawnLevels();
     return view;
 }
 
@@ -384,7 +495,73 @@ QList<THeadlessSession::RoomMatch> THeadlessSession::findRooms(const QString& te
             found.append(RoomMatch{.id = pRoom->getId(), .name = pRoom->name, .areaId = pRoom->getArea(), .areaName = areaNames.value(pRoom->getArea())});
         }
     }
+    if (found.isEmpty()) {
+        return found;
+    }
+    TRoomDB* pRooms = mpHost->mpMap->mpRoomDB.get();
+    const int playerRoomId = playerRoomOf(mpHost->mpMap.data());
+    const TRoom* pPlayerRoom = pRooms->getRoom(playerRoomId);
+    const QHash<int, int> steps = stepsFrom(pRooms, playerRoomId);
+    for (RoomMatch& match : found) {
+        match.inPlayerArea = pPlayerRoom && match.areaId == pPlayerRoom->getArea();
+        match.steps = steps.value(match.id, -1);
+    }
     return found;
+}
+
+std::optional<THeadlessSession::RoomInfo> THeadlessSession::roomInfo(const int roomId) const
+{
+    if (!mpHost || !mpHost->mpMap || !mpHost->mpMap->mpRoomDB) {
+        return std::nullopt;
+    }
+    TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
+    const TRoom* pRoom = pRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        return std::nullopt;
+    }
+    RoomInfo info{.id = roomId,
+                  .name = pRoom->name,
+                  .areaId = pRoom->getArea(),
+                  .areaName = pRoomDB->getAreaNamesMap().value(pRoom->getArea()),
+                  .x = pRoom->x(),
+                  .y = pRoom->y(),
+                  .z = pRoom->z(),
+                  .steps = stepsFrom(pRoomDB, playerRoomOf(mpHost->mpMap.data())).value(roomId, -1)};
+    const auto exit = [pRoomDB](const QString& direction, const int toId, const bool locked) {
+        const TRoom* pTo = pRoomDB->getRoom(toId);
+        return RoomExit{.direction = direction, .to = toId, .toName = pTo ? pTo->name : QString(), .locked = locked};
+    };
+    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+        if (const int toId = pRoom->getExit(direction); toId > 0) {
+            info.exits.append(exit(TRoom::dirCodeToShortString(direction), toId, pRoom->hasExitLock(direction)));
+        }
+    }
+    const QMap<QString, int>& specialExits = pRoom->getSpecialExits();
+    for (auto it = specialExits.cbegin(); it != specialExits.cend(); ++it) {
+        info.exits.append(exit(it.key(), it.value(), pRoom->hasSpecialExitLock(it.key())));
+    }
+    return info;
+}
+
+QList<THeadlessSession::MapArea> THeadlessSession::mapAreas() const
+{
+    QList<MapArea> areas;
+    if (!mpHost || !mpHost->mpMap || !mpHost->mpMap->mpRoomDB) {
+        return areas;
+    }
+    TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
+    const QMap<int, QString>& names = pRoomDB->getAreaNamesMap();
+    for (auto it = names.cbegin(); it != names.cend(); ++it) {
+        const TArea* pArea = pRoomDB->getArea(it.key());
+        if (pArea && !pArea->getAreaRooms().isEmpty()) {
+            areas.append(MapArea{.id = it.key(), .name = it.value()});
+        }
+    }
+    std::sort(areas.begin(), areas.end(), [](const MapArea& a, const MapArea& b) {
+        const int byName = a.name.compare(b.name, Qt::CaseInsensitive);
+        return byName != 0 ? byName < 0 : a.id < b.id;
+    });
+    return areas;
 }
 
 // Gathered into one a turn, as the GUI's update() calls are into one repaint

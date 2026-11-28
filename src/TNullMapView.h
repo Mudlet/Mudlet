@@ -66,8 +66,16 @@ public:
     bool move(const QPointF& pan, qreal zoom, const QPointF& about);
     // Centres the next render() on the player's room and follows the player again; false with no room to follow
     bool follow();
-    // Whether the view follows the player: not from a move() or showRoom() that left it off the player, until the
-    // player moves to another room or follow()
+    // Shows that level of the area the last render() laid out, about the same point, as T2DMap's level buttons do,
+    // until the player moves to another room or follow(); false for a level the area has no rooms on, or while the
+    // last render() laid out no area
+    bool showLevel(int level);
+    // Shows that area, as picking it in dlgMapper's area box does: following the player where they are in it, else
+    // about the room nearest the middle of its current level, or of its level with the most rooms where it has no
+    // rooms on the current one; false for an area that is not in the map or has no rooms
+    bool showArea(int areaId);
+    // Whether the view follows the player: not from a move(), showRoom(), showLevel() or showArea() that left it off
+    // the player, until the player moves to another room or follow()
     bool following() const { return mFollowing; }
     // The most a move() zooms the area out to: half as much again as fits its widest side, and at least 30 rooms
     // across, or the zoom the area is at where that is more already
@@ -87,6 +95,8 @@ public:
     // cell in the frame's pixels
     int drawnAreaId() const { return mView.mAreaID; }
     int drawnLevel() const { return mView.mMapCenterZ; }
+    // The levels of the area the last render() laid out that have rooms, lowest first
+    QList<int> drawnLevels() const;
     qreal drawnZoom() const { return mView.xyzoom; }
     qreal drawnRoomSize() const { return mView.mRoomWidth; }
     // The room the map takes as the player's: paint() and TMapPainter take the first room where the player's is gone
@@ -150,7 +160,8 @@ private:
     int mFollowedRoomId = 0;
     int mFollowedAreaId = 0;
     bool mLaidOut = false;
-    // Cleared by a move() or showRoom() that leaves the view off the player, set again as it follows the player
+    // Cleared by a move(), showRoom(), showLevel() or showArea() that leaves the view off the player, set again as it
+    // follows the player
     bool mFollowing = true;
     QList<DrawnRoom> mDrawnRooms;
     // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn

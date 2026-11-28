@@ -37,6 +37,9 @@
 #include <QSettings>
 #include <QTimer>
 
+#include <algorithm>
+#include <cmath>
+
 TNullMapView::TNullMapView(Host* pHost, QObject* parent, const bool raisesEvents)
 : QObject(parent)
 , mpHost(pHost)
@@ -379,6 +382,86 @@ bool TNullMapView::showRoom(const int roomId)
     mView.mMultiSelectionHighlightRoomId = roomId;
     requestRepaint();
     return true;
+}
+
+bool TNullMapView::showLevel(const int level)
+{
+    const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID);
+    if (!pArea || !mLaidOut || !pArea->zLevels.contains(level)) {
+        return false;
+    }
+    // As move(): in shift mode for the player's room, so the next frame keeps this level
+    mRecentre = false;
+    mFollowing = false;
+    mView.mMapCenterZ = level;
+    mView.mShiftMode = true;
+    mView.mPick = false;
+    mView.mRoomID = playerRoomId();
+    requestRepaint();
+    return true;
+}
+
+bool TNullMapView::showArea(const int areaId)
+{
+    TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
+    const TArea* pArea = pRoomDB->getArea(areaId);
+    if (!pArea || pArea->zLevels.isEmpty()) {
+        return false;
+    }
+    const TRoom* pPlayerRoom = pRoomDB->getRoom(playerRoomId());
+    if (pPlayerRoom && pPlayerRoom->getArea() == areaId) {
+        return follow();
+    }
+    int level = mView.mMapCenterZ;
+    if (!pArea->zLevels.contains(level)) {
+        // As T2DMap::switchArea(): the lowest of the levels with the most rooms
+        qsizetype most = 0;
+        for (const int z : pArea->zLevels) {
+            if (const qsizetype count = pArea->getRoomsForZ(z).size(); count > most) {
+                most = count;
+                level = z;
+            }
+        }
+    }
+    const QSet<int>& roomIds = pArea->getRoomsForZ(level);
+    QList<const TRoom*> rooms;
+    double meanX = 0.0;
+    double meanY = 0.0;
+    for (const int roomId : roomIds) {
+        if (const TRoom* pRoom = pRoomDB->getRoom(roomId)) {
+            rooms.append(pRoom);
+            meanX += (pRoom->x() - meanX) / rooms.size();
+            meanY += (pRoom->y() - meanY) / rooms.size();
+        }
+    }
+    const auto nearest = std::min_element(rooms.cbegin(), rooms.cend(), [meanX, meanY](const TRoom* a, const TRoom* b) {
+        return std::hypot(a->x() - meanX, a->y() - meanY) < std::hypot(b->x() - meanX, b->y() - meanY);
+    });
+    if (nearest == rooms.cend()) {
+        return false;
+    }
+    if (mView.mAreaID != areaId) {
+        TMapPainter::pruneSelectionToArea(mpHost->mpMap.data(), mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
+    }
+    // As showRoom(), without selecting the room
+    mRecentre = false;
+    mFollowing = false;
+    mPendingZoom.reset();
+    mView.mAreaID = areaId;
+    mView.mMapCenterX = (*nearest)->x();
+    mView.mMapCenterY = -(*nearest)->y();
+    mView.mMapCenterZ = level;
+    mView.mShiftMode = true;
+    mView.mPick = false;
+    mView.mRoomID = playerRoomId();
+    requestRepaint();
+    return true;
+}
+
+QList<int> TNullMapView::drawnLevels() const
+{
+    const TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID);
+    return pArea && mLaidOut ? pArea->zLevels : QList<int>();
 }
 
 bool TNullMapView::showsArea() const

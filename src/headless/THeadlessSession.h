@@ -678,6 +678,19 @@ public:
     // Centres that map on the player's room and has it follow the player again; mapRepaintRequested follows. False,
     // with errorString() saying why, as moveMapView() is, and with no room the player is in.
     bool followPlayerOnMap(MapTarget map);
+    // Shows that level of the area the map drew last, about the same point, as the GUI's level buttons do, until the
+    // player moves to another room or followPlayerOnMap(); mapRepaintRequested follows. False, with errorString()
+    // saying why, as moveMapView() is, and for a level the area has no rooms on.
+    bool showMapLevel(MapTarget map, int level);
+    // Shows that area on the map, as picking it in the GUI's area box does: following the player where they are in
+    // it, else about the room nearest the middle of its current level, or of its level with the most rooms where it
+    // has none on the current one; mapRepaintRequested follows. False, with errorString() saying why, where
+    // moveMapView() is but for a last draw that showed no area, and for an area not in the map or with no rooms.
+    bool showMapArea(MapTarget map, int areaId);
+    // Walks the player to the room, as a double-click on it on the GUI's map does, with the profile's doSpeedWalk()
+    // or else the shortest path by known exits. False, with errorString() saying why, for a room not in the map, with
+    // no room the player is in; a walk that finds no path says so in the console, as the double-click does.
+    bool walkToRoom(int roomId);
     // A room a map's last render drew, at its middle in the frame's pixels
     struct MapRoom
     {
@@ -687,8 +700,8 @@ public:
     };
     // What a map's last render laid out, for an app to place what it draws over the map and to keep a gesture in
     // step with it: the area and level drawn, the zoom (rooms across the narrow side) and the most moveMapView()
-    // zooms out to, whether it follows the player, the player's room, a room's cell in pixels, and the rooms of that
-    // area and level it drew, at most 500, those nearest the middle where there were more
+    // zooms out to, whether it follows the player, the player's room, a room's cell in pixels, the rooms of that
+    // area and level it drew, at most 500, those nearest the middle where there were more, and the area's levels
     struct MapView
     {
         int areaId = 0;
@@ -701,6 +714,8 @@ public:
         int playerRoomId = 0;
         qreal roomSize = 0.0;
         QList<MapRoom> rooms;
+        // The levels of the area that have rooms, lowest first
+        QList<int> levels;
     };
     // None before that map has drawn an area, or with no such map
     std::optional<MapView> mapView(MapTarget map) const;
@@ -711,11 +726,49 @@ public:
         QString name;
         int areaId = 0;
         QString areaName;
+        // Whether it is in the area of the player's room
+        bool inPlayerArea = false;
+        // As RoomInfo::steps
+        int steps = -1;
     };
     // The rooms of the map whose name holds the text, ignoring case, as searchRoom() finds them, and the room whose
     // id it is, in no order; none with no profile open or for empty text. A getter, so it may be called from any
     // handler.
     QList<RoomMatch> findRooms(const QString& text) const;
+    // A way out of a room: one of the twelve directions, as "n" to "out", or a special exit's command
+    struct RoomExit
+    {
+        QString direction;
+        int to = 0;
+        QString toName;
+        bool locked = false;
+    };
+    struct RoomInfo
+    {
+        int id = 0;
+        QString name;
+        int areaId = 0;
+        QString areaName;
+        int x = 0;
+        int y = 0;
+        int z = 0;
+        // The fewest exits from the player's room to it, by rooms and exits that are not locked, as the GUI's
+        // speedwalk goes: 0 for the player's room, -1 with no such way or no room the player is in
+        int steps = -1;
+        // The directions first, from north to out, then the special exits by command
+        QList<RoomExit> exits;
+    };
+    // A room of the map, as the GUI's room properties show it; none for a room not in the map or with no profile
+    // open. A getter, so it may be called from any handler.
+    std::optional<RoomInfo> roomInfo(int roomId) const;
+    struct MapArea
+    {
+        int id = 0;
+        QString name;
+    };
+    // The areas of the map that have rooms, by name ignoring case, then id; none with no profile open. A getter, so
+    // it may be called from any handler.
+    QList<MapArea> mapAreas() const;
     // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
     // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
     // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
