@@ -88,13 +88,28 @@ void TScript::setEventHandlerList(QStringList handlerList)
 
 void TScript::compileAll(bool saveLoadingError)
 {
-    if (mpHost->mResetProfile) {
-        mNeedsToBeCompiled = true;
-    }
     compile(saveLoadingError);
     for (auto* scriptNode : *mpMyChildrenList) {
         auto* script = static_cast<TScript*>(scriptNode);
         script->compileAll(saveLoadingError);
+    }
+}
+
+// A reset closed the Lua state the body ran in
+void TScript::markForCompile()
+{
+    mNeedsToBeCompiled = true;
+    for (auto* scriptNode : *mpMyChildrenList) {
+        static_cast<TScript*>(scriptNode)->markForCompile();
+    }
+}
+
+// A reset cleared the event handlers this tree had registered
+void TScript::registerEventHandlers()
+{
+    setEventHandlerList(mEventHandlerList);
+    for (auto* scriptNode : *mpMyChildrenList) {
+        static_cast<TScript*>(scriptNode)->registerEventHandlers();
     }
 }
 
@@ -136,7 +151,7 @@ bool TScript::compileScript(bool saveLoadingError)
     // this profile's scripts: the top-level Lua body run below (the lua_pcall inside
     // TLuaInterpreter::compile()) can uninstall its own package - a common package
     // auto-updater pattern - and freeing this script mid-compile, or writing to it
-    // after compile() returns (see mNeedsToBeCompiled/mOK_code below and in
+    // after compile() returns (see mOK_code below and mNeedsToBeCompiled in
     // setScript()), is a use-after-free. See ScriptUnit::mProcessingDepth.
     ScriptUnit* pUnit = mpHost->getScriptUnit();
     pUnit->beginProcessing();
@@ -161,10 +176,12 @@ bool TScript::compileScript(bool saveLoadingError)
     // package's scripts run their own bodies inside this one
     const Host::RunningScript outer = std::exchange(mpHost->mRunningScript, {chunkName, pRoot->mPackageName});
     QString error;
+    // Cleared first: a body that calls enableScript() on its own tree would otherwise run itself
+    // again from compileSwitchedOn(), and one that stopped part way must not be run again either
+    mNeedsToBeCompiled = false;
     const bool compiled = mpHost->mLuaInterpreter.compile(mScript, error, chunkName);
     mpHost->mRunningScript = outer;
     if (compiled) {
-        mNeedsToBeCompiled = false;
         mOK_code = true;
         clearLoadingError();
         if (mpHost->mResetProfile) {

@@ -60,6 +60,9 @@ public:
     bool enableScript(const QString& name);
     bool disableScript(const QString& name);
     void compileAll(bool saveLoadingError = false);
+    // compileAll() skips a switched off root, so a script under one may not have run its body in
+    // this Lua state yet when it is switched on; only those still waiting are run
+    void compileSwitchedOn(TScript* pScript);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
@@ -106,6 +109,11 @@ private:
     // > 0 whilst Host::raiseEvent() is dispatching to event handlers; uninstall()
     // and doCleanup() must not delete scripts then:
     int mProcessingDepth = 0;
+    // Until compileAll() ends, compileSwitchedOn() runs only these roots and leaves the rest for
+    // compileAll() to run in order, after the scripts before them
+    std::vector<TScript*> mRootsCompiledThisPass;
+    bool mCompilePassDone = false;
+    std::vector<TScript*> mRootsBeingCompiled;
     int mMaxID = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;
