@@ -39,6 +39,7 @@
 #include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 #include "TPrintSink.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include "GroupedTest.h"
@@ -845,6 +846,21 @@ assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitE
 
         TAppFrontend::setInstance(&app);
         QVERIFY(!TAppFrontend::viewGone());
+    }
+
+    // A map file can hold a stub twice, or one beside the exit it was for: neither is a way out still to map
+    void test_anAreasOpenExitsCountEachUnmappedWayOutOnce()
+    {
+        QCOMPARE(runLua(qsl("routingOpenArea = addAreaName('RoutingOpenExits') routingOpenRoom = createRoomID() addRoom(routingOpenRoom) "
+                            "setRoomArea(routingOpenRoom, routingOpenArea) routingOpenOther = createRoomID() addRoom(routingOpenOther) "
+                            "setRoomArea(routingOpenOther, routingOpenArea) setExit(routingOpenRoom, routingOpenOther, 'e')")),
+                 qsl("ok"));
+        TRoom* pRoom = mpHost->mpMap->mpRoomDB->getRoom(luaGlobalInt("routingOpenRoom"));
+        QVERIFY(pRoom);
+        pRoom->exitStubs = {DIR_NORTH, DIR_NORTH, DIR_EAST};
+
+        QCOMPARE(runLua(qsl("local found = getAreaExploration(routingOpenArea) assert(found.openExits == 1, tostring(found.openExits))")), qsl("ok"));
+        QCOMPARE(runLua(qsl("deleteArea('RoutingOpenExits')")), qsl("ok"));
     }
 
     void test_mapZoomReachesTheMapView()

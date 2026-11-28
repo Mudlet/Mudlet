@@ -128,6 +128,12 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "not connected to game server"))
     end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendATCP("Char.Login", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not connected to game server"), tostring(err))
+    end)
   end)
 
   describe("sendTelnetChannel102", function()
@@ -158,6 +164,16 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "unable to send"))
     end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendSocket("noop", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unable to send"), tostring(err))
+    end)
+
+    it("still raises a Lua error when the second argument is not a boolean", function()
+      assertArgError(function() sendSocket("noop", "yes") end, "sendSocket: bad argument #2 type")
+    end)
   end)
 end)
 
@@ -187,6 +203,53 @@ describe("connectToServer validates its arguments without connecting", function(
     local hostAfter, portAfter = storedProfileAddress()
     assert.equals(hostBefore, hostAfter)
     assert.equals(portBefore, portAfter)
+  end)
+end)
+
+describe("a connection attempt after disconnect() found nothing to disconnect", function()
+  local function connected()
+    local _, _, isConnected = getConnectionInfo()
+    return isConnected
+  end
+
+  local function waitUntil(predicate, timeoutMs)
+    for _ = 1, math.ceil(timeoutMs / 20) do
+      if predicate() then
+        return true
+      end
+      pumpEvents(20)
+    end
+    return predicate()
+  end
+
+  local function linesSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  it("still reports the attempt failing", function()
+    disconnect()
+    assert.is_true(waitUntil(function() return not connected() end, 2000))
+    -- Finds no connection to end, so the flags it sets are never cleared by a disconnection
+    disconnect()
+
+    local failed = false
+    local handler = registerAnonymousEventHandler("sysDisconnectionEvent", function() failed = true end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      -- Calls off any automatic retry the failure scheduled
+      disconnect()
+    end)
+
+    local mark = getLastLineNumber("main")
+    -- Nothing listens on port 1, so the connection is refused straight away
+    connectToServer("127.0.0.1", 1)
+    assert.is_true(waitUntil(function() return failed or connected() end, 10000), "the connection attempt never ended")
+    if connected() then
+      pending("something accepted a connection on 127.0.0.1:1, so the refusal could not be tested")
+      return
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(mark), "Unable to connect") end, 2000),
+                   "the refused connection was not reported, saw: " .. linesSince(mark))
   end)
 end)
 
@@ -760,6 +823,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       local event, _, body = waitForEvent("sysPostHttpDone", 2000)
       assert.equals("sysPostHttpDone", event)
       assert.is_true(contains(body, "body=file body with no data argument"), body)
+    end)
+
+    it("sends data holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      -- a binary part of a multipart form, say
+      assert.is_true(postHTTP("a\0b\255c", fixtureUrl("/echo")))
+
+      local event, _, body = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.is_true(contains(body, "bodyhex=610062ff63\n"), body)
     end)
 
     it("raises sysPostHttpError when the endpoint refuses the verb", function()
@@ -3158,6 +3233,36 @@ describe("The IRC configuration functions round-trip through the profile", funct
         assert.is_string(channel)
       end
     end)
+
+    it("keep the nick they make up when no nick was ever set", function()
+      -- restartIrc() reads the nick again, so a made-up one must not change between reads
+      local profileNickFile = getMudletHomeDir() .. "/irc_nick"
+      local lastUsedNickFile = getMudletHomeDir() .. "/../../irc_nick"
+      local nick = getIrcNick()
+      local lastUsedNick
+      local file = io.open(lastUsedNickFile, "rb")
+      if file then
+        lastUsedNick = file:read("*a")
+        file:close()
+      end
+      finally(function()
+        setIrcNick(nick)
+        if lastUsedNick then
+          local restored = io.open(lastUsedNickFile, "wb")
+          restored:write(lastUsedNick)
+          restored:close()
+        else
+          os.remove(lastUsedNickFile)
+        end
+      end)
+
+      os.remove(profileNickFile)
+      os.remove(lastUsedNickFile)
+      local madeUp = getIrcNick()
+      assert.is_truthy(madeUp:match("^Mudlet%d+$"), madeUp)
+      assert.equals(madeUp, getIrcNick())
+      assert.equals(madeUp, getConfig("ircNickName"))
+    end)
   end)
 
   describe("setIrcNick", function()
@@ -3696,6 +3801,21 @@ describe("sending protocol data to a game server that has not negotiated", funct
     end, 2000), "the bytes after the NUL never reached the wire, saw: " .. tostring(wireHex()))
   end)
 
+  it("sends telnet code tokens unparsed when sendSocket's second argument is nil", function()
+    if serverUnavailable() then return end
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendSocket("SendSocketNilRaw<SOH>|", nil)
+    assert.is_true(ok, "sendSocket refused a connected socket: " .. tostring(err))
+    local wanted = ("SendSocketNilRaw<SOH>|"):gsub(".", function(c) return string.format("%02x", c:byte()) end)
+    assert.is_true(waitUntil(function()
+      local seen = capture()
+      return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
+    end, 2000), "the <SOH> token did not reach the wire as typed, saw: " .. tostring(wireHex()))
+  end)
+
   local function hex(text)
     return (text:gsub(".", function(c) return string.format("%02x", c:byte()) end))
   end
@@ -3842,6 +3962,30 @@ describe("sending protocol data to a game server that has not negotiated", funct
     local atcp, atcpErr = sendATCP("Core.Hello")
     assert.is_nil(atcp)
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
+  end)
+
+  it("still names a disconnect the user's when a sysDisconnectionEvent handler reconnects", function()
+    if serverUnavailable() then return end
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local reconnected = false
+    local handler
+    handler = registerAnonymousEventHandler("sysDisconnectionEvent", function()
+      killAnonymousEventHandler(handler)
+      reconnected = true
+      reconnect()
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    local mark = getLastLineNumber("main")
+    disconnect()
+    assert.is_true(waitUntil(function() return reconnected end, 5000), "sysDisconnectionEvent never fired")
+    local function linesSince()
+      return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+    end
+    assert.is_true(waitUntil(function() return contains(linesSince(), "User Disconnected") end, 2000),
+                   "the disconnect was not reported as the user's, saw: " .. linesSince())
   end)
 end)
 

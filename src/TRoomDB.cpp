@@ -30,6 +30,7 @@
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QVarLengthArray>
 
 #include <limits>
@@ -241,59 +242,69 @@ bool TRoomDB::__removeRoom(int id)
         // in "Container Class | Qt 5.x Core" for why an iterator into entranceMap
         // itself could not have tolerated that.
         const QList<int> enteringRoomIds = entranceMap.values(id);
+        // mapDeletedRoomExitsAsStubs: an exit that led here still leads somewhere, just not to this room
+        // Not for a whole area going, often to be built again or imported anew: stubs would only clutter the areas around
+        const bool exitsBecomeStubs = mpMap->mpHost && mpMap->mpHost->mMapperDeletedRoomExitsAsStubs && !mRemovingArea;
         for (const int enteringRoomId : enteringRoomIds) {
             if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
                 continue; // Bypass rooms we know are also to be deleted
             }
             TRoom* r = getRoom(enteringRoomId);
             if (r) {
+                // Made a stub before its extras go: removeExitExtras() keeps a door and a lock only on a stub
+                const auto dropExitExtras = [r, exitsBecomeStubs](const int direction) {
+                    if (exitsBecomeStubs) {
+                        r->setExitStub(direction, true);
+                    }
+                    r->removeExitExtras(direction);
+                };
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
-                    r->removeExitExtras(DIR_NORTH);
+                    dropExitExtras(DIR_NORTH);
                 }
                 if (r->getNortheast() == id) {
                     r->setNortheast(-1);
-                    r->removeExitExtras(DIR_NORTHEAST);
+                    dropExitExtras(DIR_NORTHEAST);
                 }
                 if (r->getNorthwest() == id) {
                     r->setNorthwest(-1);
-                    r->removeExitExtras(DIR_NORTHWEST);
+                    dropExitExtras(DIR_NORTHWEST);
                 }
                 if (r->getEast() == id) {
                     r->setEast(-1);
-                    r->removeExitExtras(DIR_EAST);
+                    dropExitExtras(DIR_EAST);
                 }
                 if (r->getWest() == id) {
                     r->setWest(-1);
-                    r->removeExitExtras(DIR_WEST);
+                    dropExitExtras(DIR_WEST);
                 }
                 if (r->getSouth() == id) {
                     r->setSouth(-1);
-                    r->removeExitExtras(DIR_SOUTH);
+                    dropExitExtras(DIR_SOUTH);
                 }
                 if (r->getSoutheast() == id) {
                     r->setSoutheast(-1);
-                    r->removeExitExtras(DIR_SOUTHEAST);
+                    dropExitExtras(DIR_SOUTHEAST);
                 }
                 if (r->getSouthwest() == id) {
                     r->setSouthwest(-1);
-                    r->removeExitExtras(DIR_SOUTHWEST);
+                    dropExitExtras(DIR_SOUTHWEST);
                 }
                 if (r->getUp() == id) {
                     r->setUp(-1);
-                    r->removeExitExtras(DIR_UP);
+                    dropExitExtras(DIR_UP);
                 }
                 if (r->getDown() == id) {
                     r->setDown(-1);
-                    r->removeExitExtras(DIR_DOWN);
+                    dropExitExtras(DIR_DOWN);
                 }
                 if (r->getIn() == id) {
                     r->setIn(-1);
-                    r->removeExitExtras(DIR_IN);
+                    dropExitExtras(DIR_IN);
                 }
                 if (r->getOut() == id) {
                     r->setOut(-1);
-                    r->removeExitExtras(DIR_OUT);
+                    dropExitExtras(DIR_OUT);
                 }
                 r->removeAllSpecialExitsToRoom(id);
                 // The plain setters above do not touch the area exit records,
@@ -419,6 +430,7 @@ bool TRoomDB::removeArea(int id)
             // During map deletion rooms will already
             // have been cleared so this would not
             // be wanted to be done in that case.
+            const QScopedValueRollback removingArea(mRemovingArea, true);
             removeRoom(pA->rooms);
         }
         // During map deletion areaNamesMap will
@@ -1550,6 +1562,24 @@ bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
         return false;
     }
     pA->set2DMapZoom(zoom);
+    return true;
+}
+
+bool TRoomDB::setRoomHash(const int roomId, const QString& hash)
+{
+    if (roomIDToHash.value(roomId) == hash && (hash.isEmpty() || hashToRoomID.value(hash, -1) == roomId)) {
+        return false;
+    }
+    if (roomIDToHash.contains(roomId)) {
+        hashToRoomID.remove(roomIDToHash.take(roomId));
+    }
+    if (!hash.isEmpty()) {
+        if (hashToRoomID.contains(hash)) {
+            roomIDToHash.remove(hashToRoomID[hash]);
+        }
+        hashToRoomID[hash] = roomId;
+        roomIDToHash[roomId] = hash;
+    }
     return true;
 }
 
