@@ -598,8 +598,8 @@ public:
     QSize mainConsoleGrid() const;
     QRect mainConsoleTextRect() const;
     // The colour of the border around the main console, the room the borders leave, as setBorderColor() set it:
-    // black until a script sets one, as the GUI's, and invalid after a setBorderColor() out of range, which Qt makes
-    // no colour of. Invalid with no profile open: read it at profileLoaded, then follow mainBorderColorChanged.
+    // black until a script sets one, as the GUI's. Invalid with no profile open: read it at profileLoaded, then
+    // follow mainBorderColorChanged.
     QColor mainBorderColor() const;
     // The words scripts gave the main command line for Tab to complete, with addCmdLineSuggestion(), and those
     // it is never to complete, with addCmdLineBlacklist(), each once and sorted. Empty with no profile open.

@@ -970,9 +970,8 @@ app last had, so a script that sets a border twice in one turn sends one, and on
 it back sends none.
 
 `mainBorderColor()` is the colour a script's `setBorderColor()` gives the room the borders leave around
-the main console, which the GUI paints there and `getBorderColor()` reads: black until a script sets one,
-and invalid after a `setBorderColor()` out of range, which Qt makes no colour of. Read it at
-`profileLoaded`; `mainBorderColorChanged` carries it when it changes, from the event loop and only when
+the main console, which the GUI paints there and `getBorderColor()` reads: black until a script sets one.
+Read it at `profileLoaded`; `mainBorderColorChanged` carries it when it changes, from the event loop and only when
 it differs from what the app last had, as `mainConsoleAreaChanged` does.
 
 A script's `setMainWindowSize(width, height)` sets its own profile's area in pixels, as the app's call
