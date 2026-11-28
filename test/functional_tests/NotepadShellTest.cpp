@@ -19,7 +19,7 @@
 
 /*
  * Guards the notepad's design-language shell: its two sheets, the send strip's
- * three readings, the tab chips and their crosses, the glyphs, and the question
+ * three readings, the strip of tabs and their crosses, the glyphs, and the question
  * before a note with text in it is destroyed.
  *
  * Run with: ctest -R NotepadShellTest -V
@@ -149,17 +149,17 @@ private:
                  qPrintable(qsl("tab %1: a cross drawn into a %2px box the platform sized is stretched past the %3px mark the recipe draws")
                                     .arg(QString::number(index), QString::number(pCross->size().width()), QString::number(uiDesign::scmTabCloseGlyphSize))));
 
-        // The gap between chips comes off the trailing side of the tab's rect
+        // The gap to the next tab comes off the trailing side of the tab's rect, and the word's line stands over the
+        // underline's room
         const QRect tab = pTabBar->tabRect(index);
-        const QRect chip = tab.adjusted(0, 0, -uiDesign::scmTabGap, 0);
-        const int padding = uiDesign::scmInputBorderWidth + uiDesign::scmTabPaddingHorizontal;
-        const int stands = pTrailing ? chip.right() - pCross->geometry().right() : pCross->geometry().left() - chip.left();
-        QVERIFY2(stands == padding,
-                 qPrintable(qsl("the cross on tab %1 sits %2px from the chip's edge where the word has %3px of padding")
-                                    .arg(QString::number(index), QString::number(stands), QString::number(uiDesign::scmTabPaddingHorizontal))));
+        const QRect line(tab.left(), tab.top() + uiDesign::scmTabPaddingTop, tab.width() - uiDesign::scmTabGap, tab.height() - uiDesign::scmTabPaddingTop - uiDesign::scmTabPaddingBottom);
+        const int stands = pTrailing ? line.right() - pCross->geometry().right() : pCross->geometry().left() - line.left();
+        QVERIFY2(stands == 0,
+                 qPrintable(qsl("the cross on tab %1 sits %2px off the end of the tab's own extent, so it stands in the gap to the next tab or inside the word")
+                                    .arg(QString::number(index), QString::number(stands))));
 
-        const int offCentre = std::abs(pCross->geometry().center().y() - tab.center().y());
-        QVERIFY2(offCentre <= 1, qPrintable(qsl("the cross on tab %1 sits %2px off the chip's centre line, where the word is").arg(QString::number(index), QString::number(offCentre))));
+        const int offCentre = std::abs(pCross->geometry().center().y() - line.center().y());
+        QVERIFY2(offCentre <= 1, qPrintable(qsl("the cross on tab %1 sits %2px off the word's centre line").arg(QString::number(index), QString::number(offCentre))));
     }
 
     // 20ms ticks the answerer waits for a box, and puts up with one still shown
@@ -628,7 +628,7 @@ private slots:
         QVERIFY2(central.mid(at, 200).contains(qsl("image:")), "the tab's close-button rule points at no picture");
     }
 
-    void test_theChosenTabIsLitAndTheRestAreThePage()
+    void test_theChosenTabStandsOnTheUnderlineAndNoTabIsFilled()
     {
         QTabBar* pTabBar = mpNotepad->tabWidget->tabBar();
         QVERIFY2(pTabBar->count() == 2, "the strip does not hold the two tabs this reads");
@@ -636,23 +636,31 @@ private slots:
         QCoreApplication::processEvents();
 
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-        const QColor lit = uiDesign::blend(tokens.page, tokens.accent, uiDesign::scmSoftWashStrength);
-        const QImage shot = mpNotepad->grab().toImage();
+        const QImage shot = TestPixels::shot(mpNotepad);
 
-        // Inside the fill and clear of the word, in the tab's leading padding
-        const auto insideTab = [pTabBar, this](const int index) {
+        // In the gap a tab trails, clear of its word and its cross; and on the bottom row, where the underline is drawn
+        const auto inTheGap = [pTabBar, this](const int index) {
             const QRect tab = pTabBar->tabRect(index);
-            return pTabBar->mapTo(mpNotepad, QPoint(tab.left() + 4, tab.center().y()));
+            return pTabBar->mapTo(mpNotepad, QPoint(tab.right() - uiDesign::scmTabGap / 2, tab.center().y()));
+        };
+        const auto underTheWord = [pTabBar, this](const int index) {
+            const QRect tab = pTabBar->tabRect(index);
+            return pTabBar->mapTo(mpNotepad, QPoint(tab.left() + 1, tab.bottom()));
         };
 
-        const QColor chosen = shot.pixelColor(insideTab(0));
-        const QColor other = shot.pixelColor(insideTab(1));
-        qInfo().noquote() << qsl("  chosen tab %1, the other %2; the accent wash on the page is %3 and the page is %4").arg(chosen.name(), other.name(), lit.name(), tokens.page.name());
+        const QColor chosen = TestPixels::sampled(shot, inTheGap(0));
+        const QColor other = TestPixels::sampled(shot, inTheGap(1));
+        const QColor chosenFoot = TestPixels::sampled(shot, underTheWord(0));
+        const QColor otherFoot = TestPixels::sampled(shot, underTheWord(1));
+        qInfo().noquote() << qsl("  beside the chosen tab %1, beside the other %2, the page is %3; under the chosen word %4, under the other %5, the accent is %6")
+                                     .arg(chosen.name(), other.name(), tokens.page.name(), chosenFoot.name(), otherFoot.name(), tokens.accent.name());
 
-        QVERIFY2(TestPixels::readsAs(chosen, lit, scmFillTolerance),
-                 qPrintable(qsl("the chosen tab reads %1 rather than the accent wash %2 - it is not drawn as a lit chip").arg(chosen.name(), lit.name())));
-        QVERIFY2(TestPixels::readsAs(other, tokens.page, scmFillTolerance),
-                 qPrintable(qsl("the tab that is not chosen reads %1 rather than the page %2 - the strip is still drawing folder tabs").arg(other.name(), tokens.page.name())));
+        QVERIFY2(TestPixels::readsAs(chosen, tokens.page, scmFillTolerance) && TestPixels::readsAs(other, tokens.page, scmFillTolerance),
+                 qPrintable(qsl("a tab is drawn on %1 and %2 rather than on the page %3 - the strip is still filling tabs").arg(chosen.name(), other.name(), tokens.page.name())));
+        QVERIFY2(TestPixels::readsAs(chosenFoot, tokens.accent, scmFillTolerance),
+                 qPrintable(qsl("the chosen tab's word stands on %1 rather than the accent %2").arg(chosenFoot.name(), tokens.accent.name())));
+        QVERIFY2(TestPixels::readsAs(otherFoot, tokens.border, scmFillTolerance),
+                 qPrintable(qsl("the tab that is not chosen stands on %1 rather than the hairline %2").arg(otherFoot.name(), tokens.border.name())));
     }
 
     // Nothing else restyles this window: it is not a QDialog, and the profile
@@ -799,8 +807,8 @@ private slots:
 
     // Qt's tab close button takes its size from the style in its constructor,
     // never from the ::close-button rule, and is placed from the tab's raw rect
-    // rather than from the padding box the rule lays the word in
-    void test_everyCrossIsTheRecipesBoxInsideTheChipsPadding()
+    // rather than beside the word the rule lays out
+    void test_everyCrossIsTheRecipesBoxBesideItsWord()
     {
         for (int i = 0; i < mpNotepad->tabWidget->tabBar()->count(); ++i) {
             theCrossOnTabIsTheRecipes(i);

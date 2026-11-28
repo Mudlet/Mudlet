@@ -28,7 +28,6 @@
 #include <QStyleOption>
 #include <QStyleOptionTab>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPen>
 #include <QVariant>
 #include <QMouseEvent>
@@ -41,25 +40,12 @@
 static const int VERTICAL_MOVEMENT_RATIO_THRESHOLD = 60; // Percentage of movement that must be vertical
 static const int TAB_REORDER_DELAY_MS = 150;             // Delay before allowing tab detachment
 
-// Contrast is read against a wash as blended over the page, not against the wash's own colour
-static QColor composited(const QColor& ink, const QColor& surface)
-{
-    const qreal weight = ink.alphaF();
-    return QColor::fromRgbF(ink.redF() * weight + surface.redF() * (1.0 - weight), ink.greenF() * weight + surface.greenF() * (1.0 - weight), ink.blueF() * weight + surface.blueF() * (1.0 - weight));
-}
-
-// The walk towards black always reaches a fill white clears, so tokens.text is never the answer
-static QColor chosenFillOnLightPage(const uiDesign::ThemeTokens& tokens)
-{
-    return uiDesign::readableOn(tokens.field, tokens.accent, tokens.text, uiDesign::scmTextMinimumRatio);
-}
-
-
 // A script's sheet that names QTabBar, through setAppStyleSheet() or setProfileStyleSheet(), keeps the last word over
-// the chips
+// the strip
 bool TStyle::scriptSheetTakesTheTabs() const
 {
-    return qApp->styleSheet().contains(qsl("QTabBar")) || (mpTabBar && mpTabBar->styleSheet().contains(qsl("QTabBar")));
+    // setGlobalStyleSheet() puts a profile's sheet on the bar itself
+    return uiDesign::scriptSheetTakesTheTabs(mpTabBar);
 }
 
 // Qt paints a reordered tab's drag pixmap with the rect moved to the origin, so tabAt() on it
@@ -75,79 +61,63 @@ int TStyle::tabIndexOf(const QStyleOptionTab* tabOption) const
     return mpTabBar ? mpTabBar->tabAt(tabOption->rect.center()) : -1;
 }
 
-TStyle::ChipLayout TStyle::layoutChip(const QStyleOptionTab* tabOption) const
+// Each tab leads with scmTabStripInset of the gap and trails the rest, so the first name stands where it always has and
+// every name after it a whole gap on from the one before
+TStyle::TabLayout TStyle::layoutTab(const QStyleOptionTab* tabOption) const
 {
-    ChipLayout layout;
+    TabLayout layout;
     if (!tabOption) {
         return layout;
     }
 
     const QRect bounds = tabOption->rect;
-    // The gap trails, as tabBarStyleSheet()'s margin-right puts it on a rule-drawn strip
-    const QRect chip = bounds.adjusted(0, 0, -uiDesign::scmTabGap, 0);
-    const int horizontalInset = uiDesign::scmInputBorderWidth + uiDesign::scmTabPaddingHorizontal;
-    const int verticalInset = uiDesign::scmInputBorderWidth + uiDesign::scmTabPaddingVertical;
-    const QRect inner = chip.adjusted(horizontalInset, verticalInset, -horizontalInset, -verticalInset);
+    const QRect content = bounds.adjusted(uiDesign::scmTabStripInset, 0, uiDesign::scmTabStripInset - uiDesign::scmTabGap, 0);
+    // The word's own line, clear of the air and the underline below it
+    const QRect line(content.left(), bounds.top() + uiDesign::scmTabPaddingTop, content.width(), qMax(0, bounds.height() - uiDesign::scmTabPaddingTop - uiDesign::scmTabPaddingBottom));
 
-    int left = inner.left();
-    int right = inner.right();
+    int left = content.left();
+    int right = content.right();
 
     QRect indicator;
     if (tabConnectionIndicator(tabIndexOf(tabOption)) != TabConnectionIndicator::None) {
-        indicator = QRect(left, chip.top() + (chip.height() - sIndicatorDiameter) / 2, sIndicatorDiameter, sIndicatorDiameter);
+        indicator = QRect(left, line.top() + (line.height() - sIndicatorDiameter) / 2, sIndicatorDiameter, sIndicatorDiameter);
         left += sIndicatorReservedWidth;
     }
 
     QRect close;
     if (!tabOption->rightButtonSize.isEmpty()) {
         const QSize wanted = tabOption->rightButtonSize;
-        close = QRect(inner.right() - wanted.width() + 1, chip.top() + (chip.height() - wanted.height()) / 2, wanted.width(), wanted.height());
-        right = close.left() - 1 - sCloseButtonGap;
+        close = QRect(content.right() - wanted.width() + 1, line.top() + (line.height() - wanted.height()) / 2, wanted.width(), wanted.height());
+        right = close.left() - 1 - uiDesign::scmTabCloseGap;
     }
 
-    const QRect text(left, inner.top(), qMax(0, right - left + 1), inner.height());
+    const QRect text(left, line.top(), qMax(0, right - left + 1), line.height());
 
-    layout.chip = QStyle::visualRect(tabOption->direction, bounds, chip);
+    layout.content = QStyle::visualRect(tabOption->direction, bounds, content);
     layout.indicator = indicator.isNull() ? indicator : QStyle::visualRect(tabOption->direction, bounds, indicator);
     layout.text = QStyle::visualRect(tabOption->direction, bounds, text);
     layout.close = close.isNull() ? close : QStyle::visualRect(tabOption->direction, bounds, close);
     return layout;
 }
 
-// Filled on a light page, where a wash is too pale on the grey; on a dark page a fill would shout
-TStyle::ChipFace TStyle::chipFace(const QStyleOptionTab* tabOption, const uiDesign::ThemeTokens& tokens) const
+// New output is marked in the full text ink as well as by its weight, so the mark reads louder than a quiet tab; the
+// chosen tab's accent word and underline keep the two apart, and a hovered word takes the accent without the underline
+QColor TStyle::wordInk(const QStyleOptionTab* tabOption, const uiDesign::ThemeTokens& tokens) const
 {
-    ChipFace face;
-    face.fill = QColor(Qt::transparent);
-    face.word = tokens.mutedText;
-    face.surface = tokens.page;
-
     if (!(tabOption->state & State_Enabled)) {
-        face.word = tokens.disabledText;
-        return face;
+        return tokens.disabledText;
     }
-
     if (tabOption->state & State_Selected) {
-        if (!tokens.darkPage) {
-            face.fill = chosenFillOnLightPage(tokens);
-            face.surface = face.fill;
-            face.word = tokens.field;
-            return face;
-        }
-        face.fill = tokens.accentWash;
-        face.surface = composited(tokens.accentWash, tokens.page);
-        face.word = uiDesign::readableOn(face.surface, tokens.accentText, tokens.text, sChosenWordMinimumRatio);
-        face.bar = true;
-        face.outline = true;
-        return face;
+        return uiDesign::readableOn(tokens.page, tokens.accentText, tokens.text, uiDesign::scmTextMinimumRatio);
     }
-
     if (tabOption->state & State_MouseOver) {
-        face.fill = tokens.hoverWash;
-        face.surface = composited(tokens.hoverWash, tokens.page);
-        face.word = tokens.accentText;
+        return tokens.accentText;
     }
-    return face;
+    const QString tabName = mpTabBar ? mpTabBar->tabData(tabIndexOf(tabOption)).toString() : QString();
+    if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
+        return tokens.text;
+    }
+    return tokens.mutedText;
 }
 
 void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
@@ -157,7 +127,7 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
         if (scriptSheetTakesTheTabs()) {
             paintThroughApplicationSheet(element, tabOption, painter, widget);
         } else {
-            paintChip(painter, tabOption, widget, element != CE_TabBarTabLabel, element != CE_TabBarTabShape);
+            paintTab(painter, tabOption, widget, element != CE_TabBarTabLabel, element != CE_TabBarTabShape);
         }
         return;
     }
@@ -189,55 +159,47 @@ void TStyle::paintThroughApplicationSheet(const ControlElement element, const QS
         return;
     }
     const QRect bounds = tabOption->rect;
-    const QRect box(
-            bounds.left() + uiDesign::scmInputBorderWidth + uiDesign::scmTabPaddingHorizontal, bounds.top() + (bounds.height() - sIndicatorDiameter) / 2, sIndicatorDiameter, sIndicatorDiameter);
+    const QRect box(bounds.left() + sIndicatorInsetUnderScriptSheet, bounds.top() + (bounds.height() - sIndicatorDiameter) / 2, sIndicatorDiameter, sIndicatorDiameter);
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-    paintConnectionIndicator(painter, QStyle::visualRect(tabOption->direction, bounds, box), state, tokens, tokens.page, tokens.mutedText);
+    paintConnectionIndicator(painter, QStyle::visualRect(tabOption->direction, bounds, box), state, tokens, tokens.mutedText);
 }
 
-void TStyle::paintChip(QPainter* painter, const QStyleOptionTab* tabOption, const QWidget* widget, const bool shape, const bool label) const
+void TStyle::paintTab(QPainter* painter, const QStyleOptionTab* tabOption, const QWidget* widget, const bool shape, const bool label) const
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-    const ChipLayout layout = layoutChip(tabOption);
-    const ChipFace face = chipFace(tabOption, tokens);
+    const TabLayout layout = layoutTab(tabOption);
     const bool chosen = tabOption->state & State_Selected;
 
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
 
-    if (shape) {
-        if (face.fill.alpha() > 0) {
-            QPainterPath path;
-            path.addRoundedRect(QRectF(layout.chip), uiDesign::scmRadiusChip, uiDesign::scmRadiusChip);
-            painter->fillPath(path, face.fill);
-        }
-        if (face.bar) {
-            uiDesign::paintAccentBar(painter, layout.chip, tokens.accent, uiDesign::scmRadiusChip);
-        }
-        // Stroked last so it is the bar's outer edge, and half a pixel in so the line lands on whole pixels
-        if (face.outline) {
-            QPainterPath outline;
-            outline.addRoundedRect(QRectF(layout.chip).adjusted(0.5, 0.5, -0.5, -0.5), uiDesign::scmRadiusChip, uiDesign::scmRadiusChip);
-            painter->strokePath(outline, QPen(tokens.accent, uiDesign::scmInputBorderWidth));
-        }
+    // Over the hairline along the bar's bottom row; from the keyboard it grows up into the air under the word
+    if (shape && chosen) {
+        const int thickness = (tabOption->state & State_HasFocus) ? uiDesign::scmTabFocusUnderlineWidth : uiDesign::scmTabUnderlineWidth;
+        painter->fillRect(QRect(layout.content.left(), tabOption->rect.bottom() - thickness + 1, layout.content.width(), thickness), tokens.accent);
     }
 
     if (label) {
         const QString tabName = mpTabBar ? mpTabBar->tabData(tabIndexOf(tabOption)).toString() : QString();
         QFont font = widget ? widget->font() : painter->font();
-        // Bold also marks new output; the wash is what tells that apart from the chosen tab
-        font.setBold(chosen || mBoldTabsSet.contains(tabName));
+        if (mBoldTabsSet.contains(tabName)) {
+            font.setBold(true);
+        } else if (chosen) {
+            font.setWeight(uiDesign::scmTabChosenWeight);
+        }
         font.setItalic(mItalicTabsSet.contains(tabName));
         font.setUnderline(mUnderlineTabsSet.contains(tabName));
         painter->setFont(font);
 
-        painter->setPen(face.word);
+        const QColor ink = wordInk(tabOption, tokens);
+        painter->setPen(ink);
         const int mnemonic = qApp->style()->styleHint(SH_UnderlineShortcut, tabOption, widget) ? Qt::TextShowMnemonic : Qt::TextHideMnemonic;
-        painter->drawText(layout.text, Qt::AlignCenter | mnemonic, tabOption->text);
+        // From the leading edge: every tab is measured bold, so a lighter word centred in its box would stand off the line
+        painter->drawText(layout.text, QStyle::visualAlignment(tabOption->direction, Qt::AlignLeft | Qt::AlignVCenter) | mnemonic, tabOption->text);
 
         const TabConnectionIndicator state = tabConnectionIndicator(tabIndexOf(tabOption));
         if (state != TabConnectionIndicator::None && !layout.indicator.isNull()) {
-            paintConnectionIndicator(painter, layout.indicator, state, tokens, face.surface, face.word);
+            paintConnectionIndicator(painter, layout.indicator, state, tokens, ink);
         }
     }
 
@@ -256,9 +218,7 @@ void TStyle::drawPrimitive(PrimitiveElement element, const QStyleOption* option,
         // is the tab bar, not the close button that asked
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
         const bool lit = option->state & (State_Raised | State_Sunken);
-        // A filled chip has no wash to light up, and the chrome tone would vanish into the fill
-        const bool onAFill = (option->state & State_Selected) && !tokens.darkPage;
-        const QColor ink = !(option->state & State_Enabled) ? tokens.disabledText : (onAFill ? tokens.field : (lit ? tokens.accentText : tokens.mutedText));
+        const QColor ink = !(option->state & State_Enabled) ? tokens.disabledText : (lit ? tokens.accentText : tokens.mutedText);
         const qreal ratio = painter->device() ? painter->device()->devicePixelRatioF() : 1.0;
         const QPixmap cross = uiDesign::themedGlyphPixmap(qsl(":/icons/editor-clear.svg"), ink, uiDesign::scmTabCloseBoxSize, uiDesign::scmTabCloseGlyphSize, ratio);
         if (!cross.isNull()) {
@@ -269,6 +229,10 @@ void TStyle::drawPrimitive(PrimitiveElement element, const QStyleOption* option,
     }
 
     if (element == PE_FrameTabBarBase) {
+        // A script's sheet has always drawn its tabs with no base under them
+        if (option && !scriptSheetTakesTheTabs()) {
+            uiDesign::paintTabStripHairline(painter, option->rect, uiDesign::themeTokens());
+        }
         return;
     }
 
@@ -284,9 +248,9 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
     if (tabOption) {
         switch (element) {
         case SE_TabBarTabText:
-            return layoutChip(tabOption).text;
+            return layoutTab(tabOption).text;
         case SE_TabBarTabRightButton:
-            return layoutChip(tabOption).close;
+            return layoutTab(tabOption).close;
         case SE_TabBarTabLeftButton:
             return QRect();
         default:
@@ -316,9 +280,9 @@ int TStyle::pixelMetric(PixelMetric metric, const QStyleOption* option, const QW
 
     switch (metric) {
     case PM_TabBarTabHSpace:
-        return 2 * (uiDesign::scmTabPaddingHorizontal + uiDesign::scmInputBorderWidth) + uiDesign::scmTabGap;
+        return uiDesign::scmTabGap;
     case PM_TabBarTabVSpace:
-        return 2 * (uiDesign::scmTabPaddingVertical + uiDesign::scmInputBorderWidth);
+        return uiDesign::scmTabPaddingTop + uiDesign::scmTabPaddingBottom;
     case PM_TabCloseIndicatorWidth:
     case PM_TabCloseIndicatorHeight:
         return uiDesign::scmTabCloseBoxSize;
@@ -346,11 +310,11 @@ int TStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWidget*
     }
 }
 
-// Walked against the chip's own surface: a dot walked off the page vanishes into an accent fill
-void TStyle::paintConnectionIndicator(QPainter* painter, const QRect& box, TabConnectionIndicator state, const uiDesign::ThemeTokens& tokens, const QColor& surface, const QColor& ringInk) const
+// Walked against the page: no tab is filled, so that is what every indicator stands on
+void TStyle::paintConnectionIndicator(QPainter* painter, const QRect& box, TabConnectionIndicator state, const uiDesign::ThemeTokens& tokens, const QColor& ringInk) const
 {
-    const auto stateInk = [&tokens, &surface](const qreal hue) {
-        return uiDesign::readableOn(surface, uiDesign::stateColor(hue, tokens.darkPage), tokens.text, uiDesign::scmQuietMinimumRatio);
+    const auto stateInk = [&tokens](const qreal hue) {
+        return uiDesign::readableOn(tokens.page, uiDesign::stateColor(hue, tokens.darkPage), tokens.text, uiDesign::scmQuietMinimumRatio);
     };
 
     painter->save();
@@ -502,8 +466,8 @@ QSize TTabBar::tabSizeHint(int index) const
 {
     QSize s = QTabBar::tabSizeHint(index);
 
-    // Every tab is measured bold so the strip does not shift when the chosen (bold) tab changes.
-    // Sizing uses tabText(), which Qt may have given an accelerator, not the name in tabData.
+    // Every tab is measured bold, as new output marks it, which is wider than the chosen tab's semibold, so the
+    // strip does not shift for either. Sizing uses tabText(), which Qt may have given an accelerator, not tabData.
     const QFontMetrics fm(font());
     const int w = fm.horizontalAdvance(tabText(index));
 
@@ -535,6 +499,15 @@ bool TTabBar::adoptCloseButton(const int index)
     pClose->setStyle(&mStyle);
     pClose->resize(pClose->sizeHint());
     return true;
+}
+
+void TTabBar::changeEvent(QEvent* event)
+{
+    // A script's sheet arrives or goes, on the bar or on the application, with a StyleChange
+    if (event->type() == QEvent::StyleChange) {
+        expandOnlyUnderAScriptSheet();
+    }
+    QTabBar::changeEvent(event);
 }
 
 // QTabBar::insertTab() sizes the cross from the application style and lays out before calling

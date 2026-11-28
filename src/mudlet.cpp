@@ -1496,12 +1496,8 @@ void mudlet::init()
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->setSpacing(0);
-    // QTabBar lays its first tab out at x = 0 and ignores its own contents margins
-    auto pTabStrip = new QHBoxLayout;
-    pTabStrip->setContentsMargins(uiDesign::scmTabStripInset, 0, 0, 0);
-    pTabStrip->setSpacing(0);
-    pTabStrip->addWidget(mpTabBar);
-    layoutTopLevel->addLayout(pTabStrip);
+    // Across the whole window, so the hairline the tabs stand on does; the first name's inset is the tab's own
+    layoutTopLevel->addWidget(mpTabBar);
     mpWidget_profileContainer = new QWidget(frame);
     const QPalette mainPalette;
     mpWidget_profileContainer->setPalette(mainPalette);

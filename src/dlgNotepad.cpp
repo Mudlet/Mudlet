@@ -402,15 +402,19 @@ void dlgNotepad::applyNotepadShellStyle()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
+    const bool designedTabs = uiDesign::prepareTabStrip(tabWidget->tabBar());
     const QString centralRules =
-            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name()) + uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens)
+            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name())
+            + (designedTabs ? uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens, uiDesign::scmTabPaneInset, tabWidget->layoutDirection()) : QString())
             + uiDesign::inputStyleSheet(tokens, qsl("#centralwidget"))
             + qsl("QWidget#notepadFindBar { background-color: %1; border-top: %2px solid %3; }").arg(tokens.page.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.border.name())
             // Borderless: a frame round a glyph this small reads as a second control
             + qsl("QToolButton#notepadAddTab, QWidget#notepadFindBar QToolButton"
                   " { border: none; border-radius: %1px; background: transparent; padding: 2px; }"
                   "QToolButton#notepadAddTab:hover, QWidget#notepadFindBar QToolButton:hover { background-color: %2; }")
-                      .arg(QString::number(uiDesign::scmRadiusChip), tokens.hoverSoft);
+                      .arg(QString::number(uiDesign::scmRadiusChip), tokens.hoverSoft)
+            // Ends where the hairline does, and keeps clear of a crowded strip, which ::tab-bar moves along by the same inset
+            + qsl("QToolButton#notepadAddTab { margin: 0px %1px; }").arg(QString::number(uiDesign::scmTabPaneInset));
     centralwidget->setStyleSheet(centralRules);
 
     const QColor warningColour = uiDesign::stateColor(uiDesign::scmStateHue_warning, tokens.darkPage);
@@ -1133,7 +1137,7 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 }
 
 // Under "follow the system" a system theme change emits no signal_appearanceChanged; the style or
-// palette change Qt sends is the only notice
+// palette change Qt sends is the only notice. A script's sheet comes or goes with a StyleChange too.
 void dlgNotepad::changeEvent(QEvent* event)
 {
     QMainWindow::changeEvent(event);

@@ -245,23 +245,48 @@ QPixmap noticeGlyph(const NoticeKind kind, const ThemeTokens& tokens, const qrea
 // Fixed to the glyph's square, or the label keeps the height the .ui file's 64px bitmap needed
 void applyNoticeGlyph(QLabel* pLabel, const NoticeKind kind, const ThemeTokens& tokens);
 
-// Call prepareTabStrip() on the bar too. A crowded strip's scroll buttons are left alone: their arrows belong to a
-// QToolButton the bar makes, and a face without them is a blank square.
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens);
-
-// Safe before or after the bar holds tabs
-void prepareTabStrip(QTabBar* pTabBar);
-
 inline constexpr int scmTabPaneInset = 4;
 
-// Public because TTabBar paints the profile strip's chips from these same numbers
-inline constexpr int scmMenuItemPaddingVertical = 4;
-inline constexpr int scmTabPaddingVertical = scmMenuItemPaddingVertical;
-inline constexpr int scmTabPaddingHorizontal = 10;
-inline constexpr int scmTabGap = 2;
+// Public because TTabBar paints the profile strip from these same numbers
+inline constexpr int scmTabPaddingTop = 5;
+inline constexpr int scmTabUnderlineWidth = 2;
+// Grown up into the air under the word, so neither the word nor the strip moves for it
+inline constexpr int scmTabFocusUnderlineWidth = 4;
+inline constexpr int scmTabUnderlineAir = 6;
+inline constexpr int scmTabPaddingBottom = scmTabUnderlineAir + scmTabUnderlineWidth;
+// Trailing, so the first word starts on the edge of what is under the strip
+inline constexpr int scmTabGap = 18;
+// A profile tab leads with this much of the gap, which puts the first name where it has always stood
 inline constexpr int scmTabStripInset = scmTabPaneInset;
 inline constexpr int scmTabCloseBoxSize = 14;
 inline constexpr int scmTabCloseGlyphSize = 8;
+// What QTabBar::tabSizeHint() adds for a tab button, so the cross stands this far after the word
+inline constexpr int scmTabCloseGap = 4;
+inline constexpr QFont::Weight scmTabChosenWeight = QFont::DemiBold;
+
+// Call prepareTabStrip() on the bar too, and leave these rules out of every sheet that reaches it while that answers
+// false. paneInset is the pane's margin at its sides and foot, and where the strip starts: 0 where nothing under the
+// strip needs keeping off a window's edge. direction is the bar's layoutDirection(): Qt never mirrors a sheet's
+// margins, so the gap after each tab is written on its trailing side. A crowded strip's scroll buttons are left alone:
+// their arrows belong to a QToolButton the bar makes, and a face without them is a blank square.
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset = scmTabPaneInset, const Qt::LayoutDirection direction = Qt::LeftToRight);
+
+// A script's sheet that names QTabBar takes a strip's tabs whole: the application's, or the one on pScriptSheetHolder,
+// the widget a profile's sheet is set on. Mudlet's own sheets never go on that widget, or their rules would count.
+bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder);
+
+// Answers whether the design draws the strip; false while a script's sheet takes the tabs, and the bar is then put
+// back as it was. Qt carries a sheet into a window from every widget above it, so that sheet is looked for on the
+// bar's window and all its ancestors: Mudlet's own tab rules go inside the window, never on it or above it.
+// Safe to repeat, with or without tabs. The bar's QTabWidget then hints the size its pages, strip and pane need.
+bool prepareTabStrip(QTabBar* pTabBar);
+
+// True once a script's sheet has come or gone since prepareTabStrip() last ran: ask on the window's StyleChange, which
+// a sheet set above the window sends too, and restyle then. The restyle sends the window no StyleChange back.
+bool tabStripOutOfDate(const QTabBar* pTabBar);
+
+// Along the bottom row of base, the row a chosen tab's underline is drawn over
+void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens);
 
 // QAbstractButton reads SH_Button_FocusPolicy once, in its constructor, and the base style swaps with the
 // appearance; both answer Qt::StrongFocus, so a click leaves the focus accent on the control. Call after setting
