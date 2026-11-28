@@ -1816,6 +1816,7 @@ end
 ---
 --- Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist
 --- then they will be set to nil or the default value. As you can see, all fields are optional.
+--- A datetime field takes a db:Timestamp or a plain epoch number such as os.time().
 ---
 --- @usage Adding one record.
 ---   <pre>
@@ -1860,16 +1861,29 @@ function db:add(sheet, ...)
     end
   end
 
+  local columns = db.__schema[db_name][s_name].columns
+
   for _, t in ipairs(rows) do
     if t._row_id then
       -- You are not permitted to change a _row_id
       t._row_id = nil
     end
 
+    -- stored as datetime text like a db:Timestamp: sqlite sorts a raw number below all text, so db:gt
+    -- and db:eq would never match it and db:lt always would. Converted in a copy so the caller's table keeps its number
+    local row = {}
+    for k, v in pairs(t) do
+      local column = columns[k]
+      if type(column) == "table" and column._timestamp ~= nil and db:_datetime_epoch(v) then
+        v = db:Timestamp(v)
+      end
+      row[k] = v
+    end
+
     local sql = sql_insert:format(
       s_name,
-      db:_sql_fields(t),
-      db:_sql_values(t)
+      db:_sql_fields(row),
+      db:_sql_values(row)
     )
     db:echo_sql(sql)
 
@@ -1938,7 +1952,9 @@ end
 --- db:AND, and such. You may pass a SQL WHERE clause here if you wish, but doing so is very dangerous.
 --- If you don't know SQL well, its best to build the expression.<br/><br/>
 ---
---- Query may also be a table array of such expressions, if so they will be AND'd together implicitly.<br/><br/>
+--- Query may also be a table array of such expressions, if so they will be AND'd together implicitly.
+--- An empty table returns every row, the same as a nil query. A table keyed by field name, such as
+--- {name = "Bob"}, is not a query: it makes db:fetch return nil.<br/><br/>
 ---
 --- The results that are returned are not in any guaranteed order, though they are usually the same order
 --- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the
@@ -1982,7 +1998,10 @@ function db:fetch(sheet, query, order_by, descending)
 
   if query then
     if type(query) == "table" and not query._isExp then
-      sql = sql .. " WHERE " .. db:AND(unpack(query))
+      -- next(), not #: a hash-style table such as {name = x} must not mean "no filter" and match every row
+      if next(query) ~= nil then
+        sql = sql .. " WHERE " .. db:AND(unpack(query))
+      end
     else
       sql = sql .. " WHERE " .. tostring(query)
     end
@@ -2030,7 +2049,8 @@ end
 ---   TOTAL - Returns the value of adding all the contents of the specified field.
 ---   </pre>
 ---
---- @param query optional
+--- @param query optional, as for db:fetch; an empty table aggregates over every row, and a table keyed
+--- by field name, such as {name = "Bob"}, raises an error rather than returning nil
 ---
 --- @usage Example:
 ---   <pre>
@@ -2047,13 +2067,23 @@ function db:aggregate(field, fn, query, distinct)
   local conn = db.__conn[db_name]
   if not conn then error(db_no_connection_message("aggregate over", db_name, A_FIELD), 2) end
 
-  local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", quoted_column(field), ")", "AS", fn, "FROM", s_name }
+  local column = quoted_column(field)
+  local upper_fn = fn:upper()
+  if field.type == "datetime" and (upper_fn == "MIN" or upper_fn == "MAX") then
+    -- sqlite sorts every number below every text, so a plain epoch db:add stored next to datetime
+    -- text would never be the MAX nor lose the MIN; compare both as datetime text
+    column = string.format("CASE WHEN typeof(%s) IN ('integer', 'real') THEN datetime(%s, 'unixepoch') ELSE %s END", column, column, column)
+  end
+  local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", column, ")", "AS", fn, "FROM", s_name }
 
   if query then
-    sql_chunks[#sql_chunks + 1] = "WHERE"
     if type(query) == "table" and not query._isExp then
-      sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
+      if next(query) ~= nil then
+        sql_chunks[#sql_chunks + 1] = "WHERE"
+        sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
+      end
     else
+      sql_chunks[#sql_chunks + 1] = "WHERE"
       sql_chunks[#sql_chunks + 1] = tostring(query)
     end
   end
@@ -2069,7 +2099,7 @@ function db:aggregate(field, fn, query, distinct)
     cur:close()
 
     -- give back the correct data type. see http://www.sqlite.org/lang_aggfunc.html
-    if (fn:upper() ~= "MIN" and fn:upper() ~= "MAX") or field.type == "number" then
+    if (upper_fn ~= "MIN" and upper_fn ~= "MAX") or field.type == "number" then
       return tonumber(count)
     end
     if field.type == "string" then
@@ -2395,9 +2425,13 @@ end
 
 -- NOT LUADOC
 -- Converts a UTC "YYYY-MM-DD HH:MM:SS" string, as sqlite's datetime() stores it, to an
--- epoch. Done arithmetically (Howard Hinnant's days_from_civil) rather than through
--- os.time, which can only read local time and is slow enough to dominate a db:fetch.
+-- epoch; a plain number, which db:add or raw SQL can store in a datetime field, already is one.
+-- Done arithmetically (Howard Hinnant's days_from_civil) rather than through os.time, which
+-- can only read local time and is slow enough to dominate a db:fetch.
 function db:_epoch_from_utc(value)
+  if type(value) == "number" then
+    return value
+  end
   local year, month, day, hour, min, sec = value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d):(%d%d)$")
   if not year then
     local utc_epoch = datetime:parse(value, nil, true)
@@ -2450,6 +2484,12 @@ end
 
 
 
+-- sqlite's datetime() silently gives NULL past 9999 (and for NaN and inf), and before year 0000 it gives a
+-- negative year that db:_epoch_from_utc cannot read back
+function db:_datetime_epoch(value)
+  return type(value) == "number" and value >= -62167219200 and value <= 253402300799
+end
+
 -- NOT LUADOC
 -- The function converts a Lua value into its SQL representation, depending on the
 -- type of the specified field. Strings will be single-quoted (and single-quotes
@@ -2462,12 +2502,17 @@ function db:_coerce(field, value)
   elseif field.type == "number" then
     return tonumber(value) or ("'" .. value .. "'")
   elseif field.type == "datetime" then
-    if value._timestamp == false then
+    if type(value) == "number" then
+      if not db:_datetime_epoch(value) then
+        error(string.format("db: %s is outside the epoch range a datetime field can hold (seconds, not milliseconds?)", tostring(value)), 3)
+      end
+      return "datetime('" .. value .. "', 'unixepoch')"
+    elseif value._timestamp == false then
       return "NULL"
     elseif value._timestamp == "CURRENT_TIMESTAMP" then
       return "datetime('now')"
     else
-      return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
+      return "datetime('" .. value._timestamp .. "', 'unixepoch')"
     end
   else
     return "'" .. tostring(value):gsub("'", "''") .. "'"
@@ -2728,26 +2773,27 @@ end
 
 
 
---- Returns a compound database expression that combines both of the simple expressions passed into it.
+--- Returns a compound database expression that combines all of the simple expressions passed into it.
 --- These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>
 ---
---- This compound expression will find any item that matches either the first or the second sub-expression.
+--- This compound expression will find any item that matches at least one of the sub-expressions.
 ---
 --- @see db:fetch
-function db:OR(left, right)
-  -- coerce to strings so db:exp sentinels work here as well as plain expressions
-  left = tostring(left)
-  right = tostring(right)
+function db:OR(...)
+  local parts = {}
 
-  if not string.starts(left, "(") then
-    left = "(" .. left .. ")"
+  -- counted rather than ipairs, which would drop a nil and every condition after it; the "(nil)"
+  -- kept here makes sqlite reject the query, so db:fetch returns nil rather than missing rows
+  for i = 1, select("#", ...) do
+    -- coerce to strings so db:exp sentinels work here as well as plain expressions
+    local expression = tostring((select(i, ...)))
+    if not string.starts(expression, "(") then
+      expression = "(" .. expression .. ")"
+    end
+    parts[#parts + 1] = expression
   end
 
-  if not string.starts(right, "(") then
-    right = "(" .. right .. ")"
-  end
-
-  return left .. " OR " .. right
+  return table.concat(parts, " OR ")
 end
 
 

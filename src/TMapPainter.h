@@ -351,7 +351,7 @@ private:
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
     void spendClick();
     // Why the save failed, empty when it did not
-    static QString performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    static QString performImageSave(const QImage& image, const QString& filePath, const QString& format);
     int width() const { return mSize.width(); }
     int height() const { return mSize.height(); }
 
@@ -361,6 +361,8 @@ private:
     QCache<QString, QPixmap> mSymbolPixmapCache;
     // The round-room setting the symbol pixmaps were drawn for
     bool mCachedBubbleMode = false;
+    // The device pixel ratio of what the symbol pixmaps were drawn for
+    qreal mSymbolPixmapDevicePixelRatio = 1.0;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
 

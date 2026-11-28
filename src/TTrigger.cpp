@@ -665,12 +665,11 @@ TTrigger::~TTrigger()
     if (mpHost) {
         mpHost->getTriggerUnit()->unregisterTrigger(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Trigger0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Trigger%1").arg(mID)) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 
@@ -2304,12 +2303,9 @@ std::unique_ptr<TColorTable> TTrigger::createColorPattern(int ansiFg, int ansiBg
      * 16 dark white          ->  7
      */
 
-    const QColor fgColor = mpHost->getAnsiColor(ansiFg, false);
-    const QColor bgColor = mpHost->getAnsiColor(ansiBg, true);
-
     // If BOTH ansiFg AND ansiBg are scmIgnored then the color pattern is
     // totally unset
-    if (!(fgColor.isValid() || bgColor.isValid())) {
+    if (!(mpHost->getAnsiColor(ansiFg, false).isValid() || mpHost->getAnsiColor(ansiBg, true).isValid())) {
         return nullptr;
     }
 
@@ -2320,13 +2316,39 @@ std::unique_ptr<TColorTable> TTrigger::createColorPattern(int ansiFg, int ansiBg
 
     pCT->ansiBg = ansiBg;
     pCT->ansiFg = ansiFg;
-    pCT->mBgColor = bgColor;
-    pCT->mFgColor = fgColor;
-    pCT->mFgValid = fgColor.isValid();
-    pCT->mBgValid = bgColor.isValid();
-    pCT->mFgRgba = fgColor.rgba();
-    pCT->mBgRgba = bgColor.rgba();
+    applyPalette(*pCT);
     return pCT;
+}
+
+bool TTrigger::applyPalette(TColorTable& table) const
+{
+    const QColor fgColor = mpHost->getAnsiColor(table.ansiFg, false);
+    const QColor bgColor = mpHost->getAnsiColor(table.ansiBg, true);
+    if (fgColor == table.mFgColor && bgColor == table.mBgColor) {
+        return false;
+    }
+    table.mFgColor = fgColor;
+    table.mBgColor = bgColor;
+    table.mFgValid = fgColor.isValid();
+    table.mBgValid = bgColor.isValid();
+    table.mFgRgba = fgColor.rgba();
+    table.mBgRgba = bgColor.rgba();
+    return true;
+}
+
+// The text a color pattern is matched against carries the RGB its ANSI color had when it arrived,
+// so the pattern has to follow the profile's palette or it never matches newly arrived text again
+void TTrigger::refreshColorPatterns()
+{
+    bool changed = false;
+    for (const auto& pColorTable : mColorPatternList) {
+        if (pColorTable && applyPalette(*pColorTable)) {
+            changed = true;
+        }
+    }
+    if (changed) {
+        refile(TriggerRefile::Patterns);
+    }
 }
 
 bool TTrigger::setupColorTrigger(int ansiFg, int ansiBg)
@@ -2417,8 +2439,7 @@ bool TTrigger::setScript(const QString& script)
     // Switching from a registered anonymous Lua function (set up by tempTrigger with a
     // function argument) to a script string: release the old function from the Lua
     // registry and leave callback mode. Otherwise execute() keeps calling the stale
-    // function so the new script never runs, and the registry entry leaks - the
-    // destructor would take its mScript-based branch and delete the compiled function.
+    // function so the new script never runs.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
@@ -2438,7 +2459,7 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = qsl("Trigger%1").arg(QString::number(mID));
+    mFuncName = qsl("Trigger%1").arg(mID);
     const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
     if (mpLua->compile(code, error, qsl("Trigger: %1").arg(getName()))) {

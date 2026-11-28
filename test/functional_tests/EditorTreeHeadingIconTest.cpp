@@ -175,8 +175,9 @@ private slots:
     // The switch lives in Settings, so the editor is already open when it is flipped
     void test_coloredIconsReachTheSidebarTheHeadingsAndTheToolbar()
     {
+        mudlet::self()->setColouredIcons(false);
         auto restore = qScopeGuard([]() {
-            mudlet::self()->setColouredIcons(false);
+            mudlet::self()->setColouredIcons(true);
         });
         // The hue of the most saturated solid pixel, or -1 for a grey picture
         const auto hueOf = [](const QIcon& icon) {
