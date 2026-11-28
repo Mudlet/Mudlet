@@ -157,6 +157,10 @@ public:
     ~TTabBar() = default;
 
     QSize tabSizeHint(int index) const override;
+    // A profile name may contain "&", which QTabBar would draw as a mnemonic and bind to Alt+<letter>
+    int addTab(const QString& text) { return QTabBar::addTab(literalLabel(text)); }
+    int insertTab(const int index, const QString& text) { return QTabBar::insertTab(index, literalLabel(text)); }
+    void setTabText(const int index, const QString& text) { QTabBar::setTabText(index, literalLabel(text)); }
     void applyPrefixToDisplayedText(const int index, const QString& prefix = QString());
     void applyPrefixToDisplayedText(const QString& tabName, const QString& prefix = QString());
     void setTabBold(const QString& tabName, const bool state) { mStyle.setTabBold(tabName, state); }
@@ -214,6 +218,7 @@ signals:
     void tabReattachRequested(const QString& tabName, int index);
 
 private:
+    static QString literalLabel(const QString& text) { return QString(text).replace(QLatin1Char('&'), QLatin1String("&&")); }
     void relayoutTab(int index);
     // True only when the button still had the application style, the one case needing a re-measure
     bool adoptCloseButton(int index);

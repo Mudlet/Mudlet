@@ -30,6 +30,7 @@
 #include "TDebug.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QJsonArray>
@@ -40,11 +41,13 @@
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QSaveFile>
+#include <QSet>
 #include <QStandardPaths>
 #include <QTimer>
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <numbers>
 #include <optional>
@@ -52,8 +55,8 @@
 using namespace std::chrono_literals;
 
 namespace {
-// Holds TMediaPlayer::reservedForPlay() for as long as a play() call is setting that player up,
-// however that call returns.
+// Holds TMediaPlayer::reservedForPlay() for as long as its holder owns that player, however its
+// scope is left.
 class MediaPlayerReservation
 {
 public:
@@ -92,6 +95,99 @@ bool mediaTypeNamed(const QJsonObject& json)
     }
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
+}
+
+// Qt 6.12's FFmpeg backend builds its resampler from the first frame it plays and rebuilds it only on a seek or an
+// output change, so a mono frame after a stereo one makes swresample read a missing channel.
+bool mp3TurnsMono(const QString& fileName)
+{
+    if (!fileName.endsWith(qsl(".mp3"), Qt::CaseInsensitive)) {
+        return false;
+    }
+
+    static QHash<QString, bool> verdicts;
+    const QFileInfo info(fileName);
+    const QString key = qsl("%1|%2|%3").arg(info.absoluteFilePath(), QString::number(info.size()), QString::number(info.lastModified().toMSecsSinceEpoch()));
+
+    if (const auto known = verdicts.constFind(key); known != verdicts.cend()) {
+        return known.value();
+    }
+
+    QFile file(fileName);
+    const qint64 size = file.open(QIODevice::ReadOnly) ? file.size() : 0;
+    const uchar* data = size > 0 ? file.map(0, size) : nullptr;
+
+    if (!data) {
+        return false;
+    }
+
+    // Version, layer and sample rate of the frame at pos
+    const auto streamBits = [data](const qint64 pos) {
+        return (data[pos + 1] & 0x1E) << 8 | (data[pos + 2] & 0x0C);
+    };
+
+    // Length of the MPEG layer III frame starting at pos, or 0 if there is none
+    const auto frameLength = [data, size](const qint64 pos) -> qint64 {
+        if (pos + 4 > size || data[pos] != 0xFF || (data[pos + 1] & 0xE6) != 0xE2) {
+            return 0;
+        }
+
+        static constexpr int mpeg1Kbps[] = {0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320};
+        static constexpr int mpeg2Kbps[] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160};
+        // Indexed by the header's version bits: 0 is MPEG-2.5, 2 is MPEG-2, 3 is MPEG-1
+        static constexpr int sampleRates[4][3] = {{11025, 12000, 8000}, {}, {22050, 24000, 16000}, {44100, 48000, 32000}};
+        const int version = (data[pos + 1] >> 3) & 3;
+        const int bitrateIndex = data[pos + 2] >> 4;
+        const int rateIndex = (data[pos + 2] >> 2) & 3;
+
+        if (version == 1 || bitrateIndex == 0 || bitrateIndex == 15 || rateIndex == 3) {
+            return 0;
+        }
+
+        const int sampleRate = sampleRates[version][rateIndex];
+        const int padding = (data[pos + 2] >> 1) & 1;
+        return (version == 3 ? 144000 * mpeg1Kbps[bitrateIndex] : 72000 * mpeg2Kbps[bitrateIndex]) / sampleRate + padding;
+    };
+
+    qint64 pos = 0;
+
+    // ID3v2: a 10 byte header holding a syncsafe size, plus 10 more if a footer follows
+    if (size >= 10 && std::memcmp(data, "ID3", 3) == 0) {
+        pos = 10 + ((data[6] & 0x7F) << 21 | (data[7] & 0x7F) << 14 | (data[8] & 0x7F) << 7 | (data[9] & 0x7F)) + ((data[5] & 0x10) ? 10 : 0);
+    }
+
+    bool stereoSeen = false;
+    bool turnsMono = false;
+    // Whether the last frame counted ran into one starting here
+    bool expected = false;
+
+    while (pos + 4 <= size) {
+        const qint64 length = frameLength(pos);
+        const bool runsOn = length > 0 && frameLength(pos + length) > 0 && streamBits(pos + length) == streamBits(pos);
+
+        // A frame counts when it runs into another of its version and rate, or when the last one ran into it and it
+        // fits in the file: anything else is a false sync, as in a tag or junk. A stream may change rate partway, as
+        // when two files are joined, and FFmpeg follows it
+        if (!runsOn && !(expected && pos + length <= size)) {
+            expected = false;
+            ++pos;
+            continue;
+        }
+
+        // A mono start doesn't settle it: playback can start at a later stereo part
+        if ((data[pos + 3] >> 6) != 3) {
+            stereoSeen = true;
+        } else if (stereoSeen) {
+            turnsMono = true;
+            break;
+        }
+
+        expected = frameLength(pos + length) > 0;
+        pos += length;
+    }
+
+    verdicts.insert(key, turnsMono);
+    return turnsMono;
 }
 
 // An unknown type is refused, not read as an absent one: a Play would default to a sound that the
@@ -144,6 +240,20 @@ std::optional<double> mediaNumber(const QJsonValue& value)
 
 // Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
 constexpr int maxQueuedLoops = 10000;
+
+// The download events share their shape with the downloadFile() ones, so these fill in what TMedia has of the rest
+void appendResponse(TEvent& event, Host* host, QNetworkReply* reply)
+{
+    event.mArgumentList << QString::number(host->getLuaInterpreter()->createHttpResponseTable(reply));
+    event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
+}
+
+// Also where the request id goes: no script call started a media download, so it has none
+void appendNil(TEvent& event)
+{
+    event.mArgumentList << QString();
+    event.mArgumentTypeList << ARGUMENT_TYPE_NIL;
+}
 } // namespace
 
 // Public
@@ -442,11 +552,11 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
         }
 
         // Whichever way this track is being ended below, it is not to start again. A looping
-        // or multi-entry track restarts itself from the EndOfMedia handler in
-        // connectMediaPlayer(), which would undo the stop that was just asked for - on a
-        // StoppedState-first backend that signal can still be on its way when the stop
-        // arrives. An emptied playlist is what that handler checks, and play() builds a fresh
-        // one whenever this player is picked up again.
+        // or multi-entry track restarts itself through playNextPass(), at its end or its finish
+        // position, which would undo the stop that was just asked for - on a StoppedState-first
+        // backend EndOfMedia can still be on its way when the stop arrives. An emptied playlist
+        // is what playNextPass() checks, and play() builds a fresh one whenever this player is
+        // picked up again.
         if (pPlayer->playlist()) {
             pPlayer->playlist()->clear();
         }
@@ -505,8 +615,8 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     if (!mpHost->mAcceptServerMedia) {
         return;
     }
-    // Checked now, as the first sound played while the check runs keeps an output of its own. Not at
-    // launch or on GMCP alone: the check loads FFmpeg, which a game that sends no media never needs.
+    // Checked now, so the first sound already knows whether it can be mixed. Not at launch or on GMCP
+    // alone: the check loads FFmpeg, which a game that sends no media never needs.
     TMediaVoice::probeBackend();
 
     auto document = QJsonDocument::fromJson(gmcp.toUtf8());
@@ -864,8 +974,8 @@ void TMedia::stopAllMediaPlayers()
         const bool hadVideoOutput = pPlayer->mediaPlayer()->videoOutput() != nullptr;
         const quint64 claimedAt = pPlayer->claimGeneration();
 
-        // No loop is to survive this: the EndOfMedia handler restarts one from the playlist,
-        // and a StoppedState-first backend can still have that signal on its way.
+        // No loop is to survive this: playNextPass() restarts one from the playlist,
+        // and a StoppedState-first backend can still have EndOfMedia on its way.
         if (pPlayer->playlist()) {
             pPlayer->playlist()->clear();
         }
@@ -1467,6 +1577,12 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << mediaData.mediaAbsolutePathFileName();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendResponse(event, mpHost, reply);
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        appendNil(event);
 
         reply->deleteLater();
         mpHost->raiseEvent(event);
@@ -1482,6 +1598,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't open the destination file for writing (permission errors?)");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            appendResponse(event, mpHost, reply);
+            appendNil(event);
 
             reply->deleteLater();
             mpHost->raiseEvent(event);
@@ -1501,6 +1619,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't write downloaded content into the destination file");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            appendResponse(event, mpHost, reply);
+            appendNil(event);
 
             reply->deleteLater();
             mpHost->raiseEvent(event);
@@ -1517,6 +1637,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                     event.mArgumentList << qsl("Failed to commit file: %1").arg(localFile.errorString());
                     event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                    appendResponse(event, mpHost, reply);
+                    appendNil(event);
 
                     reply->deleteLater();
                     mpHost->raiseEvent(event);
@@ -1529,6 +1651,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
+                appendResponse(event, mpHost, reply);
+                appendNil(event);
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
@@ -1548,6 +1672,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
                 event.mArgumentList << localFile.errorString();
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                appendResponse(event, mpHost, reply);
+                appendNil(event);
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
@@ -1621,6 +1747,12 @@ void TMedia::downloadFile(TMediaData& mediaData)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << mediaData.mediaAbsolutePathFileName();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << fileUrl.toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        // No request was made, so there is no response or body
+        appendNil(event);
+        appendNil(event);
+        appendNil(event);
         mpHost->raiseEvent(event);
         return;
     }
@@ -1696,6 +1828,28 @@ void TMedia::seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player)
     mediaPlayer->setPosition(startPosition);
 }
 
+void TMedia::playNextPass(const std::shared_ptr<TMediaPlayer>& player)
+{
+    TMediaPlaylist* playlist = player->playlist();
+
+    if (!playlist || playlist->isEmpty()) {
+        return;
+    }
+
+    QUrl nextMedia = playlist->next();
+
+    if (nextMedia.isEmpty() && playlist->playbackMode() == TMediaPlaylist::Loop) {
+        playlist->setCurrentIndex(0);
+        nextMedia = playlist->currentMedia();
+    }
+
+    if (nextMedia.isEmpty()) {
+        return;
+    }
+
+    player->continuePlaying(nextMedia);
+}
+
 void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player || !player->mediaPlayer()) {
@@ -1721,16 +1875,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             seekToMediaStart(lockedPlayer);
 
             if (mediaStatus == QMediaPlayer::EndOfMedia) {
-                if (lockedPlayer->playlist() && !lockedPlayer->playlist()->isEmpty()) {
-                    QUrl nextMedia = lockedPlayer->playlist()->next();
-
-                    if (!nextMedia.isEmpty()) {
-                        lockedPlayer->continuePlaying(nextMedia);
-                    } else if (lockedPlayer->playlist()->playbackMode() == TMediaPlaylist::Loop) {
-                        lockedPlayer->playlist()->setCurrentIndex(0);
-                        lockedPlayer->continuePlaying(lockedPlayer->playlist()->currentMedia());
-                    }
-                }
+                playNextPass(lockedPlayer);
             }
         }
     });
@@ -1765,7 +1910,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 
         // Nothing else will end it: a source set on a player that was already stopped - which
         // is what every claimSource() on a new or finished player does, and what a loop restart
-        // or playlist advance does from the EndOfMedia handler - has no state to change from.
+        // or playlist advance does from playNextPass() - has no state to change from.
         // Left alone the track falls silent still holding a source nothing will ever release,
         // and a script waiting on sysMediaFinished to start the next one waits forever.
         //
@@ -1827,7 +1972,20 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
-                lockedPlayer->mediaPlayer()->stop();
+                // stop() raises sysMediaFinished synchronously on the FFmpeg backend, so its handler
+                // runs between passes; reserved so a sound it plays takes another player.
+                const quint64 claimedAt = lockedPlayer->claimGeneration();
+                const quint64 lastClaim = TMediaPlayer::lastClaim();
+                {
+                    MediaPlayerReservation reservation;
+                    reservation.reserve(lockedPlayer);
+                    lockedPlayer->mediaPlayer()->stop();
+                }
+                // An end is a fade-away stop, and media the handler plays under this key replaces the
+                // loop. A finish at or before the start would cycle through empty passes forever.
+                if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt && !keyClaimedSince(lockedPlayer, lastClaim)) {
+                    playNextPass(lockedPlayer);
+                }
             } else {
                 if (fadeInUsed) {
                     if (progress < relativeFadeInPosition) {
@@ -1861,7 +2019,8 @@ void TMedia::purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& medi
     mediaList.erase(std::remove_if(mediaList.begin(),
                                    mediaList.end(),
                                    [](const std::shared_ptr<TMediaPlayer>& player) {
-                                       return player->getPlaybackState() == QMediaPlayer::StoppedState;
+                                       // Reserved: owned by a request still in progress, so stopped without being finished.
+                                       return player->getPlaybackState() == QMediaPlayer::StoppedState && !player->reservedForPlay();
                                    }),
                     mediaList.end());
 }
@@ -1961,7 +2120,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
         }
 
         if (existingPlayer->reservedForPlay()) {
-            continue; // Another play() call is setting this one up
+            continue; // Owned by a request in progress - see TMediaPlayer::reservedForPlay()
         }
 
         if (existingPlayer->getPlaybackState() != QMediaPlayer::PlayingState && existingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
@@ -2129,11 +2288,12 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     QTimer::singleShot(0ms, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
         const auto lockedPlayer = weakPlayer.lock();
         const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimedAt;
-        // Two ways the same playback can have carried on during the deferred turn. On a
-        // StoppedState-first backend the loop restarts from the EndOfMedia handler after the
-        // snapshot above, so the counter is what sees it; on an EndOfMedia-first backend the
-        // restart already happened before the snapshot, so the counter cannot see it and the
-        // player still reporting PlayingState is.
+        // Two ways the same playback can have carried on during the deferred turn. When the
+        // loop restarts through playNextPass() after the snapshot above - from EndOfMedia on a
+        // StoppedState-first backend, or straight after the stop at a finish position - the
+        // counter is what sees it; on an EndOfMedia-first backend the restart already happened
+        // before the snapshot, so the counter cannot see it and the player still reporting
+        // PlayingState is.
         const bool sameMediaContinues =
                 lockedPlayer && (lockedPlayer->continuationGeneration() != continuedAt || (playbackStateDecides && stillOurs && lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState));
 
@@ -2353,6 +2513,21 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
     return true;
 }
 
+bool TMedia::keyClaimedSince(const std::shared_ptr<TMediaPlayer>& player, const quint64 claim)
+{
+    const QString key = player->mediaData().mediaKey();
+    if (key.isEmpty()) {
+        return false;
+    }
+
+    for (const auto& otherPlayer : findMediaPlayersByCriteria(player->mediaData())) {
+        if (otherPlayer && otherPlayer != player && otherPlayer->claimGeneration() > claim && otherPlayer->mediaData().mediaKey() == key) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName)
 {
@@ -2407,10 +2582,57 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    const QStringList fileNameList = TMedia::getFileNameList(mediaData);
+    QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) {
         qWarning() << qsl("TMedia::play() WARNING - could not generate a list of media file names.");
+        return;
+    }
+
+    const auto refused = [this](const QString& fileName) {
+        if (!mp3TurnsMono(fileName)) {
+            return false;
+        }
+
+        qWarning().noquote() << qsl("TMedia::play() WARNING - refusing \"%1\": it switches from stereo to mono, which crashes Qt's FFmpeg backend.").arg(fileName);
+        static QSet<QString> reported;
+
+        if (!reported.contains(fileName)) {
+            reported.insert(fileName);
+            //: %1 is the path of a sound or music file
+            mpHost->printSystemMessage(tr("Not playing %1: it switches from stereo to mono partway through, which would crash Mudlet. "
+                                          "Converting it to all stereo or all mono fixes this.")
+                                               .arg(fileName)
+                                       + QChar('\n'));
+        }
+
+        return true;
+    };
+
+    // Scans only the files it picks, so a wildcard over a large folder doesn't read every match first
+    const auto pickFile = [this, &mediaData, &fileNameList, &refused]() -> QString {
+        while (!fileNameList.isEmpty()) {
+            if (fileNameList.size() == 1 && mediaData.mediaInput() == TMediaData::MediaInputStream) {
+                return getStreamUrl(mediaData);
+            }
+
+            const qsizetype index = fileNameList.size() > 1 ? QRandomGenerator::global()->bounded(fileNameList.size()) : 0;
+            const QString fileName = fileNameList.at(index);
+
+            if (mediaData.mediaInput() != TMediaData::MediaInputFile || !refused(fileName)) {
+                return fileName;
+            }
+
+            fileNameList.removeAt(index);
+        }
+
+        return QString();
+    };
+
+    // A file found playable stays in the list, so later picks always find one
+    QString absolutePathFileName = pickFile();
+
+    if (mediaData.mediaInput() == TMediaData::MediaInputFile && absolutePathFileName.isEmpty()) {
         return;
     }
 
@@ -2455,8 +2677,6 @@ void TMedia::play(TMediaData& mediaData)
         playlist->setPlaybackMode(TMediaPlaylist::Sequential);
     }
 
-    QString absolutePathFileName;
-
     if (mediaData.mediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
         playlist->setPlaybackMode(TMediaPlaylist::Sequential);
 
@@ -2472,9 +2692,6 @@ void TMedia::play(TMediaData& mediaData)
                 return; // No action required. Continue playing the same media.
             }
         }
-
-        absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
-                                                       : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 
         if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) {
             return;
@@ -2498,9 +2715,6 @@ void TMedia::play(TMediaData& mediaData)
                     return; // Continue playing
                 }
             }
-
-            absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
-                                                           : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 
             if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) {
                 return;
@@ -2529,8 +2743,9 @@ void TMedia::play(TMediaData& mediaData)
             }
 
             for (int k = 0, loops = std::min(mediaData.mediaLoops(), maxQueuedLoops); k < loops; k++) {
-                absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
-                                                               : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
+                if (k > 0) {
+                    absolutePathFileName = pickFile();
+                }
 
                 if (k == 0 && !TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) {
                     return;

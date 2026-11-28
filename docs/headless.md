@@ -920,8 +920,8 @@ it out:
 - What they leave is where the main console's text goes, `mainConsoleTextRect()`, in pixels from the
   area's top left corner.
 - The main console's grid, `mainConsoleGrid()`, is as many characters of its font as fit there, never
-  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, and a
-  script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
+  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, unless the
+  app gave `setGameScreenSize()` (below), and a script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
 - Borders wider than the area leave the text no room, as in the GUI: `mainConsoleTextRect()` and
   `sysWindowResizeEvent` give a width or height of 0, never a negative one, and the grid stays at its
   40 columns, or 1 row.
@@ -938,6 +938,13 @@ Either raises `sysWindowResizeEvent` with the text's width and height in pixels,
 window does in the GUI, and nothing when the size is the one already given; a border change raises it
 too. Both are refused where `submit()` is, and for a size of no character, or more than 65535, either
 way.
+
+An app that draws the main console in a font of its own counts its columns and rows itself:
+`setGameScreenSize(columns, rows)` tells the game (NAWS) that size from then on, in place of the grid,
+with the same 40-column floor, wrap-width cap and 0.3 s settling as `setScreenSize()`. It changes
+neither the area nor the grid, so a main window given with `setMainWindowSize()` keeps its size and
+scripts read it; a later `setScreenSize()` still resizes the area. It is refused where `setScreenSize()`
+is, and holds until the profile closes.
 
 `mainConsoleAreaChanged` carries the grid and where the text goes when either changes: from a border, a
 font change, either call, or a script's own `setMainWindowSize()`. Read both at `profileLoaded`; the
@@ -980,7 +987,8 @@ has let go, so an app that keeps older lines than the console does should not re
 `link(id)` says what a link offers, as the GUI shows it: its `tooltip`, as plain text; its `items`,
 one for each thing it can run, each with the label the GUI gives it, and marked as greyed out where it
 has nothing to run or as a separator where it has no label either; and `menu`, where the GUI's right
-click lists the items, under `menuTitle` if that is set. A click follows the first item. It also gives
+click lists the items, under `menuTitle` if that is set. A click follows the first item, or on a `local:`
+link with a `menu` opens the menu. It also gives
 the link's state (a `spoiler` and whether it is `revealed`, `disabled`, `concealed` by the game's OSC 8
 visibility settings, which leave blanks in its place in the GUI, `visited`, and `selected` in its group),
 and how the GUI paints the link in that state, which may differ from its runs as they were sent: a
@@ -994,10 +1002,14 @@ and `followLink(id, item)` what picking that item from its `menu` does; `item` i
 not yet revealed is only revealed (`revealedSpoiler`), and the next follow runs it; the revealed text is
 not sent, so an app's copy of the line keeps the blanks it was sent with. A `disabled` link, or a menu's
 greyed-out item, runs nothing (`disabled`), nor does a `concealed` one (`concealed`), which the GUI leaves
-no way to click. Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
-group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, and a
-web link opens through `QDesktopServices::openUrl()`, which an app can route with
-`QDesktopServices::setUrlHandler()`. Where that raises a Lua error the result is `failed`, and
+no way to click. A game's OSC 8 `local:` note is `disabled` too, as the GUI takes no click on it. A
+`gmcp:` link or item while GMCP is off for the connection, or with no connection, sends nothing and
+leaves the link as it was (`gmcpOff`). Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
+group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, a
+`gmcp:` link sends its GMCP message, and a web link opens through `QDesktopServices::openUrl()`, which an
+app can route with `QDesktopServices::setUrlHandler()`. A `local:` link with a `menu` runs nothing without
+an item, as the GUI's click only opens the menu, so the app shows `items`; an item picked straight after
+leaves the selection that follow changed. Where a command raises a Lua error the result is `failed`, and
 `errorString()` gives Lua's message. The link is `visited` after either. `noSuchItem` is for an item the
 link does not have, `unknown` for an id the main console does not hold, as once a game's OSC 8 visibility
 settings have deleted its line, and `refused` for where `submit()` is, a handler included.
@@ -1201,6 +1213,10 @@ trimmed under the row it is scrolled back to.
 - `clickThrough`, as `enableClickthrough()` sets it;
 - `accessibleName` and `accessibleButton`, what a screen reader says for it and whether it is told it is
   a button;
+- `liveRegion`, as `setLabelLiveRegion()` gave it: `off`, or `polite` or `assertive` for a label whose
+  new text a screen reader is to announce as ARIA's `aria-live` does. The GUI announces it itself, and only
+  while the profile's `accessibleLabels` setting (`getConfig()`) is on; with no widget, announcing is the
+  app's to do;
 - `styleSheet`, as `setLabelStyleSheet()` gave it. Mudlet does not interpret it for the app: drawing what
   it says is the app's to do, or not.
 
@@ -1224,6 +1240,27 @@ script sets another, as on the desktop.
 
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
+
+`textBoxContent(name)` is what a text box from `createTextEdit()` holds, beside the place and font its
+`ScriptWindow` has, for the app to draw as an editable box of its own:
+
+- `text`, what `getTextEditText()` reads: as `setTextEditText()` or `clearTextEdit()` left it, or as the
+  player typed it;
+- `readOnly`, as `setTextEditReadOnly()` gave it;
+- `placeholder`, as `setTextEditPlaceholder()` gave it, shown while the box is empty;
+- `styleSheet`, as `setTextEditStyleSheet()` gave it, which Mudlet does not interpret for the app, as a
+  label's;
+- `tabMovesFocus`, as `setTextEditTabMovesFocus()` gave it: Tab moves on to the next control rather than
+  typing a tab.
+
+A script's change to any of these names the box in `scriptWindowsChanged`. It is empty for a name that is
+not a text box's.
+
+`setTextBoxText(name, text)` is what the player has typed in it so far, the whole of the box's text, which
+a script's `getTextEditText()` then reads. The GUI's box gives Mudlet its text as it changes and raises no
+event for that, so neither does this; nor is it told back in `scriptWindowsChanged`. It is false for a name
+that is not a text box's, for a box that is read-only or not `shown` in `scriptWindows()`, which a player
+could not type in, though a script still sets its text, and where `runLua()` is refused.
 
 ### Reading a console's text
 

@@ -398,6 +398,40 @@ private slots:
     }
 #endif
 
+    // saveJsonMap() with no file name exports into the map folder; its file can be newer than the save the copy makes
+    void test_onlyTheBinaryMapIsCopied()
+    {
+        const QString mapDir = MudletApp::getMudletPath(enums::profileMapsPath, mDestinationName);
+        QDir(mapDir).removeRecursively();
+        buildMap(mpDestination, qsl("The destination's own"), 2);
+        buildMap(mpSource, mCopiedArea, scmCopiedRooms);
+        const QString sourceDir = MudletApp::getMudletPath(enums::profileMapsPath, mSourceName);
+        QVERIFY(QDir().mkpath(sourceDir));
+        const QString exported = qsl("%1/2099-01-01#00-00-00map.json").arg(sourceDir);
+        auto removeExport = qScopeGuard([&]() {
+            QFile::remove(exported);
+        });
+        QFile json(exported);
+        QVERIFY(json.open(QIODevice::WriteOnly));
+        QVERIFY(json.write(R"({ "formatVersion": 1.002, "areas": [] })") > 0);
+        // Flushed first, or the write at close() stamps the file with the current time
+        QVERIFY(json.flush());
+        QVERIFY(json.setFileTime(QDateTime::currentDateTime().addDays(1), QFileDevice::FileModificationTime));
+        json.close();
+        openPreferencesAndTick({mDestinationName});
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList taken = comingMapNames();
+
+        mpPreferences->pushButton_copyMap->click();
+
+        const QStringList copied = QDir(mapDir).entryList(QDir::Files | QDir::NoDotAndDotDot);
+        QCOMPARE(copied.size(), 1);
+        QVERIFY2(taken.contains(copied.constFirst()), qPrintable(qsl("%1 was copied rather than the map just saved").arg(copied.constFirst())));
+        QVERIFY2(areaNames(mpDestination).contains(mCopiedArea), qPrintable(qsl("the destination has %1 open instead of the copy").arg(areaNames(mpDestination).join(qsl(", ")))));
+    }
+
     // Deleted in the connection dialog while these preferences were open
     void test_aDeletedDestinationIsNotBroughtBack()
     {
