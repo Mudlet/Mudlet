@@ -832,6 +832,9 @@ private slots:
         QStringList found;
         for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
             const QTreeWidgetItem* top = results->topLevelItem(i);
+            if (isNotice(top)) {
+                continue;
+            }
             found << qsl("%1 %2").arg(typeOf(top), titleOf(top));
         }
         QCOMPARE(found, QStringList({qsl("Trigger qaPermanentTokenTrigger")}));
