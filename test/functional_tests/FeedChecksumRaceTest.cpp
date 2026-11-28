@@ -204,6 +204,8 @@ public:
     quint16 port() const { return mServer.serverPort(); }
 
     void setFeedBody(const QByteArray& body) { mFeedBody = body; }
+    // Answers the feed request with an HTTP error, which Feed sees as a network failure
+    void setFeedFails(bool fails) { mFeedFails = fails; }
     void setChecksum(const QByteArray& hex) { mChecksum = hex; }
     // Switches the download from never finishing to this body, delivered in
     // chunks
@@ -268,6 +270,11 @@ private:
         // nothing else this stub serves has "/releases" in its path: the asset
         // and checksum URLs are the port root with a filename appended
         if (requestLine.contains("/releases")) {
+            if (mFeedFails) {
+                socket->write("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                socket->disconnectFromHost();
+                return;
+            }
             sendBody(socket, "application/json", mFeedBody);
             return;
         }
@@ -335,6 +342,7 @@ private:
 
     QHash<QSslSocket*, QByteArray> mBuffers;
     QByteArray mFeedBody{"[]"};
+    bool mFeedFails{false};
     QByteArray mChecksum{QByteArray(64, 'a')};
     QByteArray mDownloadPayload;
     int mChecksumRequests{0};
@@ -521,6 +529,9 @@ private slots:
     void aSupersededDownloadIsFetchedAgain();
     void theChangelogAfterAnUpdateListsWhatTheUpdateBrought();
     void theChangelogMenuEntryOnlyAnswersItsOwnRequest();
+    void aManualCheckOnlyAnswersItsOwnRequest();
+    void aManualCheckWaitsOutALoadThatWasTurnedAway();
+    void aLoadStartedWhileAFailureIsReportedIsAnswered();
     void aCheckThatFindsNothingWithdrawsTheEarlierOffer();
     void aDownloadedInstallerSurvivesACheckThatFindsNothing();
     void anInstallerTheRunningVersionHasPassedIsNotKept();
@@ -969,8 +980,7 @@ void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
     QList<QPointer<QWidget>> updaterWidgets;
-    // Runs after ~Updater: the "Update" button the constructor makes is unparented, and only
-    // checkUpdatesOnStart() reaches the addInstallButton() that would give it an owner
+    // Runs after ~Updater, which leaves its top-level widgets for the application to destroy
     const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
         for (const auto& widget : updaterWidgets) {
             delete widget.data();
@@ -1088,6 +1098,139 @@ void FeedChecksumRaceTest::theChangelogMenuEntryOnlyAnswersItsOwnRequest()
     QVERIFY2(feedReady.wait(waitMs), "the update check the changelog joined never finished");
     QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("asking for the changelog during an update check raised: %1").arg(whatTheDialogWasTold())));
     QCOMPARE(openChangelogs().size(), 1);
+}
+
+// Help > Check for updates listens for either feed answer; once one arrives, a later
+// twice-daily load must neither report a failure nor open the update dialog
+void FeedChecksumRaceTest::aManualCheckOnlyAnswersItsOwnRequest()
+{
+#if defined(Q_OS_MACOS)
+    QSKIP("on macOS Sparkle answers Check for updates, not the Feed");
+#else
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
+    QList<QPointer<QWidget>> updaterWidgets;
+    // Runs after ~Updater, as the unparented "Update" button its constructor makes needs
+    const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
+        for (const auto& widget : updaterWidgets) {
+            delete widget.data();
+        }
+    });
+
+    Updater updater(nullptr, &harness.settings());
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (!widgetsBeforeUpdater.contains(widget)) {
+            updaterWidgets.append(widget);
+        }
+    }
+    auto* feed = updater.findChild<dblsqd::Feed*>();
+    QVERIFY2(feed, "the Updater no longer parents its Feed to itself, so this test cannot reach it");
+    QSignalSpy feedReady(feed, &dblsqd::Feed::ready);
+    QSignalSpy feedError(feed, &dblsqd::Feed::loadError);
+    QSignalSpy checkFailed(&updater, &Updater::signal_updateCheckFailed);
+    // A manual check that succeeds goes on to show the update dialog, which this Updater, never
+    // started, lacks - so it says so, and saying it is how a check is seen to open the dialog
+    const QByteArray opensTheDialog("showDialogManually called but update dialog not initialized");
+    QTest::failOnWarning(opensTheDialog.constData());
+
+    harness.server().setFeedBody("not json");
+    updater.manuallyCheckUpdates();
+    QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load");
+    QCOMPARE(checkFailed.size(), 1);
+
+    // The twice-daily check, once the connection is back
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    feed->load();
+    QVERIFY2(feedReady.wait(waitMs), "the repaired feed never loaded, so the failOnWarning above would test nothing");
+
+    QTest::ignoreMessage(QtWarningMsg, opensTheDialog.constData());
+    updater.manuallyCheckUpdates();
+    QVERIFY2(feedReady.wait(waitMs), "the second manual check never loaded the feed");
+
+    // And a twice-daily check that fails after it
+    harness.server().setFeedBody("not json");
+    feed->load();
+    QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load the second time");
+    // Only the player's own failed check is reported, not the background one
+    QCOMPARE(checkFailed.size(), 1);
+#endif
+}
+
+// Feed::load() turns a second load away with loadError while the first is running, and a check
+// waiting on that first load has to wait on rather than take the refusal as its own answer
+void FeedChecksumRaceTest::aManualCheckWaitsOutALoadThatWasTurnedAway()
+{
+#if defined(Q_OS_MACOS)
+    QSKIP("on macOS Sparkle answers Check for updates, not the Feed");
+#else
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
+    QList<QPointer<QWidget>> updaterWidgets;
+    // Runs after ~Updater, as the unparented "Update" button its constructor makes needs
+    const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
+        for (const auto& widget : updaterWidgets) {
+            delete widget.data();
+        }
+    });
+
+    Updater updater(nullptr, &harness.settings());
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (!widgetsBeforeUpdater.contains(widget)) {
+            updaterWidgets.append(widget);
+        }
+    }
+    auto* feed = updater.findChild<dblsqd::Feed*>();
+    QVERIFY2(feed, "the Updater no longer parents its Feed to itself, so this test cannot reach it");
+    QSignalSpy feedReady(feed, &dblsqd::Feed::ready);
+    QSignalSpy checkFailed(&updater, &Updater::signal_updateCheckFailed);
+
+    updater.manuallyCheckUpdates();
+    // The twice-daily check, started while the player's own check is loading
+    QTest::ignoreMessage(QtWarningMsg, "Update check already in progress, ignoring duplicate request");
+    feed->load();
+    QVERIFY2(checkFailed.isEmpty(), qPrintable(qsl("the refused second load was reported as the player's check failing: %1").arg(checkFailed.value(0).value(0).toString())));
+
+    // Seen to finish by the warning showDialogManually() gives on an Updater that was never started
+    QTest::ignoreMessage(QtWarningMsg, "showDialogManually called but update dialog not initialized");
+    QVERIFY2(feedReady.wait(waitMs), "the player's check never loaded the feed");
+    QVERIFY(checkFailed.isEmpty());
+#endif
+}
+
+// Feed reports a failed load while it still holds the reply, and a handler - the changelog's
+// error box runs an event loop - can start the next load before it lets go
+void FeedChecksumRaceTest::aLoadStartedWhileAFailureIsReportedIsAnswered()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    harness.server().setFeedFails(true);
+    auto& feed = harness.feed();
+    feed.setRepo(qsl("Mudlet"), qsl("Mudlet"), false, qsl("linux"), qsl("x64"));
+    QSignalSpy feedReady(&feed, &dblsqd::Feed::ready);
+    QSignalSpy feedError(&feed, &dblsqd::Feed::loadError);
+
+    QObject::connect(
+            &feed,
+            &dblsqd::Feed::loadError,
+            &feed,
+            [&harness, &feed]() {
+                harness.server().setFeedFails(false);
+                feed.load();
+            },
+            Qt::SingleShotConnection);
+
+    feed.load();
+    QVERIFY2(feedError.wait(waitMs), "the stub's failing feed did not fail to load");
+    QVERIFY2(feedReady.wait(waitMs), "the load started while the failure was reported was never answered");
+    QCOMPARE(feedError.size(), 1);
 }
 
 // The dialog decides whether there is an update to show from the release the

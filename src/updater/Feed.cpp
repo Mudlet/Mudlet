@@ -358,10 +358,11 @@ void Feed::makeDownloadRequest(const QUrl& url)
 void Feed::handleFeedFinished()
 {
     if (mFeedReply->error() != QNetworkReply::NoError) {
+        // Let go before emitting: a handler may start the next load, which takes mFeedReply
+        auto* reply = std::exchange(mFeedReply, nullptr);
+        reply->deleteLater();
         //: Error shown when the network request to the update server fails. %1 is the technical error description.
-        emit loadError(tr("Could not connect to the update server: %1").arg(mFeedReply->errorString()));
-        mFeedReply->deleteLater();
-        mFeedReply = nullptr;
+        emit loadError(tr("Could not connect to the update server: %1").arg(reply->errorString()));
         return;
     }
 
