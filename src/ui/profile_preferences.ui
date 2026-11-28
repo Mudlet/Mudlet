@@ -5503,22 +5503,6 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Other Special options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_debug">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_showIconsOnMenus">
-            <property name="text">
-             <string>Show icons on menus</string>
-            </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="checked">
-             <bool>false</bool>
-            </property>
-            <property name="tristate">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
             <property name="toolTip">
@@ -5734,6 +5718,19 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
            </widget>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_showIconsOnMenus">
+            <property name="text">
+             <string extracomment="Label in front of the dropdown on the General settings page where the player picks whether menus show an icon beside each entry.">Show icons on menus:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_showIconsOnMenus</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QComboBox" name="comboBox_showIconsOnMenus"/>
           </item>
          </layout>
         </widget>
@@ -5955,7 +5952,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>
-  <tabstop>checkBox_showIconsOnMenus</tabstop>
+  <tabstop>comboBox_showIconsOnMenus</tabstop>
   <tabstop>checkBox_debugShowAllCodepointProblems</tabstop>
   <tabstop>checkBox_expectCSpaceIdInColonLessMColorCode</tabstop>
   <tabstop>comboBox_store_passwords_in</tabstop>

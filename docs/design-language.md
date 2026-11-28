@@ -468,6 +468,54 @@ which is the very edge the row's highlight is drawn from, so both are moved into
 the middle of the room the row leaves them or they sit on the arc of that
 highlight rather than inside it.
 
+A row carrying a picture gets no mark at all: Qt's stylesheet style draws the
+icon in its place (`QStyleSheetStyle::renderMenuItemIcon()`), its `On` pixmap
+when the row is switched on. So `QMenu::icon:checked` washes the box behind the
+glyph in `accentSoft`, as a switched-on toolbar button is washed, `scmRadiusChip`
+round and `scmMenuIconWashPadding` clear of the glyph, moved back by the same
+amount so the glyph does not shift when the row is switched on. A row without a
+picture keeps its mark. The menu bar's own menus are drawn by the base style
+instead, which fills the row under the pointer with `Highlight`: there
+`restyleMenuGlyphs()` inks every glyph, coloured or grey, in the row's words'
+`HighlightedText`, walked with `readableOn()` to `scmQuietMinimumRatio` on `Highlight`, the floor a glyph line is held to,
+both read from the `QMenu` class palette, which a platform theme may set apart
+from the application's (Windows), or from one set on the menu itself, rather
+than from a menu's `palette()`, which takes an appearance change only once
+events run. A base style draws a switched-on entry's icon in the tick's place
+too, and Fusion puts only a sunken box behind it, its fill near 1.3:1 against a
+light menu and its edge 2.3:1, so on those menus `restyleMenuGlyphs()` draws the
+mark into every switch's `On` pictures: a 1px outline round the picture's edge,
+`scmRadiusChip` round, in `accent` over `accentWash` at rest, in the row's ink
+with no wash under the pointer, and in `disabledText` while it is unavailable.
+Each keeps the glyph's own raster, as a style scales whatever it is handed down to
+its icon size, glyph and all; the outline's width is the menu's pixel, measured
+from the style's `PM_SmallIconSize` asked with the menu's font, as Fusion sizes the
+icon it draws from that font's dpi, and rounded up to whole pixels of the picture.
+Lucide draws its outermost line at 2 units of 24, 0.83px in at a 16px icon, so the
+speaker and the pin would touch an outline at the edge: `glyphInsideOutline()`
+draws every outlined glyph at `scmOutlinedGlyphScale` (0.83) of its size, about its
+centre, which leaves a whole menu pixel clear inside the outline at 16px. At that
+size the smaller glyphs are softer than the ones switched off: the speaker's cross
+closes up into a dot and the underscore of the input line's prompt spreads over
+two rows of pixels.
+Who draws the menus is `MenuDrawnBy`, which `mudlet::restyleToolBarIcons()` passes:
+`NativeMenuBar` while `QMenuBar::isNativeMenuBar()`, as a native menu draws its own
+tick beside the picture it copies, `ScriptSheet` while a script's sheet names
+`QMenu`, and `BaseStyle` otherwise; only `BaseStyle` gets the outline in the
+picture. A script's sheet naming `QMenu` hands those rows to the stylesheet
+style, so `mudlet::restyleMenuBar()` puts `menuIconWashStyleSheet()` on the menu
+bar ahead of the profile's sheet - this wash, with every glyph given its room,
+as a script's row may start the icon at the edge the row is clipped to, and a
+1px `accent` outline taken out of that room, as on a script's dark menu the wash
+alone reads near 1.2:1 against the row and the outline 4:1 - unless
+the script styles `QMenu::icon` itself, and the glyph under the pointer stays as
+at rest, as Qt has no way to read the colours the sheet gives that row.
+On macOS the menu bar is the system's, and macOS 27 hides a menu item's picture
+unless the application asks to show it, which Qt 6.11 never does: with "Show
+icons on menus" set to "Always", `setMacMenuImagesAlwaysVisible()` asks for every
+entry of the main window's menus and the application menu, and at "Follow the
+system" it leaves the choice to macOS.
+
 The corner is the list's, cut by the same `letPopupsTakeTheFieldsCorner()` - see
 the paragraph on it above. A window's style pass gives both to whatever it owns;
 a menu built at the moment it is needed, which is what a context menu is, is
@@ -1440,6 +1488,17 @@ experiment saved it as `false` for every player who never ticked it.
 - The colour stays at rest, under the pointer, switched on and chosen; the wash
   under the button or row already shows those states. Unavailable, the glyph is
   `disabledBarText` with no wash. `identityIcon()` builds all of these.
+- The main window's menu bar carries its own ledger, `mudlet::mMenuGlyphs`, drawn
+  by `restyleMenuGlyphs()` from `restyleToolBarIcons()`. An entry that does what a
+  toolbar button does carries that button's files and colour; the rest reuse a
+  glyph the editor, Settings or About already show, with the colour it has there,
+  or a `menu-*.svg` of their own. Unavailable, the glyph is `disabledText`, which
+  is walked to read on the card and the field, rather than the bar's
+  `disabledBarText`, walked on the page alone. On the row under the pointer the
+  colour gives way to `HighlightedText`, and on a menu the base style draws a
+  switched-on entry's picture carries its outline, so it is no longer the toolbar
+  button's picture in that state (see Menus). Whether a menu shows the glyphs at all is
+  `Qt::AA_DontShowIconsInMenus`, which the "Show icons on menus" setting sets.
 - The Connect button's menu takes Lucide glyphs too, so its four entries match:
   Disconnect (`unplug`) is grey, its picture being under 30% coloured, Close
   profile (`log-out`) takes Connect's orange and Close Mudlet (`circle-x`) the

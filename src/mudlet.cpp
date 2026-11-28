@@ -82,6 +82,9 @@
 #include "edbee/edbee.h"
 #include "uiDesign.h"
 #include "widgetutils.h"
+#if defined(Q_OS_MACOS)
+#include "MacMenuImageVisibility.h"
+#endif
 
 #include <QDataStream>
 #include <QSaveFile>
@@ -103,6 +106,7 @@
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QPoint>
+#include <QRegularExpression>
 #include <QScopeGuard>
 #include <QScopedValueRollback>
 #include <QScreen>
@@ -1388,6 +1392,13 @@ mudlet::mudlet()
 
 static bool anyProfilesExist(const QString& profilesPath);
 
+#if defined(Q_OS_MACOS)
+static void syncMacMenuImageVisibility(mudlet* pMudlet)
+{
+    setMacMenuImagesAlwaysVisible(pMudlet->menuBar(), pMudlet->mShowIconsOnMenuCheckedState == Qt::Checked);
+}
+#endif
+
 void mudlet::init()
 {
     MudletApp::setFirstLaunch(!anyProfilesExist(MudletApp::getMudletPath(enums::profilesPath)));
@@ -1783,6 +1794,46 @@ void mudlet::init()
                       {mpActionMultiView, qsl(":/icons/toolbar-multiview.svg"), QString()},
                       {mpActionAbout, qsl(":/icons/toolbar-about.svg"), QString()},
                       {mpActionFullScreenView, qsl(":/icons/toolbar-fullscreen.svg"), qsl(":/icons/toolbar-fullscreen-exit.svg")}};
+    // An entry that does what a toolbar button does carries that button's picture. The profiles updateWindowMenu() lists
+    // are left out: a glyph would take the place of the tick that says which one is in front.
+    mMenuGlyphs = {{dactionConnect, qsl(":/icons/toolbar-connect.svg"), QString(), uiDesign::scmIdentity_connect},
+                   {dactionDisconnect, qsl(":/icons/toolbar-disconnect.svg"), QString()},
+                   {dactionReconnect, qsl(":/icons/toolbar-reconnect.svg"), QString(), uiDesign::scmIdentity_reconnect},
+                   {dactionCloseProfile, qsl(":/icons/toolbar-close-profile.svg"), QString(), uiDesign::scmIdentity_connect},
+                   {dactionCloseApplication, qsl(":/icons/toolbar-quit.svg"), QString(), uiDesign::scmIdentity_delete},
+                   {dactionScriptEditor, qsl(":/icons/settings-editor.svg"), QString()},
+                   {dactionShowErrors, qsl(":/icons/editor-errors.svg"), QString(), uiDesign::scmIdentity_errors},
+                   {dactionShowMap, qsl(":/icons/toolbar-map.svg"), QString(), uiDesign::scmIdentity_map},
+                   {dactionInputLine, qsl(":/icons/settings-input.svg"), QString(), uiDesign::scmIdentity_input},
+                   {dactionNotepad, qsl(":/icons/toolbar-notepad.svg"), QString()},
+                   {dactionPackageManager, qsl(":/icons/toolbar-packages.svg"), QString(), uiDesign::scmIdentity_packages},
+                   {dactionReplay, qsl(":/icons/toolbar-replay.svg"), QString()},
+                   {dactionModuleManager, qsl(":/icons/editor-module.svg"), QString(), uiDesign::scmIdentity_packages},
+                   {dactionPackageExporter, qsl(":/icons/toolbar-export.svg"), QString(), uiDesign::scmIdentity_packages},
+                   {dactionToggleReplay, qsl(":/icons/menu-record-replay.svg"), QString()},
+                   {dactionToggleLogging, qsl(":/icons/menu-record-log.svg"), QString()},
+                   {dactionToggleEmergencyStop, qsl(":/icons/menu-emergency-stop.svg"), QString(), uiDesign::scmIdentity_delete},
+                   {dactionOptions, qsl(":/icons/toolbar-settings.svg"), QString()},
+                   {dactionToggleTimeStamp, qsl(":/icons/menu-timestamps.svg"), QString()},
+                   {dactionMuteMedia, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                   {dactionMuteAPI, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                   {dactionMuteGame, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                   {dactionToggleFullScreen, qsl(":/icons/toolbar-fullscreen.svg"), qsl(":/icons/toolbar-fullscreen-exit.svg")},
+                   {dactionMultiView, qsl(":/icons/toolbar-multiview.svg"), QString()},
+                   {dactionReattachDetachedWindows, qsl(":/icons/menu-reattach-windows.svg"), QString()},
+                   {dactionToggleAlwaysOnTop, qsl(":/icons/menu-always-on-top.svg"), QString()},
+                   {dactionMinimize, qsl(":/icons/control-minus.svg"), QString()},
+                   {dactionHelp, qsl(":/icons/toolbar-manual.svg"), QString(), uiDesign::scmIdentity_manual},
+                   {dactionUiTour, qsl(":/icons/menu-ui-tour.svg"), QString()},
+                   {dactionVideo, qsl(":/icons/menu-video-tutorials.svg"), QString()},
+                   {dactionDiscord, qsl(":/icons/toolbar-discord.png"), QString(), uiDesign::scmIdentity_discord},
+                   {dactionMudletDiscord, qsl(":/icons/menu-discord-help.svg"), QString(), uiDesign::scmIdentity_discord},
+                   {dactionLiveHelpChat, qsl(":/icons/settings-chat.svg"), QString(), uiDesign::scmIdentity_discord},
+                   {dactionForum, qsl(":/icons/about-forums.svg"), QString()},
+                   {dactionAbout, qsl(":/icons/toolbar-about.svg"), QString()},
+                   {dactionUpdate, qsl(":/icons/packages-update.svg"), QString()},
+                   {dactionChangelog, qsl(":/icons/menu-changelog.svg"), QString()},
+                   {dactionReportIssue, qsl(":/icons/about-bug.svg"), QString()}};
     restyleToolBarIcons();
 
     const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
@@ -2078,6 +2129,19 @@ void mudlet::init()
 
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(menuWindow, &QMenu::aboutToShow, this, &mudlet::updateWindowMenu);
+
+#if defined(Q_OS_MACOS)
+    // An entry added from here on starts out with macOS's own choice, so the menus are set again whenever one opens,
+    // after updateWindowMenu() has added its profiles
+    for (QAction* pMenuAction : menuBar()->actions()) {
+        if (QMenu* pMenu = pMenuAction->menu()) {
+            connect(pMenu, &QMenu::aboutToShow, this, [this]() {
+                syncMacMenuImageVisibility(this);
+            });
+        }
+    }
+    syncMacMenuImageVisibility(this);
+#endif
 
     // PLACEMARKER: sample benchmarking code
     // looking to benchmark old/new code? Use this example
@@ -4868,7 +4932,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // In the near future the user's locale preferences will need to be read
     // as soon as possible as well!
 
-    mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
+    // A number that is none of the three states would leave the settings' dropdown with no entry chosen
+    const int showIconsInMenus = settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt();
+    mShowIconsOnMenuCheckedState = (showIconsInMenus == Qt::Unchecked || showIconsInMenus == Qt::Checked) ? static_cast<Qt::CheckState>(showIconsInMenus) : Qt::PartiallyChecked;
 
     // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
     auto oldDarkTheme = settings.value(qsl("darkTheme"), QVariant(false)).toBool();
@@ -5098,6 +5164,14 @@ void mudlet::restyleToolBarIcons()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, tokens, mColouredIcons);
+    // A native bar ignores every sheet
+    uiDesign::MenuDrawnBy menusDrawnBy = uiDesign::MenuDrawnBy::BaseStyle;
+    if (menuBar()->isNativeMenuBar()) {
+        menusDrawnBy = uiDesign::MenuDrawnBy::NativeMenuBar;
+    } else if (sheetStylesMenus(qApp->styleSheet() + mMainToolBarProfileStyleSheet)) {
+        menusDrawnBy = uiDesign::MenuDrawnBy::ScriptSheet;
+    }
+    uiDesign::restyleMenuGlyphs(mMenuGlyphs, tokens, mColouredIcons, menusDrawnBy);
     // Outside mToolBarGlyphs: its own green stays whether or not the bar is coloured
     if (mpButtonAbout) {
         mpButtonAbout->setIcon(aboutUpdateIcon(tokens));
@@ -5105,6 +5179,7 @@ void mudlet::restyleToolBarIcons()
     uiDesign::ToolBarOverflow::restyle(mpMainToolBar, tokens);
     uiDesign::ToolBarOverflow::restyle(mpToolBarReplay, tokens);
     restyleMainToolBar();
+    restyleMenuBar();
 }
 
 // A script's sheet naming these styles the bars as before the design, whose rules set on a bar itself would outrank an
@@ -5112,6 +5187,27 @@ void mudlet::restyleToolBarIcons()
 bool mudlet::sheetStylesToolBars(const QString& sheet)
 {
     return sheet.contains(qsl("QToolBar")) || sheet.contains(qsl("QToolButton"));
+}
+
+// Not QMenuBar alone, which styles only the bar and leaves its menus to the base style
+bool mudlet::sheetStylesMenus(const QString& sheet)
+{
+    static const QRegularExpression menuSelector(qsl("\\bQMenu\\b"));
+    return sheet.contains(menuSelector);
+}
+
+// The profile's Lua sheet is the menu bar's own. The wash joins it only while a script's sheet styles the menus but not
+// their icons: an icon rule alone moves a base-style menu's glyphs and drops the box that marks a switched-on one
+void mudlet::restyleMenuBar()
+{
+    const QString scriptSheets = qApp->styleSheet() + mMainToolBarProfileStyleSheet;
+    // Within one selector, so an object name or a property between the two is still the script's icon rule
+    static const QRegularExpression menuIconSelector(qsl("\\bQMenu\\b[^,{}]*::icon"), QRegularExpression::CaseInsensitiveOption);
+    const bool washSwitchedOnGlyphs = sheetStylesMenus(scriptSheets) && !scriptSheets.contains(menuIconSelector);
+    const QString sheet = washSwitchedOnGlyphs ? uiDesign::menuIconWashStyleSheet(uiDesign::themeTokens()) + mMainToolBarProfileStyleSheet : mMainToolBarProfileStyleSheet;
+    if (menuBar()->styleSheet() != sheet) {
+        menuBar()->setStyleSheet(sheet);
+    }
 }
 
 QString mudlet::toolBarShellStyleSheet(const QString& barSelector)
@@ -8257,6 +8353,11 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
         case Qt::PartiallyChecked:
             qApp->setAttribute(Qt::AA_DontShowIconsInMenus, !mShowIconsOnMenuOriginally);
         }
+        // Qt copies an action's icon into a native menu's item when the action changes, not when this attribute does
+        restyleToolBarIcons();
+#if defined(Q_OS_MACOS)
+        syncMacMenuImageVisibility(this);
+#endif
 
         emit signal_showIconsOnMenusChanged(state);
     }
@@ -8547,7 +8648,6 @@ void mudlet::setGlobalStyleSheet(const QString& styleSheet)
     restyleMainToolBar();
     restyleToolBarIcons();
     mpTabBar->setStyleSheet(styleSheet);
-    menuBar()->setStyleSheet(styleSheet);
 }
 
 void mudlet::registerBlinkClient()

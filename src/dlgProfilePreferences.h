@@ -356,6 +356,8 @@ private:
     void updateSecurityStatus();
     // Strings setupUi() did not create, which retranslateUi() therefore cannot restore on a language change
     void retranslateShell();
+    // Adds the entries on the first call and only rewords them afterwards
+    void retranslateShowIconsOnMenus();
     // Search synonyms not in a setting's own words; here rather than in the .ui file so they can carry
     // a translator note.
     void setSearchKeywords();

@@ -230,6 +230,8 @@ QString disclosureButtonStyleSheet(const QString& buttonSelector, const ThemeTok
 
 // Follow with letPopupsTakeTheFieldsCorner() on the same container; a menu built on demand gets both before exec().
 QString menuStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix = QString());
+// menuStyleSheet()'s wash behind a switched-on entry's glyph alone, for menus whose rows a script's sheet draws
+QString menuIconWashStyleSheet(const ThemeTokens& tokens);
 
 inline constexpr int scmNoticeGlyphSize = 20;
 inline constexpr int scmNoticePaddingHorizontal = 10;
@@ -472,6 +474,15 @@ void restyleActionGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& to
 // For actions on a toolbar: unavailable, the glyph takes disabledBarText as the bar's words do. Coloured, a glyph with
 // an identity colour keeps it at rest, under the pointer and switched on.
 void restyleToolBarGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured = false);
+// A native menu bar draws its own tick beside an entry's picture and a script's sheet draws menuIconWashStyleSheet()'s
+// outline round it; a base style draws neither
+enum class MenuDrawnBy { NativeMenuBar, BaseStyle, ScriptSheet };
+// For actions in a menu: unavailable, disabledText; under the pointer, the menu palette's HighlightedText walked to read
+// on its Highlight, or as at rest under a script's sheet. On a base style's menu a switched-on entry's picture carries
+// the outline itself: the accent over its wash at rest, the glyph's own ink under the pointer and unavailable.
+void restyleMenuGlyphs(const QList<ActionGlyph>& glyphs, const ThemeTokens& tokens, const bool coloured, const MenuDrawnBy drawnBy);
+// The glyph as that outline holds it: smaller, about its centre, on a picture of its own size
+QPixmap glyphInsideOutline(const QPixmap& glyph);
 
 struct CardMetrics
 {
