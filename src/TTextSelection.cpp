@@ -270,7 +270,6 @@ int TTextSelection::offsetOf(const int line, const int column) const
 {
     int offset = 0;
     for (int i = 0; i < line; i++) {
-        // The accessible text adds a newline to the end of every line
         offset += mBuffer.line(i).length() + 1;
     }
     return offset + column;

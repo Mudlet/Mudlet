@@ -39,17 +39,19 @@ class TTextSelection
 public:
     TTextSelection(TBuffer& buffer, Host* pHost);
 
-    // Orders mDragStart and mDragSelectionEnd into mPA (top left) and mPB (bottom right)
+    // Orders mDragStart and mDragSelectionEnd so mPA is the first selected cell and mPB the last, in reading order
     void normalise();
     // Widens mPA and mPB to the words they are in
     void expandToWords();
-    // A drag anchored on a word separator starts at the nearest word, past any separators beside it
+    // A drag anchored on a word separator starts at the nearest word, past any separators beside it; the anchored end
+    // must be on a line of the buffer
     void anchorEndToNearestWord(bool anchorFirst);
     void selectAll();
     // Marks the selected characters on the buffer's lines, which is how they are drawn selected; unmarkLines() clears them
     void markLines();
     void unmarkLines();
     bool hasSelection() const;
+    // Moves mPA and mPB down by a trim of the buffer before reading, which the other methods only allow for
     QString text(QChar newline = QChar::LineFeed, bool showTimestamps = false);
     // Appends the selection's lines as HTML; false where a line of it is gone, as a script can clear the buffer
     bool appendHtml(QString& html, bool showTimestamps) const;
@@ -64,9 +66,10 @@ public:
 
     QPoint mDragStart;
     QPoint mDragSelectionEnd;
-    // The first selected cell
+    // The first and last selected cells, as a line of the buffer and a QChar index into it; x == the line's length on
+    // mPB is the newline after it. Expanding to words on a separator leaves them crossed, which hasSelection() reads
+    // as no selection.
     QPoint mPA;
-    // The last selected cell
     QPoint mPB;
     // Equal to mPB while the selection includes the newline after mPB's line: an
     // accessibility range ending there leaves mPB where a whole-line selection without
@@ -78,7 +81,8 @@ public:
     // Tracks the Shift key for keyboard selection
     bool mShiftSelection = false;
     QElapsedTimer mLastClickTimer;
-    // Where the view last drew the selection; empty for no selection
+    // Where the view last drew the selection, emptied when it is dropped; a region alone is not a selection, see
+    // hasSelection()
     QRegion mSelectedRegion;
 
 private:

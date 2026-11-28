@@ -21,16 +21,17 @@
  ***************************************************************************/
 
 class Host;
-class QObject;
+class QWidget;
 class TBuffer;
 
 namespace consoleAnnouncements {
 // Whether a view's new text is read out: a screen reader is on, the console is the main one, the profile asks
 // for it and is the active one
 bool wanted(const Host& host, bool isMainConsole);
-// The lines from previousLastLine up to lastLine, read out joined; fewer lines than before are a removal on
-// the accessible text of view, the widget the event names, rather than anything new to read
-void announceNewLines(QObject* view, const TBuffer& buffer, int previousLastLine, int lastLine);
+// Reads out lines previousLastLine up to but not including lastLine, both lines of the buffer as it is now, so the
+// caller takes lines trimmed off the top since off previousLastLine. When lastLine is the smaller, lines were removed,
+// so it raises a removal on view's accessible text instead.
+void announceNewLines(QWidget* view, const TBuffer& buffer, int previousLastLine, int lastLine);
 } // namespace consoleAnnouncements
 
 #endif // MUDLET_TCONSOLEANNOUNCEMENTS_H

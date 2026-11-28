@@ -2492,7 +2492,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     bool copyingSelection = establishSelectedText();
     if (copyingSelection && mpSelection->mPB.y() > lastBufferLine) {
         // Lines lost off the front of a buffer that reached its limit shift every
-        // remaining index down; getSelectedText() compensates the same way. mPA
+        // remaining index down; TTextSelection::text() compensates the same way. mPA
         // and mPB move rather than a copy of them, so that the deselect below
         // still finds the characters that are about to be drawn.
         const int shift = mpBuffer->mBatchDeleteSize;

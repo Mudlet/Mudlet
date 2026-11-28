@@ -77,7 +77,6 @@ TLinkInteraction::RightClick TLinkInteraction::rightClick(const int linkIndex)
         return RightClick::revealed;
     }
 
-    // Disabled links don't show context menus
     if (hyperlinkStyling.selection.disabled) {
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "TLinkInteraction::rightClick - Right-click on disabled link" << linkIndex << ", blocking context menu";
@@ -183,8 +182,8 @@ QString TLinkInteraction::tooltipMarkup(const int linkIndex) const
     // The server chooses this text and QToolTip renders anything
     // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
     // in an explicit document rather than letting that guess decide
-    // whether the markup is live. white-space:pre keeps the line
-    // breaks the plain-text path used to give.
+    // whether the markup is live. white-space:pre keeps the tooltip's
+    // line breaks, as plain text would.
     // An empty string is how QToolTip is told to hide, so it has to
     // stay empty rather than becoming an empty document.
     const QString tooltipText = mBuffer.mLinkStore.tooltip(linkIndex);
@@ -273,6 +272,7 @@ void TLinkInteraction::announceFocus(const int linkIndex)
     }
 }
 
+// Still in the "TTextEdit" translation context, where the existing translations of these strings live
 QString TLinkInteraction::announcement(const int linkIndex) const
 {
     const QString tooltip = mBuffer.getLinkTooltip(linkIndex);

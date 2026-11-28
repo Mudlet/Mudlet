@@ -60,7 +60,8 @@ private:
         }
     }
 
-    // Qt only hands events to the handler while accessibility is active, which no screen reader makes it here
+    // Qt only hands events to the handler while accessibility is active, and with no screen reader here only
+    // setActive() makes it so
     static bool startRecording()
     {
         smAnnouncements.clear();

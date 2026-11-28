@@ -30,7 +30,8 @@ class TBuffer;
 class TConsoleModel;
 
 // What a view does with a link under the pointer, the caret or a menu, in terms of the buffer and the model;
-// the view draws, positions the menu and places the tooltip
+// the view draws, positions the menu and places the tooltip. Hover, focus and the active link live in the buffer,
+// so they are shared by every view of it.
 class TLinkInteraction : public QObject
 {
     Q_OBJECT
@@ -44,10 +45,10 @@ public:
     // text: the menu any other text gets; revealed: repaint; blocked: no menu at all; menu: show the link's menu
     enum class RightClick { text, revealed, blocked, menu };
     RightClick rightClick(int linkIndex);
-    // none: not a link that takes keys; ignored: the key is the view's to handle as any other; redraw: repaint only;
+    // none: not a link that takes keys; ignored: a link that has nothing to do for this key; redraw: repaint only;
     // ran: nothing more to do; menu: show the link's menu at the caret
     enum class Activate { none, ignored, redraw, ran, menu };
-    // Enter or Space on the focused link
+    // Enter or Space on the focused link; ignored hands the key on as any other
     Activate activateFocused();
     // The Menu key on the focused link; none means the console's own menu, ignored means nothing
     Activate menuKeyOnFocused();
@@ -58,7 +59,8 @@ public:
     Qt::CursorShape cursorFor(int linkIndex) const;
     // The tooltip as markup QToolTip will not reinterpret, empty for none
     QString tooltipMarkup(int linkIndex) const;
-    // The link's menu, in the view's font; picks from it run on the link it was built for
+    // The link's menu, in the view's font, for the caller to show; it deletes itself on close, and its picks run on
+    // the link of the menu built last
     QMenu* buildMenu(int linkIndex, QWidget* parent, const QFont& font, bool alreadyActivated);
     QString announcement(int linkIndex) const;
     void announceFocus(int linkIndex);
@@ -73,7 +75,7 @@ private:
 
     TBuffer& mBuffer;
     TConsoleModel& mModel;
-    // The link whose menu is showing, 0 for none; its actions carry the item's index plus one
+    // The link the menu built last runs its picks on, 0 once a pick has run; its actions carry the item's index plus one
     int mPopupLinkIndex = 0;
     // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
     qint64 mPopupLinkIssue = 0;

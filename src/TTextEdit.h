@@ -343,7 +343,6 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // One repaint per frame at most for what new output drives, through scheduleUpdate()
     TPaintPacer* mpPacer = nullptr;
     TLinkInteraction* mpLinks = nullptr;
     // Set while updateScrollBar() is moving the bar itself, which

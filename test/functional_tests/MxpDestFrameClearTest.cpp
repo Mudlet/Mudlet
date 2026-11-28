@@ -46,7 +46,7 @@ using namespace std::chrono_literals;
 // <DEST frame EOF> empties the frame's buffer, but that must go through
 // TConsole::clear() rather than a bare TBuffer::clear(): a selection made on
 // the frame beforehand would otherwise keep pointing at the deleted lines,
-// and getSelectedText()'s batch-delete adjustment then drives its line index
+// and TTextSelection::text()'s batch-delete adjustment then drives its line index
 // negative, sending Copy far out of the line buffer. The scroll state has to
 // go with the lines too, or a frame the user had scrolled up in stays frozen
 // over the emptied buffer and never shows new output again.

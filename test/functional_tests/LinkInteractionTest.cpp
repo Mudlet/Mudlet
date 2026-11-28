@@ -137,6 +137,33 @@ private slots:
         QCOMPARE(links.menuKeyOnFocused(), TLinkInteraction::Activate::ignored);
     }
 
+    // TConsoleModel::runLink() does not check again, so the gate in press() and the Menu key's own checks are all there is
+    void test_aDisabledLinkOrAHiddenSpoilerDoesNotRun()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        TBuffer& buffer = console->buffer;
+        TLinkInteraction links(buffer, console->model(), nullptr);
+        const int disabled = linkTo(qsl("send:vote?config={\"disabled\":true}"));
+        QVERIFY(disabled);
+        QCOMPARE(links.press(disabled), TLinkInteraction::Press::redraw);
+        buffer.setFocusedLink(disabled);
+        QCOMPARE(links.menuKeyOnFocused(), TLinkInteraction::Activate::ignored);
+        QVERIFY(!buffer.isLinkVisited(disabled));
+
+        const int pressed = linkTo(qsl("send:look?config={\"spoiler\":true}"));
+        QVERIFY(pressed);
+        QCOMPARE(links.press(pressed), TLinkInteraction::Press::redraw);
+        QVERIFY(!buffer.isSpoilerUnrevealed(pressed));
+        QVERIFY(!buffer.isLinkVisited(pressed));
+
+        const int keyed = linkTo(qsl("send:look?config={\"spoiler\":true}"));
+        QVERIFY(keyed);
+        buffer.setFocusedLink(keyed);
+        QCOMPARE(links.menuKeyOnFocused(), TLinkInteraction::Activate::redraw);
+        QVERIFY(!buffer.isSpoilerUnrevealed(keyed));
+        QVERIFY(!buffer.isLinkVisited(keyed));
+    }
+
     void test_aPressOnALinkWithAMenuOpensIt()
     {
         TMainConsole* console = mpHost->mainConsoleView();
@@ -237,7 +264,7 @@ private slots:
         QCOMPARE(shape, (QStringList{qsl("title:Combat"), qsl("-"), qsl("Strike"), qsl("-"), qsl("Flee")}));
     }
 
-    // The store holds 20000 ids, so a script's flood of links can hand an open menu's id to another link
+    // The store holds TLinkStore::scmMaxLinks (20000) ids, so a script's flood of links can hand an open menu's id to another link
     void test_aPickRunsNothingOnceItsLinksIdIsReused()
     {
         TMainConsole* console = mpHost->mainConsoleView();

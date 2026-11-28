@@ -41,8 +41,9 @@ using namespace std::chrono_literals;
 // A console pane used to repaint once per socket read. Those paints run inside
 // the receive loop, so a flood of small packets - a GMCP speedwalk sends one
 // room description per packet - spent a whole frame between every two packets
-// it could have spent reading. TTextEdit::scheduleUpdate() caps the paints at
-// one per csmPaintPaceMs instead, so several packets share a frame.
+// it could have spent reading. TTextEdit::scheduleUpdate() hands them to
+// TPaintPacer, which caps them at one per csmPaintPaceMs, so several packets
+// share a frame.
 //
 // What this covers is the seam that does the capping: output arriving inside the
 // cooldown has to arm the pacer rather than paint at once, and the frame it held

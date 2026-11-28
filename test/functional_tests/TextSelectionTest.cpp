@@ -166,6 +166,29 @@ private slots:
         QCOMPARE(selection.text(), qsl("b\ncd"));
     }
 
+    // A whole-line selection cannot tell the ends' arguments to bufferToHtml() apart
+    void test_theHtmlHoldsOnlyThePartSelected()
+    {
+        Host* pHost = TestProfile::create(mpHostname, mpLocalhost, mpPort);
+        QVERIFY(pHost);
+        TBuffer buffer(pHost);
+        print(buffer, qsl("say hello now\nfirst line\nsecond line\n"));
+        TTextSelection selection(buffer, pHost);
+        selection.mPA = QPoint(4, 0);
+        selection.mPB = QPoint(8, 0);
+        QString word;
+        QVERIFY(selection.appendHtml(word, false));
+        QVERIFY2(word.contains(qsl("hello")), qPrintable(word));
+        QVERIFY2(!word.contains(qsl("say")) && !word.contains(qsl("now")), qPrintable(word));
+
+        selection.mPA = QPoint(6, 1);
+        selection.mPB = QPoint(5, 2);
+        QString lines;
+        QVERIFY(selection.appendHtml(lines, false));
+        QVERIFY2(lines.contains(qsl("line")) && lines.contains(qsl("second")), qPrintable(lines));
+        QVERIFY2(!lines.contains(qsl("first")) && !lines.contains(qsl("second line")), qPrintable(lines));
+    }
+
     void test_crossedEndpointsAreNoSelection()
     {
         Host* pHost = TestProfile::create(mpHostname, mpLocalhost, mpPort);

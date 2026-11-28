@@ -24,6 +24,7 @@
 #include "mudlet.h"
 
 #include <QAccessible>
+#include <QWidget>
 
 namespace consoleAnnouncements {
 
@@ -32,11 +33,10 @@ bool wanted(const Host& host, const bool isMainConsole)
     return QAccessible::isActive() && isMainConsole && host.mAnnounceIncomingText && mudlet::self()->getActiveHost() == &host;
 }
 
-void announceNewLines(QObject* view, const TBuffer& buffer, const int previousLastLine, const int lastLine)
+void announceNewLines(QWidget* view, const TBuffer& buffer, const int previousLastLine, const int lastLine)
 {
     QString newLines;
 
-    // content has been deleted
     if (previousLastLine > lastLine) {
         QAccessibleTextInterface* ti = QAccessible::queryAccessibleInterface(view)->textInterface();
         if (!ti) {
@@ -49,7 +49,6 @@ void announceNewLines(QObject* view, const TBuffer& buffer, const int previousLa
         return;
     }
 
-    // content has been added
     for (int i = previousLastLine; i < lastLine; i++) {
         newLines.append(buffer.spokenLine(i));
         newLines.append('\n');
