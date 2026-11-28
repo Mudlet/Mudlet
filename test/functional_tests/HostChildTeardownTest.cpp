@@ -63,7 +63,9 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
+#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
+#include "dlgPackageManager.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -239,6 +241,7 @@ private slots:
         for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"),
                                            qsl("HostChildTeardown-CloseChildren"),
                                            qsl("HostChildTeardown-HiddenInputBox"),
+                                           qsl("HostChildTeardown-Managers"),
                                            qsl("HostChildTeardown-First"),
                                            qsl("HostChildTeardown-Second"),
                                            qsl("HostChildTeardown-ViewsFirst"),
@@ -600,6 +603,45 @@ private slots:
         QTRY_VERIFY2(firstEditor.isNull(), "Closing the first profile left its editor behind");
         QVERIFY2(secondEditor, "Closing the first profile took the second profile's editor with it");
         QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
+    }
+
+    // Parented to the main window, not the Host: one still showing once the Host is gone can take the
+    // focus as the main window hides on quit, and read the freed Host to show its current row
+    void test_closingTheProfileClosesItsPackageAndModuleManagersBeforeTheHost()
+    {
+        const QString profileName = qsl("HostChildTeardown-Managers");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        // So the package manager reads the repository index from disk rather than downloading it
+        QFile index(MudletApp::getMudletPath(enums::profileHomePath, profileName) + qsl("/mpkg.packages.json"));
+        QVERIFY(index.open(QIODevice::WriteOnly));
+        QVERIFY(index.write("{\"packages\": []}") > 0);
+        index.close();
+
+        mudlet::self()->slot_packageManager();
+        mudlet::self()->slot_moduleManager();
+        const QPointer<dlgPackageManager> packageManager = HostDialogs::of(pHost).mpPackageManager;
+        const QPointer<dlgModuleManager> moduleManager = HostDialogs::of(pHost).mpModuleManager;
+        QVERIFY2(packageManager && packageManager->isVisible(), "The package manager did not open");
+        QVERIFY2(moduleManager && moduleManager->isVisible(), "The module manager did not open");
+
+        QStringList shownWithTheHostGone;
+        connect(pHost, &QObject::destroyed, this, [&]() {
+            if (packageManager && packageManager->isVisible()) {
+                shownWithTheHostGone << qsl("the package manager");
+            }
+            if (moduleManager && moduleManager->isVisible()) {
+                shownWithTheHostGone << qsl("the module manager");
+            }
+        });
+
+        const QPointer<Host> hostGuard(pHost);
+        pHost->forceClose();
+        mudlet::self()->slot_closeProfileByName(profileName);
+        pHost = nullptr;
+        QTRY_VERIFY2(hostGuard.isNull(), "The profile did not close");
+        QVERIFY2(shownWithTheHostGone.isEmpty(), qPrintable(qsl("The Host went with %1 still showing").arg(shownWithTheHostGone.join(qsl(" and ")))));
+        QTRY_VERIFY2(!packageManager && !moduleManager, "The managers were closed but never deleted");
     }
 
     // ~QWidget destroys a mini console's command line after ~TConsole, and the main console's
