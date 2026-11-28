@@ -730,6 +730,10 @@ public:
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
+        // A command line's own Qt style sheet, as a script's setCmdLineStyleSheet() gave it, for the app to draw it
+        // with: the GUI's TCommandLine takes it as its QPlainTextEdit's. Empty until a script sets one, and for the
+        // other kinds. The main command line's, which is the app's own input line and no window here, is not one.
+        QString styleSheet;
 
         bool operator==(const ScriptWindow&) const = default;
     };
@@ -1163,10 +1167,10 @@ signals:
     void mainBorderColorChanged(const QString& profile, const QColor& color);
     // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
-    // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
-    // trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose labelContent() differs,
-    // a text box whose textBoxContent() does, by a script, and those whose place among their parent's windows moved
-    // with it.
+    // lowered or given another background, font or command line sheet, a console scrolled, by a script, pointer()'s
+    // wheel, a clear or a trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose
+    // labelContent() differs, a text box whose textBoxContent() does, by a script, and those whose place among their
+    // parent's windows moved with it.
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);

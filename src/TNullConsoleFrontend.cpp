@@ -5010,6 +5010,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         const bool shown = commandLineShown(name);
         records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
         records.back().parentKind = own ? consoleKind(name, console->second) : kindOfParent(line.box.get());
+        records.back().styleSheet = line.styleSheet;
     }
     for (const auto& [name, textBox] : mTextBoxes) {
         if (inRetiredWindow(textBox.userWindow, textBox.box.get())) {

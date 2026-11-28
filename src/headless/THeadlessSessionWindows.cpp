@@ -91,6 +91,7 @@ THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int st
     window.scrollBar = record.scrollBar;
     window.timeStamps = record.timeStamps;
     window.parentKind = kindOf(record.parentKind);
+    window.styleSheet = record.styleSheet;
     if (record.kind == Record::Kind::userWindow) {
         window.dock = THeadlessSession::ScriptWindow::Dock{record.autoDock, record.dockArea, record.floating, record.title};
     }

@@ -182,6 +182,8 @@ public:
         bool timeStamps = false;
         // What its parent is, as a scroll box may share its name with a user window or console
         Kind parentKind = Kind::userWindow;
+        // A command line's own sheet, as setCmdLineStyleSheet() gave it
+        QString styleSheet;
     };
 
     explicit TNullConsoleFrontend(Host* pHost);

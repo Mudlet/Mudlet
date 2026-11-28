@@ -1178,6 +1178,11 @@ and the app draws what that says, as it draws the main console from `lineShown`.
   `getRowCount()` give them, so the whole console while it is not scrolled back and about three quarters
   of its height while it is. `scrollBar` is whether `enableScrollBar()` asked for one, and `timeStamps`
   whether `enableTimeStamps()` has each row's time shown beside it. The other kinds have none of these.
+- for a command line, its `styleSheet`, as a script's `setCmdLineStyleSheet()` gave it (Geyser's
+  `CommandLine` calls it from `setStyleSheet()`, and `MiniConsole` from `setCmdLineStyleSheet()`),
+  which the GUI's command line takes as its widget's sheet; empty until a script sets one, and for the
+  other kinds. The main command line's sheet, `setCmdLineStyleSheet()` with no name or `"main"`, is not
+  here: that line is the app's own input line.
 
 The list has parents before the windows they hold, and each parent's windows from the lowest up, the
 main window's area's before the docks, so an app that draws it in order draws each window over what it
