@@ -6205,6 +6205,16 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     mPointerPosition = event->position().toPoint();
     mPointerInView = true;
     mPointerButtons = event->buttons();
+    QRectF openRect;
+    for (const PortalCard& card : portalCards()) {
+        if (card.open) {
+            openRect = card.rect;
+        }
+    }
+    if (openRect != mOpenPortalRect) {
+        mOpenPortalRect = openRect;
+        update();
+    }
     setHoveredRoom(roomUnderPointer());
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
@@ -6450,6 +6460,9 @@ void ModernGLWidget::leaveEvent(QEvent* event)
     }
     mPointerInView = false;
     mPointerButtons = Qt::NoButton;
+    if (!std::exchange(mOpenPortalRect, QRectF()).isNull()) {
+        update();
+    }
     setHoveredRoom(0);
     QOpenGLWidget::leaveEvent(event);
 }
@@ -8544,36 +8557,99 @@ QList<ModernGLWidget::PortalCard> ModernGLWidget::portalCards()
         } else {
             away /= length;
         }
+        const auto placed = [&](const qreal width, const qreal height) {
+            const qreal reach = scmPortalGapPixels + std::abs(away.x()) * width / 2.0 + std::abs(away.y()) * height / 2.0;
+            const QPointF center = *tip + away * reach;
+            return QRectF(center - QPointF(width / 2.0, height / 2.0), QSizeF(width, height));
+        };
         const QString name = metrics.elidedText(areaName(portal.toAreaId), Qt::ElideRight, scmPortalNamePixels);
-        const qreal width = qMax(scmPortalThumbnailPixels, metrics.horizontalAdvance(name)) + 2.0 * scmPortalPadding;
-        const qreal height = scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding;
-        const qreal reach = scmPortalGapPixels + std::abs(away.x()) * width / 2.0 + std::abs(away.y()) * height / 2.0;
-        const QPointF center = *tip + away * reach;
-        const QRectF rect(center - QPointF(width / 2.0, height / 2.0), QSizeF(width, height));
-        if (!viewRect.intersects(rect)) {
+        const qreal nameWidth = metrics.horizontalAdvance(name) + 2.0 * scmPortalPadding;
+        const QRectF nameRect = placed(nameWidth, metrics.height() + 2.0 * scmPortalPadding);
+        if (!viewRect.intersects(nameRect)) {
             continue;
         }
-        cards.append({rect, *tip, i, name});
-        rects.append(rect);
+        PortalCard card;
+        card.rect = nameRect;
+        card.nameRect = nameRect;
+        // Grown from the name away from the exit, flipped only when that keeps it in view, over the exit only if nothing else does
+        const QSizeF openSize(qMax(scmPortalThumbnailPixels + 2.0 * scmPortalPadding, nameWidth), scmPortalThumbnailPixels + metrics.height() + 3.0 * scmPortalPadding);
+        const auto grown = [&nameRect, &openSize](const bool rightward, const bool downward) {
+            QRectF grownRect(QPointF(), openSize);
+            if (rightward) {
+                grownRect.moveLeft(nameRect.left());
+            } else {
+                grownRect.moveRight(nameRect.right());
+            }
+            if (downward) {
+                grownRect.moveTop(nameRect.top());
+            } else {
+                grownRect.moveBottom(nameRect.bottom());
+            }
+            return grownRect;
+        };
+        const bool rightward = tip->x() <= nameRect.center().x();
+        const bool downward = tip->y() <= nameRect.center().y();
+        card.openRect = grown(rightward, downward);
+        for (const bool overTheExit : {false, true}) {
+            if (viewRect.contains(card.openRect)) {
+                break;
+            }
+            for (const auto& [right, down] : {std::pair{rightward, !downward}, std::pair{!rightward, downward}, std::pair{!rightward, !downward}}) {
+                if (const QRectF other = grown(right, down); viewRect.contains(other) && (overTheExit || !other.contains(*tip))) {
+                    card.openRect = other;
+                    break;
+                }
+            }
+        }
+        card.anchor = *tip;
+        card.portal = i;
+        card.name = name;
+        cards.append(card);
+        rects.append(nameRect);
     }
     QList<PortalCard> kept;
     for (const qsizetype index : GeometryManager::declutteredRects(rects, 0.0)) {
         kept.append(cards.at(index));
+    }
+    if (!mPointerInView) {
+        return kept;
+    }
+    // Kept open while the pointer moves from its name onto its rooms, until the view moves it
+    auto open = std::find_if(kept.begin(), kept.end(), [this](const PortalCard& card) {
+        return card.openRect == mOpenPortalRect && card.openRect.contains(mPointerPosition);
+    });
+    if (open == kept.end()) {
+        open = std::find_if(kept.begin(), kept.end(), [this](const PortalCard& card) {
+            return card.nameRect.contains(mPointerPosition);
+        });
+    }
+    if (open != kept.end()) {
+        open->open = true;
+        open->rect = open->openRect;
     }
     return kept;
 }
 
 void ModernGLWidget::paintPortals(QPainter& painter)
 {
-    const QList<PortalCard> cards = portalCards();
+    QList<PortalCard> cards = portalCards();
+    // Mouse moves keep open what was last drawn open, which may have opened by its name since the view moved
+    mOpenPortalRect = QRectF();
+    for (const PortalCard& card : std::as_const(cards)) {
+        if (card.open) {
+            mOpenPortalRect = card.rect;
+        }
+    }
     if (cards.isEmpty()) {
         return;
     }
+    // The open one over the names it may cover
+    std::stable_partition(cards.begin(), cards.end(), [](const PortalCard& card) {
+        return !card.open;
+    });
     const QColor background = mpHost->mBgColor_2;
     const QColor contrast = ExitAppearance::contrastColor(background);
     QColor fill = background;
-    fill.setAlpha(230);
-    const QFontMetricsF metrics(font());
     const qreal cell = scmPortalThumbnailPixels / (2 * MapStitch::scmPreviewSteps + 1);
     painter.save();
     painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
@@ -8581,31 +8657,42 @@ void ModernGLWidget::paintPortals(QPainter& painter)
         const QPointF edge(std::clamp(card.anchor.x(), card.rect.left(), card.rect.right()), std::clamp(card.anchor.y(), card.rect.top(), card.rect.bottom()));
         painter.setPen(QPen(contrast, 1.0));
         painter.drawLine(card.anchor, edge);
+        // Closed, the rooms under the name still show through
+        fill.setAlpha(card.open ? 230 : 160);
         painter.setBrush(fill);
         painter.drawRoundedRect(card.rect, 4.0, 4.0);
-        // North up, whichever way the view faces, as the area's name reads across it
-        const QRectF thumbnail(card.rect.center().x() - scmPortalThumbnailPixels / 2.0, card.rect.top() + scmPortalPadding, scmPortalThumbnailPixels, scmPortalThumbnailPixels);
-        for (const MapStitch::PreviewRoom& room : mStitch.portals().at(card.portal).preview) {
-            const QPointF center = thumbnail.center() + QPointF(room.at.x() * cell, -room.at.y() * cell);
-            const QRectF square(center - QPointF(cell * 0.4, cell * 0.4), QSizeF(cell * 0.8, cell * 0.8));
-            painter.setPen(room.target ? QPen(contrast, 1.5) : QPen(Qt::NoPen));
-            painter.setBrush(room.color);
-            painter.drawRect(square);
+        if (card.open) {
+            // North up, whichever way the view faces, as the area's name reads across it
+            const qreal top = card.nameRect.top() > card.rect.top() ? card.rect.top() + scmPortalPadding : card.nameRect.bottom();
+            const QRectF thumbnail(card.rect.center().x() - scmPortalThumbnailPixels / 2.0, top, scmPortalThumbnailPixels, scmPortalThumbnailPixels);
+            for (const MapStitch::PreviewRoom& room : mStitch.portals().at(card.portal).preview) {
+                const QPointF center = thumbnail.center() + QPointF(room.at.x() * cell, -room.at.y() * cell);
+                const QRectF square(center - QPointF(cell * 0.4, cell * 0.4), QSizeF(cell * 0.8, cell * 0.8));
+                painter.setPen(room.target ? QPen(contrast, 1.5) : QPen(Qt::NoPen));
+                painter.setBrush(room.color);
+                painter.drawRect(square);
+            }
         }
         painter.setPen(contrast);
-        painter.drawText(QRectF(card.rect.left(), thumbnail.bottom() + scmPortalPadding, card.rect.width(), metrics.height()), Qt::AlignCenter, card.name);
+        painter.drawText(card.nameRect, Qt::AlignCenter, card.name);
     }
     painter.restore();
 }
 
 qsizetype ModernGLWidget::portalAt(const QPoint& position)
 {
-    for (const PortalCard& card : portalCards()) {
-        if (card.rect.contains(QPointF(position))) {
-            return card.portal;
-        }
+    const QList<PortalCard> cards = portalCards();
+    const QPointF point(position);
+    // The open one first, as it is drawn over the others
+    auto found = std::find_if(cards.cbegin(), cards.cend(), [&point](const PortalCard& card) {
+        return card.open && card.rect.contains(point);
+    });
+    if (found == cards.cend()) {
+        found = std::find_if(cards.cbegin(), cards.cend(), [&point](const PortalCard& card) {
+            return card.rect.contains(point);
+        });
     }
-    return -1;
+    return found != cards.cend() ? found->portal : -1;
 }
 
 QString ModernGLWidget::portalToolTip(const qsizetype portal) const

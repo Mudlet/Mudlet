@@ -465,6 +465,8 @@ private:
     QPoint mPointerPosition;
     bool mPointerInView = false;
     Qt::MouseButtons mPointerButtons;
+    // Where the exit preview opened by pointing at its name was drawn; it stays open there while pointed at
+    QRectF mOpenPortalRect;
     // A see-through level's exit lines and arrowheads, drawn with its rooms
     struct LevelExits
     {
@@ -609,10 +611,14 @@ private:
     std::optional<StitchInputs> mStitchInputs;
     MapStitch mStitch;
     RetainedMapScene mStitchScene;
-    // A neighboring area's name and a few of its rooms, shown where an exit leads to it but its rooms are not drawn
+    // A neighboring area's name, and a few of its rooms while pointed at, shown where an exit leads to it but its rooms are not drawn
     struct PortalCard
     {
+        // Where it is drawn and can be clicked: the name alone, or with the rooms too while it is open
         QRectF rect;
+        QRectF nameRect;
+        QRectF openRect;
+        bool open = false;
         // The tip of the exit's stub, in the view
         QPointF anchor;
         qsizetype portal = 0;
@@ -752,7 +758,7 @@ private:
     // The room drawn past this area's edge with this id, if the stitch is of the area shown
     const MapStitch::Room* stitchedRoom(int roomId) const;
     void queueStitchedAreas();
-    // The portals this frame shows, none overlapping another
+    // The portals this frame shows, none of their names overlapping another; only the one pointed at shows its rooms
     QList<PortalCard> portalCards();
     void paintPortals(QPainter& painter);
     // The portal under this point of the view, as an index into the stitch's portals, or -1
