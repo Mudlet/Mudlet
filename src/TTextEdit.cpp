@@ -131,6 +131,18 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
+    mpDragScrollTimer = new QTimer(this);
+    mpDragScrollTimer->setInterval(50ms);
+    connect(mpDragScrollTimer, &QTimer::timeout, this, [this]() {
+        // A popup or another window can take the release, so the pane never sees it
+        if (!mMouseTracking || !isVisible() || !(QGuiApplication::mouseButtons() & Qt::LeftButton)) {
+            stopDragScroll();
+            return;
+        }
+        QMouseEvent move(QEvent::MouseMove, mDragScrollPos, mapToGlobal(mDragScrollPos), Qt::NoButton, Qt::LeftButton, QGuiApplication::keyboardModifiers());
+        mouseMoveEvent(&move);
+    });
+
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
@@ -2006,6 +2018,16 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
+    // The lower pane never scrolls: a repeat there would only scroll the upper pane, and at the bottom edge close the split mid-drag
+    if (!mIsLowerPane && (eventPos.y() < 10 || eventPos.y() >= height() - 10)) {
+        mDragScrollPos = event->position();
+        if (!mpDragScrollTimer->isActive()) {
+            mpDragScrollTimer->start();
+        }
+    } else {
+        mpDragScrollTimer->stop();
+    }
+
     if (eventPos.y() < 10) {
         mpConsole->scrollUp(3);
     }
@@ -2332,8 +2354,19 @@ void TTextEdit::slot_popupMenu()
     mPopupLinkIndex = 0;
 }
 
+void TTextEdit::stopDragScroll()
+{
+    mpDragScrollTimer->stop();
+    mMouseTracking = false;
+}
+
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
+    // A drag in either pane whose release went elsewhere would take this press for its button still held
+    if (event->button() == Qt::LeftButton) {
+        mpConsole->mUpperPane->stopDragScroll();
+        mpConsole->mLowerPane->stopDragScroll();
+    }
     //new event to get mouse position on the parent window
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
@@ -2351,9 +2384,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         int x = 0;
         y = std::max(y, 0);
 
-        if (event->modifiers() & Qt::ControlModifier) {
-            mCtrlSelecting = true;
-        }
+        // Set either way: a release lost elsewhere leaves the last drag's value behind
+        mCtrlSelecting = event->modifiers().testFlag(Qt::ControlModifier);
 
         bool isOutOfbounds = false;
         if (!mCtrlSelecting && mpConsole->showTimeStamps()) {
@@ -2990,6 +3022,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     auto eventGlobalPos = event->globalPosition().toPoint();
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
+        mpDragScrollTimer->stop();
         mCtrlSelecting = false;
 
         // Clear active state on mouse release
