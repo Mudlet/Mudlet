@@ -2118,6 +2118,34 @@ bool SettingsSnapshot::dirty(const QObject* pControl) const
     return *it != controlValue(pControl);
 }
 
+bool SettingsSnapshot::edited(const QObject* pControl) const
+{
+    return beingTypedInto(pControl) || dirty(pControl);
+}
+
+void SettingsSnapshot::takeWithParts(const QWidget* pControl)
+{
+    take(pControl);
+    for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+        if (carriesValue(pPart)) {
+            take(pPart);
+        }
+    }
+}
+
+bool SettingsSnapshot::editedWithParts(const QWidget* pControl) const
+{
+    if (edited(pControl)) {
+        return true;
+    }
+    for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+        if (carriesValue(pPart) && edited(pPart)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // For a setting spread over several controls (borders, Discord privacy flags), any one changing triggers the
 // write, still composed per control: a clean control contributes the Host's current value, not what it
 // shows, which a script may have changed since. Members that are separate settings take their own guard.
@@ -2151,8 +2179,7 @@ bool SettingsSnapshot::pendingEdits(const QTimer* pApplyTimer, const QLineEdit* 
         if (pWidget == pSearchField || !carriesValue(pWidget)) {
             continue;
         }
-        // dirty() is false for a field being typed into, exactly the edit that must not be overwritten here
-        if (beingTypedInto(pWidget) || dirty(pWidget)) {
+        if (edited(pWidget)) {
             return true;
         }
     }

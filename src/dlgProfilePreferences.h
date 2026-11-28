@@ -221,6 +221,7 @@ private slots:
     void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
+    void slot_editorFontFamilyChanged();
     void slot_dictionaryPicked(const int index);
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
@@ -295,7 +296,8 @@ private:
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
     void showDisplayFont(const QFont&);
-    void showEditorFont(const QFont&);
+    void rememberEditorFontFamilyShown();
+    void showEditorFont(const QFont&, bool showFamily = true, bool showSize = true);
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
@@ -439,9 +441,10 @@ private:
     void maybeDownloadEditorThemes();
 
     QPointer<Host> mpHost;
-    // The family the display font list was last set to while the font database had it, so that
-    // the list moving off it as it leaves the database is not taken for the user's choice
+    // The family each font list was last set to while the font database had it, so that the
+    // list moving off it as it leaves the database is not taken for the user's choice
     QString mDisplayFontFamilyShown;
+    QString mEditorFontFamilyShown;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;

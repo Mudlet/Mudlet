@@ -2269,6 +2269,11 @@ void Host::reportDisplayFontChangeToEditor()
 // Shaped as the "main window font" one above
 void Host::raiseEditorFontChange()
 {
+    if (mEditorFontReportHeld) {
+        mEditorFontReportPending = true;
+        return;
+    }
+
     // As in raiseSettingChangedEvent(): a value read from the profile's own file is not a change
     if (!TAppFrontend::hasView() || hasConsoleView()) {
         const QFont font = getEditorFont();
@@ -2288,6 +2293,31 @@ void Host::raiseEditorFontChange()
     const QFont reported = getEditorFont();
     mEditorFontReported = TFontAttributes(reported);
     emit signal_editorFontChanged(reported);
+}
+
+Host::EditorFontReportHold::EditorFontReportHold(Host* pHost)
+{
+    if (pHost && !pHost->mEditorFontReportHeld) {
+        mpHost = pHost;
+        mpHost->mEditorFontReportHeld = true;
+    }
+}
+
+Host::EditorFontReportHold::~EditorFontReportHold()
+{
+    release();
+}
+
+void Host::EditorFontReportHold::release()
+{
+    if (!mpHost) {
+        return;
+    }
+    Host* pHost = std::exchange(mpHost, nullptr);
+    pHost->mEditorFontReportHeld = false;
+    if (std::exchange(pHost->mEditorFontReportPending, false)) {
+        pHost->raiseEditorFontChange();
+    }
 }
 
 // a little message to make the player feel special for helping us find bugs
@@ -8684,17 +8714,30 @@ void Host::setEditorFontFromString(const QString& fontData)
     setEditorFont(font);
 }
 
-void Host::setEditorFontFollowsDisplay(const bool follows)
+void Host::setEditorFontFollowsDisplay(const bool follows, const EditorFontStart start)
 {
     if (mEditorFontFollowsDisplay == follows) {
         return;
     }
-    if (!follows && !mEditorFont.has_value()) {
-        setEditorFont(getDisplayFont());
+    if (!follows && (start == EditorFontStart::FontOnShow || !mEditorFont.has_value())) {
+        setEditorFont(getDisplayFontForSaving());
     }
     mEditorFontFollowsDisplay = follows;
     raiseSettingChangedEvent(qsl("editorFontFollowsDisplay"), follows);
     raiseEditorFontChange();
+}
+
+void Host::setFontsAntiAlias(const bool antiAlias)
+{
+    if (fontsAntiAlias() == antiAlias) {
+        return;
+    }
+    mNoAntiAlias = !antiAlias;
+    // The display font carries the strategy to a following editor. Not refreshEditorFont(): straight
+    // after a load that only records the font, so the first toggle would never reach the editor
+    if (!mEditorFontFollowsDisplay && mEditorFont.has_value()) {
+        raiseEditorFontChange();
+    }
 }
 
 QFont Host::getAndClearTempDisplayFont()

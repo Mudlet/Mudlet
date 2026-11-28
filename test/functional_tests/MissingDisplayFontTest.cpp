@@ -65,6 +65,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "SettingsTestHelper.h"
 #include "TAlias.h"
 #include "TConsole.h"
 #include "TLuaInterpreter.h"
@@ -1140,7 +1141,8 @@ private slots:
     }
 
     // The editor's own family is resolved afresh on every read, so an editor and a preferences dialog
-    // already showing it have to be told when a package takes it away or brings it back
+    // already showing it have to be told when a package takes it away or brings it back. The dialog's
+    // list moves off the family by itself as it goes, which is no choice for its apply to store
     void test_anOpenEditorFollowsItsOwnFontAwayAndBackWithThePackage()
     {
         const QString packageName = qsl("font-editor");
@@ -1160,15 +1162,19 @@ private slots:
         pHost->setEditorFontFollowsDisplay(false);
         QString wrong = editorReadersNotIn(pEditor, mPackageSuppliedFamily, 12);
         QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), pHost);
+        QCOMPARE(pPreferences->fontComboBox_editorFont->currentFont().family(), mPackageSuppliedFamily);
+        QSignalSpy applySpy(pPreferences.get(), &dlgProfilePreferences::signal_preferencesSaved);
 
         QVERIFY2(uninstallFontPackage(pHost, packageName), "the package did not uninstall");
         QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's font is still registered, so nothing has gone missing to notice");
         wrong = editorReadersNotIn(pEditor, Host::scmDefaultFontFamily, 12);
         QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
         QCOMPARE(pHost->editorFontChoice()->family(), mPackageSuppliedFamily);
-
-        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), pHost);
         QCOMPARE(pPreferences->fontComboBox_editorFont->currentFont().family(), Host::scmDefaultFontFamily);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the list moving off the uninstalled family never scheduled an apply");
+        QVERIFY2(pHost->editorFontChoice()->family() == mPackageSuppliedFamily,
+                 qPrintable(qsl("the apply stored %1, which the list moved to by itself, as the editor's own font").arg(pHost->editorFontChoice()->family())));
 
         pHost->waitForProfileSave();
         QVERIFY2(installFontPackage(pHost, packagePath, packageName), "the package carrying the font did not install again");
