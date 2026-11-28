@@ -47,6 +47,7 @@
 #include <QMetaMethod>
 #include <QScopeGuard>
 #include <QTimer>
+#include <QUrl>
 
 #include <algorithm>
 #include <functional>
@@ -396,6 +397,11 @@ bool THeadlessSession::setDictionaryFolder(const QString& folder)
     return MudletApp::setAppDictionaryFolder(folder);
 }
 
+void THeadlessSession::setMaxConsoleBufferSize(const int lines)
+{
+    TBuffer::setPlatformMaxBufferSize(lines);
+}
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {
@@ -490,12 +496,17 @@ void THeadlessSession::beginStart(const Options& asked, std::function<void(Start
     // apply them; a host of only spaces is then none, and a name with spaces round it finds the profile it names
     Options options = asked;
     options.password.clear();
+    options.proxyPassword.clear();
     // A copy of its own, taken before the event loop runs, where the caller may change or clear its own; and
     // cleared once the start is over, so that nothing kept shares the buffer the caller clears
-    const std::shared_ptr<QString> password(new QString(asked.password.constData(), asked.password.size()), [](QString* copy) {
-        SecureStringUtils::secureStringClear(*copy);
-        delete copy;
-    });
+    const auto ownCopy = [](const QString& secret) {
+        return std::shared_ptr<QString>(new QString(secret.constData(), secret.size()), [](QString* copy) {
+            SecureStringUtils::secureStringClear(*copy);
+            delete copy;
+        });
+    };
+    const std::shared_ptr<QString> password = ownCopy(asked.password);
+    const std::shared_ptr<QString> proxyPassword = ownCopy(asked.proxyPassword);
     std::optional<bool> tls;
     bool stalePasswords = false;
     if (const auto refusal = prepareStart(options, tls, stalePasswords)) {
@@ -503,13 +514,13 @@ void THeadlessSession::beginStart(const Options& asked, std::function<void(Start
         return;
     }
     if (!stalePasswords) {
-        done(finishStart(options, tls, *password));
+        done(finishStart(options, tls, *password, *proxyPassword));
         return;
     }
     // Calls meanwhile are refused as during the load, until the queued load begins: a shutdown() would take the
     // pool this is about to load into
     mRemovingStalePasswords = true;
-    removeStalePasswords(this, new CredentialManager(this), mProfileName, {qsl("character"), qsl("proxy")}, [this, options, tls, password, done](const QString& failure) {
+    removeStalePasswords(this, new CredentialManager(this), mProfileName, {qsl("character"), qsl("proxy")}, [this, options, tls, password, proxyPassword, done](const QString& failure) {
         if (!failure.isEmpty()) {
             mRemovingStalePasswords = false;
             mpPool.reset();
@@ -519,9 +530,9 @@ void THeadlessSession::beginStart(const Options& asked, std::function<void(Start
             return;
         }
         // From the event loop, not from inside the store's callback, as the load may delete the session and the store with it
-        QTimer::singleShot(0ms, this, [this, options, tls, password, done]() {
+        QTimer::singleShot(0ms, this, [this, options, tls, password, proxyPassword, done]() {
             mRemovingStalePasswords = false;
-            done(finishStart(options, tls, *password));
+            done(finishStart(options, tls, *password, *proxyPassword));
         });
     });
 }
@@ -614,7 +625,7 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
     return std::nullopt;
 }
 
-THeadlessSession::StartResult THeadlessSession::finishStart(const Options& options, const std::optional<bool> tls, const QString& password)
+THeadlessSession::StartResult THeadlessSession::finishStart(const Options& options, const std::optional<bool> tls, const QString& password, const QString& proxyPassword)
 {
     // The load runs the event loop, where the frontend may delete the session
     const QPointer<THeadlessSession> self(this);
@@ -635,7 +646,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     Host* pHost = mpPool->openProfile(
             profileName,
             options.connect,
-            [this, self, run, supplyTransport = options.supplyTransport, &password](Host* pNewHost) {
+            [this, self, run, supplyTransport = options.supplyTransport, &password, &proxyPassword](Host* pNewHost) {
                 if (!self) {
                     return;
                 }
@@ -645,6 +656,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 }
                 mSecureConnectionOffered = false;
                 mMapOperationCancelable = false;
+                pNewHost->giveProxyPass(proxyPassword);
                 pNewHost->givePass(password);
                 mShownLinesOfPasses.clear();
                 pNewHost->mainConsoleModel().mTriggerTextShownElsewhere = [self = QPointer<THeadlessSession>(this)]() {
@@ -1136,13 +1148,21 @@ bool THeadlessSession::storeConnectionDetails(const Options& options, const std:
         items.append({qsl("login"), options.login});
     }
     for (const auto& [item, value] : items) {
-        if (const auto [stored, reason] = MudletApp::writeProfileData(mProfileName, item, value); !stored) {
-            //: %1 is the internal name of a profile setting, such as url or port, %2 a profile name, %3 the reason it could not be written
-            mErrorString = tr("The %1 of the profile \"%2\" could not be stored: %3").arg(item, mProfileName, reason);
+        if (!storeConnectionDetail(item, value)) {
             return false;
         }
     }
     return true;
+}
+
+bool THeadlessSession::storeConnectionDetail(const QString& item, const QString& value)
+{
+    const auto [stored, reason] = MudletApp::writeProfileData(mProfileName, item, value);
+    if (!stored) {
+        //: %1 is the internal name of a profile setting, such as url or port, %2 a profile name, %3 the reason it could not be written
+        mErrorString = tr("The %1 of the profile \"%2\" could not be stored: %3").arg(item, mProfileName, reason);
+    }
+    return stored;
 }
 
 Host* THeadlessSession::host() const
@@ -1280,6 +1300,107 @@ bool THeadlessSession::inputHidden(const bool sending)
         mErrorString = tr("Hidden input is not open: the game is not hiding what is typed.");
     }
     return false;
+}
+
+bool THeadlessSession::setLogin(const QString& login)
+{
+    const QString name = login.trimmed();
+    if (!usable() || !storeConnectionDetail(qsl("login"), name)) {
+        return false;
+    }
+    mpHost->changeLogin(name);
+    return true;
+}
+
+bool THeadlessSession::setPassword(const QString& password)
+{
+    if (!usable()) {
+        return false;
+    }
+    mpHost->changeGivenPass(password);
+    return true;
+}
+
+bool THeadlessSession::setAddress(const QString& host, const int port, const bool tls)
+{
+    if (!usable()) {
+        return false;
+    }
+    Options details;
+    details.host = host.trimmed();
+    details.port = port;
+    details.tls = tls;
+    if (const QString problem = MudletApp::connectionDetailsProblem(hostToConnectTo(mProfileName, details.host), port, tls); !problem.isEmpty()) {
+        mErrorString = problem;
+        return false;
+    }
+    if (!storeConnectionDetails(details, tls)) {
+        return false;
+    }
+    mpHost->changeAddress(details.host.isEmpty() ? mpHost->getUrl() : details.host, port > 0 ? port : mpHost->getPort(), tls);
+    return true;
+}
+
+bool THeadlessSession::setAutoReconnect(const bool reconnect)
+{
+    if (!usable() || !storeConnectionDetail(qsl("autoreconnect"), QString::number(reconnect ? Qt::Checked : Qt::Unchecked))) {
+        return false;
+    }
+    mpHost->setAutoReconnect(reconnect);
+    return true;
+}
+
+bool THeadlessSession::proxy(Proxy& proxy)
+{
+    if (!usable()) {
+        return false;
+    }
+    proxy.use = mpHost->mUseProxy;
+    proxy.address = mpHost->mProxyAddress;
+    proxy.port = mpHost->mProxyPort;
+    proxy.username = mpHost->mProxyUsername;
+    return true;
+}
+
+bool THeadlessSession::setProxy(const Proxy& proxy)
+{
+    if (!usable()) {
+        return false;
+    }
+    const QString address = proxy.address.trimmed();
+    if (proxy.port < 0 || proxy.port > 65535) {
+        //: Error from a frontend with no window that was given a proxy's port; %1 is that port number
+        mErrorString = tr("The port %1 is not one a proxy can be reached on; it must be from 0 to 65535.").arg(proxy.port);
+        return false;
+    }
+    if (!address.isEmpty()) {
+        QUrl check;
+        check.setHost(address);
+        if (!check.isValid()) {
+            //: Error from a frontend with no window; %1 is the proxy address given for a profile, %2 why it is not one
+            mErrorString = tr("\"%1\" is not the address of a proxy: %2").arg(address, check.errorString());
+            return false;
+        }
+    }
+    if (proxy.use && (address.isEmpty() || proxy.port == 0)) {
+        //: Error from a frontend with no window that was told to use a proxy for a profile without the proxy's address or port
+        mErrorString = tr("A proxy needs its address and its port to be used.");
+        return false;
+    }
+    mpHost->mUseProxy = proxy.use;
+    mpHost->mProxyAddress = address;
+    mpHost->mProxyPort = static_cast<quint16>(proxy.port);
+    mpHost->mProxyUsername = proxy.username;
+    return true;
+}
+
+bool THeadlessSession::setProxyPassword(const QString& password)
+{
+    if (!usable()) {
+        return false;
+    }
+    mpHost->changeGivenProxyPass(password);
+    return true;
 }
 
 bool THeadlessSession::runLua(const QString& code)

@@ -265,6 +265,8 @@ Host* HostManager::openProfile(const QString& name, const bool connect, const st
         beforeLoad(pHost);
     }
     const bool firstLoad = pHost->loadProfileSave(QString());
+    // As the GUI's console takes it (mudlet::addConsoleForNewHost()), before any script reads it
+    pHost->applyConsoleBufferSize();
     // Chosen as the GUI chooses them, from the address the load leaves, before a frontend's own goes over it
     const QStringList packages = firstLoad ? defaultPackages(pHost->getUrl().toLower(), name, pHost->mAcceptServerGUI && pHost->mEnableGMCP) : QStringList();
     if (afterLoad) {

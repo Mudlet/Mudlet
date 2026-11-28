@@ -81,7 +81,7 @@ class TMap : public QObject
 
 public:
     // Host settings the 2D map keeps a copy of to draw with, and those a 3D view sets itself up from
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style, BackgroundColor };
+    enum class MapperSetting { RoomSize, ExitSize, BorderSize, RoundRooms, ShowRoomIds, ShowGrid, Style, BackgroundColor };
 
 signals:
     void signal_saveErrorChanged(bool hasError);

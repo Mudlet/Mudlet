@@ -205,6 +205,40 @@ With no Java VM registered with Qt - `mudlet-headless` run as a bare executable,
 load Qt Core through `System.loadLibrary` - the KeyStore cannot be reached, so the folder keeps them all
 under `credentials/`, and the log says so.
 
+`setLogin()` and `setPassword()` change the automatic login's name and password in the profile that is
+running: the next connection logs in with them, with no close and load of the profile, and so does the
+one that is open if its login is still to come. The name is trimmed and
+stored with the profile, as `options.login` is, and an empty one clears it. The password is for this run
+only, as `options.password` is, and nothing stores it; an empty one withdraws the one given, and the
+password stored for the profile, if any, is read again. Both are false, with `errorString()` saying why,
+where `submit()` is refused, and `setLogin()` also when the name could not be stored.
+
+`setAddress()` and `setAutoReconnect()` change the running profile's server and automatic reconnect.
+`setAddress()` takes the server, its port and whether it is
+reached securely, and stores them as `options.host`, `options.port` and `options.tls` are stored, so an empty
+host or a port of 0 leaves the profile's. Lua's `reconnect()`, the retry after a failed connection and the
+automatic reconnect go to the new address from then on, where they would have gone to the one last connected
+to, and every later connection takes the TLS choice, `connectToServer()`'s included. A connection that is open
+stays as it is, and one still looking its server up takes the TLS choice as it is when the lookup ends, as it
+does a change made in the profile preferences. `setAutoReconnect()` is the dialog's "Reconnect automatically",
+stored with the profile: it counts from the next time the connection is lost or fails, and turning it off
+also calls off a retry that is waiting. Both are false where `submit()` is refused
+and when a detail could not be stored, and `setAddress()` also for details `start()` would refuse.
+
+`proxy()` and `setProxy()` read and change the proxy of the profile preferences, which the connection dialog
+does not hold: whether the game is reached through a SOCKS5 proxy, and the proxy's address, port and user
+name (`THeadlessSession::Proxy`). A change is kept with the profile and written with its next save, as the
+preferences' is, and used from the next connection and the next download; a connection that is open stays as
+it is. The address is trimmed. `setProxy()` refuses a port outside 0 to 65535, an address that is not a
+host's, and a proxy to use that has no address or no port, which the preferences take and then connect
+without a proxy, saying nothing. The proxy's password is `options.proxyPassword` at the start and
+`setProxyPassword()` in the running profile: for this run only, as `options.password` is, so the profile's
+save neither stores it nor writes it to the profile's file; an empty one withdraws the one given, and the one
+stored for the profile, if any, is read again. A proxy that refuses the connection, or the user name and
+password, fails the connection as in the GUI, with its message in the profile's console. All three are false,
+with `errorString()` saying why, where `submit()` is refused. No Lua function reads or changes the proxy, as
+none does in the GUI.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
@@ -1544,6 +1578,21 @@ Hunspell reads the files with plain file calls, so the folder must be a real one
 app copies its dictionaries into from its package; a `:/` or `assets:/` path is refused, and
 `setDictionaryFolder()` returns `false`.
 
+## Embedding it: the most lines a console keeps
+
+The profile preferences' "Use maximum lines possible" gives the main console as many lines as
+`TBuffer::getMaxBufferSize()` estimates the machine's memory can hold, and a bigger buffer size, the profile's or one `setConsoleBufferSize()` asks for, is clipped to that. A phone
+stops a process long before its memory is used up, so an app there names its own most before it
+starts a session:
+
+```cpp
+THeadlessSession::setMaxConsoleBufferSize(40000);
+```
+
+Every buffer size set afterwards, in any session, takes it in place of the estimate; below 100 it is
+100, and 0 or less goes back to the estimate. A profile keeps the size it saved, as on a desktop with less
+memory than the one it was saved on.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
@@ -1627,6 +1676,30 @@ change from the event loop, whoever made it, a script's `setConfig()` in any of 
 and also a call that left it as it was, so an app's mute buttons can follow it as the GUI's do. It stops
 once the session's own profile has closed, as the session's other signals do, even while profiles its
 scripts opened live on. They are refused where `submit()` is.
+
+## Embedding it: the profile's settings
+
+An app with its own settings screen reads and changes a profile's settings with `settings()` and
+`setSettings()`, by the keys Lua's `getConfig()` and `setConfig()` take, rather than building Lua for
+`runLua()` that cannot answer with what it read.
+The game's text encoding is the key `serverEncoding`, by the names `getServerEncodingsList()` gives.
+The input line's are `commandSeparator`, `highlightHistory`, `disablePasswordMasking` and `runAllKeyMatches`, as the
+preferences' Input line tab has them.
+The console's colours are text in `#rrggbb` form: the sixteen ANSI ones by the names `color_table` gives them
+(`ansiBlack` to `ansiLightWhite`), then `foregroundColor`, `backgroundColor`, `commandForegroundColor` and
+`commandBackgroundColor`, with `serverMayRedefineColors` beside them; a change keeps the colour's alpha and
+reaches text decoded after it.
+`enableOSC8Hyperlinks` and `alertOnNewData` turn OSC 8 links and the new text alert on and off.
+
+`settings()` fills a `QVariantMap` with the value of each key it is given, as `getConfig()` gives it
+with `true` for its second argument: a `bool`, a `double` or a `QString`, an option of several by its
+name, as `showSentText` gives `"never"`, `"always"` or `"script"`. A key `getConfig()` does not know, or
+that gives a table or nothing, is left out. `setSettings()` changes each key as `setConfig()` does,
+events included, and fills a `QMap` with each one it did not take and why: the message `setConfig()`
+gave, its Lua error for a value of the wrong type, or that the value was not a `bool`, a number or a
+string. What it took is kept as a script's change to that key is: most with the profile at its next save,
+and a few, such as the app-wide `showTabConnectionIndicators`, elsewhere. Both call Mudlet's own functions, so a script that has put its own `getConfig` or `setConfig` in
+the globals changes nothing. They are false, reading or changing nothing, where `runLua()` is refused.
 
 ## Embedding it: commands and buttons that scripts add
 

@@ -2329,6 +2329,204 @@ describe("Tests Other.lua functions", function()
       restore("editorAutoComplete")
     end)
 
+    it("round-trips the certificate, game permission and Lua error options", function()
+      for _, key in ipairs({ "sslIgnoreExpired", "sslIgnoreSelfSigned", "sslIgnoreAll", "acceptServerGUI", "acceptServerMedia", "echoLuaErrors" }) do
+        snapshot(key)
+        local target = not getConfig(key)
+        assert.is_true(setConfig(key, target))
+        assert.equals(target, getConfig(key))
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the server encoding as getServerEncoding and setServerEncoding do", function()
+      snapshot("serverEncoding")
+      assert.equals(getServerEncoding(), getConfig("serverEncoding"))
+      assert.is_true(setConfig("serverEncoding", "ISO 8859-1"))
+      assert.equals("ISO 8859-1", getConfig("serverEncoding"))
+      assert.equals("ISO 8859-1", getServerEncoding())
+      assert.is_true(setConfig("serverEncoding", "ASCII"))
+      assert.equals("ASCII", getConfig("serverEncoding"))
+      local ok, message = setConfig("serverEncoding", "No Such Encoding")
+      assert.is_nil(ok)
+      assert.truthy(message:find("does not exist", 1, true))
+      assert.equals("ASCII", getConfig("serverEncoding"))
+      restore("serverEncoding")
+    end)
+
+    it("reads and changes the input line's command separator, history highlight, password masking and key bindings run", function()
+      for _, key in ipairs({ "commandSeparator", "highlightHistory", "disablePasswordMasking", "runAllKeyMatches" }) do
+        snapshot(key)
+      end
+      assert.equals(getCommandSeparator(), getConfig("commandSeparator"))
+      assert.is_true(setConfig("commandSeparator", "|"))
+      assert.equals("|", getConfig("commandSeparator"))
+      assert.equals("|", getCommandSeparator())
+      assert.is_true(setConfig("commandSeparator", ""))
+      assert.equals("", getCommandSeparator())
+      for _, key in ipairs({ "highlightHistory", "disablePasswordMasking", "runAllKeyMatches" }) do
+        local was = getConfig(key)
+        assert.equals("boolean", type(was))
+        assert.is_true(setConfig(key, not was))
+        assert.equals(not was, getConfig(key))
+      end
+      for _, key in ipairs({ "commandSeparator", "highlightHistory", "disablePasswordMasking", "runAllKeyMatches" }) do
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the console colours as #rrggbb, and color_table follows", function()
+      local keys = { "ansiRed", "ansiLightCyan", "foregroundColor", "backgroundColor", "commandForegroundColor", "commandBackgroundColor" }
+      for _, key in ipairs(keys) do
+        snapshot(key)
+        assert.truthy(getConfig(key):match("^#%x%x%x%x%x%x$"))
+      end
+      assert.is_true(setConfig("ansiRed", "#12AB34"))
+      assert.equals("#12ab34", getConfig("ansiRed"))
+      assert.same({ 0x12, 0xab, 0x34 }, color_table.ansiRed)
+      for _, key in ipairs(keys) do
+        assert.is_true(setConfig(key, "#010203"))
+        assert.equals("#010203", getConfig(key))
+      end
+      for _, bad in ipairs({ "red", "#12ab3", "#12ab345", "12ab34" }) do
+        local ok, message = setConfig("ansiRed", bad)
+        assert.is_nil(ok)
+        assert.truthy(message:find("#rrggbb", 1, true))
+      end
+      assert.equals("#010203", getConfig("ansiRed"))
+      for _, key in ipairs(keys) do
+        restore(key)
+      end
+    end)
+
+    it("keeps the console background's alpha when setConfig() changes its colour", function()
+      local r, g, b, a = getBackgroundColor("main")
+      finally(function()
+        setBackgroundColor("main", r, g, b, a)
+      end)
+      setBackgroundColor("main", 10, 20, 30, 128)
+      assert.is_true(setConfig("backgroundColor", getConfig("backgroundColor")))
+      assert.same({ 10, 20, 30, 128 }, { getBackgroundColor("main") })
+      assert.is_true(setConfig("backgroundColor", "#ff0000"))
+      assert.same({ 255, 0, 0, 128 }, { getBackgroundColor("main") })
+    end)
+
+    it("keeps the game's current text colour when setConfig() is given the console colours it has", function()
+      finally(function()
+        feedTriggers("\27[0m\n")
+      end)
+      local keys = {
+        "ansiBlack", "ansiRed", "ansiGreen", "ansiYellow", "ansiBlue", "ansiMagenta", "ansiCyan", "ansiWhite",
+        "ansiLightBlack", "ansiLightRed", "ansiLightGreen", "ansiLightYellow", "ansiLightBlue", "ansiLightMagenta",
+        "ansiLightCyan", "ansiLightWhite", "foregroundColor", "backgroundColor", "commandForegroundColor",
+        "commandBackgroundColor",
+      }
+      local function coloursOfLine(text)
+        for row = getLastLineNumber("main"), 0, -1 do
+          if getLines("main", row, row + 1)[1] == text then
+            moveCursor("main", 0, row)
+            selectSection("main", 0, 1)
+            local colours = { fg = { getFgColor("main") }, bg = { getBgColor("main") } }
+            deselect("main")
+            moveCursorEnd("main")
+            return colours
+          end
+        end
+      end
+      feedTriggers("\27[31;42mbefore the restore\n")
+      local before = coloursOfLine("before the restore")
+      assert.same(color_table.ansiRed, before.fg)
+      assert.same(color_table.ansiGreen, before.bg)
+      assert.is_true(setConfig(getConfig(keys)))
+      feedTriggers("after the restore\n")
+      assert.same(before, coloursOfLine("after the restore"))
+    end)
+
+    it("keeps the main console's trimming batch when setConfig() is given the buffer size it has", function()
+      local size, useMax = getConfig("consoleBufferSize"), getConfig("useMaxConsoleBufferSize")
+      finally(function()
+        setConfig("consoleBufferSize", size == 100 and 101 or 100)
+        setConfig("consoleBufferSize", size)
+        setConfig("useMaxConsoleBufferSize", useMax)
+      end)
+      assert.is_true(setConsoleBufferSize("main", 200, 10))
+      for i = 1, 250 do
+        echo("main", "line " .. i .. "\n")
+      end
+      assert.is_true(setConfig("consoleBufferSize", getConfig("consoleBufferSize")))
+      assert.is_true(setConfig("useMaxConsoleBufferSize", getConfig("useMaxConsoleBufferSize")))
+      for i = 1, 250 do
+        echo("main", "line " .. i .. "\n")
+      end
+      assert.is_true(getLineCount("main") >= 190, "the console trimmed " .. 500 - getLineCount("main") .. " lines")
+    end)
+
+    it("reads and changes the game's colour redefinition, OSC 8 links and the new text alert", function()
+      for _, key in ipairs({ "serverMayRedefineColors", "enableOSC8Hyperlinks", "alertOnNewData" }) do
+        snapshot(key)
+        local was = getConfig(key)
+        assert.equals("boolean", type(was))
+        assert.is_true(setConfig(key, not was))
+        assert.equals(not was, getConfig(key))
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the map's colours as #rrggbb, keeping each one's alpha", function()
+      local keys = { "mapBackgroundColor", "mapLinkColor", "mapRoomBorderColor", "mapGridColor", "mapAnsiRed", "mapAnsiLightWhite", "mapPlayerRoomOuterColor" }
+      local r0, g0, b0, a0 = getMapBackgroundColor()
+      finally(function()
+        setMapBackgroundColor(r0, g0, b0, a0)
+      end)
+      for _, key in ipairs(keys) do
+        snapshot(key)
+        assert.truthy(getConfig(key):match("^#%x%x%x%x%x%x$"))
+        assert.is_true(setConfig(key, "#12AB34"))
+        assert.equals("#12ab34", getConfig(key))
+      end
+      local r, g, b = getMapBackgroundColor()
+      assert.same({ 0x12, 0xab, 0x34 }, { r, g, b })
+      setMapBackgroundColor(1, 2, 3, 100)
+      assert.is_true(setConfig("mapBackgroundColor", "#12AB34"))
+      assert.same({ 0x12, 0xab, 0x34, 100 }, { getMapBackgroundColor() })
+      for _, bad in ipairs({ "red", "#12ab3", "#12ab345", "12ab34" }) do
+        local ok, message = setConfig("mapLinkColor", bad)
+        assert.is_nil(ok)
+        assert.truthy(message:find("#rrggbb", 1, true))
+      end
+      for _, key in ipairs(keys) do
+        restore(key)
+      end
+    end)
+
+    it("reads and changes the map's border size, area exit arrows and player room marker", function()
+      local keys = { "mapRoomBorderSize", "mapLargeAreaExitArrows", "mapPlayerRoomStyle", "mapPlayerRoomOuterDiameter", "mapPlayerRoomInnerDiameter" }
+      for _, key in ipairs(keys) do
+        snapshot(key)
+      end
+      assert.is_true(setConfig("mapRoomBorderSize", 12.5))
+      assert.equals(12.5, getConfig("mapRoomBorderSize"))
+      assert.is_nil(setConfig("mapRoomBorderSize", 0.5))
+      local arrows = getConfig("mapLargeAreaExitArrows")
+      assert.is_true(setConfig("mapLargeAreaExitArrows", not arrows))
+      assert.equals(not arrows, getConfig("mapLargeAreaExitArrows"))
+      for _, style in ipairs({ "redRing", "blueYellowRing", "customRing", "original" }) do
+        assert.is_true(setConfig("mapPlayerRoomStyle", style))
+        assert.equals(style, getConfig("mapPlayerRoomStyle"))
+      end
+      assert.is_nil(setConfig("mapPlayerRoomStyle", "square"))
+      assert.is_true(setConfig("mapPlayerRoomOuterDiameter", 150))
+      assert.equals(150, getConfig("mapPlayerRoomOuterDiameter"))
+      assert.is_nil(setConfig("mapPlayerRoomOuterDiameter", 201))
+      assert.is_true(setConfig("mapPlayerRoomInnerDiameter", 0))
+      assert.equals(0, getConfig("mapPlayerRoomInnerDiameter"))
+      assert.is_nil(setConfig("mapPlayerRoomInnerDiameter", 97))
+      assert.equals(150, getConfig("mapPlayerRoomOuterDiameter"))
+      for _, key in ipairs(keys) do
+        restore(key)
+      end
+    end)
+
     it("getConfig returns a keyed table when given a list of keys", function()
       local result = getConfig({ "enableGMCP", "editorAutoComplete" })
       assert.is_table(result)

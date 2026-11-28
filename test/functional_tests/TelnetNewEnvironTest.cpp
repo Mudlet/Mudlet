@@ -32,6 +32,7 @@
 // fixed sleep that would pass on a slow runner by accident.
 
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -755,6 +756,48 @@ private slots:
             QVERIFY2(variable.name.startsWith("OSC_HYPERLINKS"), qPrintable(qsl("%1 rode along with the hyperlink update").arg(QString::fromLatin1(variable.name))));
             QCOMPARE(variable.value, QByteArray("0"));
         }
+    }
+
+    void test_aScriptTurningHyperlinksOffTellsTheGameOnce()
+    {
+        enableNewEnviron();
+        requestSend({});
+        QCOMPARE(newEnvironReplies().size(), 1);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('enableOSC8Hyperlinks', false)")));
+        QVERIFY(!mpHost->mEnableOSC8Hyperlinks);
+        QString problem;
+        const EnvironVariable sent = infoVariableNamed("OSC_HYPERLINKS", problem);
+        QVERIFY2(problem.isEmpty(), qPrintable(problem));
+        QCOMPARE(sent.value, QByteArray("0"));
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('enableOSC8Hyperlinks', false)")));
+        QVERIFY2(newEnvironReplies().isEmpty(), "setting the preference to what it already was sent the game an update");
+    }
+
+    void test_restoringTheServerEncodingItAlreadyHasTellsTheGameNothing_data()
+    {
+        QTest::addColumn<QByteArray>("encoding");
+        QTest::newRow("ASCII") << QByteArray("ASCII");
+        QTest::newRow("UTF-8") << QByteArray("UTF-8");
+    }
+
+    void test_restoringTheServerEncodingItAlreadyHasTellsTheGameNothing()
+    {
+        QFETCH(QByteArray, encoding);
+        const QByteArray original = mpHost->mTelnet.getEncoding();
+        // Drained so the update the restore sends cannot land in the next test's capture
+        auto restore = qScopeGuard([this, original] {
+            mpHost->mTelnet.setEncoding(original, false);
+            sentBytes();
+        });
+        enableNewEnviron();
+        QVERIFY(mpHost->mTelnet.setEncoding(encoding, false).first);
+        requestSend({});
+        QVERIFY(!newEnvironReplies().isEmpty());
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('serverEncoding', getConfig('serverEncoding'))")));
+        QVERIFY2(newEnvironReplies().isEmpty(), "restoring the encoding the profile already had sent the game an update");
     }
 
     // A server must see these before it sends the scheme, even in a menu, where an older client types it at the game

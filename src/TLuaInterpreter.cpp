@@ -85,6 +85,7 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QVector>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -10193,6 +10194,136 @@ int TLuaInterpreter::removeFileWatch(lua_State* L)
     return 1;
 }
 
+// The profile's console colours, the sixteen by the names color_table gives them
+static QColor Host::* consoleColorMember(QStringView key)
+{
+    static const std::array<std::pair<QStringView, QColor Host::*>, 20> members{{
+            {u"ansiBlack", &Host::mBlack},
+            {u"ansiRed", &Host::mRed},
+            {u"ansiGreen", &Host::mGreen},
+            {u"ansiYellow", &Host::mYellow},
+            {u"ansiBlue", &Host::mBlue},
+            {u"ansiMagenta", &Host::mMagenta},
+            {u"ansiCyan", &Host::mCyan},
+            {u"ansiWhite", &Host::mWhite},
+            {u"ansiLightBlack", &Host::mLightBlack},
+            {u"ansiLightRed", &Host::mLightRed},
+            {u"ansiLightGreen", &Host::mLightGreen},
+            {u"ansiLightYellow", &Host::mLightYellow},
+            {u"ansiLightBlue", &Host::mLightBlue},
+            {u"ansiLightMagenta", &Host::mLightMagenta},
+            {u"ansiLightCyan", &Host::mLightCyan},
+            {u"ansiLightWhite", &Host::mLightWhite},
+            {u"foregroundColor", &Host::mFgColor},
+            {u"backgroundColor", &Host::mBgColor},
+            {u"commandForegroundColor", &Host::mCommandFgColor},
+            {u"commandBackgroundColor", &Host::mCommandBgColor},
+    }};
+    for (const auto& [name, member] : members) {
+        if (name == key) {
+            return member;
+        }
+    }
+    return nullptr;
+}
+
+// The 2D map's colours, as the preferences' Mapper colors tab keeps them; the sixteen colour the default environments
+static QColor Host::* mapColorMember(QStringView key)
+{
+    static const std::array<std::pair<QStringView, QColor Host::*>, 23> members{{
+            {u"mapBackgroundColor", &Host::mBgColor_2},
+            {u"mapLinkColor", &Host::mFgColor_2},
+            {u"mapRoomBorderColor", &Host::mRoomBorderColor},
+            {u"mapRoomCollisionBorderColor", &Host::mRoomCollisionBorderColor},
+            {u"mapLowerLevelColor", &Host::mLowerLevelColor},
+            {u"mapUpperLevelColor", &Host::mUpperLevelColor},
+            {u"mapGridColor", &Host::mMapGridColor},
+            {u"mapAnsiBlack", &Host::mBlack_2},
+            {u"mapAnsiRed", &Host::mRed_2},
+            {u"mapAnsiGreen", &Host::mGreen_2},
+            {u"mapAnsiYellow", &Host::mYellow_2},
+            {u"mapAnsiBlue", &Host::mBlue_2},
+            {u"mapAnsiMagenta", &Host::mMagenta_2},
+            {u"mapAnsiCyan", &Host::mCyan_2},
+            {u"mapAnsiWhite", &Host::mWhite_2},
+            {u"mapAnsiLightBlack", &Host::mLightBlack_2},
+            {u"mapAnsiLightRed", &Host::mLightRed_2},
+            {u"mapAnsiLightGreen", &Host::mLightGreen_2},
+            {u"mapAnsiLightYellow", &Host::mLightYellow_2},
+            {u"mapAnsiLightBlue", &Host::mLightBlue_2},
+            {u"mapAnsiLightMagenta", &Host::mLightMagenta_2},
+            {u"mapAnsiLightCyan", &Host::mLightCyan_2},
+            {u"mapAnsiLightWhite", &Host::mLightWhite_2},
+    }};
+    for (const auto& [name, member] : members) {
+        if (name == key) {
+            return member;
+        }
+    }
+    return nullptr;
+}
+
+// The player room marker's styles, by the index the preferences' list and the profile keep them at
+static const QStringList& playerRoomStyles()
+{
+    static const QStringList styles{qsl("original"), qsl("redRing"), qsl("blueYellowRing"), qsl("customRing")};
+    return styles;
+}
+
+struct PlayerRoomMarker
+{
+    quint8 style = 0;
+    quint8 outerDiameter = 0;
+    quint8 innerDiameter = 0;
+    QColor outerColor;
+    QColor innerColor;
+};
+
+// From the Host's copy, the one the profile saves
+static PlayerRoomMarker playerRoomMarker(Host& host)
+{
+    PlayerRoomMarker marker;
+    host.getPlayerRoomStyleDetails(marker.style, marker.outerDiameter, marker.innerDiameter, marker.outerColor, marker.innerColor);
+    return marker;
+}
+
+static void setPlayerRoomMarker(Host& host, const PlayerRoomMarker& marker)
+{
+    host.setPlayerRoomStyleDetails(marker.style, marker.outerDiameter, marker.innerDiameter, marker.outerColor, marker.innerColor);
+    TMap* pMap = host.mpMap.data();
+    pMap->mPlayerRoomStyle = marker.style;
+    pMap->mPlayerRoomOuterDiameterPercentage = marker.outerDiameter;
+    pMap->mPlayerRoomInnerDiameterPercentage = marker.innerDiameter;
+    pMap->mPlayerRoomOuterColor = marker.outerColor;
+    pMap->mPlayerRoomInnerColor = marker.innerColor;
+    emit pMap->signal_playerRoomStyleChanged();
+    pMap->requestMapRepaint();
+}
+
+// "#rrggbb" with the alpha of the colour it replaces, which the preferences can pick and #rrggbb cannot say; invalid for anything else
+static QColor hexColorKeepingAlpha(const QString& name, const QColor& replaced)
+{
+    static const QRegularExpression hexColor(qsl("^#[0-9A-Fa-f]{6}$"));
+    if (!hexColor.match(name).hasMatch()) {
+        return {};
+    }
+    QColor color = QColor::fromString(name);
+    color.setAlpha(replaced.alpha());
+    return color;
+}
+
+// As getServerEncoding() gives it: never empty, and without the "M_" of Mudlet's own codecs
+static QByteArray scriptVisibleEncoding(const cTelnet& telnet)
+{
+    QByteArray encoding = telnet.getEncoding();
+    if (encoding.isEmpty()) {
+        encoding = "ASCII";
+    } else if (encoding.startsWith("M_")) {
+        encoding.remove(0, 2);
+    }
+    return encoding;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The table argument case for setting multiple properties at once is handled
@@ -10299,7 +10430,78 @@ int TLuaInterpreter::setConfig(lua_State* L)
 #endif
         if (key == qsl("mapShowRoomBorders")) {
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->requestMapRepaint();
             return success();
+        }
+        if (key == qsl("mapRoomBorderSize")) {
+            // As mapExitSize: it divides the border pen's width and is saved to one decimal place
+            const double size = getVerifiedDouble(L, __func__, 2, "value");
+            if (!std::isfinite(size) || size < 1.0) {
+                return warnArgumentValue(L, __func__, qsl("mapRoomBorderSize must be a number of at least 1, got %1").arg(size));
+            }
+            host.mRoomBorderSize = size;
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BorderSize);
+            host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (key == qsl("mapLargeAreaExitArrows")) {
+            host.setLargeAreaExitArrows(getVerifiedBool(L, __func__, 2, "value"));
+            host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (QColor Host::* member = mapColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
+            const QString name = getVerifiedString(L, __func__, 2, "value");
+            const QColor color = hexColorKeepingAlpha(name, host.*member);
+            if (!color.isValid()) {
+                return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
+            }
+            host.*member = color;
+            if (member == &Host::mBgColor_2) {
+                host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
+            }
+            // The map keeps its own copy of the sixteen for the environments 257 to 272, as the preferences refresh it
+            if (key.startsWith(QLatin1StringView("mapAnsi"))) {
+                host.mpMap->restore16ColorSet();
+            }
+            host.mpMap->requestMapRepaint();
+            return success();
+        }
+        if (key.startsWith(QLatin1StringView("mapPlayerRoom"))) {
+            PlayerRoomMarker marker = playerRoomMarker(host);
+            if (key == qsl("mapPlayerRoomStyle")) {
+                const QString value = getVerifiedString(L, __func__, 2, "value");
+                const qsizetype style = playerRoomStyles().indexOf(value);
+                if (style < 0) {
+                    return warnArgumentChoice(L, __func__, qsl("mapPlayerRoomStyle"), playerRoomStyles(), value);
+                }
+                marker.style = static_cast<quint8>(style);
+                setPlayerRoomMarker(host, marker);
+                return success();
+            }
+            if (key == qsl("mapPlayerRoomOuterDiameter") || key == qsl("mapPlayerRoomInnerDiameter")) {
+                // The preferences' spin boxes' ranges: a percentage of the room, and of the outer diameter
+                const bool outer = key == qsl("mapPlayerRoomOuterDiameter");
+                const int percent = getVerifiedInt(L, __func__, 2, "value");
+                const int lowest = outer ? 50 : 0;
+                const int highest = outer ? 200 : 96;
+                if (percent < lowest || percent > highest) {
+                    return warnArgumentValue(L, __func__, qsl("%1 must be from %2 to %3, got %4").arg(QString::fromUtf8(lua_tostring(L, 1))).arg(lowest).arg(highest).arg(percent));
+                }
+                (outer ? marker.outerDiameter : marker.innerDiameter) = static_cast<quint8>(percent);
+                setPlayerRoomMarker(host, marker);
+                return success();
+            }
+            if (key == qsl("mapPlayerRoomOuterColor") || key == qsl("mapPlayerRoomInnerColor")) {
+                QColor& replaced = key == qsl("mapPlayerRoomOuterColor") ? marker.outerColor : marker.innerColor;
+                const QString name = getVerifiedString(L, __func__, 2, "value");
+                const QColor color = hexColorKeepingAlpha(name, replaced);
+                if (!color.isValid()) {
+                    return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
+                }
+                replaced = color;
+                setPlayerRoomMarker(host, marker);
+                return success();
+            }
         }
         if (key == qsl("mapShowGrid")) {
             host.mMapperShowGrid = getVerifiedBool(L, __func__, 2, "value");
@@ -10454,6 +10656,42 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("sslIgnoreExpired")) {
+        host.mSslIgnoreExpired = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("sslIgnoreSelfSigned")) {
+        host.mSslIgnoreSelfSigned = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("sslIgnoreAll")) {
+        host.mSslIgnoreAll = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("acceptServerGUI")) {
+        host.mAcceptServerGUI = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("acceptServerMedia")) {
+        host.mAcceptServerMedia = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("echoLuaErrors")) {
+        host.mEchoLuaErrors = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("serverEncoding")) {
+        const QByteArray encoding = getVerifiedString(L, __func__, 2, "value").toUtf8();
+        // setEncoding() tells the game the charset even when it is unchanged, which a setConfig(getConfig()) restore must not
+        if (encoding == scriptVisibleEncoding(host.mTelnet)) {
+            return success();
+        }
+        const QPair<bool, QString> result = host.mTelnet.setEncoding(encoding);
+        if (!result.first) {
+            return warnArgumentValue(L, __func__, result.second);
+        }
+        return success();
+    }
     if (key == qsl("promptForMXPProcessorOn")) {
         host.mPromptedForMXPProcessorOn = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -10476,6 +10714,41 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("autoClearInputLine")) {
         host.mAutoClearCommandLineAfterSend = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("commandSeparator")) {
+        host.mCommandSeparator = getVerifiedString(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("highlightHistory")) {
+        host.mHighlightHistory = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("disablePasswordMasking")) {
+        host.setDisablePasswordMasking(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("runAllKeyMatches")) {
+        host.getKeyUnit()->mRunAllKeyMatches = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (QColor Host::* member = consoleColorMember(QString::fromUtf8(lua_tostring(L, 1)))) {
+        const QString name = getVerifiedString(L, __func__, 2, "value");
+        const QColor color = hexColorKeepingAlpha(name, host.*member);
+        if (!color.isValid()) {
+            return warnArgumentValue(L, __func__, qsl("%1 takes a colour as #rrggbb, got '%2'").arg(QString::fromUtf8(lua_tostring(L, 1)), name));
+        }
+        // The refresh puts the game's current text colours back to the defaults, which a setConfig(getConfig()) restore must not
+        if (color.rgba() == (host.*member).rgba()) {
+            return success();
+        }
+        host.*member = color;
+        host.applyMainConsoleColors();
+        host.updateAnsi16ColorsInTable();
+        return success();
+    }
+    if (key == qsl("serverMayRedefineColors")) {
+        host.setMayRedefineColors(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("showSentText")) {
@@ -10710,6 +10983,27 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
+    if (key == qsl("consoleBufferSize")) {
+        const auto value = getVerifiedInt(L, __func__, 2, "value");
+        // The preferences' least; the most is what the machine can hold, to which the buffer clips a bigger one
+        if (value < 100) {
+            return warnArgumentValue(L, __func__, qsl("consoleBufferSize %1 is below the least of 100 lines").arg(value));
+        }
+        // As the preferences: only a change resets the console's limit, and the batch a script gave it
+        if (value != host.getConsoleBufferSize()) {
+            host.setConsoleBufferSize(value);
+            host.applyConsoleBufferSize();
+        }
+        return success();
+    }
+    if (key == qsl("useMaxConsoleBufferSize")) {
+        const bool useMax = getVerifiedBool(L, __func__, 2, "value");
+        if (useMax != host.getUseMaxConsoleBufferSize()) {
+            host.setUseMaxConsoleBufferSize(useMax);
+            host.applyConsoleBufferSize();
+        }
+        return success();
+    }
     if (key == qsl("controlCharacterHandling")) {
         static const QStringList values{"asis", "oem", "picture"};
         const auto value = getVerifiedString(L, __func__, 2, "value");
@@ -10729,6 +11023,29 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("logInHTML")) {
         host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("logTimestamps")) {
+        host.mIsLoggingTimestamps = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("logFileNameFormat")) {
+        // The preferences' choices; the empty one names the log by logFileName instead of the date
+        static const QStringList values{qsl("yyyy-MM-dd#HH-mm-ss"), qsl("yyyy-MM-ddTHH-mm-ss"), qsl("yyyy-MM-dd"), qsl("yyyy-MM"), QString()};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+        if (!values.contains(value)) {
+            return warnArgumentChoice(L, __func__, qsl("logFileNameFormat"), values, value);
+        }
+        host.mLogFileNameFormat = value;
+        return success();
+    }
+    if (key == qsl("logFileName")) {
+        const auto value = getVerifiedString(L, __func__, 2, "value");
+        // The log goes in the profile's log folder, never a folder a separator would name
+        if (value.contains(QLatin1Char('/')) || value.contains(QLatin1Char('\\'))) {
+            return warnArgumentValue(L, __func__, qsl("a log file name cannot contain '/' or '\\'"));
+        }
+        host.mLogFileName = value;
         return success();
     }
     if (key == qsl("f3SearchEnabled")) {
@@ -10767,6 +11084,18 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("enableBlinkText")) {
         host.setEnableBlinkText(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
+    if (key == qsl("enableOSC8Hyperlinks")) {
+        const bool enabled = getVerifiedBool(L, __func__, 2, "value");
+        if (enabled != host.mEnableOSC8Hyperlinks) {
+            host.mEnableOSC8Hyperlinks = enabled;
+            host.mTelnet.sendInfoNewEnvironOSCHyperlinks();
+        }
+        return success();
+    }
+    if (key == qsl("alertOnNewData")) {
+        host.mAlertOnNewData = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
 
@@ -10935,6 +11264,35 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushboolean(L, host.mMapperShowRoomBorders);
              }},
+            {qsl("mapRoomBorderSize"),
+             [&]() {
+                 lua_pushnumber(L, host.mRoomBorderSize);
+             }},
+            {qsl("mapLargeAreaExitArrows"),
+             [&]() {
+                 lua_pushboolean(L, host.getLargeAreaExitArrows());
+             }},
+            {qsl("mapPlayerRoomStyle"),
+             [&]() {
+                 const QByteArray style = playerRoomStyles().value(playerRoomMarker(host).style, playerRoomStyles().constFirst()).toUtf8();
+                 lua_pushlstring(L, style.constData(), style.size());
+             }},
+            {qsl("mapPlayerRoomOuterDiameter"),
+             [&]() {
+                 lua_pushnumber(L, playerRoomMarker(host).outerDiameter);
+             }},
+            {qsl("mapPlayerRoomInnerDiameter"),
+             [&]() {
+                 lua_pushnumber(L, playerRoomMarker(host).innerDiameter);
+             }},
+            {qsl("mapPlayerRoomOuterColor"),
+             [&]() {
+                 lua_pushstring(L, playerRoomMarker(host).outerColor.name().toUtf8().constData());
+             }},
+            {qsl("mapPlayerRoomInnerColor"),
+             [&]() {
+                 lua_pushstring(L, playerRoomMarker(host).innerColor.name().toUtf8().constData());
+             }},
             {qsl("mapInfoColor"),
              [&]() {
                  lua_newtable(L);
@@ -11029,6 +11387,34 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushboolean(L, host.mAskTlsAvailable);
              }},
+            {qsl("sslIgnoreExpired"),
+             [&]() {
+                 lua_pushboolean(L, host.mSslIgnoreExpired);
+             }},
+            {qsl("sslIgnoreSelfSigned"),
+             [&]() {
+                 lua_pushboolean(L, host.mSslIgnoreSelfSigned);
+             }},
+            {qsl("sslIgnoreAll"),
+             [&]() {
+                 lua_pushboolean(L, host.mSslIgnoreAll);
+             }},
+            {qsl("acceptServerGUI"),
+             [&]() {
+                 lua_pushboolean(L, host.mAcceptServerGUI);
+             }},
+            {qsl("acceptServerMedia"),
+             [&]() {
+                 lua_pushboolean(L, host.mAcceptServerMedia);
+             }},
+            {qsl("echoLuaErrors"),
+             [&]() {
+                 lua_pushboolean(L, host.mEchoLuaErrors);
+             }},
+            {qsl("serverEncoding"),
+             [&]() {
+                 lua_pushstring(L, scriptVisibleEncoding(host.mTelnet).constData());
+             }},
             {qsl("promptForMXPProcessorOn"),
              [&]() {
                  lua_pushboolean(L, host.mPromptedForMXPProcessorOn);
@@ -11052,6 +11438,27 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("autoClearInputLine"),
              [&]() {
                  lua_pushboolean(L, host.mAutoClearCommandLineAfterSend);
+             }},
+            {qsl("commandSeparator"),
+             [&]() {
+                 const QByteArray separator = host.mCommandSeparator.toUtf8();
+                 lua_pushlstring(L, separator.constData(), separator.size());
+             }},
+            {qsl("highlightHistory"),
+             [&]() {
+                 lua_pushboolean(L, host.mHighlightHistory);
+             }},
+            {qsl("disablePasswordMasking"),
+             [&]() {
+                 lua_pushboolean(L, host.disablePasswordMasking());
+             }},
+            {qsl("runAllKeyMatches"),
+             [&]() {
+                 lua_pushboolean(L, host.getKeyUnit()->mRunAllKeyMatches);
+             }},
+            {qsl("serverMayRedefineColors"),
+             [&]() {
+                 lua_pushboolean(L, host.getMayRedefineColors());
              }},
             {qsl("showSentText"),
              [&]() {
@@ -11160,6 +11567,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
              [&]() {
                  lua_pushnumber(L, host.getCommandLineHistorySaveSize());
              }},
+            {qsl("consoleBufferSize"),
+             [&]() {
+                 lua_pushnumber(L, host.getConsoleBufferSize());
+             }},
+            {qsl("useMaxConsoleBufferSize"),
+             [&]() {
+                 lua_pushboolean(L, host.getUseMaxConsoleBufferSize());
+             }},
             {qsl("controlCharacterHandling"),
              [&]() {
                  const auto controlCharacterMode = host.getControlCharacterMode();
@@ -11177,6 +11592,18 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("logInHTML"),
              [&]() {
                  lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat);
+             }},
+            {qsl("logTimestamps"),
+             [&]() {
+                 lua_pushboolean(L, host.mIsLoggingTimestamps);
+             }},
+            {qsl("logFileNameFormat"),
+             [&]() {
+                 lua_pushstring(L, host.mLogFileNameFormat.toUtf8().constData());
+             }},
+            {qsl("logFileName"),
+             [&]() {
+                 lua_pushstring(L, host.mLogFileName.toUtf8().constData());
              }},
             {qsl("f3SearchEnabled"),
              [&]() {
@@ -11215,6 +11642,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("enableBlinkText"),
              [&]() {
                  lua_pushboolean(L, host.getEnableBlinkText());
+             }},
+            {qsl("enableOSC8Hyperlinks"),
+             [&]() {
+                 lua_pushboolean(L, host.mEnableOSC8Hyperlinks);
+             }},
+            {qsl("alertOnNewData"),
+             [&]() {
+                 lua_pushboolean(L, host.mAlertOnNewData);
              }},
             {qsl("showUpperLowerLevels"),
              [&]() {
@@ -11255,6 +11690,14 @@ int TLuaInterpreter::getConfig(lua_State* L)
     auto it = configMap.find(key);
     if (it != configMap.end()) {
         it->second();
+        return 1;
+    }
+    if (QColor Host::* member = consoleColorMember(key)) {
+        lua_pushstring(L, (host.*member).name().toUtf8().constData());
+        return 1;
+    }
+    if (QColor Host::* member = mapColorMember(key)) {
+        lua_pushstring(L, (host.*member).name().toUtf8().constData());
         return 1;
     }
 

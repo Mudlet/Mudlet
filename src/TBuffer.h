@@ -548,6 +548,7 @@ class TBuffer
     static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
+    static inline int smPlatformMaxBufferSize = 0;
 
 public:
     // limit on how many characters a single echo can accept for performance reasons
@@ -741,6 +742,9 @@ public:
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
+    // Replaces what getMaxBufferSize() estimates from the machine's memory, for a platform that stops a process long
+    // before that is used up (Android); 0 goes back to the estimate
+    static void setPlatformMaxBufferSize(int lines);
     int getLastClickedLinkIndex() const { return mLastClickedLinkIndex; }
     void setLastClickedLinkIndex(int index) { mLastClickedLinkIndex = index; }
     void clearLastClickedLinkIndex() { mLastClickedLinkIndex = 0; }

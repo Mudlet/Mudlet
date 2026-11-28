@@ -223,8 +223,14 @@ public:
     int getPort() { return mPort; }
     void setPort(const int port) { mPort = port; }
     void setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
+    // The server and whether it is reached securely, changed while the profile runs: the next connect, reconnect
+    // or automatic reconnect goes there, and a connection that is open stays where it is
+    void changeAddress(const QString& url, int port, bool tls);
     QString& getLogin() { return mLogin; }
     void setLogin(const QString& login) { mLogin = login; }
+    // The login name, changed while the profile runs: the automatic login reads it at its login step, so it is for
+    // the next connection unless this one's login is still to come
+    void changeLogin(const QString& login);
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
     // One given for this run, as a headless frontend's option is, which the stored one does not replace; an
@@ -238,6 +244,23 @@ public:
         mPass = QString(password.constData(), password.size());
         mPassGiven = true;
     }
+    // The one given for this run, changed while the profile runs: an empty one withdraws it, and the stored one,
+    // if any, is read again as at the load. The automatic login reads it at its password step, so it is for the
+    // next connection unless this one's password step is still to come.
+    void changeGivenPass(const QString& password);
+    // The proxy's password given for this run, as givePass() gives the game's: the load does not replace it
+    // with the stored one and a save does not store it. An empty one is none.
+    void giveProxyPass(const QString& password)
+    {
+        if (password.isEmpty()) {
+            return;
+        }
+        mProxyPassword = QString(password.constData(), password.size());
+        mProxyPassGiven = true;
+    }
+    bool proxyPassGiven() const { return mProxyPassGiven; }
+    // As changeGivenPass(), for the proxy's: it is used from the next connection.
+    void changeGivenProxyPass(const QString& password);
     // A password still being fetched from the keychain counts: the auto-login is timer based, so
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
@@ -427,6 +450,9 @@ public:
     // The main console's scrollback limit is also the profile's setting. With
     // useMaximum the most this machine can hold stands in for the limit given.
     void setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum);
+    // The main console's limit from the profile's buffer size and its use of the maximum, as the preferences apply
+    // them, with a batch of a fifth of it (at least 100)
+    void applyConsoleBufferSize();
     // Paint the named console's selection, and write what follows in the same
     // format. Each answers whether it found the console.
     bool setWindowFgColor(const QString& name, const QColor& color);
@@ -1557,6 +1583,8 @@ private:
     bool installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
+    // The password stored for the profile, from the keychain or the profile's own file
+    void loadStoredPassword();
     void loadSecuredPassword();
     // The lookup loadSecuredPassword() starts, on a manager of its own that this deletes once the
     // lookup has answered. Apart so that a test can hand in a manager that stands in for the keychain.
@@ -1704,6 +1732,7 @@ private:
     QString mLogin;
     QString mPass;
     bool mPassGiven = false;
+    bool mProxyPassGiven = false;
     bool mSecuredPasswordPending = false;
     // The store refused the saved password, as against having none or not being there at all
     bool mSecuredPasswordUnreadable = false;

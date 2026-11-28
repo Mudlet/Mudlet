@@ -28,6 +28,7 @@
 #include <QHash>
 #include <QKeySequence>
 #include <QList>
+#include <QMap>
 #include <QObject>
 #include <QPoint>
 #include <QPointF>
@@ -37,6 +38,7 @@
 #include <QSize>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 
 #include <functional>
 #include <memory>
@@ -83,6 +85,8 @@ public:
         QString login;
         // For this run only; nothing stores it
         QString password;
+        // The password of the profile's proxy (setProxy()), for this run only too; nothing stores it
+        QString proxyPassword;
         // An absolute path, made if need be: the folder that holds the profiles, Mudlet.ini and the passwords
         // stored for them, in place of the GUI's folder and the system's keychain, except in an Android app with
         // a Java VM registered with Qt (docs/headless.md), whose profile passwords go to the KeyStore unless
@@ -150,6 +154,10 @@ public:
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
     // Hunspell cannot read; empty forgets it.
     static bool setDictionaryFolder(const QString& folder);
+    // What "use maximum lines possible" gives, and what a bigger buffer size set afterwards is clipped to, in place of
+    // the estimate from the machine's memory, for a platform that stops a process long before that is used up
+    // (Android). Below 100 it is 100; 0 or less goes back to the estimate.
+    static void setMaxConsoleBufferSize(int lines);
 
     // Names mudlet_core's own Qt resources (":/" images, translations and fonts), so a program linking it statically
     // keeps them; Qt registers them before main() runs
@@ -210,7 +218,50 @@ public:
     // dismissing it then lasts until the game stops hiding input. False while the box would not be open, and
     // where submit() is refused.
     bool dismissHiddenInput();
+    // The automatic login, changed in the running profile: used from the next login, this connection's too if it is
+    // still to come. setLogin() trims the name and stores it, as Options::login is (empty clears it); setPassword()
+    // is for this run only, as Options::password is (empty goes back to the stored one, if any).
+    // False where submit() is refused, and from setLogin() when the name could not be stored.
+    bool setLogin(const QString& login);
+    bool setPassword(const QString& password);
+    // Changed in the running profile and stored, as Options::host, port and tls are; an empty host or a port of 0
+    // keeps the profile's. Lua's reconnect(), the retry and the automatic reconnect go there from then on, every
+    // later connection takes the TLS choice, and an open one stays as it is. setAutoReconnect() is the connection
+    // dialog's "Reconnect automatically", stored too and counted from the next lost or failed connection; turning it
+    // off calls off a waiting retry.
+    // False where submit() is refused or a detail could not be stored; setAddress() also where start() would refuse it.
+    bool setAddress(const QString& host, int port, bool tls);
+    bool setAutoReconnect(bool reconnect);
+    // The profile preferences' proxy: whether the game is reached through a SOCKS5 proxy, and where that is.
+    // Its password is not part of it.
+    struct Proxy
+    {
+        bool use = false;
+        QString address;
+        // 0 is none
+        int port = 0;
+        QString username;
+    };
+    // The proxy as the running profile holds it. False where submit() is refused.
+    bool proxy(Proxy& proxy);
+    // As the profile preferences change it: written with the profile's next save, and used from the next connection,
+    // a download's too, while an open one stays as it is. The address is trimmed. Refused, changing nothing, for a
+    // port outside 0 to 65535, an address that is not a host's, or a proxy in use without its address or port,
+    // which the preferences would quietly connect around. False where submit() is refused as well.
+    bool setProxy(const Proxy& proxy);
+    // For this run only, as Options::proxyPassword is (empty goes back to the stored one, if any), and used from
+    // the next connection. False where submit() is refused.
+    bool setProxyPassword(const QString& password);
     bool runLua(const QString& code);
+    // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
+    // string each, an option of several by its name (showSentText as "never", "always" or "script"). A key
+    // getConfig() does not know, or gives a table or nothing for, is left out. Mudlet's own getConfig() is called, not
+    // whatever a script has put in its place. False, reading nothing, where runLua() is refused.
+    bool settings(const QStringList& keys, QVariantMap& values);
+    // Changes them as Lua's setConfig() does, one key at a time, which keeps each change where the preferences
+    // dialog would. A key setConfig() refuses, or whose value is not a bool, a number or a string, goes into
+    // refused with why. False, changing nothing, where runLua() is refused.
+    bool setSettings(const QVariantMap& values, QMap<QString, QString>& refused);
     // As the GUI installs a package given on its command line, but quietly: a refusal is errorString()'s alone
     // to tell. It returns once the install's sysInstall handlers should have run: Qt fires zero timers in the
     // order set, though it does not promise to. installedWithErrors: it stays installed, as in the GUI, but a
@@ -1134,7 +1185,7 @@ private:
     void tellConfigSaved();
     void beginStart(const Options&, std::function<void(StartResult)> done);
     std::optional<StartResult> prepareStart(Options&, std::optional<bool>& tls, bool& stalePasswords);
-    StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password);
+    StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password, const QString& proxyPassword);
     void beginInstallPackage(const QString& path, std::function<void(PackageResult)> done);
     void finishInstallPackage(const QString& path, std::function<void(PackageResult)> done);
     // saved is set once the closes that save have begun, for a session deleted after that
@@ -1144,6 +1195,7 @@ private:
     void beginSave(std::function<void(bool)> done);
     void saveEach(QList<QPointer<Host>> profiles, qsizetype closesUnsavedBefore, QStringList unsaved, std::function<void(bool)> done);
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
+    bool storeConnectionDetail(const QString& item, const QString& value);
     void detachFromHost();
     void connectInputRelays(unsigned int run);
     void connectCommandRelays(unsigned int run);

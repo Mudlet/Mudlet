@@ -1996,6 +1996,163 @@ end))lua");
         QVERIFY(!outputTexts(output).contains(qsl("Replayed line 1999.")));
     }
 
+    void test_settingsAreReadAndChangedAsGetConfigAndSetConfigDo()
+    {
+        const QString name = qsl("Headless Settings");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession unstarted;
+        QVariantMap values;
+        QMap<QString, QString> refused;
+        QVERIFY(!unstarted.settings({qsl("blankLinesBehaviour")}, values));
+        QCOMPARE(unstarted.errorString(), qsl("No profile is open."));
+        QVERIFY(!unstarted.setSettings({{qsl("blankLinesBehaviour"), qsl("hide")}}, refused));
+        QVERIFY(values.isEmpty());
+        QVERIFY(refused.isEmpty());
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("getConfig = function() return 'a script' end setConfig = getConfig")));
+        QVERIFY(session.settings({qsl("blankLinesBehaviour"), qsl("announceIncomingText"), qsl("showSentText"), qsl("noSuchSetting")}, values));
+        QCOMPARE(values.value(qsl("blankLinesBehaviour")), QVariant(qsl("show")));
+        QCOMPARE(values.value(qsl("announceIncomingText")).typeId(), QMetaType::Bool);
+        QVERIFY(values.value(qsl("showSentText")).toString() == qsl("always") || values.value(qsl("showSentText")).toString() == qsl("never")
+                || values.value(qsl("showSentText")).toString() == qsl("script"));
+        QVERIFY(!values.contains(qsl("noSuchSetting")));
+
+        QVERIFY(session.setSettings(
+                {{qsl("blankLinesBehaviour"), qsl("hide")}, {qsl("announceIncomingText"), qsl("yes")}, {qsl("noSuchSetting"), true}, {qsl("advertiseScreenReader"), QVariant(QPoint(1, 2))}}, refused));
+        QCOMPARE(refused.keys(), QList<QString>({qsl("advertiseScreenReader"), qsl("announceIncomingText"), qsl("noSuchSetting")}));
+        QVERIFY2(refused.value(qsl("noSuchSetting")).contains(qsl("noSuchSetting")), qPrintable(refused.value(qsl("noSuchSetting"))));
+        QVERIFY(!refused.value(qsl("announceIncomingText")).isEmpty());
+        QCOMPARE(session.host()->mBlankLineBehaviour, Host::BlankLineBehaviour::Hide);
+        values.clear();
+        QVERIFY(session.settings({qsl("blankLinesBehaviour")}, values));
+        QCOMPARE(values, QVariantMap({{qsl("blankLinesBehaviour"), qsl("hide")}}));
+
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.settings({qsl("blankLinesBehaviour")}, values));
+    }
+
+    void test_theServerEncodingIsASettingKeptWithTheProfile()
+    {
+        const QString name = qsl("Headless Encoding");
+        QVERIFY(writeProfile(name, QString()));
+        QVariantMap values;
+        QMap<QString, QString> refused;
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.settings({qsl("serverEncoding")}, values));
+            QCOMPARE(values, QVariantMap({{qsl("serverEncoding"), qsl("UTF-8")}}));
+
+            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("No Such Encoding")}}, refused));
+            QVERIFY2(refused.value(qsl("serverEncoding")).contains(qsl("does not exist")), qPrintable(refused.value(qsl("serverEncoding"))));
+            QCOMPARE(session.host()->mTelnet.getEncoding(), QByteArray("UTF-8"));
+
+            refused.clear();
+            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("ASCII")}}, refused));
+            QVERIFY(refused.isEmpty());
+            QVERIFY(session.host()->mTelnet.getEncoding().isEmpty());
+            QVERIFY(session.settings({qsl("serverEncoding")}, values));
+            QCOMPARE(values.value(qsl("serverEncoding")), QVariant(qsl("ASCII")));
+
+            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("CP437")}}, refused));
+            QVERIFY(refused.isEmpty());
+            QCOMPARE(session.host()->mTelnet.getEncoding(), QByteArray("CP437"));
+            QVERIFY(session.settings({qsl("serverEncoding")}, values));
+            QCOMPARE(values.value(qsl("serverEncoding")), QVariant(qsl("CP437")));
+
+            QVERIFY(session.setSettings({{qsl("serverEncoding"), qsl("ISO 8859-2")}}, refused));
+            QVERIFY(refused.isEmpty());
+            QCOMPARE(session.host()->mTelnet.getEncoding(), QByteArray("ISO 8859-2"));
+            QVERIFY(session.shutdown(false));
+        }
+
+        THeadlessSession reopened;
+        QCOMPARE(reopened.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        values.clear();
+        QVERIFY(reopened.settings({qsl("serverEncoding")}, values));
+        QCOMPARE(values, QVariantMap({{qsl("serverEncoding"), qsl("ISO 8859-2")}}));
+        QVERIFY(reopened.shutdown(false));
+    }
+
+    void test_theInputLineSettingsAreKeptWithTheProfile()
+    {
+        const QString name = qsl("Headless Input Line");
+        QVERIFY(writeProfile(name, QString()));
+        const QStringList keys{qsl("commandSeparator"), qsl("highlightHistory"), qsl("disablePasswordMasking"), qsl("runAllKeyMatches")};
+        const QVariantMap changed{{qsl("commandSeparator"), qsl("|")}, {qsl("highlightHistory"), false}, {qsl("disablePasswordMasking"), true}, {qsl("runAllKeyMatches"), true}};
+        QVariantMap values;
+        QMap<QString, QString> refused;
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.settings(keys, values));
+            QCOMPARE(values, QVariantMap({{qsl("commandSeparator"), qsl(";;")}, {qsl("highlightHistory"), true}, {qsl("disablePasswordMasking"), false}, {qsl("runAllKeyMatches"), false}}));
+
+            QVERIFY(session.setSettings(changed, refused));
+            QVERIFY2(refused.isEmpty(), qPrintable(refused.keys().join(qsl(", "))));
+            QCOMPARE(session.host()->getCommandSeparator(), qsl("|"));
+            QVERIFY(!session.host()->mHighlightHistory);
+            QVERIFY(session.host()->disablePasswordMasking());
+            QVERIFY(session.host()->getKeyUnit()->mRunAllKeyMatches);
+            QVERIFY(session.shutdown(true));
+        }
+
+        THeadlessSession reopened;
+        QCOMPARE(reopened.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        values.clear();
+        QVERIFY(reopened.settings(keys, values));
+        QCOMPARE(values, changed);
+        QVERIFY(reopened.shutdown(false));
+    }
+
+    void test_theColourAndDisplaySettingsAreKeptWithTheProfile()
+    {
+        const QString name = qsl("Headless Colours And Display");
+        QVERIFY(writeProfile(name, QString()));
+        const QStringList keys{qsl("ansiRed"), qsl("backgroundColor"), qsl("serverMayRedefineColors"), qsl("enableOSC8Hyperlinks"), qsl("alertOnNewData")};
+        const QVariantMap changed{{qsl("ansiRed"), qsl("#123456")},
+                                  {qsl("backgroundColor"), qsl("#0a141e")},
+                                  {qsl("serverMayRedefineColors"), true},
+                                  {qsl("enableOSC8Hyperlinks"), false},
+                                  {qsl("alertOnNewData"), true}};
+        QVariantMap values;
+        QMap<QString, QString> refused;
+        {
+            THeadlessSession session;
+            QSignalSpy colors(&session, &THeadlessSession::consoleColorsChanged);
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.settings(keys, values));
+            QCOMPARE(values,
+                     QVariantMap({{qsl("ansiRed"), qsl("#800000")},
+                                  {qsl("backgroundColor"), qsl("#000000")},
+                                  {qsl("serverMayRedefineColors"), false},
+                                  {qsl("enableOSC8Hyperlinks"), true},
+                                  {qsl("alertOnNewData"), false}}));
+
+            QVERIFY(session.setSettings({{qsl("ansiRed"), qsl("crimson")}}, refused));
+            QVERIFY(refused.value(qsl("ansiRed")).contains(qsl("#rrggbb")));
+            refused.clear();
+
+            QVERIFY(session.setSettings(changed, refused));
+            QVERIFY2(refused.isEmpty(), qPrintable(refused.keys().join(qsl(", "))));
+            QCOMPARE(session.host()->mRed, QColor(0x12, 0x34, 0x56));
+            QTRY_COMPARE_WITH_TIMEOUT(colors.count(), 1, 10000);
+            QCOMPARE(colors.constFirst().at(2).value<QColor>(), QColor(10, 20, 30));
+            QCOMPARE(session.consoleBackground(), QColor(10, 20, 30));
+            QVERIFY(session.shutdown(true));
+        }
+
+        THeadlessSession reopened;
+        QCOMPARE(reopened.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        values.clear();
+        QVERIFY(reopened.settings(keys, values));
+        QCOMPARE(values, changed);
+        QCOMPARE(reopened.consoleBackground(), QColor(10, 20, 30));
+        QVERIFY(reopened.shutdown(false));
+    }
+
     // As the GUI's command line hands the profile's key bindings its key events
     void test_aKeyPressedRunsItsKeyBinding()
     {
@@ -2146,6 +2303,35 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+F1 Ctrl+Alt+S Ctrl+Alt+S "));
         QTest::qWait(100);
         QVERIFY(!game->readAll().contains("north"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // connectToServer() dials elsewhere without changing the profile's address, so naming that address is still a change
+    void test_settingTheProfilesOwnAddressTakesReconnectBackToIt()
+    {
+        const QString name = qsl("Headless Own Address");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer profileServer;
+        QTcpServer otherServer;
+        QVERIFY(profileServer.listen(QHostAddress::LocalHost));
+        QVERIFY(otherServer.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(profileServer.serverPort())).first);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(profileServer.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> first(profileServer.nextPendingConnection());
+
+        QVERIFY(session.runLua(qsl("connectToServer('127.0.0.1', %1)").arg(otherServer.serverPort())));
+        QTRY_VERIFY_WITH_TIMEOUT(otherServer.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> elsewhere(otherServer.nextPendingConnection());
+        QVERIFY(!profileServer.hasPendingConnections());
+
+        QVERIFY(session.setAddress(qsl("127.0.0.1"), profileServer.serverPort(), false));
+        QVERIFY(session.runLua(qsl("reconnect()")));
+        QTRY_VERIFY_WITH_TIMEOUT(profileServer.hasPendingConnections() || otherServer.hasPendingConnections(), 10000);
+        QVERIFY2(profileServer.hasPendingConnections(), "reconnect() went back to the server connectToServer() named");
         QVERIFY(session.shutdown(false));
     }
 

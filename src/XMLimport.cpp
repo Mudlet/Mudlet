@@ -912,17 +912,21 @@ void XMLimport::readHost(Host* pHost)
     const QVersionNumber secureStorageVersion = QVersionNumber(4, 20, 0);
     const bool useSecureStorage = appVersion >= secureStorageVersion;
 
+    // One given for this run is the one used, whatever is stored
+    const bool proxyPassGiven = pHost->proxyPassGiven();
     if (!storedProxyPassword.isEmpty()) {
         if (useSecureStorage) {
             // Modern application: migrate plaintext password to secure storage and clear from XML
             CredentialManager::storeCredential(pHost->getName(), "proxy", storedProxyPassword);
-            pHost->mProxyPassword = storedProxyPassword;
+            if (!proxyPassGiven) {
+                pHost->mProxyPassword = storedProxyPassword;
+            }
             SecureStringUtils::secureStringClear(storedProxyPassword); // Clear after migration
-        } else {
+        } else if (!proxyPassGiven) {
             // Legacy application: keep plaintext password for backward compatibility
             pHost->mProxyPassword = storedProxyPassword;
         }
-    } else if (useSecureStorage) {
+    } else if (useSecureStorage && !proxyPassGiven) {
         // Modern application: load from secure storage if available
         CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
         pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy", &outcome);

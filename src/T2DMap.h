@@ -110,6 +110,7 @@ public:
     friend class MiddleMousePanHandler;
 
     friend class MapMouseInteractionTest;
+    friend class MapViewCueTest;
 
     struct MapInteractionContext
     {
