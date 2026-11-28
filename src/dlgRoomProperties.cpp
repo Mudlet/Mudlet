@@ -543,9 +543,6 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
         uiDesign::markAsShellSurface(pScaffolding);
     }
     uiDesign::prepareTabStrip(tabWidget_room->tabBar());
-    // Sized by keepTheTabsRoomForThePages() alone: QTabWidget's own size asks the base style for a frame round the
-    // pages that the tab recipe's pane does not draw, which would leave a band under the Room tab's last row
-    tabWidget_room->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     dialogButtonBox->button(QDialogButtonBox::Ok)->setProperty(uiDesign::scmProp_primaryButton, true);
 
     // Made after setupUi() set the form's tab order, the colour fields and the opacity box would come after OK and
@@ -769,7 +766,6 @@ void dlgRoomProperties::init(
     initGeneral();
     initUserData();
     alignValueBoxes();
-    keepTheTabsRoomForThePages();
 
     // The name is what is most often changed: typed straight away, Enter renames. Set here, as the buttons not in the
     // tab order would otherwise be the first to take focus
@@ -1174,7 +1170,6 @@ void dlgRoomProperties::applyRoomPropertiesShellStyle()
     uiDesign::lineUpNumberBoxesWithFields(roomPropertiesShell);
     spaceTheSections();
     alignValueBoxes();
-    keepTheTabsRoomForThePages();
     fitScriptData();
 }
 
@@ -1211,20 +1206,6 @@ void dlgRoomProperties::fitThePreviewColumn()
     horizontalLayout_previewColumn->setSpacing(windowMargin);
     roomPropertiesPreviewLabel->setFixedHeight(colourRow.height());
     uiDesign::invalidateLayoutsUpTo(roomPropertiesPreviewColumn, this);
-    // The Room tab asks for the new spacing as width
-    keepTheTabsRoomForThePages();
-}
-
-// The pane takes scmPagesInset at its sides, its foot and under its hairline, and the hairline is lifted onto the
-// strip's bottom row, so it adds nothing more
-void dlgRoomProperties::keepTheTabsRoomForThePages()
-{
-    QSize pages;
-    for (int i = 0; i < tabWidget_room->count(); ++i) {
-        pages = pages.expandedTo(tabWidget_room->widget(i)->sizeHint());
-    }
-    const QSize strip = tabWidget_room->tabBar()->sizeHint();
-    tabWidget_room->setMinimumSize(std::max(pages.width() + 2 * scmPagesInset, strip.width() + scmPagesInset), strip.height() + pages.height() + 2 * scmPagesInset);
 }
 
 void dlgRoomProperties::alignValueBoxes()
@@ -2019,7 +2000,6 @@ void dlgRoomProperties::showEvent(QShowEvent* pEvent)
     // before QDialog::showEvent() centres the window by its size
     if (!pEvent->spontaneous() && !mSizedForShow) {
         mSizedForShow = true;
-        keepTheTabsRoomForThePages();
         adjustSize();
     }
     QDialog::showEvent(pEvent);

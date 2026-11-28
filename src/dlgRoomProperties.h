@@ -91,7 +91,6 @@ private:
     void fitThePreviewColumn();
     // The colour boxes, the symbol field and the border width stand one over another, so they share one width
     void alignValueBoxes();
-    void keepTheTabsRoomForThePages();
     bool resetOffered(const QColor& chosen) const;
     bool borderColoursDiffer() const;
     void showBorderColour();
