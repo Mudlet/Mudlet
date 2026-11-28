@@ -136,8 +136,17 @@ inline constexpr qreal scmHoverWashStrength = 0.07;
 // A console is drawn in the profile's colours, not the theme's, so this mixes its command-line colours
 inline constexpr qreal scmConsoleFootSeamStrength = 0.20;
 
+// Named so the bar a sheet draws and the room a window keeps for it in its own margins are one number
+inline constexpr int scmScrollBarThickness = 12;
+// A bar against the cards' edge reads as part of them
+inline constexpr int scmScrollBarGap = 8;
+
 // A scroll area's own bars answer only to a descendant selector, hence the prefix. An invalid surface means the page.
 QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& tokens, const QColor& surface = QColor());
+
+// The gap is part of the bar's width, so room kept for the bar keeps the gap too. Pass the window's direction: Qt
+// moves the bar to the left right to left, but leaves a style sheet margin where it was.
+QString scrollBarGapStyleSheet(const QString& scrollAreaSelector, const Qt::LayoutDirection direction);
 
 // The vertical bar's width is taken from the viewport at all times and only the bar comes and goes, so what the
 // area shows keeps one width whether or not it scrolls

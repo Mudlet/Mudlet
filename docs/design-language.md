@@ -848,6 +848,31 @@ edge and the words after it, which is where the style puts them; nothing insets
 a plain card's title to match, because on a card whose controls all start at the
 padding edge that would indent the heading away from what it heads.
 
+### Scroll bars
+
+`scrollBarStyleSheet(selectorPrefix, tokens, surface)` draws every bar on a
+styled surface: a groove in the surface's own tone, `scmScrollBarThickness`
+(12px) wide, a handle mixed from that surface towards `text` and a step further
+under the pointer, and no arrow buttons. The handle stands 1px in from each side
+of the groove, so it is 10px wide and its 5px radius rounds both ends whole.
+
+Where a bar scrolls cards, `scrollBarGapStyleSheet(scrollAreaSelector,
+direction)` holds it `scmScrollBarGap` (8px) off them: a bar against the cards'
+edge read as part of them. The gap is a margin on the bar itself, on the side
+facing the content, and the bar's width grows by it, so the style still draws a
+12px groove and the room a window keeps for the bar, `scmScrollBarThickness` +
+`scmScrollBarGap`, holds the gap as well. The settings pages keep that room
+whether or not a page scrolls, out of the content's 24px margin on the bar's
+side, so the cards never change width as the bar comes and goes, and the bar
+stands 4px from the content column's edge.
+
+The rule is a child selector on the area's own bar, since a descendant one also
+reaches the bars of what the area holds - the Editor page's theme preview among
+them - which stand against their own text. The margin's side follows the layout
+direction: right to left, Qt puts the bar on the area's left but does not mirror
+a style sheet margin with it, so the builder writes `margin-right` there and the
+window builds its sheet again on `QEvent::LayoutDirectionChange`.
+
 ### Human copy
 
 Controls state what happens in words a player understands. A card may carry a
@@ -1061,8 +1086,8 @@ is empty, with `retainSizeWhenHidden` so it still takes its place. Only the
 bar comes and goes; the content is never laid out again.
 
 - Call it once on a tree, list or scroll area as it is built. The editor's
-  item trees, its search results and `ContentScrollArea` (the pattern list)
-  do.
+  item trees, its search results, `ContentScrollArea` (the pattern list) and
+  the settings pages (`createScrollPage()`) do.
 - Do not reach for the same result by switching a viewport margin or a layout
   margin when the bar shows or hides. The margin is applied after the bar has
   already changed the viewport, so one frame is painted at the wrong width,
