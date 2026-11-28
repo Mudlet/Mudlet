@@ -353,7 +353,9 @@ bool TRoomDB::__removeRoom(int id)
 bool TRoomDB::removeRoom(int id)
 {
     if (rooms.contains(id) && id > 0) {
-        forgetLocationsInRooms({id});
+        if (forgetLocationsInRooms({id})) {
+            mpMap->updateArea(-1);
+        }
         TRoom* pR = getRoom(id);
         if (pR) {
             delete pR;
@@ -363,8 +365,9 @@ bool TRoomDB::removeRoom(int id)
     return false;
 }
 
-// A player or speedwalk target left on a deleted room ID would follow whichever room reuses it
-void TRoomDB::forgetLocationsInRooms(const QSet<int>& ids)
+// A player or speedwalk target left on a deleted room ID would follow whichever room reuses it.
+// Returns whether this profile's player was in one of them; the caller announces the change.
+bool TRoomDB::forgetLocationsInRooms(const QSet<int>& ids)
 {
     const bool playerRoomDeleted = ids.contains(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     for (int& playerRoomId : mpMap->mRoomIdHash) {
@@ -375,9 +378,7 @@ void TRoomDB::forgetLocationsInRooms(const QSet<int>& ids)
     if (ids.contains(mpMap->mTargetID)) {
         mpMap->mTargetID = 0;
     }
-    if (playerRoomDeleted) {
-        mpMap->updateArea(-1);
-    }
+    return playerRoomDeleted;
 }
 
 void TRoomDB::removeRoom(QSet<int>& ids)
