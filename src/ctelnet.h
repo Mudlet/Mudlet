@@ -599,6 +599,9 @@ private:
     // IPv6 address ("2001:db8::1"):
     QString mHostUrl;
     int mHostPort = 0;
+    // The profile's own address was changed since the last dial, so reconnect() and the automatic reconnect go to
+    // it instead of where that dial went
+    bool mHostAddressChanged = false;
     bool mWaitingForResponse = false;
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.

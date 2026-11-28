@@ -855,6 +855,7 @@ void cTelnet::connectIt(const QString& address, int port)
 
     mHostUrl = address;
     mHostPort = port;
+    mHostAddressChanged = false;
     if (mpTransport) {
         dialTransport();
         return;
@@ -881,7 +882,7 @@ void cTelnet::reconnect()
 
     // if we've opened the profile offline and wish to connect, the last
     // connection parameters aren't yet set
-    if (mHostUrl.isEmpty() || mHostPort == 0) {
+    if (mHostUrl.isEmpty() || mHostPort == 0 || mHostAddressChanged) {
         connectIt(mpHost->getUrl(), mpHost->getPort());
     } else {
         connectIt(mHostUrl, mHostPort);
@@ -1773,7 +1774,11 @@ void cTelnet::finishDisconnection()
     // And if the conditions are right start the reconnection attempt straight
     // away:
     if (mAutoReconnect && !mDontReconnect && timeOffset >= 5000) {
-        connectIt(mHostUrl, mHostPort);
+        if (mHostAddressChanged && mpHost) {
+            connectIt(mpHost->getUrl(), mpHost->getPort());
+        } else {
+            connectIt(mHostUrl, mHostPort);
+        }
     }
     mDontReconnect = false;
     mDisconnectRequested = false;

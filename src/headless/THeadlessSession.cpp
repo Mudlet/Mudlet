@@ -1309,6 +1309,35 @@ bool THeadlessSession::setPassword(const QString& password)
     return true;
 }
 
+bool THeadlessSession::setAddress(const QString& host, const int port, const bool tls)
+{
+    if (!usable()) {
+        return false;
+    }
+    Options details;
+    details.host = host.trimmed();
+    details.port = port;
+    details.tls = tls;
+    if (const QString problem = MudletApp::connectionDetailsProblem(hostToConnectTo(mProfileName, details.host), port, tls); !problem.isEmpty()) {
+        mErrorString = problem;
+        return false;
+    }
+    if (!storeConnectionDetails(details, tls)) {
+        return false;
+    }
+    mpHost->changeAddress(details.host.isEmpty() ? mpHost->getUrl() : details.host, port > 0 ? port : mpHost->getPort(), tls);
+    return true;
+}
+
+bool THeadlessSession::setAutoReconnect(const bool reconnect)
+{
+    if (!usable() || !storeConnectionDetail(qsl("autoreconnect"), QString::number(reconnect ? Qt::Checked : Qt::Unchecked))) {
+        return false;
+    }
+    mpHost->setAutoReconnect(reconnect);
+    return true;
+}
+
 bool THeadlessSession::runLua(const QString& code)
 {
     if (!usable()) {

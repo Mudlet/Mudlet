@@ -6628,6 +6628,19 @@ void Host::loadStoredPassword()
     }
 }
 
+void Host::changeAddress(const QString& url, const int port, const bool tls)
+{
+    if (url == mUrl && port == mPort && tls == mSslTsl) {
+        return;
+    }
+    mUrl = url;
+    mPort = port;
+    mSslTsl = tls;
+    // A telnets:// link asked for the server it named
+    mUseTlsThisSession = false;
+    mTelnet.mHostAddressChanged = true;
+}
+
 void Host::changeLogin(const QString& login)
 {
     if (login == mLogin) {

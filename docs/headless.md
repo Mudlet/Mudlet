@@ -213,6 +213,18 @@ only, as `options.password` is, and nothing stores it; an empty one withdraws th
 password stored for the profile, if any, is read again. Both are false, with `errorString()` saying why,
 where `submit()` is refused, and `setLogin()` also when the name could not be stored.
 
+`setAddress()` and `setAutoReconnect()` do the same for the rest of what the connection dialog holds, which a
+running profile also reads only as it loads. `setAddress()` takes the server, its port and whether it is
+reached securely, and stores them as `options.host`, `options.port` and `options.tls` are stored, so an empty
+host or a port of 0 leaves the profile's. Lua's `reconnect()`, the retry after a failed connection and the
+automatic reconnect go to the new address from then on, where they would have gone to the one last connected
+to, and every later connection takes the TLS choice, `connectToServer()`'s included. A connection that is open
+stays as it is, and one still looking its server up takes the TLS choice as it is when the lookup ends, as it
+does a change made in the profile preferences. `setAutoReconnect()` is the dialog's "Reconnect automatically",
+stored with the profile: it counts from the next time the connection is lost or fails, so a retry that is
+already waiting is still made, and disconnecting calls that off. Both are false where `submit()` is refused
+and when a detail could not be stored, and `setAddress()` also for details `start()` would refuse.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap

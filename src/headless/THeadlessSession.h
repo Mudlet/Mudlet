@@ -220,6 +220,15 @@ public:
     // name could not be stored, which leaves the profile's as it was.
     bool setLogin(const QString& login);
     bool setPassword(const QString& password);
+    // The server, its port and whether it is reached securely, changed in the running profile and stored with it
+    // as Options::host, port and tls are: an empty host or a port of 0 leaves the profile's. Lua's reconnect(),
+    // the retry after a failed connection and the automatic reconnect go there from then on, and every later
+    // connection takes the TLS choice; a connection that is open stays as it is. setAutoReconnect() is the
+    // connection dialog's "Reconnect automatically", stored too: it counts from the next time the connection is
+    // lost or fails, and a retry already waiting is still made. Both are false where submit() is refused, and
+    // when a detail could not be stored; setAddress() also where start() would refuse the details.
+    bool setAddress(const QString& host, int port, bool tls);
+    bool setAutoReconnect(bool reconnect);
     bool runLua(const QString& code);
     // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
     // string each, an option of several by its name (showSentText as "never", "always" or "script"). A key

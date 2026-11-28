@@ -223,6 +223,9 @@ public:
     int getPort() { return mPort; }
     void setPort(const int port) { mPort = port; }
     void setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
+    // The server and whether it is reached securely, changed while the profile runs: the next connect, reconnect
+    // or automatic reconnect goes there, and a connection that is open stays where it is
+    void changeAddress(const QString& url, int port, bool tls);
     QString& getLogin() { return mLogin; }
     void setLogin(const QString& login) { mLogin = login; }
     // The login name, changed while the profile runs: the automatic login reads it at its login step, so it is for
