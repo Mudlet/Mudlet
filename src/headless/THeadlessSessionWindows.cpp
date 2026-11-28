@@ -483,6 +483,9 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.cursor = record->cursor;
     content.customCursor = record->customCursor;
     content.customCursorHotSpot = record->customCursorHotSpot;
+    if (const std::optional<TLabelAccessibleValue>& value = pModel->mAccessibleValue) {
+        content.accessibleValue = LabelContent::AccessibleValue{.value = value->value, .min = value->min, .max = value->max};
+    }
     content.clickThrough = pModel->mClickThrough;
     content.accessibleName = pModel->effectiveAccessibleName();
     content.accessibleButton = pModel->actsAsButton();

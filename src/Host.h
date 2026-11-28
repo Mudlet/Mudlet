@@ -76,6 +76,7 @@ class QSettings;
 class TEvent;
 class TArea;
 enum class TLabelLiveRegion : int;
+struct TLabelAccessibleValue;
 class LuaInterface;
 class XMLexport;
 class TMedia;
@@ -813,6 +814,8 @@ public:
     // std::nullopt goes back to deciding by the label's callbacks
     bool setLabelAccessibleButton(const QString& name, std::optional<bool> button);
     bool setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion);
+    // std::nullopt clears it
+    bool setLabelAccessibleValue(const QString& name, std::optional<TLabelAccessibleValue> value);
     bool setLabelAccessibleName(const QString& name, const QString& accessibleName);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
@@ -855,9 +858,11 @@ public:
     std::optional<QString> labelStyleSheet(const QString& name) const;
     std::optional<QString> labelToolTip(const QString& name) const;
     std::optional<QString> labelAccessibleName(const QString& name) const;
-    // "button", "graphic", "animation" or "text": what a screen reader is told the label is
+    // "button", "progressbar", "graphic", "animation" or "text": what a screen reader is told the label is
     std::optional<QString> labelAccessibleRole(const QString& name) const;
     std::optional<TLabelLiveRegion> labelLiveRegion(const QString& name) const;
+    // The outer one empty for no such label, the inner one for a label with no accessible value
+    std::optional<std::optional<TLabelAccessibleValue>> labelAccessibleValue(const QString& name) const;
     std::optional<QFont> labelFont(const QString& name) const;
     std::optional<QString> labelText(const QString& name) const;
     // The title in .second when .first is true, otherwise why there is none, in setUserWindowTitle()'s words.

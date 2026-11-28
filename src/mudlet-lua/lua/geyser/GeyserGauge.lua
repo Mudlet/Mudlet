@@ -572,6 +572,19 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
     resizeWindow(front.name, inPlaceSize(self, fill, front))
   end
 
+  -- what a screen reader reads the gauge as, as a progress bar: the back label is the gauge's size, so its value
+  -- is the gauge's, out of the maximum given, or of 100; one past the end is at the end. A reading it cannot give,
+  -- not a number or out of an infinite maximum, leaves it none, so a reader goes by what the gauge draws; checked
+  -- here, as setLabelAccessibleValue() would warn of it at every prompt
+  local maximum = maxValue or 100
+  if maximum > 0 and maximum < math.huge and currentValue == currentValue then
+    setLabelAccessibleValue(self.back.name, math.min(currentValue, maximum), 0, maximum)
+  else
+    clearLabelAccessibleValue(self.back.name)
+  end
+  -- kept for setStyleSheet(), which lays the gauge out again: self.value is a percentage, which would lose the maximum
+  self.currentValue, self.maxValue = currentValue, maxValue
+
   if text then
     self.text:echo(text)
   end
@@ -706,9 +719,9 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
     self.text:setStyleSheet(cssText)
   end
   
-  -- Recalculate gauge positioning with the new stylesheet
+  -- Recalculate gauge positioning with the new stylesheet, from the value and maximum last given, if any
   if self.value then
-    self:setValue(self.value)
+    self:setValue(self.currentValue or self.value, self.maxValue)
   end
 end
 

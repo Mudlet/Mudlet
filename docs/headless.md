@@ -1210,6 +1210,10 @@ trimmed under the row it is scrolled back to.
 - `toolTip` and `toolTipDuration`, in seconds, 0 for the platform's own;
 - `cursor`, unset for the parent's, or the shape `setLabelCursor()` gave it, or `Qt::BitmapCursor` with
   `customCursor` and `customCursorHotSpot` from `setLabelCustomCursor()`;
+- `accessibleValue`, as `setLabelAccessibleValue()` gave it: `value`, from `min` to `max`, which a screen
+  reader reads as a progress bar's, and none for a label without one. `Geyser.Gauge:setValue()` and `setGauge()`
+  give it to the gauge's back label, so an app that draws the gauge has its value without reading the front label's
+  width;
 - `clickThrough`, as `enableClickthrough()` sets it;
 - `accessibleName` and `accessibleButton`, what a screen reader says for it and whether it is told it is
   a button;

@@ -3743,6 +3743,80 @@ int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
     return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelAccessibleValue
+int TLuaInterpreter::setLabelAccessibleValue(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    const double given = getVerifiedDouble(L, __func__, 2, "value");
+    // The range is optional: 0 to 100 without it
+    TLabelAccessibleValue value;
+    if (!lua_isnoneornil(L, 3)) {
+        value.min = getVerifiedDouble(L, __func__, 3, "minimum", true);
+    }
+    if (!lua_isnoneornil(L, 4)) {
+        value.max = getVerifiedDouble(L, __func__, 4, "maximum", true);
+    }
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+    if (!std::isfinite(given) || !std::isfinite(value.min) || !std::isfinite(value.max)) {
+        return warnArgumentValue(L, __func__, "the value, minimum and maximum must be finite numbers");
+    }
+    if (value.min >= value.max) {
+        return warnArgumentValue(L, __func__, qsl("the minimum (%1) must be less than the maximum (%2)").arg(value.min).arg(value.max));
+    }
+    // As a progress bar shows it: one past either end, as a gauge that is not strict may be, is at that end
+    value.value = std::clamp(given, value.min, value.max);
+
+    Host& host = getHostFromLua(L);
+    if (!host.setLabelAccessibleValue(labelName, value)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelAccessibleValue
+int TLuaInterpreter::getLabelAccessibleValue(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    const std::optional<std::optional<TLabelAccessibleValue>> value = host.labelAccessibleValue(labelName);
+    if (!value) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+    if (!*value) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushnumber(L, (*value)->value);
+    lua_pushnumber(L, (*value)->min);
+    lua_pushnumber(L, (*value)->max);
+    return 3;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearLabelAccessibleValue
+int TLuaInterpreter::clearLabelAccessibleValue(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.setLabelAccessibleValue(labelName, std::nullopt)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelAccessibleRole
 int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
 {

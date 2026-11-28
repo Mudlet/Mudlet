@@ -7441,6 +7441,16 @@ bool Host::setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion)
     return false;
 }
 
+bool Host::setLabelAccessibleValue(const QString& name, std::optional<TLabelAccessibleValue> value)
+{
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setAccessibleValue(value);
+        return true;
+    }
+    return false;
+}
+
 bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
 {
     auto* pModel = mWindowRegistry.labelModel(name);
@@ -7953,6 +7963,14 @@ std::optional<TLabelLiveRegion> Host::labelLiveRegion(const QString& name) const
     return {};
 }
 
+std::optional<std::optional<TLabelAccessibleValue>> Host::labelAccessibleValue(const QString& name) const
+{
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mAccessibleValue;
+    }
+    return {};
+}
+
 std::optional<QString> Host::labelAccessibleRole(const QString& name) const
 {
     const TLabelModel* pLabel = mWindowRegistry.labelModel(name);
@@ -7961,6 +7979,9 @@ std::optional<QString> Host::labelAccessibleRole(const QString& name) const
     }
     if (pLabel->actsAsButton()) {
         return qsl("button");
+    }
+    if (pLabel->mAccessibleValue) {
+        return qsl("progressbar");
     }
     switch (pLabel->mShownContent) {
     case TLabelModel::ShownContent::Graphic:

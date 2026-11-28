@@ -39,6 +39,16 @@ class QSvgRenderer;
 // How a change of a label's text is announced to a screen reader, as ARIA's aria-live
 enum class TLabelLiveRegion : int { Off, Polite, Assertive };
 
+// What a screen reader reads a label as when it shows a value, as a progress bar: value, from min to max
+struct TLabelAccessibleValue
+{
+    double value = 0.0;
+    double min = 0.0;
+    double max = 100.0;
+
+    bool operator==(const TLabelAccessibleValue&) const = default;
+};
+
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
 // these by name but does NOT own them.
@@ -85,6 +95,12 @@ struct TLabelModel
     // Set by the widget, if there is one, to update its focus policy, tell assistive technology of a change and pace its announcements
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
+
+    // std::nullopt for none. Gaining or losing one is a Role change, as a label that is not a button is a progress
+    // bar while it has one; any change at all is told to mAccessibleValueChanged, set by the widget or the headless
+    // front end, if there is one
+    void setAccessibleValue(std::optional<TLabelAccessibleValue> value);
+    std::function<void()> mAccessibleValueChanged;
 
     // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
     static bool svgCandidate(const QString& path);
@@ -153,6 +169,8 @@ struct TLabelModel
     // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
     std::optional<bool> mAccessibleButton;
     TLabelLiveRegion mLiveRegion = TLabelLiveRegion::Off;
+    // What setLabelAccessibleValue() gave it, as Geyser gives a gauge's back label its value; none until then
+    std::optional<TLabelAccessibleValue> mAccessibleValue;
     bool mClickThrough = false;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.

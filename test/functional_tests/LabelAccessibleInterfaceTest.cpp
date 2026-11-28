@@ -233,7 +233,7 @@ private slots:
     {
         QVERIFY(runLua(
                 qsl("setConfig('accessibleLabels', false); setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
-                    "setLabelLiveRegion('%1', 'off'); disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
+                    "setLabelLiveRegion('%1', 'off'); clearLabelAccessibleValue('%1'); disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
                     "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil; accessibleLinkHit = nil")
                         .arg(mLabelName)));
     }
@@ -976,6 +976,47 @@ private slots:
         QVERIFY(luaHolds(qsl("getLabelAccessibleRole('%1') == 'text'").arg(mLabelName)));
         QVERIFY(runLua(qsl("disableClickthrough('%1')").arg(mLabelName)));
         QCOMPARE(accessible()->role(), QAccessible::Button);
+    }
+
+    // As a Geyser gauge's back label is, so a screen reader reads the gauge's value
+    void test_aLabelWithAValueIsAProgressBar()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+        QVERIFY(accessible()->valueInterface() == nullptr);
+        QVERIFY(runLua(qsl("assert(setLabelAccessibleValue('%1', 30, 0, 200))").arg(mLabelName)));
+        QCOMPARE(accessible()->role(), QAccessible::ProgressBar);
+        QAccessibleValueInterface* value = accessible()->valueInterface();
+        QVERIFY(value);
+        QCOMPARE(value->currentValue().toDouble(), 30.0);
+        QCOMPARE(value->minimumValue().toDouble(), 0.0);
+        QCOMPARE(value->maximumValue().toDouble(), 200.0);
+        QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "gaining a value was not announced as a role change");
+        QVERIFY2(smEvents.contains(QAccessible::ValueChanged), "the value was not announced");
+
+        smEvents.clear();
+        QVERIFY(runLua(qsl("setLabelAccessibleValue('%1', 50, 0, 200)").arg(mLabelName)));
+        QCOMPARE(accessible()->valueInterface()->currentValue().toDouble(), 50.0);
+        QVERIFY2(smEvents.contains(QAccessible::ValueChanged), "a new value was not announced");
+        QVERIFY2(!smEvents.contains(QAccessible::ActionChanged), "a new value was announced as a role change");
+        // A gauge is set on every prompt, mostly to the value it has
+        smEvents.clear();
+        QVERIFY(runLua(qsl("setLabelAccessibleValue('%1', 50, 0, 200)").arg(mLabelName)));
+        QVERIFY2(smEvents.isEmpty(), "a value that did not change was announced");
+
+        // A button stays one, and has no value to read
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(mLabelName)));
+        QCOMPARE(accessible()->role(), QAccessible::Button);
+        QVERIFY(accessible()->valueInterface() == nullptr);
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil)").arg(mLabelName)));
+
+        smEvents.clear();
+        QVERIFY(runLua(qsl("clearLabelAccessibleValue('%1')").arg(mLabelName)));
+        QCOMPARE(accessible()->role(), QAccessible::StaticText);
+        QVERIFY(accessible()->valueInterface() == nullptr);
+        QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "losing the value was not announced as a role change");
     }
 
     // As Qt's own interface for a QLabel says of one

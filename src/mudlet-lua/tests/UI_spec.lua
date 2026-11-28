@@ -7390,6 +7390,77 @@ describe("Widget state getters", function()
     end)
   end)
 
+  describe("setLabelAccessibleValue/getLabelAccessibleValue/clearLabelAccessibleValue", function()
+    after_each(function()
+      clearLabelAccessibleValue(label)
+    end)
+
+    it("is none until it is set, and holds what it is set to until it is cleared", function()
+      assert.is_nil(getLabelAccessibleValue(label))
+      assert.is_true(setLabelAccessibleValue(label, 25, 0, 200))
+      assert.are.same({25, 0, 200}, {getLabelAccessibleValue(label)})
+      assert.is_true(setLabelAccessibleValue(label, 40))
+      assert.are.same({40, 0, 100}, {getLabelAccessibleValue(label)})
+      assert.is_true(clearLabelAccessibleValue(label))
+      assert.is_nil(getLabelAccessibleValue(label))
+    end)
+
+    it("takes a value past either end as that end", function()
+      assert.is_true(setLabelAccessibleValue(label, -5, 0, 10))
+      assert.are.same({0, 0, 10}, {getLabelAccessibleValue(label)})
+      assert.is_true(setLabelAccessibleValue(label, 15, 0, 10))
+      assert.are.same({10, 0, 10}, {getLabelAccessibleValue(label)})
+    end)
+
+    it("makes a label a progress bar until it is cleared, but a button stays a button", function()
+      assert.are.equal("text", getLabelAccessibleRole(label))
+      setLabelAccessibleValue(label, 1)
+      assert.are.equal("progressbar", getLabelAccessibleRole(label))
+      setLabelAccessibleRole(label, "button")
+      assert.are.equal("button", getLabelAccessibleRole(label))
+      setLabelAccessibleRole(label, "")
+      clearLabelAccessibleValue(label)
+      assert.are.equal("text", getLabelAccessibleRole(label))
+    end)
+
+    it("returns nil and a message for an empty label name", function()
+      for _, call in ipairs({function() return setLabelAccessibleValue("", 1) end, function() return getLabelAccessibleValue("") end,
+                             function() return clearLabelAccessibleValue("") end}) do
+        local ok, err = call()
+        assert.is_nil(ok)
+        assert.are.equal("a label cannot have an empty string as its name", err)
+      end
+    end)
+
+    it("returns nil and a message for a range that is empty or a number that is not finite, leaving the value as it was", function()
+      setLabelAccessibleValue(label, 5, 0, 10)
+      local ok, err = setLabelAccessibleValue(label, 5, 10, 10)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("must be less than the maximum", 1, true))
+      for _, bad in ipairs({{0 / 0}, {1, -math.huge}, {1, 0, math.huge}}) do
+        ok, err = setLabelAccessibleValue(label, unpack(bad))
+        assert.is_nil(ok)
+        assert.are.equal("the value, minimum and maximum must be finite numbers", err)
+      end
+      assert.are.same({5, 0, 10}, {getLabelAccessibleValue(label)})
+    end)
+
+    it("raises for an argument that is not a number", function()
+      assert.has_error(function() setLabelAccessibleValue(label, "five") end)
+      assert.has_error(function() setLabelAccessibleValue(label, 5, "zero") end)
+      assert.has_error(function() setLabelAccessibleValue(label, 5, 0, {}) end)
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local unknown = name("wdgNoSuchLabel")
+      for _, call in ipairs({setLabelAccessibleValue, getLabelAccessibleValue, clearLabelAccessibleValue}) do
+        local ok, err = call(unknown, 1)
+        assert.is_nil(ok)
+        assert.are.equal(("label name '%s' not found"):format(unknown), err)
+      end
+    end)
+  end)
+
   describe("setLabelLiveRegion/getLabelLiveRegion", function()
     after_each(function()
       setLabelLiveRegion(label, "off")

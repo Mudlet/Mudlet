@@ -582,6 +582,9 @@ public:
     static int getLabelAccessibleRole(lua_State*);
     static int setLabelLiveRegion(lua_State*);
     static int getLabelLiveRegion(lua_State*);
+    static int setLabelAccessibleValue(lua_State*);
+    static int getLabelAccessibleValue(lua_State*);
+    static int clearLabelAccessibleValue(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);

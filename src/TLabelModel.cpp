@@ -577,6 +577,22 @@ void TLabelModel::setClickThrough(bool clickThrough)
     accessibilityChanged(AccessibilityChange::Role);
 }
 
+void TLabelModel::setAccessibleValue(std::optional<TLabelAccessibleValue> value)
+{
+    if (mAccessibleValue == value) {
+        return;
+    }
+    // A button stays a button; any other label is a progress bar while it has a value
+    const bool roleChanges = mAccessibleValue.has_value() != value.has_value() && !actsAsButton();
+    mAccessibleValue = value;
+    if (roleChanges) {
+        accessibilityChanged(AccessibilityChange::Role);
+    }
+    if (mAccessibleValueChanged) {
+        mAccessibleValueChanged();
+    }
+}
+
 void TLabelModel::setText(const QString& text)
 {
     if (mText == text) {

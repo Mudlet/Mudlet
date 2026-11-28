@@ -739,6 +739,17 @@ public:
         QPoint customCursorHotSpot;
         // The pointer passes through it to what is under it
         bool clickThrough = false;
+        // What a screen reader reads it as, as a progress bar, as setLabelAccessibleValue() gave it: value, from min
+        // to max. Geyser gives a gauge's back label the gauge's value. None for a label without one
+        struct AccessibleValue
+        {
+            double value = 0.0;
+            double min = 0.0;
+            double max = 100.0;
+
+            bool operator==(const AccessibleValue&) const = default;
+        };
+        std::optional<AccessibleValue> accessibleValue;
         // What a screen reader says for it, and whether it is told it is a button
         QString accessibleName;
         bool accessibleButton = false;

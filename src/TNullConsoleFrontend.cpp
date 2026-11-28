@@ -1368,6 +1368,10 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     pLabel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange) {
         mWindowNotifier.note();
     };
+    // ... and gives it a value
+    pLabel->mAccessibleValueChanged = [this]() {
+        mWindowNotifier.note();
+    };
     pLabel->setClickThrough(clickThrough);
     pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     auto [userWindow, box] = containerFor(windowname, false);

@@ -870,6 +870,91 @@ createMiniConsole("again", 0, 0, 100, 100)
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aLabelsAccessibleValueIsItsContent()
+    {
+        using AccessibleValue = THeadlessSession::LabelContent::AccessibleValue;
+        const QString name = qsl("Headless Label Accessible Value");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("lbl", 0, 0, 100, 20, 1)
+hpGauge = Geyser.Gauge:new({name = "hp", x = 0, y = 300, width = 200, height = 20})
+hpGauge:setValue(30, 200)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<THeadlessSession::LabelContent> content = session.labelContent(qsl("lbl"));
+        QVERIFY(content);
+        QVERIFY(!content->accessibleValue);
+        // A gauge's value is on its back label, out of the maximum it was given; the other two have none
+        content = session.labelContent(qsl("hp_back"));
+        QVERIFY(content);
+        QCOMPARE(content->accessibleValue, std::optional(AccessibleValue{.value = 30.0, .min = 0.0, .max = 200.0}));
+        QVERIFY(!session.labelContent(qsl("hp_front"))->accessibleValue);
+        QVERIFY(!session.labelContent(qsl("hp_text"))->accessibleValue);
+
+        // Nothing else about the label changes, so the value alone names it
+        const auto toldAs = [&](const QString& lua, const std::optional<AccessibleValue> expected) {
+            if (!session.runLua(lua) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("lbl")};
+            changes.clear();
+            const std::optional<THeadlessSession::LabelContent> now = session.labelContent(qsl("lbl"));
+            return named && now && now->accessibleValue == expected;
+        };
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleValue("lbl", 5, 0, 10))"), AccessibleValue{.value = 5.0, .min = 0.0, .max = 10.0}));
+        // As a progress bar shows it, a value past the end is at the end
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleValue("lbl", 15, 0, 10))"), AccessibleValue{.value = 10.0, .min = 0.0, .max = 10.0}));
+        // Out of 0 to 100 unless told otherwise
+        QVERIFY(toldAs(qsl(R"(setLabelAccessibleValue("lbl", 40))"), AccessibleValue{.value = 40.0, .min = 0.0, .max = 100.0}));
+        // The one it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setLabelAccessibleValue("lbl", 40, 0, 100))")));
+        QVERIFY(!changes.wait(200));
+        // Nor is one refused, with nil and a message as Mudlet's other label functions refuse
+        QVERIFY(session.runLua(qsl(R"lua(
+local ok, message = setLabelAccessibleValue("lbl", 5, 10, 10)
+assert(ok == nil and message:find("must be less than the maximum", 1, true), message)
+ok, message = setLabelAccessibleValue("lbl", 0 / 0)
+assert(ok == nil and message:find("finite", 1, true), message)
+ok, message = setLabelAccessibleValue("nonesuch", 5)
+assert(ok == nil and message == "label name 'nonesuch' not found", message)
+assert(not pcall(setLabelAccessibleValue, "lbl", "five"))
+local value, min, max = getLabelAccessibleValue("lbl")
+assert(value == 40 and min == 0 and max == 100)
+)lua")));
+        QVERIFY(!changes.wait(200));
+        QVERIFY(toldAs(qsl(R"(clearLabelAccessibleValue("lbl"))"), std::nullopt));
+        QVERIFY(session.runLua(qsl(R"(assert(getLabelAccessibleValue("lbl") == nil))")));
+
+        // A new value of the gauge names its back label
+        QVERIFY(session.runLua(qsl("hpGauge:setValue(50)")));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(changes.takeFirst().at(1).toStringList().contains(qsl("hp_back")));
+        QCOMPARE(session.labelContent(qsl("hp_back"))->accessibleValue, std::optional(AccessibleValue{.value = 50.0, .min = 0.0, .max = 100.0}));
+        // A new style sheet lays the gauge out again, out of the maximum it was given, not of 100
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"lua(hpGauge:setValue(30, 200); hpGauge:setStyleSheet("background-color: red", "background-color: black"))lua")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(session.labelContent(qsl("hp_back"))->accessibleValue, std::optional(AccessibleValue{.value = 30.0, .min = 0.0, .max = 200.0}));
+        // A reading it cannot give leaves it none, not the last, so a reader goes by what the gauge draws
+        changes.clear();
+        QVERIFY(session.runLua(qsl("hpGauge:setValue(5, math.huge)")));
+        QVERIFY(changes.wait(1000));
+        QVERIFY(!session.labelContent(qsl("hp_back"))->accessibleValue);
+        // createGauge()'s gauges have it too, kept as they move
+        changes.clear();
+        QVERIFY(session.runLua(qsl(R"lua(createGauge("old", 100, 10, 0, 400); setGauge("old", 3, 12); moveGauge("old", 0, 420))lua")));
+        QVERIFY(changes.wait(1000));
+        QCOMPARE(session.labelContent(qsl("old_back"))->accessibleValue, std::optional(AccessibleValue{.value = 3.0, .min = 0.0, .max = 12.0}));
+        QVERIFY(!session.labelContent(qsl("old_front"))->accessibleValue);
+
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_labelsRunTheirCallbacksAsTheGuisMouseDoes()
     {
         const QString name = qsl("Headless Label Pointer");

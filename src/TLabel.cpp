@@ -87,6 +87,12 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     mpModel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange change) {
         accessibilityChanged(change);
     };
+    mpModel->mAccessibleValueChanged = [this]() {
+        if (const std::optional<TLabelAccessibleValue>& value = mpModel->mAccessibleValue; value && !mpModel->actsAsButton()) {
+            QAccessibleValueChangeEvent event(this, value->value);
+            QAccessible::updateAccessibility(&event);
+        }
+    };
     updateKeyboardAccess();
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);

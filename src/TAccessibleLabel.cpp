@@ -36,10 +36,27 @@ bool TAccessibleLabel::actsAsButton() const
     return label()->model().actsAsButton();
 }
 
+const TLabelAccessibleValue* TAccessibleLabel::accessibleValue() const
+{
+    const std::optional<TLabelAccessibleValue>& value = label()->model().mAccessibleValue;
+    return value && !actsAsButton() ? &*value : nullptr;
+}
+
+void* TAccessibleLabel::interface_cast(QAccessible::InterfaceType t)
+{
+    if (t == QAccessible::ValueInterface && accessibleValue()) {
+        return static_cast<QAccessibleValueInterface*>(this);
+    }
+    return QAccessibleWidget::interface_cast(t);
+}
+
 QAccessible::Role TAccessibleLabel::role() const
 {
     if (actsAsButton()) {
         return QAccessible::Button;
+    }
+    if (accessibleValue()) {
+        return QAccessible::ProgressBar;
     }
     // As Qt's own QLabel interface reports a pixmap or movie; Mudlet's SVG layer counts as a pixmap
     if (label()->movie()) {
@@ -73,6 +90,30 @@ void TAccessibleLabel::doAction(const QString& actionName)
         return;
     }
     QAccessibleWidget::doAction(actionName);
+}
+
+QVariant TAccessibleLabel::currentValue() const
+{
+    const TLabelAccessibleValue* value = accessibleValue();
+    return value ? QVariant(value->value) : QVariant();
+}
+
+QVariant TAccessibleLabel::maximumValue() const
+{
+    const TLabelAccessibleValue* value = accessibleValue();
+    return value ? QVariant(value->max) : QVariant();
+}
+
+QVariant TAccessibleLabel::minimumValue() const
+{
+    const TLabelAccessibleValue* value = accessibleValue();
+    return value ? QVariant(value->min) : QVariant();
+}
+
+QVariant TAccessibleLabel::minimumStepSize() const
+{
+    // Any value between the two ends is one, as for Qt's own progress bar
+    return accessibleValue() ? QVariant(0.0) : QVariant();
 }
 
 /*static*/ QAccessibleInterface* TAccessibleLabel::labelFactory(const QString& classname, QObject* object)
