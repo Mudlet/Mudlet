@@ -41,6 +41,8 @@
  * Run with: ctest -R EditorAutoCompleteFocusTest -V
  */
 
+#include <QAccessible>
+#include <QAction>
 #include <QFocusEvent>
 #include <QLineEdit>
 #include <QListWidget>
@@ -91,6 +93,38 @@ private:
             }
             return false;
         }
+    };
+
+    // Records the objects that QAccessible::Focus events name - what a screen
+    // reader follows, as opposed to where Qt's keyboard focus is
+    class FocusEventRecorder
+    {
+    public:
+        FocusEventRecorder()
+        : mWasActive(QAccessible::isActive())
+        {
+            smObjects.clear();
+            mPreviousHandler = QAccessible::installUpdateHandler(&record);
+            QAccessible::setActive(true);
+        }
+        ~FocusEventRecorder()
+        {
+            QAccessible::installUpdateHandler(mPreviousHandler);
+            QAccessible::setActive(mWasActive);
+        }
+        QObject* last() const { return smObjects.isEmpty() ? nullptr : smObjects.constLast(); }
+
+    private:
+        static void record(QAccessibleEvent* pEvent)
+        {
+            if (pEvent->type() == QAccessible::Focus) {
+                smObjects.append(pEvent->object());
+            }
+        }
+
+        inline static QList<QObject*> smObjects;
+        QAccessible::UpdateHandler mPreviousHandler = nullptr;
+        bool mWasActive = false;
     };
 
     QTemporaryDir mConfigDir;
@@ -360,6 +394,70 @@ private slots:
         QCOMPARE(mpEditor->textDocument()->text(), qsl("%1t").arg(manyWordPrefix()));
         QVERIFY2(QApplication::activePopupWidget() == mpMenu, "typing a letter closed the popup instead of narrowing it");
         QVERIFY2(focusStayedWithEditor(), "typing a letter moved the keyboard focus off the editor");
+    }
+
+    // The list announces each suggestion as the accessibility focus, so closing
+    // the popup has to announce the editor again: Qt gives the keyboard back to
+    // it silently, and a screen reader is otherwise left on a suggestion in a
+    // window that is gone.
+    void test_acceptingASuggestionGivesTheScreenReaderTheEditorBack()
+    {
+        FocusEventRecorder recorder;
+        QVERIFY2(openPopupFor(manyWordPrefix(), 3), "the autocomplete popup never came up with the three planted suggestions");
+        QVERIFY2(recorder.last() == mpList, "the suggestion list did not announce its current row, so there is nothing for the editor to take back");
+        QVERIFY(mpList->currentItem());
+        const QString suggestion = mpList->currentItem()->text();
+
+        QVERIFY2(pressInPopup(Qt::Key_Tab), "the popup was not there to take the Tab key");
+        QVERIFY2(!popupIsOpen(), "Tab did not accept the suggestion");
+        QCOMPARE(mpEditor->textDocument()->text(), suggestion);
+        QVERIFY2(recorder.last() == mpEditorComponent, "accepting a suggestion left the screen reader on the closed suggestion list");
+    }
+
+    void test_typingPastThePopupGivesTheScreenReaderTheEditorBack()
+    {
+        FocusEventRecorder recorder;
+        QVERIFY2(openPopupFor(manyWordPrefix(), 3), "the autocomplete popup never came up with the three planted suggestions");
+        QVERIFY2(recorder.last() == mpList, "the suggestion list did not announce its current row, so there is nothing for the editor to take back");
+
+        auto* window = QApplication::activePopupWidget()->windowHandle();
+        QVERIFY(window);
+        QTest::keyClick(window, '(');
+        QTest::qWait(10ms);
+
+        QVERIFY2(!popupIsOpen(), "a character that cannot be part of a name did not close the popup");
+        QCOMPARE(mpEditor->textDocument()->text(), qsl("%1(").arg(manyWordPrefix()));
+        QVERIFY2(recorder.last() == mpEditorComponent, "typing past the popup left the screen reader on the closed suggestion list");
+    }
+
+    // The popup is a QObject child of the editor, so a shortcut on the editor's
+    // surroundings - the script editor closes its find bar on Escape - still
+    // matches while the popup is open, and would take Escape from it.
+    void test_escapeClosesThePopupDespiteAnEscapeShortcutAroundTheEditor()
+    {
+        auto* closeFindBar = new QAction(mpArea);
+        closeFindBar->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        closeFindBar->setShortcut(QKeySequence(QKeySequence::Cancel));
+        mpArea->addAction(closeFindBar);
+        auto removeAction = qScopeGuard([&] {
+            delete closeFindBar;
+        });
+        int triggered = 0;
+        connect(closeFindBar, &QAction::triggered, this, [&] {
+            ++triggered;
+        });
+
+        QVERIFY2(openPopupFor(manyWordPrefix(), 3), "the autocomplete popup never came up with the three planted suggestions");
+        QVERIFY2(pressInPopup(Qt::Key_Escape), "the popup was not there to take the Escape key");
+
+        QVERIFY2(!popupIsOpen(), "Escape did not close the autocomplete popup");
+        QCOMPARE(triggered, 0);
+        QCOMPARE(mpEditor->textDocument()->text(), manyWordPrefix());
+        QVERIFY2(focusStayedWithEditor(), "closing the popup with Escape moved the keyboard focus off the editor");
+
+        // with the popup gone, Escape is the shortcut's again
+        QTest::keyClick(mpEditorComponent, Qt::Key_Escape);
+        QCOMPARE(triggered, 1);
     }
 
     // The attribute that keeps the popup window from taking the window
