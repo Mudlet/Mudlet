@@ -853,14 +853,6 @@ void dlgMapper::connect3DViewControls()
     connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
     connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
 
-    // Player icon adjustment controls
-    connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
-    connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
-    connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
-    connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
-    connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
-    connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
-
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
     if (!modernWidget) {
         for (QWidget* control : {static_cast<QWidget*>(slider_scale),
@@ -876,6 +868,12 @@ void dlgMapper::connect3DViewControls()
     }
 
     modernWidget->setCompanion2DMap(mp2dMap);
+    connect(slider_playerIconHeight, &QSlider::valueChanged, modernWidget, &ModernGLWidget::slot_setPlayerIconHeight);
+    connect(slider_playerIconRotX, &QSlider::valueChanged, modernWidget, &ModernGLWidget::slot_setPlayerIconRotationX);
+    connect(slider_playerIconRotY, &QSlider::valueChanged, modernWidget, &ModernGLWidget::slot_setPlayerIconRotationY);
+    connect(slider_playerIconRotZ, &QSlider::valueChanged, modernWidget, &ModernGLWidget::slot_setPlayerIconRotationZ);
+    connect(slider_playerIconScale, &QSlider::valueChanged, modernWidget, &ModernGLWidget::slot_setPlayerIconScale);
+    connect(pushButton_resetPlayerIcon, &QPushButton::clicked, modernWidget, &ModernGLWidget::slot_resetPlayerIcon);
     connect(modernWidget, &ModernGLWidget::areaFlownInto, this, [this](const int areaId) {
         const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         if (!areaName.isEmpty()) {

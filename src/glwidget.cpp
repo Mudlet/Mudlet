@@ -2192,43 +2192,46 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         auto eventPos = event->position().toPoint();
         const int x = eventPos.x();
         const int y = height() - eventPos.y(); // the opengl origin is at bottom left
-        GLuint buff[16] = {0};
-        GLint hits;
-        GLint view[4];
-        makeCurrent();
-        glSelectBuffer(16, buff);
-        glGetIntegerv(GL_VIEWPORT, view);
-        glRenderMode(GL_SELECT);
-        glInitNames();
-        glPushName(0);
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        gluPickMatrix(x, y, 0.1, 0.1, view);
-        gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
-        glMatrixMode(GL_MODELVIEW);
-        doneCurrent();
         mTargetRoomId = -22;
-        makeCurrent();
-        paintGL();
-        doneCurrent();
-        makeCurrent();
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        hits = glRenderMode(GL_RENDER);
+        // Without a context makeCurrent() does nothing, and picking would draw the scene into whichever context is current
+        if (isValid()) {
+            GLuint buff[16] = {0};
+            GLint hits;
+            GLint view[4];
+            makeCurrent();
+            glSelectBuffer(16, buff);
+            glGetIntegerv(GL_VIEWPORT, view);
+            glRenderMode(GL_SELECT);
+            glInitNames();
+            glPushName(0);
+            glMatrixMode(GL_PROJECTION);
+            glPushMatrix();
+            glLoadIdentity();
+            gluPickMatrix(x, y, 0.1, 0.1, view);
+            gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
+            glMatrixMode(GL_MODELVIEW);
+            doneCurrent();
+            makeCurrent();
+            paintGL();
+            doneCurrent();
+            makeCurrent();
+            glMatrixMode(GL_PROJECTION);
+            glPopMatrix();
+            hits = glRenderMode(GL_RENDER);
 
-        for (int i = 0; i < hits; i++) {
-            mTargetRoomId = buff[i * 4 + 3];
-            //TODO: multiple assignments
-            //            unsigned int minZ = buff[i * 4 + 1];
-            //            unsigned int maxZ = buff[i * 4 + 2];
+            for (int i = 0; i < hits; i++) {
+                mTargetRoomId = buff[i * 4 + 3];
+                //TODO: multiple assignments
+                //            unsigned int minZ = buff[i * 4 + 1];
+                //            unsigned int maxZ = buff[i * 4 + 2];
+            }
+            glViewport(0, 0, (GLint)width(), (GLint)height());
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
+            glMatrixMode(GL_MODELVIEW);
+            doneCurrent();
         }
-        glViewport(0, 0, (GLint)width(), (GLint)height());
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
-        glMatrixMode(GL_MODELVIEW);
-        doneCurrent();
         update();
         if (mpMap->mpRoomDB->getRoom(mTargetRoomId)) {
             mpMap->mTargetID = mTargetRoomId;
