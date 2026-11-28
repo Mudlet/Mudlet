@@ -20,7 +20,8 @@
 /*
  * The main and detached toolbars draw the editor's glyph files, inked from the palette and
  * retinted when it moves. The Sound button's caption comes from iconText() and stays "Sound", so
- * its glyph alone says whether media is muted.
+ * its glyph alone says whether media is muted. The cases reading an ink set the icons to
+ * grayscale first, as in colour a glyph takes its old picture's colour instead.
  *
  * Run with: ctest -R MainToolBarGlyphTest -V
  */
@@ -30,6 +31,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPalette>
+#include <QScopeGuard>
 #include <QSvgRenderer>
 #include <QToolButton>
 #include <QtTest/QtTest>
@@ -140,6 +142,10 @@ private slots:
 
     void test_theSoundButtonKeepsItsCaptionWhileItsGlyphSaysTheState()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         QToolButton* pButton = mudlet::self()->findChild<QToolButton*>(qsl("mute"));
         QVERIFY2(pButton, "the main window has no 'mute' toolbar button");
         QAction* pAction = mudlet::self()->findChild<QAction*>(qsl("muteMedia"));
@@ -181,6 +187,10 @@ private slots:
 
     void test_theTriggersButtonCarriesTheEditorsGlyph()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         QAction* pAction = mainWindowTriggersAction();
         QVERIFY2(pAction, "the main window has no 'triggers_action' on its toolbar");
         const QImage onTheToolbar = TestPixels::drawnAt(pAction->icon(), scmComparisonSize);
@@ -196,6 +206,10 @@ private slots:
     // Nothing re-derives a QIcon once it is set on an action
     void test_aPaletteChangeRetintsTheToolbar()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         QAction* pAction = mainWindowTriggersAction();
         QVERIFY2(pAction, "the main window has no 'triggers_action' on its toolbar");
         const QPalette savedPalette = QApplication::palette();

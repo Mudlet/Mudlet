@@ -468,12 +468,13 @@ void TDetachedWindow::createMenus()
     mpWindowMenu = menuBar()->addMenu(tr("Window"));
 
     //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
-    auto fullScreenAction = new QAction(tr("&Fullscreen"), this);
-    fullScreenAction->setCheckable(true);
+    mpMenuFullScreenAction = new QAction(tr("&Fullscreen"), this);
+    mpMenuFullScreenAction->setCheckable(true);
+    mpMenuFullScreenAction->setObjectName(qsl("menuFullScreen"));
     //: This explains the "Fullscreen" item in the "Window" menu in the menubar of a detached Mudlet window.
-    fullScreenAction->setStatusTip(tr("Toggle Full Screen View"));
-    connect(fullScreenAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreen);
-    mpWindowMenu->addAction(fullScreenAction);
+    mpMenuFullScreenAction->setStatusTip(tr("Toggle Full Screen View"));
+    connect(mpMenuFullScreenAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreenView);
+    mpWindowMenu->addAction(mpMenuFullScreenAction);
 
     //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Minimize" among them.
     mpMenuMultiViewAction = new QAction(tr("&Multiview"), this);
@@ -718,12 +719,6 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
     // Allow hiding if the window is currently minimized (check current state directly)
     // This handles the case where minimize happens before changeEvent sets mIsBeingMinimized
     if (isMinimized() || mIsBeingMinimized) {
-        QMainWindow::hideEvent(event);
-        return;
-    }
-
-    // Allow hiding if we're changing window flags (e.g., always on top)
-    if (mIsChangingWindowFlags) {
         QMainWindow::hideEvent(event);
         return;
     }
@@ -1693,38 +1688,15 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
 #endif
 }
 
+// showNormal() would also drop a maximized state, so only the full-screen bit is flipped; changeEvent() syncs the checkmarks
 void TDetachedWindow::slot_toggleFullScreenView()
 {
-    if (isFullScreen()) {
-        showNormal();
-        mpActionFullScreenView->setChecked(false);
-    } else {
-        showFullScreen();
-        mpActionFullScreenView->setChecked(true);
-    }
+    setWindowState((windowState() & ~Qt::WindowActive) ^ Qt::WindowFullScreen);
 }
 
 void TDetachedWindow::slot_toggleAlwaysOnTop()
 {
-    // Set flag to allow hiding during window flag changes
-    mIsChangingWindowFlags = true;
-
-    Qt::WindowFlags flags = windowFlags();
-
-    if (flags & Qt::WindowStaysOnTopHint) {
-        // Remove always on top flag
-        setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
-    } else {
-        // Add always on top flag
-        setWindowFlags(flags | Qt::WindowStaysOnTopHint);
-    }
-
-    show(); // Required after changing window flags
-
-    // Reset flag after a short delay to allow the window operations to complete
-    QTimer::singleShot(100ms, this, [this]() {
-        mIsChangingWindowFlags = false;
-    });
+    mudlet::setWindowStaysOnTop(this, !(windowFlags() & Qt::WindowStaysOnTopHint));
 }
 
 void TDetachedWindow::slot_toggleToolBarVisibility()
@@ -3266,6 +3238,13 @@ void TDetachedWindow::changeEvent(QEvent* event)
     }
 
     if (event->type() == QEvent::WindowStateChange) {
+        if (mpActionFullScreenView) {
+            mpActionFullScreenView->setChecked(isFullScreen());
+        }
+        if (mpMenuFullScreenAction) {
+            mpMenuFullScreenAction->setChecked(isFullScreen());
+        }
+
         // Check if window is being minimized
         if (windowState() & Qt::WindowMinimized) {
             mIsBeingMinimized = true;
@@ -3491,14 +3470,4 @@ void TDetachedWindow::slot_toggleMultiView()
     withCurrentProfileActive([this]() {
         mudlet::self()->slot_toggleMultiView();
     });
-}
-
-void TDetachedWindow::slot_toggleFullScreen()
-{
-    // Toggle fullscreen state for this detached window
-    if (isFullScreen()) {
-        showNormal();
-    } else {
-        showFullScreen();
-    }
 }

@@ -184,16 +184,20 @@ private:
         QCOMPARE(file.write(xml), xml.size());
     }
 
-    // The autosave comes due the first time the import lets events run, and roomsWhenDue is how many rooms the
-    // map then held
+    // The autosave comes due the first time the import lets events run with some of its rooms read, and
+    // roomsWhenDue is how many the map then held
     bool importWithAutosaveDue(const QString& path, QString* errMsg, int& roomsWhenDue)
     {
         QTimer ticker;
         connect(&ticker, &QTimer::timeout, this, [&]() {
-            if (roomsWhenDue < 0 && map()->mapOperationInProgress()) {
+            if (roomsWhenDue < 0 && map()->mapOperationInProgress() && map()->mpRoomDB->size() > 0) {
                 roomsWhenDue = map()->mpRoomDB->size();
                 mpHost->autoSaveMap();
             }
+        });
+        // addHost() gives this profile no TMainConsole to connect this to repaintMapProgressDialog(), which does the same
+        connect(map(), &TMap::signal_mapProgressRepaintWanted, &ticker, []() {
+            QCoreApplication::processEvents();
         });
         ticker.start(0);
         return mpHost->importMapFile(path, errMsg);
@@ -397,7 +401,7 @@ private slots:
         int roomsWhenDue = -1;
         const bool imported = importWithAutosaveDue(xmlPath, &errMsg, roomsWhenDue);
         QVERIFY2(imported, qPrintable(errMsg));
-        QVERIFY2(roomsWhenDue >= 0, "the import let no events run, so this case covers nothing");
+        QVERIFY2(roomsWhenDue > 0, "the import let no events run once it had rooms, so this case covers nothing");
         QVERIFY2(roomsWhenDue < 5000, "the import had finished its rooms before the autosave came due");
         mpHost->waitForMapAutosave();
         QVERIFY2(!QFileInfo::exists(autosavePath(mProfileName)), qPrintable(qsl("an autosave was written with %1 of the import's 5000 rooms").arg(roomsWhenDue)));
@@ -427,7 +431,7 @@ private slots:
         QString errMsg;
         int roomsWhenDue = -1;
         QVERIFY(!importWithAutosaveDue(xmlPath, &errMsg, roomsWhenDue));
-        QVERIFY2(roomsWhenDue >= 0, "the import let no events run, so this case covers nothing");
+        QVERIFY2(roomsWhenDue > 0, "the import let no events run once it had rooms, so this case covers nothing");
         mpHost->waitForMapAutosave();
         QVERIFY2(!QFileInfo::exists(autosavePath(mProfileName)), "an autosave was written from a map that failed to import");
         QVERIFY2(map()->isUnsaved(), "a failed import left the player's own changes marked as saved");
