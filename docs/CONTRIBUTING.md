@@ -2,6 +2,29 @@
 If you don't have previous Git experience, we highly recommend downloading and installing
 the free [Github for Desktop](https://desktop.github.com) app to contribute code to Mudlet 🌟
 
+# Keeping third-party code up to date
+
+The libraries under `3rdparty/` that are Git submodules are pinned to a commit, and that pin moves
+whenever `development` updates one of them. On the command line, Git leaves the files of a
+submodule where they were when you pull or switch branches, so after such an update
+`git status` lists the submodule as modified (` M 3rdparty/qtkeychain`) although you did not
+touch it, and your build uses the older library. Run this once in your clone to have
+`git pull`, `git switch` and `git checkout` bring the submodules along:
+
+```bash
+git config submodule.recurse true
+```
+
+`git merge` does not follow that setting. After merging `development` into your branch by hand,
+or if a submodule already shows as modified, run:
+
+```bash
+git submodule update --init --recursive
+```
+
+Do not commit a submodule that shows as modified unless your change is meant to update it, as
+that would undo the update for everyone.
+
 # UI design guidelines
 
 Have a look at the [UI design philosophy](../UI-design-philosophy.md) when improving Mudlet's interface.

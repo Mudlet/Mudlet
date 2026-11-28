@@ -104,6 +104,7 @@
 #include <QMessageBox>
 #include <QPoint>
 #include <QScopeGuard>
+#include <QScopedValueRollback>
 #include <QScreen>
 #include <QScrollBar>
 #include <QSettings>
@@ -3066,17 +3067,19 @@ void mudlet::slot_reattachAllDetachedWindows()
 
 void mudlet::slot_toggleAlwaysOnTop()
 {
-    Qt::WindowFlags flags = windowFlags();
-    if (flags & Qt::WindowStaysOnTopHint) {
-        // Remove always on top flag
-        setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
-        dactionToggleAlwaysOnTop->setChecked(false);
-    } else {
-        // Add always on top flag
-        setWindowFlags(flags | Qt::WindowStaysOnTopHint);
-        dactionToggleAlwaysOnTop->setChecked(true);
+    const bool onTop = !(windowFlags() & Qt::WindowStaysOnTopHint);
+    setWindowStaysOnTop(this, onTop);
+    dactionToggleAlwaysOnTop->setChecked(onTop);
+}
+
+// setWindowFlags() would destroy and recreate the native window, leaving floating docks no longer tied to it, so they
+// drop behind it; the platform window can change this flag in place
+void mudlet::setWindowStaysOnTop(QWidget* window, const bool onTop)
+{
+    window->overrideWindowFlags(window->windowFlags().setFlag(Qt::WindowStaysOnTopHint, onTop));
+    if (QWindow* pWindow = window->windowHandle()) {
+        pWindow->setFlags(window->windowFlags());
     }
-    show(); // Required after changing window flags
 }
 
 void mudlet::slot_minimize()
@@ -3823,10 +3826,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // update the window title for the currently selected profile
     updateMainWindowTitle();
 
-    mpSplitter_profileContainer->addWidget(pConsole);
+    // Hidden before the new console joins the splitter: sharing it even briefly lays the profile in front out
+    // narrower, and its scripts keep that layout while hidden
     if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mainConsoleView()->hide();
     }
+    mpSplitter_profileContainer->addWidget(pConsole);
 
     pConsole->show();
 
@@ -4236,6 +4241,7 @@ bool mudlet::loadWindowLayout()
             const bool rv = restoreState(layoutData);
 
             if (rv) {
+                mDockSidesKeepTheirDepth = true;
                 restoreFloatingDockGeometries();
                 keepFloatingDocksOnScreen();
                 commitLayoutUpdates(true);
@@ -4299,8 +4305,8 @@ bool mudlet::saveFloatingDockGeometries()
     return true;
 }
 
-// Qt gives a dock shown in an area that was used before, or that a restored layout left empty, the depth the area
-// had rather than its size hint, down to its minimum
+// Once Qt stops sizing sides from their hints, it gives a dock shown in an area that was used before, or that a restored
+// layout left empty, the depth the area had rather than its size hint, no less than its minimum
 void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
 {
     using namespace std::chrono_literals;
@@ -4336,6 +4342,7 @@ void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
             return;
         }
         resizeDocks({dock}, {wanted}, orientation);
+        mDockSidesKeepTheirDepth = true;
     });
 }
 
@@ -4500,7 +4507,48 @@ int mudlet::profileTabIndex(const QString& profileName) const
 
 bool mudlet::setActiveProfileTab(const QString& profileName)
 {
-    mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+    Host* pHost = mHostManager.getHost(profileName);
+    // A focus-change handler asking for this same switch would otherwise raise its event again, without end
+    if (pHost && pHost == mpProfileBeingActivated) {
+        return true;
+    }
+    const QScopedValueRollback<QPointer<Host>> activating(mpProfileBeingActivated, pHost);
+
+    // A detached profile's tab is in its own window, not the main tab bar
+    if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        // show() leaves a minimised window minimised
+        pDetachedWindow->setWindowState(pDetachedWindow->windowState() & ~Qt::WindowMinimized);
+        pDetachedWindow->show();
+        pDetachedWindow->raise();
+        pDetachedWindow->activateWindow();
+        pDetachedWindow->switchToProfile(profileName);
+        // The main tab bar's change of tab is what does this for a profile in the main window
+        activateProfile(pHost);
+        // The profile left behind may have sent the window to another of its tabs from a focus handler before this one took over
+        if (pHost && pHost == mpCurrentActiveHost) {
+            pDetachedWindow->switchToProfile(profileName);
+        }
+        // Queued after activateProfile()'s own hand-off, which could give the keyboard to a user window left in the main window
+        QTimer::singleShot(0ms, pDetachedWindow, [this, pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
+            // A focus-change handler may have moved on to another profile since
+            if (!pDetachedHost || pDetachedHost != mpCurrentActiveHost) {
+                return;
+            }
+            pDetachedWindow->raise();
+            pDetachedWindow->activateWindow();
+            if (TMainConsole* pConsole = pDetachedHost->mainConsoleView()) {
+                pConsole->focusActiveCommandLine(pDetachedWindow);
+            }
+        });
+        return true;
+    }
+    const int index = mpTabBar->tabIndex(profileName);
+    // While a detached profile is active the main tab bar keeps its tab current, so selecting that tab again changes nothing
+    if (index >= 0 && index == mpTabBar->currentIndex() && mpCurrentActiveHost && mpTabBar->tabIndex(mpCurrentActiveHost->getName()) < 0) {
+        activateProfile(pHost);
+        return true;
+    }
+    mpTabBar->setCurrentIndex(index);
     return true;
 }
 
@@ -4893,9 +4941,10 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mHostManager.readSettings(settings);
     mInvertMapZoom = settings.value("invertMapZoom", QVariant(false)).toBool(); // Default to false for modern (non-inverted) behavior
-    // The toolbar was inked before the settings were read
-    if (settings.value(qsl("colouredIcons"), false).toBool()) {
-        mColouredIcons = true;
+    // The toolbar was inked before the settings were read. A key of its own rather than "colouredIcons", which builds
+    // with the experiment wrote as false for everyone who never ticked it.
+    if (const bool coloured = !settings.value(qsl("greyscaleIcons"), false).toBool(); coloured != mColouredIcons) {
+        mColouredIcons = coloured;
         restyleToolBarIcons();
     }
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
@@ -5339,7 +5388,7 @@ void mudlet::writeSettings()
     settings.setValue("fullScreen", static_cast<bool>(windowState() & Qt::WindowFullScreen));
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("invertMapZoom", mInvertMapZoom);
-    settings.setValue(qsl("colouredIcons"), mColouredIcons);
+    settings.setValue(qsl("greyscaleIcons"), !mColouredIcons);
     settings.setValue("showTabConnectionIndicators", mShowTabConnectionIndicators);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -6624,17 +6673,16 @@ void mudlet::slot_replay()
         return;
     }
 
-    QSettings& settings = *MudletApp::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    // Recordings always go to the profile's default log folder, never a custom log folder
+    const QString startDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName());
 
-
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), lastDir, tr("*.dat"));
+    //: File type filter in the dialog for choosing a replay to play back; keep "(*.dat)" untranslated
+    const QString replayFilter = tr("Mudlet replays (*.dat)");
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), startDir, replayFilter);
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
-    lastDir = QFileInfo(fileName).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
     mHostManager.replay().load(pHost, fileName);
@@ -7113,6 +7161,12 @@ void mudlet::slot_multiView(const bool state)
         // If there IS at least one profile still active, but none of them WAS
         // the active one then make one (the first) the active one:
         slot_tabChanged(0);
+    }
+    // Every profile in the main window is now on show, so no tab there has text waiting unseen
+    if (mMultiView) {
+        for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+            mpTabBar->clearActivity(i);
+        }
     }
 }
 
@@ -8393,6 +8447,12 @@ void mudlet::activateProfile(Host* pHost)
     // CRITICAL FIX: Handle console visibility properly for both multiview and single-view modes
     const QString currentProfileName = mpCurrentActiveHost->getName();
     const bool currentInMainWindow = !mDetachedWindows.contains(currentProfileName);
+
+    if (currentInMainWindow && !mMultiView) {
+        // Laid out before the console is shown, or it is shown first at the size the other profile's docks left it
+        updateMainWindowDockWidgetVisibilityForProfile(currentProfileName);
+        layout()->activate();
+    }
 
     if (currentInMainWindow) {
         // Show the current console
@@ -9965,6 +10025,170 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
 QDockWidget* mudlet::getMainWindowDockWidget(const QString& mapKey) const
 {
     return mMainWindowDockWidgetMap.value(mapKey);
+}
+
+namespace {
+// Left, right, top, bottom; none for a floating dock
+std::optional<size_t> dockSideOf(const QMainWindow* window, const QDockWidget* dock)
+{
+    if (dock->isFloating()) {
+        return std::nullopt;
+    }
+    switch (window->dockWidgetArea(const_cast<QDockWidget*>(dock))) {
+    case Qt::LeftDockWidgetArea:
+        return 0;
+    case Qt::RightDockWidgetArea:
+        return 1;
+    case Qt::TopDockWidgetArea:
+        return 2;
+    case Qt::BottomDockWidgetArea:
+        return 3;
+    default:
+        return std::nullopt;
+    }
+}
+
+int depthAcross(const size_t side, const QSize size)
+{
+    return side < 2 ? size.width() : size.height();
+}
+
+// How deep Qt makes a side for these docks while it still sizes sides from their hints, as QDockAreaLayoutInfo::sizeHint() does
+int hintedDepth(const size_t side, const QList<QDockWidget*>& docks)
+{
+    int hinted = 0;
+    int least = 0;
+    int most = QWIDGETSIZE_MAX;
+    for (const QDockWidget* dock : docks) {
+        const QSize minimum = dock->minimumSize().expandedTo(dock->minimumSizeHint());
+        hinted = std::max(hinted, depthAcross(side, dock->sizeHint().expandedTo(minimum).boundedTo(dock->maximumSize())));
+        least = std::max(least, depthAcross(side, minimum));
+        most = std::min(most, depthAcross(side, dock->maximumSize()));
+    }
+    return std::clamp(hinted, least, std::max(most, least));
+}
+} // namespace
+
+// User windows and toolbars stay docked whichever profile is in front, but each profile shows only its own map dock
+QSize mudlet::profileContainerSizeFor(const QString& profileName, const QSize containerSize) const
+{
+    std::array<QList<QDockWidget*>, 4> shownNow;
+    std::array<QList<QDockWidget*>, 4> shownThen;
+    for (QDockWidget* dock : findChildren<QDockWidget*>(Qt::FindDirectChildrenOnly)) {
+        const std::optional<size_t> side = dockSideOf(this, dock);
+        if (!side) {
+            continue;
+        }
+        const QString key = mMainWindowDockWidgetMap.key(dock);
+        if (!dock->isHidden()) {
+            shownNow[*side] << dock;
+        }
+        if (key.isEmpty() ? !dock->isHidden() : key == qsl("map_%1").arg(profileName) && mMainWindowDockWidgetUserPreference.value(key, false)) {
+            shownThen[*side] << dock;
+        }
+    }
+    const int separator = style()->pixelMetric(QStyle::PM_DockWidgetSeparatorExtent, nullptr, this);
+    QSize comingBackTo = containerSize;
+    for (size_t side = 0; side < shownNow.size(); ++side) {
+        int depthNow = 0;
+        for (const QDockWidget* dock : std::as_const(shownNow[side])) {
+            depthNow = std::max(depthNow, depthAcross(side, dock->size()));
+        }
+        int depthThen = 0;
+        if (!mDockSidesKeepTheirDepth) {
+            depthThen = hintedDepth(side, shownThen[side]);
+        } else if (!shownNow[side].isEmpty()) {
+            // Qt keeps the side as deep as it is, no shallower than the docks shown then need
+            depthThen = depthNow;
+            for (const QDockWidget* dock : std::as_const(shownThen[side])) {
+                depthThen = std::max(depthThen, depthAcross(side, dock->minimumSize().expandedTo(dock->minimumSizeHint())));
+            }
+        } else {
+            // An empty side comes back as deep as it was last, taken here as where these docks were left
+            for (const QDockWidget* dock : std::as_const(shownThen[side])) {
+                depthThen = std::max(depthThen, depthAcross(side, dock->size()));
+            }
+        }
+        const int change = (shownNow[side].isEmpty() ? 0 : depthNow + separator) - (shownThen[side].isEmpty() ? 0 : depthThen + separator);
+        if (side < 2) {
+            comingBackTo.rwidth() += change;
+        } else {
+            comingBackTo.rheight() += change;
+        }
+    }
+    // A window too narrow for its docks squeezes them, never the profile below the least room it needs
+    const QSize overhead = centralWidget()->size() - containerSize;
+    return comingBackTo.expandedTo(centralWidget()->minimumSizeHint() - overhead);
+}
+
+// Qt sizes each dock side from its docks' hints until a side's edge is dragged, a dock is dragged into place, or
+// resizeDocks() or restoreState() runs, and keeps each side's depth from then on. Qt doesn't expose which
+// (QDockAreaLayout::fallbackToSizeHints), so a side seen at a depth its hints don't give settles it.
+void mudlet::noticeDockSidesKeepingTheirDepth()
+{
+    if (mDockSidesKeepTheirDepth) {
+        return;
+    }
+    std::array<QList<QDockWidget*>, 4> shown;
+    for (QDockWidget* dock : findChildren<QDockWidget*>(Qt::FindDirectChildrenOnly)) {
+        if (const std::optional<size_t> side = dockSideOf(this, dock); side && !dock->isHidden()) {
+            shown[*side] << dock;
+        }
+    }
+    const QSize central = centralWidget()->size();
+    const QSize centralLeast = centralWidget()->minimumSizeHint();
+    for (size_t side = 0; side < shown.size(); ++side) {
+        // A window too small for the hints squeezes the sides instead
+        if (shown[side].isEmpty() || depthAcross(side, central) <= depthAcross(side, centralLeast)) {
+            continue;
+        }
+        if (depthAcross(side, shown[side].constFirst()->size()) != hintedDepth(side, shown[side])) {
+            mDockSidesKeepTheirDepth = true;
+            return;
+        }
+    }
+}
+
+void mudlet::syncHiddenProfilesSoon()
+{
+    for (const auto& pHost : mHostManager.hostList()) {
+        if (TConsole* const console = pHost ? pHost->mainConsoleView() : nullptr) {
+            console->syncHiddenScreenDimensionsSoon();
+        }
+    }
+}
+
+void mudlet::childEvent(QChildEvent* event)
+{
+    QMainWindow::childEvent(event);
+    // Added before it is fully built, so looked at again once polished
+    if (event->added() || event->polished()) {
+        if (auto* const dock = qobject_cast<QDockWidget*>(event->child())) {
+            dock->installEventFilter(this);
+        }
+    }
+}
+
+bool mudlet::eventFilter(QObject* watched, QEvent* event)
+{
+    auto* const dock = qobject_cast<QDockWidget*>(watched);
+    if (!dock) {
+        return QMainWindow::eventFilter(watched, event);
+    }
+    // Qt stops sizing sides from their hints as soon as a dock is dragged by its title, which floats it first. Moved with
+    // no button held, as keepFloatingDocksOnScreen() does, it is not being dragged.
+    if (event->type() == QEvent::Move && dock->isFloating() && QApplication::mouseButtons() & Qt::LeftButton) {
+        mDockSidesKeepTheirDepth = true;
+    }
+    // A dock can join or leave a side, or change its depth, without resizing the profile in front
+    if (event->type() == QEvent::Resize || event->type() == QEvent::Show || event->type() == QEvent::Hide) {
+        if (event->type() == QEvent::Resize && !mDockSidesKeepTheirDepth) {
+            // Once laid out: Qt resizes the docks before the central widget, whose size tells a squeeze from a drag
+            QTimer::singleShot(0, this, &mudlet::noticeDockSidesKeepingTheirDepth);
+        }
+        syncHiddenProfilesSoon();
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profileName)

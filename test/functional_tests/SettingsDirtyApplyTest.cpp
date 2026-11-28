@@ -54,6 +54,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
+#include "CredentialManager.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
@@ -368,6 +369,26 @@ private slots:
         mpPreferences->slot_resetLogDir();
         QVERIFY2(TestSettings::waitForApply(applySpy), "resetting the log folder never wrote the settings back");
         QCOMPARE(mpHost->mLogDir, QString());
+    }
+
+    // Saving never deletes a stored proxy password, so clearing the field must, or the next load brings it back
+    void test_clearingTheProxyPasswordDeletesTheStoredOne()
+    {
+        QVERIFY(CredentialManager::storeCredential(mProfileName, qsl("proxy"), qsl("secret")));
+        mpHost->mProxyPassword = qsl("secret");
+        auto restore = qScopeGuard([this] {
+            CredentialManager::removeCredential(mProfileName, qsl("proxy"));
+            mpHost->mProxyPassword.clear();
+        });
+        openPreferences();
+        QCOMPARE(mpPreferences->lineEdit_proxyPassword->text(), qsl("secret"));
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->lineEdit_proxyPassword->clear();
+        emit mpPreferences->lineEdit_proxyPassword->editingFinished();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "clearing the proxy password never wrote the settings back");
+        QVERIFY(mpHost->mProxyPassword.isEmpty());
+        QVERIFY2(CredentialManager::retrieveCredential(mProfileName, qsl("proxy")).isEmpty(), "the cleared password would be loaded again");
     }
 
     // Same shape for the shortcuts page: the reset button writes through

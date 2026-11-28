@@ -301,6 +301,24 @@ private slots:
         QVERIFY2(!pConsole->startIncomingText(), "the alert stayed armed after the window came back");
     }
 
+    // Multiview puts every main window profile on show, so a tab marked before it
+    // was switched on must not go on claiming text the player has not seen
+    void test_multiviewClearsTheMainWindowsMarks()
+    {
+        TTabBar* pTabBar = mudlet::self()->mpTabBar;
+        QCOMPARE(pTabBar->count(), 3);
+        mudlet::self()->activateProfile(mpFirstHost);
+        sendGameText(mpSecondHost);
+        QVERIFY2(pTabBar->tabBold(mSecondHostname), "the tab was never marked, so finding it unmarked afterwards would prove nothing");
+
+        mudlet::self()->slot_multiView(true);
+        const bool stillMarked = pTabBar->tabBold(mSecondHostname);
+        // Put back ahead of the assertion, which returns on failure
+        mudlet::self()->slot_multiView(false);
+
+        QVERIFY2(!stillMarked, "multiview put the profile on show and its tab still claims text the player has not seen");
+    }
+
     // A detached window holding one profile names its connection state in its
     // title, which is what the taskbar shows; it has to follow a disconnect, not
     // keep claiming the game is connected until the player next switches tabs.

@@ -1,7 +1,8 @@
 name: DangerJS
 
 on:
-  pull_request_target:
+  # Needs the write token to comment on fork pull requests; only the base branch is checked out
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, synchronize, reopened, edited]
 
 permissions:

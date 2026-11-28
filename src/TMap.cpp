@@ -93,6 +93,17 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
 }
 
+// qRound() of a number an int cannot hold asserts in a debug build and is undefined
+// behaviour otherwise, so a damaged JSON map's number reads as 0 instead
+int jsonInt(const QJsonValue& value)
+{
+    const double number = value.toDouble();
+    if (!(number >= std::numeric_limits<int>::min() && number <= std::numeric_limits<int>::max())) {
+        return 0;
+    }
+    return qRound(number);
+}
+
 // Not QFont::PreferNoShaping: Qt's unshaped text path treats Private Use Area
 // code points as unprintable, which blanks every symbol from an icon font.
 QFont::StyleStrategy symbolFontStyleStrategy(const bool onlySymbolFontUsed)
@@ -2342,7 +2353,7 @@ bool TMap::restore(QString location)
     return canRestore; //FIXME
 }
 
-// Reads the newest map file from the profile and retrieves some stats and data,
+// Reads the newest binary (.dat) map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
 // copied across (if the room STILL exists)!  This is to avoid a replacement map
@@ -2359,12 +2370,10 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
         pProfileHost->waitForMapAutosave();
     }
-    QString folder;
-    QStringList entries;
-    folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
+    const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
+    // Only binary maps can be read here: the first bytes of a JSON export or other
+    // text file read as a format version far beyond ours, so no player room is read
+    const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
 
     if (entries.isEmpty()) {
         return false;
@@ -2937,7 +2946,13 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     QUrl url;
     if (remoteUrl.isEmpty()) {
         if (!getMmpMapLocation().isEmpty()) {
-            url = QUrl::fromUserInput(getMmpMapLocation());
+            url = mmpMapUrl(getMmpMapLocation());
+            if (url.isEmpty()) {
+                //: Shown in the main console when the map the game offered is not downloaded
+                postMessage(tr("[ WARN ]  - The map the game offered is not at a web (http or https) address, so it was not downloaded."));
+                mImportRunning = false;
+                return;
+            }
         } else {
             url = QUrl::fromUserInput(qsl("https://www.%1/maps/map.xml").arg(pHost->mUrl));
         }
@@ -3478,6 +3493,18 @@ QString TMap::getMmpMapLocation() const
     return mMmpMapLocation;
 }
 
+// A file: or qrc: location would have the game pick a file on the player's computer, or in Mudlet, to be read as the
+// profile's map. QUrl::fromUserInput(), as downloadMap() reads it, turns a bare path into a file: URL.
+/*static*/ QUrl TMap::mmpMapUrl(const QString& location)
+{
+    const QUrl url = QUrl::fromUserInput(location);
+    // QUrl gives the scheme in lower case
+    if ((url.scheme() != qsl("http") && url.scheme() != qsl("https")) || url.host().isEmpty()) {
+        return {};
+    }
+    return url;
+}
+
 bool TMap::getRoomNamesPresent()
 {
     return mUserData.contains(ROOM_UI_SHOWNAME);
@@ -3882,11 +3909,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("no areas detected") : qsl("no areas detected"))};
     }
 
-    mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
+    mProgressDialogAreasTotal = jsonInt(mapObj[QLatin1String("areaCount")]);
     mProgressDialogAreasCount = 0;
-    mProgressDialogRoomsTotal = qRound(mapObj[QLatin1String("roomCount")].toDouble());
+    mProgressDialogRoomsTotal = jsonInt(mapObj[QLatin1String("roomCount")]);
     mProgressDialogRoomsCount = 0;
-    mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
+    mProgressDialogLabelsTotal = jsonInt(mapObj[QLatin1String("labelCount")]);
     mProgressDialogLabelsCount = 0;
     mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
@@ -3926,16 +3953,13 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    // qRound() returns an int, so dividing by an int literal here used to be
-    // integer division and every load rounded the factor to a whole number -
-    // issue #10176, which turned anything below 1.0 into a 0 that stops room
-    // symbols being drawn at all. The 1000 is to keep the value to the three
-    // decimals the preferences offer:
-    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
+    // Not qRound(), whose int overflows on a huge factor; the 1000 keeps the
+    // value to the three decimals the preferences offer
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(std::round(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
-    const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
-    quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
-    quint8 const playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());
+    const int playerRoomStyle = jsonInt(mapObj[QLatin1String("playerRoomStyle")]);
+    quint8 const playerRoomOuterDiameterPercentage = jsonInt(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")]);
+    quint8 const playerRoomInnerDiameterPercentage = jsonInt(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")]);
     QColor playerRoomOuterColor;
     QColor playerRoomInnerColor;
 
@@ -4455,10 +4479,8 @@ QColor TMap::getColor(int id)
     int env = room->environment;
     if (mEnvColors.contains(env)) {
         env = mEnvColors.value(env);
-    } else {
-        if (!mCustomEnvColors.contains(env)) {
-            env = 1;
-        }
+    } else if (!mCustomEnvColors.contains(env)) {
+        return mpHost->mapperDefaultRoomColor();
     }
     switch (env) {
     case 1:

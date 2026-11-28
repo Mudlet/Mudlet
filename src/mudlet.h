@@ -198,6 +198,12 @@ public:
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
+    // The profile container's size once profileName is in front, from its size now
+    QSize profileContainerSizeFor(const QString& profileName, QSize containerSize) const;
+    // Profiles hidden by a tab switch get no resize events of their own
+    void syncHiddenProfilesSoon();
+    // After a resizeDocks() on the main window, from which Qt keeps each dock side's depth
+    void noteDockSidesKeepTheirDepth() { mDockSidesKeepTheirDepth = true; }
     std::optional<QSize> getImageSize(const QString&) override;
     const QLocale& getUserLocale() const { return mUserLocale; }
     // Used to enable "emergency" control recovery action - if Mudlet is
@@ -521,6 +527,7 @@ public slots:
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
     static void bringWindowToFront(QWidget* window);
+    static void setWindowStaysOnTop(QWidget* window, const bool onTop);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
@@ -534,6 +541,8 @@ public slots:
     void slot_showVariableDialog();
 
 protected:
+    void childEvent(QChildEvent*) override;
+    bool eventFilter(QObject*, QEvent*) override;
     void closeEvent(QCloseEvent*) override;
     void changeEvent(QEvent*) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -596,6 +605,7 @@ private slots:
 
 private:
     void assignKeySequences();
+    void noticeDockSidesKeepingTheirDepth();
     void keepFloatingDocksOnScreen();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
@@ -776,7 +786,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
-    bool mColouredIcons = false;
+    bool mColouredIcons = true;
     QSplitter* mpSplitter_profileContainer = nullptr;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
@@ -912,6 +922,7 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    QPointer<Host> mpProfileBeingActivated;
     // Every profile in main tab bar order, with each detached one kept behind
     // the tab it followed, so that a reattach can put it back there
     QStringList mMainTabOrder;
@@ -924,6 +935,9 @@ private:
     // Dock widget management for main window per-profile widgets
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
     QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets
+    // Whether Qt has stopped sizing dock sides from their hints, as it does for good once a side's edge or a dock is
+    // dragged, or resizeDocks() or restoreState() runs
+    bool mDockSidesKeepTheirDepth = false;
     QPointer<QDockWidget> mpCurrentMapDockWidget;
 
     // Helper methods for detached windows
