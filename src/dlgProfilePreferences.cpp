@@ -2900,7 +2900,7 @@ void dlgProfilePreferences::updateSidebarToggle()
     const bool namesShowing = mSidebarLabelsShown && mSidebarNamesFit;
     // Pointing the way the sidebar will go: into the seam while the names are
     // there to be given up, out of it while they are not
-    mpToggle_sidebar->setPointingLeft(namesShowing);
+    mpToggle_sidebar->setPointingAtPane(namesShowing);
 
     //: Tooltip and accessible name of the chevron on the line down the right of the settings dialog's sidebar while the category names are showing. Pressing it leaves the sidebar in place as a rail of icons - it closes nothing - so the wording is about the labels rather than the sidebar.
     const QString minimise = tr("Minimise the sidebar to icons");
