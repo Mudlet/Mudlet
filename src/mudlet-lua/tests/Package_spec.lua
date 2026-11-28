@@ -1111,6 +1111,68 @@ describe("Tests the functionality of uninstallPackage", function()
     assert.equals("Minimal fixture package for Package_spec.lua", titleSeen)
     assert.same({}, getPackageInfo(minimalPackage), "the details outlived the uninstall")
   end)
+
+  -- Each item's script is compiled into a global named after its ID, and IDs are
+  -- never reused, so one left behind stays in memory for the rest of the session
+  -- and every reinstall of the package adds another set. No timer: the specs run
+  -- inside a timer, so an uninstalled one is only freed once the whole run returns.
+  it("frees the compiled scripts of the package's trigger, alias, key and button", function()
+    local name = "mudlet-spec-compiled-scripts"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    writePackageXml(xml, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. name .. ' trigger</name><script>local _ = 1</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList><string>mudlet spec compiled scripts</string></regexCodeList>',
+      '<regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script>local _ = 1</script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+      '<ActionPackage>',
+      '<Action isActive="no" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">',
+      '<name>' .. name .. ' button</name><packageName></packageName><script>local _ = 1</script><css></css>',
+      '<commandButtonUp></commandButtonUp><commandButtonDown></commandButtonDown><icon></icon>',
+      '<orientation>0</orientation><location>0</location><posX>0</posX><posY>0</posY>',
+      '<mButtonState>1</mButtonState><sizeX>0</sizeX><sizeY>0</sizeY><buttonColumn>1</buttonColumn>',
+      '<buttonFillerOffset>0</buttonFillerOffset><buttonRotation>0</buttonRotation>',
+      '</Action>',
+      '</ActionPackage>',
+      '<KeyPackage>',
+      '<Key isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' keybind</name><packageName></packageName><script>local _ = 1</script>',
+      '<command></command><keyCode>16777268</keyCode><keyModifier>67108864</keyModifier>',
+      '</Key>',
+      '</KeyPackage>',
+    }, "\n"))
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    installAndConfirm(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    local functionNames = {}
+    for itemType, prefix in pairs({trigger = "Trigger", alias = "Alias", keybind = "Key", button = "Action"}) do
+      local ids = findItems(name .. " " .. itemType, itemType)
+      assert.equals(1, #ids, "the package's " .. itemType .. " was not installed")
+      local functionName = prefix .. ids[1]
+      assert.equals("function", type(_G[functionName]), "the " .. itemType .. "'s script is not compiled under " .. functionName)
+      functionNames[#functionNames + 1] = functionName
+    end
+
+    removeFixturePackage(name)
+
+    for _, functionName in ipairs(functionNames) do
+      assert.is_nil(_G[functionName], functionName .. " outlived the item it was compiled for")
+    end
+  end)
 end)
 
 describe("Tests the functionality of getPackages", function()
@@ -4286,7 +4348,7 @@ describe("Tests installing a package file from a later Mudlet", function()
   local name = "mudlet-spec-from-the-future"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
 
-  local function writeLaterMudletXml(path, itemName)
+  local function writeLaterMudletXml(path, itemName, version)
     writePackageXml(path, table.concat({
       '<TriggerPackage>',
       '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
@@ -4298,7 +4360,7 @@ describe("Tests installing a package file from a later Mudlet", function()
       '<regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
       '</Trigger>',
       '</TriggerPackage>',
-    }, "\n"), "2.000")
+    }, "\n"), version or "2.000")
   end
 
   -- the item folders named after the package are made before the version is read
@@ -4329,6 +4391,25 @@ describe("Tests installing a package file from a later Mudlet", function()
     assertNoFoldersNamed(name)
     -- the console has had its own alert, so the reason is one plain line
     assert.is_false(contains(err, "\n"), tostring(err))
+  end)
+
+  -- 256 wraps the byte the major version is kept in, and 4294967296, inf and nan are past the int its
+  -- whole part is converted to
+  it("refuses one whose version is out of range", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    for _, version in ipairs({"256", "4294967296", "inf", "nan", "-1", "-0.5"}) do
+      writeLaterMudletXml(xml, name, version)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      local err = installExpectingRefusal(installPackage, xml)
+
+      assert.is_true(contains(err, "you need a newer Mudlet"), version .. ": " .. tostring(err))
+      assert.equals(0, exists(name .. " trigger", "trigger"), version .. ": an unreadable file's trigger was installed anyway")
+      assert.is_false(packageInstalled(name), version)
+    end
   end)
 
   it("leaves no empty folders behind when it is installed as a module", function()

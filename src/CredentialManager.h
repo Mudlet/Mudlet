@@ -73,6 +73,8 @@ class CredentialManager : public QObject
     friend class HeadlessHostSmokeTest;
     // Answers the keychain for the managers a profile with no main window makes itself
     friend class HeadlessSessionTest;
+    // Refuses the keychain read a profile copy in the connection dialog is waiting on
+    friend class ConnectionDialogOfflineProfileTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
