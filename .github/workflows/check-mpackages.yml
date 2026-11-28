@@ -31,7 +31,12 @@ jobs:
 
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
-        run: git fetch --no-tags --depth=1 origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+        run: git fetch --no-tags --depth=1 origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
 
       - name: Check mpackage archives
-        run: lua CI/check-mpackage-sync.lua ${{ github.event_name == 'pull_request' && format('--base-ref origin/{0}', github.base_ref) || '' }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            lua CI/check-mpackage-sync.lua --base-ref "origin/${GITHUB_BASE_REF}"
+          else
+            lua CI/check-mpackage-sync.lua
+          fi
