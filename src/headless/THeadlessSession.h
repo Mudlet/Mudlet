@@ -218,20 +218,18 @@ public:
     // dismissing it then lasts until the game stops hiding input. False while the box would not be open, and
     // where submit() is refused.
     bool dismissHiddenInput();
-    // The automatic login's name and password, changed in the running profile: the next connection logs in with
-    // them, and this one too if its login is still to come. setLogin() trims the name and stores it with the
-    // profile, as Options::login is; an empty one clears it. setPassword() is for this run only, as
-    // Options::password is: an empty one withdraws it, and the profile's stored one, if any, is read again.
+    // The automatic login, changed in the running profile: used from the next login, this connection's too if it is
+    // still to come. setLogin() trims the name and stores it, as Options::login is (empty clears it); setPassword()
+    // is for this run only, as Options::password is (empty goes back to the stored one, if any).
     // False where submit() is refused, and from setLogin() when the name could not be stored.
     bool setLogin(const QString& login);
     bool setPassword(const QString& password);
-    // The server, its port and whether it is reached securely, changed in the running profile and stored with it
-    // as Options::host, port and tls are: an empty host or a port of 0 leaves the profile's. Lua's reconnect(),
-    // the retry after a failed connection and the automatic reconnect go there from then on, and every later
-    // connection takes the TLS choice; a connection that is open stays as it is. setAutoReconnect() is the
-    // connection dialog's "Reconnect automatically", stored too: it counts from the next time the connection is
-    // lost or fails, and turning it off calls off a retry that is waiting. Both are false where submit() is refused, and
-    // when a detail could not be stored; setAddress() also where start() would refuse the details.
+    // Changed in the running profile and stored, as Options::host, port and tls are; an empty host or a port of 0
+    // keeps the profile's. Lua's reconnect(), the retry and the automatic reconnect go there from then on, every
+    // later connection takes the TLS choice, and an open one stays as it is. setAutoReconnect() is the connection
+    // dialog's "Reconnect automatically", counted from the next lost or failed connection; turning it off calls off
+    // a waiting retry.
+    // False where submit() is refused or a detail could not be stored; setAddress() also where start() would refuse it.
     bool setAddress(const QString& host, int port, bool tls);
     bool setAutoReconnect(bool reconnect);
     // The profile preferences' proxy: whether the game is reached through a SOCKS5 proxy, and where that is.
@@ -246,15 +244,13 @@ public:
     };
     // The proxy as the running profile holds it. False where submit() is refused.
     bool proxy(Proxy& proxy);
-    // Changes it as the profile preferences do: kept with the profile and written with its next save, and used
-    // from the next connection, a download's too; a connection that is open stays as it is. The address is
-    // trimmed. Refused, changing nothing, for a port outside 0 to 65535, for an address that is not a host's,
-    // and for a proxy to use that lacks its address or its port, as the preferences would then connect
-    // without one and say nothing. False where submit() is refused as well.
+    // As the profile preferences change it: written with the profile's next save, and used from the next connection,
+    // a download's too. The address is trimmed. Refused, changing nothing, for a port outside 0 to 65535, an address
+    // that is not a host's, or a proxy in use without its address or port, which the preferences would quietly
+    // connect around. False where submit() is refused as well.
     bool setProxy(const Proxy& proxy);
-    // The proxy's password, for this run only, as Options::proxyPassword is: an empty one withdraws the one
-    // given, and the one stored for the profile, if any, is read again. Used from the next connection. False
-    // where submit() is refused.
+    // For this run only, as Options::proxyPassword is (empty goes back to the stored one, if any), and used from
+    // the next connection. False where submit() is refused.
     bool setProxyPassword(const QString& password);
     bool runLua(const QString& code);
     // The profile's settings named in keys, as Lua's getConfig() gives them, into values: a bool, a number or a
@@ -262,10 +258,9 @@ public:
     // getConfig() does not know, or gives a table or nothing for, is left out. Mudlet's own getConfig() is called, not
     // whatever a script has put in its place. False, reading nothing, where runLua() is refused.
     bool settings(const QStringList& keys, QVariantMap& values);
-    // Changes the profile's settings as Lua's setConfig() does, one key at a time, as the preferences dialog
-    // would, so where the dialog's change is kept the same one is. Each key setConfig()
-    // refuses, or whose value is not a bool, a number or a string, goes into refused with why. False, changing
-    // nothing, where runLua() is refused.
+    // Changes them as Lua's setConfig() does, one key at a time, which keeps each change where the preferences
+    // dialog would. A key setConfig() refuses, or whose value is not a bool, a number or a string, goes into
+    // refused with why. False, changing nothing, where runLua() is refused.
     bool setSettings(const QVariantMap& values, QMap<QString, QString>& refused);
     // As the GUI installs a package given on its command line, but quietly: a refusal is errorString()'s alone
     // to tell. It returns once the install's sysInstall handlers should have run: Qt fires zero timers in the

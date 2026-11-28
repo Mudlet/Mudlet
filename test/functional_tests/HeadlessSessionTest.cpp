@@ -2326,6 +2326,7 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         QVERIFY(session.runLua(qsl("connectToServer('127.0.0.1', %1)").arg(otherServer.serverPort())));
         QTRY_VERIFY_WITH_TIMEOUT(otherServer.hasPendingConnections(), 10000);
         std::unique_ptr<QTcpSocket> elsewhere(otherServer.nextPendingConnection());
+        QVERIFY(!profileServer.hasPendingConnections());
 
         QVERIFY(session.setAddress(qsl("127.0.0.1"), profileServer.serverPort(), false));
         QVERIFY(session.runLua(qsl("reconnect()")));
