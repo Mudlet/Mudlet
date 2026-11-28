@@ -97,10 +97,10 @@ private slots:
         // report tabs wider than itself and a press aimed at a tab centre lands
         // beside it. Polishing is synchronous, so nothing here has to wait.
         mpTabBar->ensurePolished();
-        // Twice the hint rather than exactly it: QTabBar stretches its tabs to
-        // fill the width it is given, so the tabs tile the bar and every tab
-        // centre is over its own tab whatever the hint came out as
-        mpTabBar->resize(mpTabBar->sizeHint().width() * 2, mpTabBar->sizeHint().height());
+        // Exactly the hint: the tabs are packed from the leading edge, so at
+        // this width they tile the bar, its centre is over the middle tab and
+        // the tabs at either end stand a whole tab off it
+        mpTabBar->resize(mpTabBar->sizeHint().width(), mpTabBar->sizeHint().height());
     }
 
     void cleanup()

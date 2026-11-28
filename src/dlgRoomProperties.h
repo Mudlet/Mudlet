@@ -31,7 +31,12 @@
 #include <optional>
 
 class Host;
+class QStyledItemDelegate;
 class TRoom;
+
+namespace uiDesign {
+class ColourValue;
+}
 
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
@@ -40,6 +45,7 @@ class dlgRoomProperties : public QDialog, public Ui::room_properties
 public:
     Q_DISABLE_COPY(dlgRoomProperties)
     explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
+    ~dlgRoomProperties() override;
     void
     init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, int hiddenRoomCount, const QSet<int>& roomIds);
     void accept() override;
@@ -73,21 +79,30 @@ signals:
     // Only when an area was picked that not every room is in already
     void signal_save_area(int areaId, QSet<int> roomIds);
 
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override;
+    void changeEvent(QEvent* pEvent) override;
+    void showEvent(QShowEvent* pEvent) override;
+
 private:
     QColor backgroundBasedColor(QColor);
+    void applyRoomPropertiesShellStyle();
+    void spaceTheSections();
+    void fitThePreviewColumn();
+    // The colour boxes, the symbol field and the border width stand one over another, so they share one width
+    void alignValueBoxes();
+    bool resetOffered(const QColor& chosen) const;
+    bool borderColoursDiffer() const;
+    void showBorderColour();
+    void showRoomColour();
     QColor defaultSymbolColor();
     QString getNewSymbol();
-    void initSymbolInstructions();
     QStringList getComboBoxSymbolItems();
 
     int getNewWeight();
-    void initWeightInstructions();
     QStringList getComboBoxWeightItems();
-    void initLockInstructions();
-    void initHiddenInstructions(const int);
-    void initBorderInstructions();
+    void initLockAndHiddenWords();
     void emitBorderPreview();
-    void showBorderColor();
     void restoreOriginalBorders();
     void initGeneral();
     void initUserData();
@@ -96,10 +111,21 @@ private:
     QMap<QString, std::optional<QString>> userDataChanges() const;
     // Says which keys typed into added rows are kept elsewhere and so will not be saved from the table
     void updateUserDataKeyWarning();
+    void showChosenValue();
+    void showValueLabel();
+    void showUserDataEmpty();
+    void fitScriptData();
+    void fitKeyColumn();
+    void focusValueBox();
     TRoom* liveRoom(const int) const;
     QSet<int> liveRoomIds() const;
 
     Host* mpHost = nullptr;
+    uiDesign::ColourValue* mpRoomColour = nullptr;
+    uiDesign::ColourValue* mpSymbolColour = nullptr;
+    uiDesign::ColourValue* mpBorderColour = nullptr;
+    QStyledItemDelegate* mpValueDelegate = nullptr;
+    QLabel* mpUserDataEmpty = nullptr;
     QSet<int> mRoomIds;
     QHash<int, quint64> mRoomSerials;
     QHash<QString, int> mpSymbols;
@@ -107,12 +133,16 @@ private:
     QColor selectedSymbolColor;
     QColor mRoomColor;
     int mRoomColorNumber = -1;
+    bool mRoomColorsDiffer = false;
     bool mChangeRoomColor = false;
+    // The rooms have different names, so an empty name field leaves them all as they are
+    bool mNamesDiffer = false;
     bool mSymbolColorWasChanged = false;
     QColor selectedBorderColor;
-    QString mBorderColorButtonWords;
     int mBorderThickness = 0;
     bool mBorderColorWasChanged = false;
+    // An opacity set for rooms that differ in colour, which each room takes with its own colour
+    std::optional<int> mBorderAlphaOnly;
     bool mBorderThicknessWasChanged = false;
     QHash<int, QColor> mOriginalBorderColors;
     QHash<int, int> mOriginalBorderThicknesses;
@@ -121,9 +151,19 @@ private:
     QString mOriginalHash;
     // The rooms' area, or std::nullopt where they are in different ones
     std::optional<int> mOriginalAreaId;
-    // The rooms' description, or std::nullopt where they do not all have the same one
-    std::optional<QString> mOriginalDescription;
-    bool mDescriptionWasEdited = false;
+    // The value box's lines as they stand, each break between them the one the value has there. Each edit is held
+    // against the box as the last one left it: two edits far apart leave no line as first shown at either end
+    QStringList mShownLines;
+    QStringList mShownBreaks;
+    // The chosen row is a JSON list or table the value box shows indented
+    bool mShownAsJson = false;
+    bool mKeyColumnFitted = false;
+    bool mSizedForShow = false;
+    bool mFittingScriptData = false;
+    // The table is given its height only once the mouse button is up: a view chooses the row under the pointer when a
+    // press is over, so rows moved during it would leave the selection on another row than the one clicked
+    bool mTablePressed = false;
+    bool mFitWhenReleased = false;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
@@ -140,12 +180,14 @@ private slots:
 
     void slot_openBorderColorSelector();
     void slot_borderColorSelected(const QColor&);
+    void slot_borderOpacitySelected(const QColor&);
     void slot_resetBorderColor();
     void slot_borderThicknessChanged(int);
 
     void slot_addUserData();
     void slot_removeUserData();
     void slot_userDataItemChanged(QTableWidgetItem*);
+    void slot_valueBoxEdited();
     void slot_hashChanged(const QString&);
 };
 

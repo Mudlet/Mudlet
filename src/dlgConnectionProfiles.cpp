@@ -269,10 +269,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mpTabBar->insertTab(scmMyGamesTab, tr("My games"));
     //: Tab showing every game Mudlet has a built-in profile for
     mpTabBar->insertTab(scmAllGamesTab, tr("All games"));
-    mpTabBar->setExpanding(false);
     mpTabBar->setAccessibleName(tr("games shown"));
     mpTabBar->setAccessibleDescription(tr("Switch between showing only your own games and all of the games Mudlet knows about."));
+    // Before prepareTabStrip(), so a script's sheet that takes the tabs finds them packed as they were before the design
+    mpTabBar->setExpanding(false);
+    uiDesign::prepareTabStrip(mpTabBar);
+    uiDesign::prepareTabStrip(tabWidget_connectionInfo->tabBar());
     verticalLayout_gamesList->insertWidget(0, mpTabBar);
+    // Or the list's own frame lies against the hairline and the two read as one thick line
+    verticalLayout_gamesList->insertSpacing(1, uiDesign::scmTabPaneInset);
     setTabOrder(mpTabBar, listWidget_profiles);
     // setTabOrder() drops the games list from the head of the focus chain; without this the name
     // field opens focused, where typing a game's name renames a profile instead of picking that game
@@ -544,12 +549,33 @@ void dlgConnectionProfiles::slot_applyAppearance()
     applyConnectionShellStyle();
 }
 
-// Sheets go on the pages and button containers, not the tab widget, which would take the tab bar
-// with it, nor the dialog, whose stylesheet a profile's Lua one is assigned to on every show
+// Sheets go on the pages, the button containers and the two tab strips, never the dialog, whose stylesheet
+// a profile's Lua one is assigned to on every show
 void dlgConnectionProfiles::applyConnectionShellStyle()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     const QColor errorColour = uiDesign::errorInk(tokens);
+
+    const bool designedTabs = uiDesign::prepareTabStrip(mpTabBar);
+    uiDesign::prepareTabStrip(tabWidget_connectionInfo->tabBar());
+    // On the bar itself: a sheet on widget_topLeft would reach the games list, which draws its own selection
+    mpTabBar->setStyleSheet(designedTabs ? uiDesign::tabBarStyleSheet(qsl("QWidget#widget_topLeft"), tokens, uiDesign::scmTabPaneInset, mpTabBar->layoutDirection()) : QString());
+    // No inset: the strip's first word and the form under it start on the tab widget's own edge, the line the
+    // information box below them stands on
+    tabWidget_connectionInfo->setStyleSheet(designedTabs ? uiDesign::tabBarStyleSheet(qsl("QTabWidget#tabWidget_connectionInfo"), tokens, 0, tabWidget_connectionInfo->layoutDirection()) : QString());
+    for (QWidget* pPage : {tab_connection_info, tab_options}) {
+        QLayout* pForm = pPage->layout();
+        if (!pForm) {
+            continue;
+        }
+        if (designedTabs) {
+            QStyle* pStyle = pPage->style();
+            pForm->setContentsMargins(0, pStyle->pixelMetric(QStyle::PM_LayoutTopMargin, nullptr, pPage), 0, pStyle->pixelMetric(QStyle::PM_LayoutBottomMargin, nullptr, pPage));
+        } else {
+            // The pane a script's sheet leaves is Qt's framed one, which the labels stand clear of
+            pForm->unsetContentsMargins();
+        }
+    }
 
     // Unscoped: the page the sheet is set on is the scope
     const QString sheet = uiDesign::inputStyleSheet(tokens)
@@ -582,6 +608,7 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
 
     uiDesign::keepClickFocusOffControls(tabWidget_connectionInfo);
     uiDesign::letPopupsTakeTheFieldsCorner(tabWidget_connectionInfo);
+    uiDesign::lineUpNumberBoxesWithFields(tabWidget_connectionInfo);
     uiDesign::keepClickFocusOffControls(profileAdminArea);
     uiDesign::keepClickFocusOffControls(widget_bottom);
 
@@ -611,8 +638,8 @@ void dlgConnectionProfiles::applyConnectionShellStyle()
 void dlgConnectionProfiles::resolveTabFonts()
 {
     tabWidget_connectionInfo->ensurePolished();
-    uiDesign::resolveFontsUnderStyleSheets(tab_connection_info);
-    uiDesign::resolveFontsUnderStyleSheets(tab_options);
+    // From the tab widget rather than the pages: it carries the strip's sheet, which no font crosses otherwise
+    uiDesign::resolveFontsUnderStyleSheets(tabWidget_connectionInfo);
 }
 
 // A widget under a sheet takes the application's face from its own font change event, so the tabs
@@ -623,6 +650,10 @@ bool dlgConnectionProfiles::event(QEvent* event)
         QMetaObject::invokeMethod(this, &dlgConnectionProfiles::resolveTabFonts, Qt::QueuedConnection);
     }
     if (event->type() == QEvent::StyleChange) {
+        // A script's sheet comes or goes with one, on the application or on this dialog
+        if (uiDesign::tabStripOutOfDate(mpTabBar)) {
+            applyConnectionShellStyle();
+        }
         QMetaObject::invokeMethod(this, &dlgConnectionProfiles::fitGamesListToItsColumns, Qt::QueuedConnection);
     }
     return QDialog::event(event);

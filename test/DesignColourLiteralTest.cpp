@@ -90,6 +90,12 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("PairGridLayout.h"),
                           QStringLiteral("AlphaColourWell.cpp"),
                           QStringLiteral("AlphaColourWell.h"),
+                          QStringLiteral("ColourValue.cpp"),
+                          QStringLiteral("ColourValue.h"),
+                          QStringLiteral("ConsoleColourPreview.cpp"),
+                          QStringLiteral("ConsoleColourPreview.h"),
+                          QStringLiteral("MapColourPreview.cpp"),
+                          QStringLiteral("MapColourPreview.h"),
                           QStringLiteral("SidebarToggle.cpp"),
                           QStringLiteral("SidebarToggle.h"),
                           QStringLiteral("ToolBarOverflow.cpp"),
@@ -116,6 +122,8 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("dlgPackageExporter.h"),
                           QStringLiteral("ExporterTreeDelegate.cpp"),
                           QStringLiteral("ExporterTreeDelegate.h"),
+                          QStringLiteral("dlgRoomProperties.cpp"),
+                          QStringLiteral("dlgRoomProperties.h"),
                           QStringLiteral("dlgColorTrigger.cpp"),
                           QStringLiteral("dlgSystemMessageArea.cpp"),
                           QStringLiteral("TDetachedWindow.cpp"),
@@ -134,7 +142,8 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("ui/vars_main_area.ui"),
                           QStringLiteral("ui/notes_editor.ui"),
                           QStringLiteral("ui/dlgPackageExporter.ui"),
-                          QStringLiteral("ui/about_dialog.ui")};
+                          QStringLiteral("ui/about_dialog.ui"),
+                          QStringLiteral("ui/room_properties.ui")};
         // Taken by pattern: the settings dialog may not stay one .ui file
         const QDir uiDir(srcDir() + QStringLiteral("/ui"));
         for (const QString& page : uiDir.entryList({QStringLiteral("profile_preferences*.ui")}, QDir::Files, QDir::Name)) {

@@ -55,8 +55,9 @@ public:
     static constexpr int sIndicatorGap = 6;
     static constexpr int sIndicatorReservedWidth = sIndicatorDiameter + sIndicatorGap;
     static constexpr int sIndicatorRingWidth = 2;
-    // accentText at the 4.5:1 floor fades into the wash on the grey page; 7:1 matches the sidebar's chosen row
-    static constexpr qreal sChosenWordMinimumRatio = 7.0;
+    // A script's sheet pads the word by its own rules, which are not known here; this is where the
+    // indicator has always stood on a tab such a sheet draws
+    static constexpr int sIndicatorInsetUnderScriptSheet = 11;
 
     explicit TStyle(QTabBar* bar)
     : mpTabBar(bar)
@@ -89,42 +90,29 @@ public:
     bool setTabConnectionIndicator(int index, TabConnectionIndicator state);
     TabConnectionIndicator tabConnectionIndicator(const QString& tabName) const;
     TabConnectionIndicator tabConnectionIndicator(int index) const;
+    bool scriptSheetTakesTheTabs() const;
 
 private:
-    bool scriptSheetTakesTheTabs() const;
-    // indicator and close stay null on a tab that carries neither
-    struct ChipLayout
+    // content is what the underline runs under: indicator, word and cross. indicator and close
+    // stay null on a tab that carries neither
+    struct TabLayout
     {
-        QRect chip;
+        QRect content;
         QRect indicator;
         QRect text;
         QRect close;
     };
 
-    // surface is the fill as composited over the page: what anything on the chip is read against
-    struct ChipFace
-    {
-        QColor fill;
-        QColor word;
-        QColor surface;
-        bool bar = false;
-        bool outline = false;
-    };
-
-    // QTabBar::tabSizeHint()'s "padding += 4" per tab button; the word leaves it before
-    // the cross so both sit where Qt measured them
-    static constexpr int sCloseButtonGap = 4;
-
-    ChipFace chipFace(const QStyleOptionTab* tabOption, const uiDesign::ThemeTokens& tokens) const;
-    ChipLayout layoutChip(const QStyleOptionTab* tabOption) const;
+    QColor wordInk(const QStyleOptionTab* tabOption, const uiDesign::ThemeTokens& tokens) const;
+    TabLayout layoutTab(const QStyleOptionTab* tabOption) const;
     int tabIndexOf(const QStyleOptionTab* tabOption) const;
     bool indexedTabState(int index, const QSet<QString>& effect) const;
     bool namedTabState(const QString& tabName, const QSet<QString>& effect) const;
     void setNamedTabState(const QString& tabName, bool state, QSet<QString>& effect);
     void setIndexedTabState(int index, bool state, QSet<QString>& effect);
-    void paintChip(QPainter* painter, const QStyleOptionTab* tabOption, const QWidget* widget, const bool shape, const bool label) const;
+    void paintTab(QPainter* painter, const QStyleOptionTab* tabOption, const QWidget* widget, const bool shape, const bool label) const;
     void paintThroughApplicationSheet(ControlElement element, const QStyleOptionTab* tabOption, QPainter* painter, const QWidget* widget) const;
-    void paintConnectionIndicator(QPainter* painter, const QRect& box, TabConnectionIndicator state, const uiDesign::ThemeTokens& tokens, const QColor& surface, const QColor& ringInk) const;
+    void paintConnectionIndicator(QPainter* painter, const QRect& box, TabConnectionIndicator state, const uiDesign::ThemeTokens& tokens, const QColor& ringInk) const;
 
     QTabBar* mpTabBar;
     // The sets that hold the tab names that have the particular effect, we
@@ -152,7 +140,9 @@ public:
         setAcceptDrops(true);
         // Without it QTabBar::initStyleOption() never sets State_MouseOver
         setAttribute(Qt::WA_Hover);
-        setDrawBase(false);
+        // The hairline the tabs stand on, across the whole bar
+        setDrawBase(true);
+        expandOnlyUnderAScriptSheet();
     }
     ~TTabBar() = default;
 
@@ -220,6 +210,8 @@ signals:
 private:
     static QString literalLabel(const QString& text) { return QString(text).replace(QLatin1Char('&'), QLatin1String("&&")); }
     void relayoutTab(int index);
+    // Words packed from the leading edge, but under a script's sheet the tabs share the bar's width as they always have
+    void expandOnlyUnderAScriptSheet() { setExpanding(mStyle.scriptSheetTakesTheTabs()); }
     // True only when the button still had the application style, the one case needing a re-measure
     bool adoptCloseButton(int index);
 
@@ -240,6 +232,7 @@ private slots:
     void onDetachedTabReattach(const QString& tabName);
 
 protected:
+    void changeEvent(QEvent* event) override;
     void tabInserted(int index) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;

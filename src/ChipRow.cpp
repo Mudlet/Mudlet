@@ -375,7 +375,8 @@ void ChipRow::remeasure()
     mpAdd->setFont(chipFont(this));
     const int line = lineHeight();
     mpAdd->setFixedHeight(line);
-    mpField->setFixedHeight(line);
+    // A large chip font takes the line past a field's height, where the input recipe would hold the field to one
+    holdHeight(mpField, line);
     const int glyphSize = chipGlyphSizeOn(this);
     mpAdd->setIconSize(QSize(glyphSize, glyphSize));
     for (Chip* pChip : mChips) {

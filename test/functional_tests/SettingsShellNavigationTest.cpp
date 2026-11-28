@@ -276,8 +276,9 @@ private:
         return mpPreferences->grab().toImage();
     }
 
-    // Small steps so no width in between is skipped. The names never fold for less
-    // than the reading column, or a page switch would fold them for nothing.
+    // Small steps so no width in between is skipped. The names fold at one width on
+    // every page, where the widest page or both colour cards two pairs to a row no
+    // longer fit beside them, or a page switch would fold them for nothing.
     void walkTheWindowDown()
     {
         auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
@@ -307,6 +308,10 @@ private:
         const QMargins margins = pContent->layout()->contentsMargins();
         const int sidebarAndMargins = fullSidebar + margins.left() + margins.right();
         const int scrollBar = pageOf(qsl("general"))->verticalScrollBar()->sizeHint().width();
+        // Taken up a hysteresis past what they need, as arrangeColourCards() takes it
+        const int colourCards =
+                std::max(mpPreferences->groupBox_displayColors->sizeHint().width(), mpPreferences->groupBox_mapperColors->sizeHint().width()) + dlgProfilePreferences::scmColourArrangementHysteresis;
+        const int threshold = sidebarAndMargins + std::max(widestPageMinimum, colourCards) + scrollBar;
 
         QStringList walked{qsl("editor")};
         if (widestPage != walked.constFirst()) {
@@ -320,7 +325,6 @@ private:
             auto* pPage = qobject_cast<QScrollArea*>(stack()->currentWidget());
             QVERIFY2(pPage && pPage->widget(), qPrintable(qsl("the '%1' page did not come up").arg(page)));
             QWidget* pColumn = pPage->widget();
-            const int threshold = sidebarAndMargins + std::max(std::min(640, widestPageMinimum), pColumn->minimumSizeHint().width()) + scrollBar;
             const int narrowest = mpPreferences->minimumWidth();
             bool sawNames = false;
             bool sawRail = false;
@@ -1742,18 +1746,20 @@ private slots:
     void test_aWindowWiderThanTheShellNeedsWidensThePage()
     {
         selectCategory(qsl("general"));
-        const int fullyExpanded = mpPreferences->sidebarWidths().fullyExpanded;
+        // Where the names are on show, which both colour cards two pairs to a row can take past fullyExpanded
+        const auto widths = mpPreferences->sidebarWidths();
+        const int shellNeeds = std::max(widths.fullyExpanded, widths.collapseBelow);
         QScrollArea* pPage = pageOf(qsl("general"));
         QWidget* pColumn = pPage->widget();
         const QList<QGroupBox*> cards = pColumn->findChildren<QGroupBox*>(QString(), Qt::FindDirectChildrenOnly);
         QVERIFY2(!cards.isEmpty(), "the General page has no cards to watch widen");
 
-        mpPreferences->resize(fullyExpanded, 760);
+        mpPreferences->resize(shellNeeds, 760);
         qApp->processEvents();
-        QCOMPARE(mpPreferences->width(), fullyExpanded);
+        QCOMPARE(mpPreferences->width(), shellNeeds);
         const int columnBefore = pColumn->width();
 
-        const int wider = fullyExpanded + 400;
+        const int wider = shellNeeds + 400;
         mpPreferences->resize(wider, 760);
         qApp->processEvents();
         QVERIFY2(mpPreferences->width() == wider, qPrintable(qsl("the window was offered %1px and took %2px").arg(wider).arg(mpPreferences->width())));
@@ -1846,7 +1852,9 @@ private slots:
     {
         auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
         QVERIFY2(pSidebar, "the settings shell has no sidebar to collapse");
-        mpPreferences->resize(mpPreferences->sidebarWidths().fullyExpanded, 760);
+        // Where the names are on show, which both colour cards two pairs to a row can take past fullyExpanded
+        const auto widths = mpPreferences->sidebarWidths();
+        mpPreferences->resize(std::max(widths.fullyExpanded, widths.collapseBelow), 760);
         qApp->processEvents();
         const int widthBefore = mpPreferences->width();
         const int fullSidebar = pSidebar->width();

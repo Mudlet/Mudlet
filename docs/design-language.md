@@ -248,6 +248,33 @@ surface, a 1px border, `scmRadiusInput`, an accent frame on focus. Framing a
 platform draws inside it, so the sheet claims those two only once it has tinted
 arrow PNGs cached to point at, and otherwise leaves them the platform's frame.
 
+Every single-line control the sheet draws - a line edit, a combo box, a spin
+box, a colour row and its opacity box - is one height, `scmInputHeight` (28px:
+22px of content, 2px of padding and the 1px hairline above and below), so
+controls standing on one row meet at the top and the bottom. The rule lives in
+`inputStyleSheet()` alone: the single-line kinds take `max-height` as well as
+`min-height`, which Qt sets as the widget's maximum and minimum at every polish
+and which also caps its size hint; uncapped, a spin box's hint is 31px under
+macOS and 33px offscreen. `QPlainTextEdit` and `QTextEdit` are not capped, and the editor
+inside a combo box or a spin box has the cap taken off again, so a box held
+taller does not hold its editor at a field's height. A control that has to be
+another height keeps it with `holdHeight()`, called where it is sized, which
+sets its height again after every polish: the Mapper page's 3D map style
+picker, whose pictures are 48px tall; the trigger editor's pattern rows, whose
+type list and line spacer stand at the row's height in the profile's display
+font; and a `ChipRow`'s field, which shares the chips' line.
+
+A spin box's value starts where a field's text does. Qt's stylesheet style
+places the box's editor against the frame on the left and inside the padding on
+the right, which leaves a left-to-right value starting 7px before the text of
+a field above it; a padding rule on the editor moves nothing.
+`lineUpNumberBoxesWithFields(container)` gives the editor a text margin making
+up the difference, mirrored right to left and taken again whenever the box lays
+its editor out. A box `fitNumberBoxes()` looks after and a value centred or
+set at the trailing edge are left alone. It runs from each styled window's
+style pass on the container the input sheet was set on, and again wherever a
+window builds a spin box after that pass.
+
 The list a combo box drops down is the field opened up: the same surface, the
 same hairline and the same `scmRadiusInput` corner as the box it came out of,
 with the accent under the chosen row. It was the card once, and on a card -
@@ -435,6 +462,142 @@ Three kinds of button are left out on purpose:
 - **The editor's placeholders** (`uiDesign::PlaceholderButton`) are tool buttons
   painting their own dashed frame, so no `QPushButton` rule reaches them.
 
+### A colour is shown apart from the buttons that change it
+
+A colour well is one target doing two things: it shows the colour, and a click
+on it opens the colours window, with nothing on it saying it can be clicked. A
+colour row keeps the two apart (`uiDesign::ColourValue`, `src/ColourValue.h`).
+The colour is an input like any other on the form, drawn by
+`inputStyleSheet()`: it shows the code over a swatch at its leading edge and
+takes a code typed into it, `#RGB` or `#RRGGBB`. A colour that may be
+see-through has an opacity box after it, since a code carries no alpha. Then
+come the buttons, glyphs alone: Choose opens the colours window, and Reset,
+where the item has a default, puts it back. Choose carries Lucide's
+swatch-book. Not the pipette: macOS's colours window has a pipette of its own
+that picks a colour off the screen, and a pipette on the button would promise
+that. Not the palette either, which is already the Settings sidebar's
+Appearance glyph. The swatch is a second way to Choose, for the player who
+clicks the colour itself: a click on it presses the row's Choose
+(`setChooseButton()`), so it does exactly what that button does and nothing
+while the button is unavailable. Unlike the old well it never stands alone,
+and under the pointer it says it can be clicked: a pointing hand where the
+code has the text cursor, a ring in `accent` in the inset round the swatch, and
+Choose's tooltip. The target is the swatch with that inset, 26px square.
+Reset (rotate-ccw) is unavailable while the item has nothing
+to reset; the field is then empty, its placeholder says what the item is drawn
+with - "Automatic" for a room's symbol, the code of the map's border colour for
+its border, so that field is no wider than any other - and its swatch shows
+that colour. The room
+properties dialog's symbol and border rows (`roomPropertiesSymbolColour`,
+`roomPropertiesBorderColour`, `roomPropertiesBorderOpacity`), its room colour
+(`roomPropertiesRoomColour`, which shows the map's number for the colour and is
+only chosen, never typed) and the settings'
+Player room marker card (`settingsPlayerRoomOuterColour`,
+`settingsPlayerRoomInnerColour` and their `...Opacity` boxes) are built this
+way, and so are the settings' two colour cards; the trigger editor keeps its
+wells.
+
+A box holding a percentage stands over another of its kind - the two ring
+opacities, the two diameters - so the values line up as numbers in a column
+do: `fitNumberBoxes()` gives a group one width, measured from the widest value
+any of them can hold, right-aligns every value and insets it from the trailing
+edge by half of what that widest value leaves, so "100%" is centred and "60%"
+ends where it does, the percent signs one over the other. Centring each value
+on its own puts every sign somewhere else.
+
+Every colour row stands at a field's height, `scmInputHeight`: field,
+opacity box and buttons, the buttons square, so a colour row looks the same in
+the room properties dialog, the Player room marker card and the colour cards,
+and meets the fields and lists beside it. The room properties dialog's one
+sheet gives its rows the input and button recipes with the rest of its fields
+and buttons, so Choose and Reset have the design's face there too.
+`holdHeight()` and `fitNumberBoxes()` polish a widget before holding it: the
+first Polish reaches their event filter before the style, which then sets the
+recipe's height limits back, and a dialog that sizes itself before it is shown
+(`adjustSize()`) never gives them a later style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
+way back. On the Main display's card that button also removes a picture a script put behind the main display, so while
+there is one the button shows "Reset all colors and remove the background image", with a tooltip about the picture. The words are set
+when the profile is read in, after a reset and each time the window becomes active again. The card's own colours (Foreground, Background and the command
+colours; the map's background, borders, links, levels, info box and grid) are
+label-and-row pairs in `PairGridLayout`. The Main display's belong together a
+row at a time (Foreground beside Background), so they are read across: two
+pairs to a row, and one to a row in that same order. The map's are two columns
+read down (`ReadingOrder::DownColumns`): the five that may be see-through -
+background, map info background, upper level, lower level, grid - leading
+(`setLeadingPairs(5)`), and Room border, Overlapping rooms border and Link
+trailing, so the opacity boxes form one column and the buttons after them line
+up, rather than appearing on alternate sides wherever the order put them. The
+trailing column is two rows shorter, and the space under it stays empty. Where
+the two columns do not fit side by side the trailing one goes under the leading
+one whole; read across, the see-through colours were shuffled in among the
+others. The Main display's Background may be see-through as well and has the
+card's one opacity box, in the trailing column. On both cards, side by side each
+column is only as wide as its own labels and rows - the Main display's leading
+column keeps no room for an opacity box none of its rows has, so the card drops
+to one pair a row no sooner than its rows need - with 24px between the two
+(`setPairSpacing(scmFieldPairGap)`, the gap between the console colours' Normal
+and Light columns). Both cards two pairs to a row beside the sidebar's names
+take a 998px window under cocoa in English (994px offscreen), where every page
+alone would fit beside the names down to 874px (868px offscreen). The names
+therefore fold first: `sidebarWidths()` sets `collapseBelow`, one width on every
+page so that a click in the sidebar never folds or unfolds them, to what both
+colour cards need two pairs to a row beside the names, and a card drops to one
+pair a row only once even the rail leaves it too little (the Main display's
+below 853px under cocoa, 844px offscreen). The other way round, narrowing the
+window would stack a card, then spread it out again as the names went. On a
+page without a colour card the names fold at that same width. A window with no
+remembered size opens at the width that keeps both colour cards side by side
+beside the names: past the usual 1060px where a wide font needs it, and no
+wider than the screen.
+
+Which arrangement a card shows is decided in `arrangeColourCards()` and handed
+to the grid with `setPairsPerRow()`, rather than left to the grid's own reading
+of the width it is given. That width moves with the page's scroll bar, and the
+page's height moves with the arrangement: a card that wraps is taller, a page
+that becomes too tall shows its bar, and the 12px the bar takes held the card
+wrapped - the same window showed either arrangement depending on how it got
+there. The decision takes the width with room kept for the bar whether it is
+showing or not, and an arrangement is taken up only
+`scmColourArrangementHysteresis` (4px) past the width it needs and given up
+below it, so a window held at the breakpoint keeps what it had. The previews
+are shown or hidden by the same rule.
+
+The sixteen console colours are a table under the divider: "Normal" and
+"Light" over two columns, and each of the eight names down the side once.
+Listed as sixteen pairs, every name was written twice ("Red", "Light red") and
+a colour stood beside whichever twin the grid put next to it; as a table, each
+colour is beside its own twin, so a light colour is judged against the normal
+one it brightens. The light twins' labels stay in the `.ui` file, hidden; the
+field and the Choose button carry the whole name ("Light red") as their
+accessible name and in Choose's tooltip, and a search for "light red" lights
+up the row's name and the Light heading.
+
+Beside the table, in the width the table leaves, a preview draws the colours in
+use: `ConsoleColourPreview` writes a few lines of a game - the echoed command,
+a room, its exits in light cyan, someone speaking, then the eight names of each
+column in their own colours over a command line, under the seam the console
+draws there - on the Background in the profile's display font, and over the
+pictures a script set behind the main console with `setBackgroundImage()`: the
+full-window one under the Background, showing where that is see-through, and the
+main display's over it, each laid out by the console's own rule (border, center,
+tile or cover) as though the console were the preview's size. A "style" one is
+left out: it is a stylesheet, which a widget painting itself has no way to
+draw. `MapColourPreview` draws rooms in the environment
+colours on the grid, linked, with a room a level up and one down, two rooms on
+one spot and the info box. A swatch shows a colour; it cannot show black words
+on a black background, a link that vanishes into the grid or an info box
+nobody can read, which is what a player choosing colours is trying to avoid.
+Both read the colours at every paint and are told to `update()` whenever one
+changes. The map preview measures everything as `T2DMap` does, with a cell
+standing for the map's room width: rooms from Room size, borders from Border
+size and only while "Show room borders" is on, links from Exit size, the grid
+line from Grid width, and the same anti-aliasing and cosmetic pens under "Use
+high quality graphics in 2D view", so a choice that looks right in the preview
+looks the same on the map; it is told to `update()` when one of those settings
+changes too. They take the table's height and never more (size policy Ignored
+down), so the card is no taller for them, and below 200px they are hidden
+rather than wrapped under the table, which would make it so.
+
 ### Menus
 
 `menuStyleSheet(tokens, selectorPrefix)` draws every menu one of these windows
@@ -475,165 +638,239 @@ given both by the code that builds it, before `exec()`.
 
 ### Tabs
 
-`tabBarStyleSheet(tabWidgetSelector, tokens)` draws a `QTabWidget`'s strip as a
-row of chips lying on the page, not as the folder tabs a platform cuts. A tab is
-a word in a box, the same object as a chip, a menu row and a sidebar's row, so it
-carries the same three states and the same corner: `mutedText` on nothing at
-rest, `hoverSoft` behind `accentText` under the pointer, `accentSoft` behind
-`accentText` while it is the one on show, `scmRadiusChip` throughout, and the
-accent on its border from the keyboard alone. What that says is that the strip is
-a choice being made, which is what it is - a stack of folder tabs says instead
-that the window is a filing cabinet.
+A tab is a word on the line it switches. `tabBarStyleSheet(tabWidgetSelector,
+tokens, paneInset, direction)` and `prepareTabStrip(pTabBar)` draw every strip of tabs that
+way - the notepad's notes, the package manager's three views, the connection
+window's "My games" / "All games" and "Connect to" / "Options" - and `TTabBar`
+paints the profile strip the same way from the same constants. The words stand
+on one hairline in `border` that runs across the whole width of what is under
+the strip, not only under the tabs, so the strip reads as the edge of the thing
+it switches. The chosen tab's word is `accentText` at `scmTabChosenWeight`
+(semibold) on an underline of the accent, `scmTabUnderlineWidth` deep, laid over
+the hairline; every other word is `mutedText` at the bar's own weight,
+`disabledText` while it cannot be chosen, and under the pointer only the word's
+ink moves, to `accentText`. Nothing is drawn behind a tab in any state: no wash,
+no fill, no box and no corner.
 
-The pane under it gets no border and no fill of its own, only `scmTabPaneInset`
-of margin, so that whatever fills it - a field, in the notepad's case - opens its
-rounded corner onto the page rather than butting into the window's edge. The
-strip starts at that same inset, so the row of chips and the field under it begin
-on the same line.
+A row of chips over a form reads as a row of headings or of buttons, not as the
+thing that switches the form, and folder tabs say the window is a filing
+cabinet. A word on a line says it is a choice of what is under the line, and
+that holds for a view and for a document alike: a note in the notepad, a view
+of the package manager and a profile in the main window are each "which of these
+is under here", so they share one look.
+
+The first word starts on the left edge of the content under the strip - the
+note, the list, the form's labels - with nothing in front of it, and tabs are
+parted by `scmTabGap` trailing each one rather than by padding inside a box. A
+word has `scmTabPaddingTop` over it and `scmTabPaddingBottom` under it, which is
+`scmTabUnderlineAir` of air and the underline's own room.
+
+From the keyboard the chosen tab's underline thickens to
+`scmTabFocusUnderlineWidth`, growing up into that air, so neither the word nor
+the strip moves, and nothing else changes. Elsewhere the design shows the
+keyboard with an accent border, but a border round a word would push the first
+word off the content's line, and the underline is already the accent the eye
+goes to. Qt gives `:focus` only to the current tab, only while the bar holds the
+focus, and the bars take it by Tab alone (`Qt::TabFocus`), so a click leaves no
+thick underline behind. `QCommonStyle` also frames a focused tab's word with the
+platform's focus rectangle, which the bar's `outline: none` takes away.
+
+Every tab is measured at the chosen weight, so choosing another tab moves no tab
+and no word is cut short. A `::tab:selected` font cannot do that:
+`QStyleSheetStyle` measures each tab in the font its own state's rule names, so
+the chosen tab comes out wider than the rest, and `QTabBar::setCurrentIndex()`
+lays the whole strip out again whenever the newly chosen tab's measure differs
+from its rectangle - every word after it would step sideways on every choice. So
+the `::tab` rule names the chosen weight for every state, and a tab that is not
+chosen has its word set back to the bar's own weight where it is drawn, in
+`drawItemText()` of the strip's style, which `prepareTabStrip()` sets on the bar
+for the sheet to sit over. That call is given no tab to tell a chosen word from
+the rest by, so the style reads it off the `SH_UnderlineShortcut` hint
+`QCommonStyle` asks of the tab immediately before it hands the word over. The
+word is drawn from the leading edge of the box it was measured for, so a lighter
+word ends a little early rather than standing off the content's line.
+
+In a `QTabWidget` the hairline is the pane's top edge: the `::pane` rule draws a
+`border-top` and lifts the pane by its own width onto the bar's bottom row, and
+the bar, painted after the pane, lays the chosen underline over it. The pane
+keeps `paneInset` of margin at its sides and foot and the same again over its
+contents, and `::tab-bar` starts the strip at that inset, so a field filling the
+pane keeps its rounded corner off the window's edge while its edge, the start of
+the hairline and the first word share one line. The notepad takes the default
+`scmTabPaneInset`; the connection window passes 0, since its form already stands
+inside the dialog's margin, and takes the side margins off both pages' layouts so
+the labels start on the tab widget's own edge, the line the information box under
+them stands on. Configure room does the same, as its shell's margin holds the
+strip off the window's edge. In document mode a `QTabWidget` paints no pane at all, so
+`prepareTabStrip()` turns document mode off - the notepad's `.ui` file has it on.
+`QTabWidget` adds a fixed frame round its pages to its size hints
+(`CT_TabWidget`, 4px each way in the base styles) that this pane does not draw,
+so `prepareTabStrip()` also gives the tab widget a style whose `CT_TabWidget` is
+the room the sheet's pane really takes: a tab widget on the recipe has exactly
+what its pages, its strip and its inset need as its size hint and its minimum,
+and a dialog can size itself from them.
+
+A bare `QTabBar` is laid across the whole width of its pane by the window holding
+it and draws the hairline as its own base. `QStyleSheetStyle` hands
+`PE_FrameTabBarBase` to the style under it, and the strip's style draws one
+`border` row along the bottom of the base's rectangle with
+`paintTabStripHairline()` - not the band the macOS style fills a bar with -
+before the tabs are drawn over it. A `border-bottom` on the bar's rule would draw
+a line too, but the base is the call `TTabBar` draws its hairline with, so the
+profile strip and the sheet's strips cannot come apart. The same style answers
+`SH_TabBar_Alignment` with the leading edge, as the macOS style centres the tabs
+and a bar as wide as its pane would start its first word half-way across, and
+`SH_TabBar_ElideMode` with `Qt::ElideNone`, so a strip short of room scrolls
+rather than cutting a word short; and `prepareTabStrip()` turns `expanding` off,
+or a bar as wide as its pane stretches its tabs across it. Everything else the
+style is asked - the scroll buttons, the crosses' own widgets - goes on to the
+application style, as it would for a bar with no style of its own. One instance
+serves every strip and is never deleted, since a bar can outlive any owner chosen
+for it.
 
 The cross on a closable tab is `editor-clear.svg`, the one x the rest of the
 design is drawn with, tinted into the glyph cache by `themedGlyphFile()` for the
 rule to point at - quiet at rest, `accentText` under the pointer. Where the cache
 cannot be written the rule is left out rather than aimed at nothing, and the tab
-keeps whatever cross the platform draws it with. A cross is on the strip only
-while it can close something: the notepad keeps its last note, so a sole tab
-carries none, and both tabs carry one again the moment a second note is made.
-Closing a note that has text asks first, with Return and Escape both keeping it,
-since nothing keeps a copy of a closed note; an empty note goes without a word.
+keeps whatever cross the platform draws it with. It stands after the word, inside
+the tab's own extent and before the gap to the next tab, `scmTabCloseGap` on from
+the word: the room `QTabBar::tabSizeHint()` adds for a tab button. A cross is on
+the strip only while it can close something: the notepad keeps its last note, so
+a sole tab carries none, and both tabs carry one again the moment a second note
+is made. Closing a note that has text asks first, with Return and Escape both
+keeping it, since nothing keeps a copy of a closed note; an empty note goes
+without a word. The notepad's + is the tab widget's corner widget and stands on
+the same line at its far end: its own sheet gives it `scmTabPaneInset` of margin
+either side, so its box ends where the hairline does and a crowded strip, which
+`::tab-bar` moves along by the same inset, stops short of it.
 
 The buttons a strip too crowded to fit scrolls with are left alone: their arrows
 are a sub-control of a `QToolButton` the bar makes for itself, and giving those
 buttons a face without also replacing the arrows would leave the reader a blank
 square to press.
 
-`prepareTabStrip(pTabBar)` is the caller's one job, and it says the two things a
-rule cannot. The base, because in document mode the macOS style fills the whole
-bar with a band of its own behind the tabs - neither the page the chips lie on
-nor anything a rule asked for, and not something `background: transparent` takes
-away. And the box the cross is drawn in, which is the button widget's own size
-rather than anything the `::close-button` rule holds: Qt's close button asks the
-style for `PM_TabCloseIndicatorWidth` in its constructor and resizes itself to
-the answer, and `QStyleSheetStyle` has no case for that metric, so the rule's
-`width` and `height` are never read and the style underneath answers - twenty
-pixels under Fusion, which the dark appearance is drawn on, fourteen under the
-macOS style. The picture the rule points at is painted into whatever rectangle
-the button ended up with, so on a twenty pixel button an eight pixel mark comes
-out at eleven. The moment to say otherwise is `QEvent::ChildPolished`: the
-button's `sizeHint()` polishes itself before it asks the style anything, which
-sends that event to the bar while the constructor's `resize()` is still ahead -
-and a resize is bounded by the widget's minimum and maximum size, so a box fixed
-from the event is the size the button keeps and the size `setTabButton()` lays
-the tabs out from.
+Besides the strip's style, `prepareTabStrip()` keeps the box the cross is drawn
+in, which is the button widget's own size rather than anything the
+`::close-button` rule holds: Qt's close button asks the style for
+`PM_TabCloseIndicatorWidth` in its constructor and resizes itself to the answer,
+and `QStyleSheetStyle` has no case for that metric, so the rule's `width` and
+`height` are never read. The strip's style answers `scmTabCloseBoxSize`, but a
+cross made while no sheet was over the bar - the notepad makes its notes before
+it sets its sheets, and a style that is not a stylesheet style does not pass to a
+bar's children - was sized by the application style: twenty pixels under Fusion,
+which the dark appearance is drawn on, fourteen under the macOS style. The
+picture the rule points at is painted into whatever rectangle the button ended up
+with, so on a twenty pixel button an eight pixel mark comes out at eleven. The
+moment to say otherwise is `QEvent::ChildPolished`: the button's `sizeHint()`
+polishes itself before it asks the style anything, which sends that event to the
+bar while the constructor's `resize()` is still ahead - and a resize is bounded
+by the widget's minimum and maximum size, so a box fixed from the event is the
+size the button keeps and the size `setTabButton()` lays the tabs out from.
 
 The keeper moves that box as well as sizing it, after every layout of the bar,
-because Qt places it outside the chip. A `::tab` rule with a box makes
-`QStyleSheetStyle` answer 0 for `PM_TabBarTabHSpace`, and its
+because Qt places it beside the gap rather than beside the word. A `::tab` rule
+with a box makes `QStyleSheetStyle` answer 0 for `PM_TabBarTabHSpace`, and its
 `SE_TabBarTabRightButton` hands `QCommonStyle` the tab's raw rectangle - only
-`SE_TabBarTabText` is given the rule's contents rect - so the cross comes out at
-`tab->rect.right() - width`, which is `scmTabGap` past the drawn chip and a
-further `scmTabPaddingHorizontal + scmInputBorderWidth` outside the box the word
-is laid in. The rule's `subcontrol-position` decides the side and nothing else,
-so the reader got a cross flush against the chip's edge beside a word with ten
-pixels of air. `QTabBarPrivate::layoutTab()` applies that rectangle with
-`move()`, which makes `QEvent::Move` on the button the one moment after every
-layout, and the keeper puts the cross back on the word's own padding line there.
-Its own `move()` sends a second `Move`, so the wanted position is compared before
-it is asked for.
+`SE_TabBarTabText` is given the rule's contents rect - so the cross comes out
+four pixels into the gap to the next tab, and centred on the whole tab rather
+than on the word, which stands above the middle for the underline's room under
+it. `QTabBarPrivate::layoutTab()` applies that rectangle with `move()`, which
+makes `QEvent::Move` on the button the one moment after every layout, and the
+keeper puts the cross back at the end of the tab's own extent, on the word's
+line. Its own `move()` sends a second `Move`, so the wanted position is compared
+before it is asked for.
+
+A script's sheet that names `QTabBar` takes a strip's tabs whole, on these
+strips as on the profile strip below: `scriptSheetTakesTheTabs()` answers for
+both. For a strip on the recipe the sheet may be the application's, the one on
+the strip's window, or one on any widget above that window, as Qt carries a
+parent's sheet into a window made under it: a dialog made under the mapper takes
+the profile's sheet `setProfileStyleSheet()` sets there. Mudlet's sheets go on
+the widgets under the window, never on the window or an ancestor of it, so their
+`QTabBar` rules never count. Left to Qt the two sheets would merge property by
+property - the design's colours and padding winning, the script's widths and
+corners laid over them - which is neither look. While a
+script's sheet holds, `prepareTabStrip()` puts back what it changed (the strip's
+style, the base, document mode, `expanding`, the crosses' size and place) and
+answers false, and the window leaves `tabBarStyleSheet()` out of every sheet that
+reaches the bar; the connection window and Configure room also give their pages
+their own margins back, as the pane is Qt's framed one again. A new strip calls `prepareTabStrip()`
+where its window builds its sheets and includes `tabBarStyleSheet()` only when it
+answers true; on the window's `StyleChange`, which comes with every sheet set on
+the application, the window or a widget above it, it builds them again when
+`tabStripOutOfDate()` answers true.
 
 #### The profile strip
 
 The row of profile tabs across the head of the main window, and of every
-detached one, is the same chip - but `TTabBar` paints it rather than being handed
-a sheet. Any `QTabBar::tab` rule sends the tab to `QStyleSheetStyle`, which draws
-it through `QWindowsStyle` and never reaches the bar's own style, and a
-stylesheet has no per-tab pseudo-state - so the tab would lose both the bold,
-italic or underlined name that says a profile has new output and the connection
-indicator beside it. Replacing `QTabBar::paintEvent()` in a subclass is not open
-either: the offsets a tab is dragged and reordered by are private to Qt.
+detached one, is the same word on the same line - but `TTabBar` paints it rather
+than being handed a sheet. Any `QTabBar::tab` rule sends the tab to
+`QStyleSheetStyle`, which draws it through `QWindowsStyle` and never reaches the
+bar's own style, and a stylesheet has no per-tab pseudo-state - so the tab would
+lose both the bold, italic or underlined name that says a profile has new output
+and the connection indicator beside it. Replacing `QTabBar::paintEvent()` in a
+subclass is not open either: the offsets a tab is dragged and reordered by are
+private to Qt.
 
-So `TStyle` draws the chip from the same tokens and the same constants the sheet
-uses. `scmTabPaddingVertical`, `scmTabPaddingHorizontal`, `scmTabGap`,
-`scmTabStripInset`, `scmTabCloseBoxSize` and `scmTabCloseGlyphSize` live in
-`src/uiDesign.h` for that reason - a measurement two strips share is one number,
-not two that agree today. The three states are the ones every other chip carries:
-nothing behind a `mutedText` word at rest, `hoverWash` behind `accentText` under
-the pointer, `accentWash` behind `accentText` while it is the profile on show -
-and down that chip's leading edge the bar the settings sidebar draws on its
-chosen row, through `paintAccentBar()` cut to the chip's own corner, because on
-a dark page the wash alone did not say which profile was on show. The chosen
-chip's word is bold as well, as the sidebar's chosen row is - bold on a resting
-chip says that profile has new output, and the wash is what tells the two
-readings apart - and every tab is measured bold whether or not it is drawn that
-way, so the strip does not step sideways each time the choice moves.
-The chosen chip is also outlined all the way round in the accent, at
-`scmInputBorderWidth`, stroked after the wash and after the bar so the bar's
-outer edge is the outline's. A border elsewhere in the design says where the
-keyboard is, but this bar takes no keyboard focus, so on it a border can only
-mean chosen - and on the light appearance the wash alone was too pale to say
-which profile was on show (2026-09-10, the user's call, against the settings
-sidebar's chosen row as the reference; that row shows the same 1px accent border
-while it holds focus). The width was always in the metrics, so nothing moved to
-make room for it.
+So `TStyle` draws it from the same tokens and the same constants the sheet uses.
+`scmTabPaddingTop`, `scmTabPaddingBottom`, `scmTabUnderlineWidth`,
+`scmTabFocusUnderlineWidth`, `scmTabGap`, `scmTabStripInset`,
+`scmTabCloseBoxSize`, `scmTabCloseGlyphSize`, `scmTabCloseGap` and
+`scmTabChosenWeight` live in `src/uiDesign.h` for that reason, and both draw the
+hairline with `paintTabStripHairline()` - a measurement two strips share is one
+number, not two that agree today. The chosen profile's word is `accentText`,
+walked against the page with `readableOn()` since every word on this strip stands
+on the page, at the chosen weight, on the accent underline under the tab's
+content: the indicator, the word and the cross. Under the pointer the word takes
+`accentText` and nothing else. The main window's bar takes no keyboard focus; a
+detached window's does, and there the underline thickens as it does on the
+sheet's strips.
 
-On a light page the chip the reader chose is not washed at all: it is filled, and
-its word, its cross and a disconnected profile's ring are written on that fill in
-white, as the platform's own chosen tab is. The fill is the accent taken towards
-black until `field` - the white Qt writes every well in the window with - reads
-on it at the text floor, which is `readableOn(tokens.field, tokens.accent,
-tokens.text, scmTextMinimumRatio)`: the walk ends at black, which white clears
-many times over, so it always lands on a colour rather than falling back. Nothing
-is left for a bar or an outline to say there, both being the accent on the
-accent, so neither is drawn. The wash, the bar and the outline above are the dark
-page's treatment: a solid fill would be the loudest thing in that window, and the
-wash there already reads as the settings sidebar's chosen row does. On the light
-page it did not, even with the bar and the outline, which is what took that
-appearance the rest of the way (2026-09-11, the user's call).
+New output is how a profile behind another tab says it has text waiting, and the
+marks it puts on the tab are the ones it always had: bold for text from the game,
+italic for a lower-priority change Mudlet made itself, and the font's underline
+as a third, kept by the profile's name so a dragged tab keeps its own, and taken
+off by `clearActivity()` when the player switches to the tab; a profile alone on
+the bar is never marked. With no wash any more to lift a marked tab off the rest,
+a marked word is also written in `text` rather than `mutedText`, so it reads
+louder than a quiet tab in both appearances. It stays apart from the chosen tab,
+which is an accent word on an accent underline, and from a hovered one, which
+takes the accent but no underline. Every tab is measured bold, the widest any
+word on the strip is drawn, so neither a mark arriving nor the choice moving
+shifts the strip, and every word is drawn from the leading edge of the box it was
+measured in.
 
-The sidebar's row also reads darker than the chip's word did, and for a reason
-that is not the border: it lies on the white pane, where `accentText` clears far
-more than the 4.5:1 it was walked to. `themeTokens()` walks that ink only to the
-floor, and against a wash on the strip's grey page the floor is where it stays,
-so the accent fades into its own wash. The chosen chip's word is therefore walked
-a second time - `readableOn()` against the wash as it is actually composited over
-the page, up to `TStyle::sChosenWordMinimumRatio`, the 7:1 the sidebar's row is
-given for free. A hovered chip's word is still plain `accentText`: it says where
-the pointer is, not which profile is on show.
+The words are packed from the leading edge with `expanding` off. Each tab leads
+with `scmTabStripInset` of the gap and trails the rest of it, so the first name
+stands where it always has and every later one a whole `scmTabGap` on from the
+end of the tab before. The bar spans the window - `mudlet.cpp` and
+`TDetachedWindow.cpp` add it to the window's layout with no margin of its own -
+and draws its base, so the hairline runs across the whole window, past the last
+tab, and the chosen underline lies over it as on every other strip.
 
 The cross is the same `editor-clear.svg` as the sheet's, through
 `themedGlyphPixmap()` - the call the cache files are written from as well, so a
-painted cross and a rule's cannot come apart. It trails the word on every
-platform, as it does on the notepad's strip: macOS alone puts a close button in
-front of a tab's name, and a cross in the leading position reads as a bullet
-until it is pressed.
-
-The chips share the width of the bar between them, as this strip always has:
-`QTabBar`'s own expanding layout is left on, and each chip holds its word centred
-in what the indicator at its leading padding edge and the cross at its trailing
-one leave. `SH_TabBar_Alignment` stays `Qt::AlignLeft` for the one case that is
-still the alignment's to decide - a strip too narrow to fill, which begins at the
-leading edge as every other row in the design does.
-
-Where the row of chips begins is the two windows' business rather than the bar's.
-`QTabBar` lays its first tab out at x = 0 and ignores its own contents margins,
-so `mudlet.cpp` and `TDetachedWindow.cpp` each put the bar in a horizontal layout
-holding `scmTabStripInset` of leading margin - the same inset the notepad's pane
-and strip start at.
+painted cross and a rule's cannot come apart - quiet at rest and `accentText`
+under the pointer. It trails the word on every platform, as it does on the
+notepad's strip: macOS alone puts a close button in front of a tab's name, and a
+cross in the leading position reads as a bullet until it is pressed.
 
 The connection indicator's inks are `stateColor()` for the reading - working,
-connecting, broken - walked with `readableOn()` at the quiet floor against what
-the chip it stands on is actually filled with, so a dot means the same thing in
-either appearance and does not disappear into an accent fill. A disconnected
-profile is a ring rather than a fill - nothing is happening, and nothing is
-wrong - drawn in the same ink as the word beside it: `mutedText` at rest, and the
-field's white on a filled chip.
+connecting, broken - walked with `readableOn()` at the quiet floor against the
+page, so a dot means the same thing in either appearance. A disconnected profile
+is a ring rather than a fill - nothing is happening, and nothing is wrong - drawn
+in the same ink as the word beside it.
 
 Mudlet sets no stylesheet of its own on this bar; `setProfileStyleSheet()` puts
 the profile's there. A script's sheet that names `QTabBar`, through that or
 `setAppStyleSheet()`, keeps the last word, exactly as before the design:
 `TStyle` hands the tabs to the application style, a `::tab` rule of theirs takes
 the tab over, font size included, and a `::close-button` rule takes the cross.
-With neither, Qt's stylesheet style falls through to `TStyle`, which is its
-base. `ProfileTabBarStyleTest` guards the lot.
+Under such a sheet the tabs share the bar's width again, as they did before, and
+no hairline is drawn under them, since a line the script did not ask for is not
+part of its look. With neither, Qt's stylesheet style falls through to `TStyle`,
+which is its base. `ProfileTabBarStyleTest` guards the lot, the marks included,
+and `UnderlinedTabStripTest` reads every strip the sheet draws off a grab.
 
 ### One sidebar for both windows
 
@@ -807,6 +1044,21 @@ The one size on a designed surface that is not a step is the notepad strip's
 font, which on macOS is not the application font, so the number is read off
 `QApplication::font("QToolButton")` and rounded to a whole point.
 
+### Section headings
+
+A heading over a group of rows on a form - Configure room's "Room 478", "On the
+map" and "Pathfinding" - is the caption step in bold, in capitals drawn by the
+font (`QFont::AllUppercase`, letter spacing 106%) rather than typed, so a
+translation keeps its own words and a script without capitals is left alone.
+Its ink is `sectionHeadingInk(tokens, surface)`: `scmHeadingHue` through
+`stateColor()`, walked to `scmTextMinimumRatio` on the surface the heading
+stands on. The hue is the same green as `scmStateHue_update` today and named
+apart from it, so either can move alone.
+
+Space sets a section apart, not a line: a line's height above every heading
+but the first and a quarter of one under it, so a heading reads with the rows
+it heads. A hairline under a heading doubled the line under a tab strip.
+
 ### Cards, not bare group boxes
 
 Content is grouped into cards: a `QGroupBox` carrying the `settingsCard` dynamic
@@ -820,8 +1072,10 @@ label and its controls keep their own widths and the row wraps where it runs out
 of room rather than widening the column, check boxes that stood side by side are
 columns as wide as their own words that stack whole when they do not fit, and
 the two colour cards - the Main display's and the map's - are one
-`uiDesign::PairGridLayout` (`reflowColourCards()`): label, well, label, well
-with every well one width, one pair to a row where two do not fit.
+`uiDesign::PairGridLayout` (`reflowColourCards()`): label, row, label, row,
+one pair to a row where two do not fit - read across on the Main display and
+down two columns on the map - and the console colours' table under them (see
+"A colour is shown apart from the buttons that change it").
 
 The card is one component for both windows, the way the sidebar is.
 `cardStyleSheet(metrics, tokens)` draws the frame and the title inside it, and
@@ -862,16 +1116,23 @@ is `sidebarWidths()` / `updateSidebarMode()` in
 
 - Widths are measured off font metrics, `sizeHint()`s and the actual scrollbar
   width, over every page rather than the one on show, so a page switch does
-  not move the collapse point - unless the page on show is wider than the
-  reading column, when the collapse point follows that page and the names fold
-  rather than the page scrolling sideways. The window's minimum is where even
-  the rail leaves the widest page too little room.
+  not move the collapse point: the names fold where the widest page, or both
+  colour cards two pairs to a row, no longer fit beside them. The window's
+  minimum is where even the rail leaves the widest page too little room.
 - The window has no maximum: a page's column grows with the window and its
-  cards use the room, so the reading column is the floor the names fold at and
-  never a ceiling. `fullyExpanded`, the names beside the widest page's column,
-  is the most a window with no remembered size opens at.
+  cards use the room, so the reading column is never a ceiling. A window with
+  no remembered size opens at `opening`, held to
+  the screen's width by `openingWidth()` and never to less than 1060px: `fullyExpanded`, the names beside the widest page's column, or wider
+  where both colour cards need it to stand two pairs to a row beside the
+  names, at the width `arrangeColourCards()` takes that up at (998px under
+  cocoa, 994px offscreen, which is also the width the names fold below,
+  against 887px and 892px for `fullyExpanded`). `fullyExpanded` itself still
+  counts each page's minimum, and a colour card's minimum is one pair to a row.
 - The test is against the window's own width, not the space left over, so
-  collapsing cannot flip the condition that caused it.
+  collapsing cannot flip the condition that caused it. A breakpoint inside a
+  scrolling page is held to the same rule: the colour cards are measured with
+  the page's scroll bar room kept whether it is showing or not, since what they
+  decide moves the page's height and so the bar (`arrangeColourCards()`).
 - The measurement is the per-window half. What is done with its answer is
   `uiDesign::setSidebarCollapsed()`, shared with `editorSidebarWidths()` /
   `updateEditorSidebarMode()` in `src/dlgTriggerEditor.cpp`. Both windows
@@ -1608,6 +1869,11 @@ handles; keep them stable.
 | `settingsHeroHeadline`, `settingsHeroDetail`, `settingsHeroLink` | Hero card parts |
 | `settingsCheckBoxWrap`, `settingsWrappedLabel` | A check box whose text wraps |
 | `settingsSearchDebounce` | The search timer - tests wait on it by name |
+| `settingsDisplayColours`, `settingsMapColours` | The two colour cards' `PairGridLayout` |
+| `settingsColour_<stem>`, `settingsOpacity_<stem>` | A colour card's field and opacity box, `<stem>` being its Choose button's name after `pushButton_` (`settingsColour_lRed`, `settingsOpacity_mapGridColor`) |
+| `settingsDisplayConsoleColours`, `settingsMapConsoleColours` | The console colours' table with the preview beside it; `...Table` is the table alone |
+| `settingsDisplayColoursNormal`, `settingsDisplayColoursLight`, `settingsMapColoursNormal`, `settingsMapColoursLight` | The table's column headings |
+| `settingsDisplayColoursPreview`, `settingsMapColoursPreview` | The two previews |
 
 ### Dynamic properties
 
@@ -1814,7 +2080,7 @@ go on their window.
 | `rightPanel` | The details column, on the page tone, never dragged narrower than 320px |
 | `packagesSplitter` | The `uiDesign::GripSplitter` the two columns hang in, in place of the row the `.ui` file put them in. Neither pane collapsible, the details column taking the growth (`setStretchFactor(1, 1)`), the list column keeping the `.ui` file's 300px floor and losing its 400px cap - a drag that stops dead reads as a broken handle. The sizes are saved in `closeEvent()` under `packageManagerSplitterState` in `MudletApp::getQSettings()` and put back in `showEvent()` on the first show only, never in the constructor: on macOS a native window created before it is shown drops the geometry it is handed. With nothing saved the list column takes a third of the window |
 | `packagesHeadlineRow` | The row at the head of the details column holding `label_packageName` and `label_version`, then a stretch |
-| `packagesViewBar` | The `QTabBar` the three views are chosen from, held to the leading edge; `headerBar` keeps the three buttons it replaced, hidden, since the group, the slots and the other package tests all press those |
+| `packagesViewBar` | The `QTabBar` the three views are chosen from, across the list column with its hairline as its base and its tabs from the leading edge; `headerBar` keeps the three buttons it replaced, hidden, since the group, the slots and the other package tests all press those |
 | `lineEdit_searchBar` | The field the list is narrowed with, carrying `settings-search.svg` as a leading action |
 | `packageList` | The rows, drawn by `PackageItemDelegate` on `itemRowStyleSheet()` |
 | `PackageItemDelegate::cPackageVersionRole` (`Qt::UserRole + 1`) | Which version the row stands for, drawn right-aligned on the name's own line, flush with the row's trailing padding, at `typeSize(Caption)` and in the ok tone the head of the details column writes the version in - walked twice in `restyle()`, against the pane a plain row stands on and against `blend(pane, accent, scmAccentWashStrength)` for a chosen one, or the tone is lost on the accent's wash. Set wherever a row is filled - `dlgPackageManager::setRowVersion()` from `resetPackageList()`, `slot_setPackageList()` and `slot_searchTextChanged()` - out of `mPackageInfo` in the Installed view, out of the repository object in Explore, and as the "%1 → %2" pair in Updates, the same text the details column shows there. A package that names no version leaves the role unset and nothing is drawn. The name's elision width shrinks by the version's advance and a gap, so the two never touch; `sizeHint()` is untouched, since the version rides an existing line. `Qt::UserRole` itself is the row's one-line summary |
@@ -1860,6 +2126,36 @@ pressed.
 
 ...and one dynamic property of its own, `exporterCountEmpty`, which the count chip carries
 while nothing is ticked and which needs `uiDesign::repolish()` after every change.
+
+...and the room properties dialog's ("Configure room"), with a `roomProperties*` prefix on
+what the redesign added and the `.ui` file's own names kept on everything that survived it,
+since `RoomPropertiesDialogTest` reaches those. Its four tabs became two, Room and Script data,
+and the `.ui` file was rewritten for it, since the layout itself changed. The window is as tall
+as the Room tab needs and keeps that size whichever tab is on show.
+`applyRoomPropertiesShellStyle()` builds one sheet, set on `roomPropertiesShell` and never on
+the dialog, and runs again on `mudlet::signal_appearanceChanged` and on a style, palette or font
+change of the dialog. A script's sheet that names `QTabBar`, on the application or on the dialog,
+takes the strip whole: the sheet holds the tab recipe only while `prepareTabStrip()` answers true,
+and the `StyleChange` such a sheet comes or goes with builds it again. OK carries
+`uiDesign::scmProp_primaryButton`.
+
+| Name | What it is |
+| --- | --- |
+| `roomPropertiesShell` | The widget holding the tabs and the buttons, which the one sheet is set on: the tab recipe on `#tabWidget_room` unless a script's sheet takes the tabs, the input recipe scoped to `#tab_general` and to `#roomPropertiesScriptData >`, the choice recipe on `#tab_general`, the button recipe on the shell and the scroll bar recipe on the table and the value box. The child combinator keeps the input recipe off the key a table cell is typed into, which it would draw as a field taller than the row |
+| `tab_general`, `tab_userData` | The Room and Script data tabs, on the tab recipe with no pane inset, since the shell's margin already holds the strip off the window's edge. Each page's layout keeps the style's top and bottom margins and none at its sides, so the words of both pages start on the line the first tab's word does. The tab widget takes its size from the recipe: `prepareTabStrip()` gives it the size its pages, strip and pane need. While a script's sheet takes the tabs the pages have the style's own margins, as the pane is Qt's framed one again, and their words no longer start on the first tab's |
+| `roomPropertiesRoomHeading`, `roomPropertiesMapHeading`, `roomPropertiesPathHeading` | The three section headings of the Room tab, set apart by space with nothing drawn under them (see "Section headings"): a line's height above the second and third, a quarter of one under each. Their words are `label_roomIdValue` - the room itself, "Room 478", or "3 rooms: 478, 479 and 512" joined as the reader's language joins a list, the first three and "5 more" past four rooms with every ID in the tooltip, and selectable - then `roomPropertiesMapHeadingText` and `roomPropertiesPathHeadingText`; all at `TypeStep::Caption`, bold, in capitals drawn by the font, inked `sectionHeadingInk(tokens, tokens.page)` |
+| `label_hash`, `roomPropertiesHashCaption` | "Room hash", since a game's own ID for a room may be the room's number and scripts call it the hash: the field says "None" while the room has none, and the caption under it which games fill it in - those that name their rooms with text instead of a number - or, while several rooms are configured, that a hash belongs to one room. `label_hashWarning` takes the caption's place, in the warning hue walked to `scmTextMinimumRatio`, while the hash typed belongs to another room |
+| `roomPropertiesPreviewColumn` | A column of its own beside the four "On the map" rows, spanning them and as wide as it needs, the window as much wider: `roomPropertiesPreviewRule`, a 1px hairline in `border` as tall as those rows, then as much room as the window leaves after the tab's content, which `fitThePreviewColumn()` measures once the tab is laid out, so the tile stands midway between the hairline and the window's edge. In it `roomPropertiesPreviewLabel`, "Preview" as a field label in `mutedText`, centred and given the Room color row's height so it stands on that row's line, and under it `label_preview`, the 48px tile centred in the room left: the room's colour, the room's own border colour and width where it has them (a width step is a pixel, held to a quarter of the tile) and otherwise the map's border while the profile shows borders, round in bubble mode, and the symbol fitted to it by `RoomAppearance::paintSymbol()`, redrawn on every edit |
+| `roomPropertiesRoomColour` | The room's colour as a `uiDesign::ColourValue` at the field's height, like the tab's other colour rows, read only and out of the tab order: the swatch and, as its default word, the number the map knows the colour by, or "Multiple" with no swatch for rooms that differ. `pushButton_setRoomColor` is its Choose |
+| `roomPropertiesRoomColorLabel`, `roomPropertiesSymbolLabel`, `roomPropertiesWeightLabel` | Labels of the rows the redesign added; with `label_name`, `label_area`, `label_hash`, `label_borderColor` ("Border") and `label_borderThickness` ("Border width") they are chrome in `mutedText` |
+| `roomPropertiesWeightCaption` | "Paths prefer a lower weight. 1 is the default." beside `spinBox_weight`, which is drawn four digits wide (measured as `QAbstractSpinBox` measures itself) with its 1 to 2147483647 range kept, as the dialog saves the weight it shows. The colour boxes, the symbol field and `spinBox_borderThickness` share one width in `alignValueBoxes()`, the widest any of them asks for, so they stand in a column |
+| `roomPropertiesScriptDataPane` | The pane between `tab_userData` and its column. Its words wrap, and a `QWidgetItem` asks a widget whose contents wrap for the height they want at a width whatever its size policy says, so the pane answers that it has no height-for-width and the tab stays out of the window's height |
+| `roomPropertiesScriptData` | The Script data column: the caption `label_userDataInstructions`, `tableWidget_userData`, the value label and box, the JSON warning, Add and Remove, and `label_userDataWarning`. `fitScriptData()` shares its height between the table and the box: each as tall as it needs while that fits, then the table gives way down to four rows, keeping the chosen one in view, and only then the box scrolls |
+| `tableWidget_userData` | Every key the rooms hold but the map's own `room.ui_` ones, `description` among them. It has no recipe of its own: the field's surface, hairline and corner, the header in `mutedText` at the caption step, and the chosen row in `accentSoft` behind `accentText`. A value cell shows the first line of its value, elided, and is never edited in place; only an added row's key is. The key column opens fitted to its keys up to 45% of the table and is dragged at the header; Return or a double-click on a row goes to the value box, and so does Tab after a new key. The vertical scroll bar stands on the frame, under the header and clear of the rounded corners: `holdTheBarInsideTheFramesEnds()` heads and foots its column with `scmScrollBarCornerClearance` (the corner's radius less its hairline), since the groove paints over whatever of the arc it covers |
+| `roomPropertiesHeaderLine` | The header's hairline in `separator`, drawn once from the table's one inner edge to the other over the sections' own: `QTableView` makes the header only as wide as the viewport while the bar's column runs the frame's whole height, and right to left `QHeaderView` paints each section a pixel past its place. It follows the header's geometry, and a spacer of the header's height heads the bar's column so the bar starts under it |
+| `roomPropertiesScriptDataEmpty` | The line over the empty table saying no script has kept anything with the room, in `disabledText` walked to `scmTextMinimumRatio` against the field |
+| `roomPropertiesValueLabel`, `roomPropertiesValueBox` | "Value of `key`" over a `QPlainTextEdit` that shows the chosen row's whole value and is the one place it is edited, three lines at rest and taller as the value needs. A JSON list or table stored with nothing between its entries is shown indented, in a fixed-width face, the label counting its entries; the indenting only puts whitespace outside strings, so taking it out again gives back the stored text. A value nobody edited is never written, an edited one that still reads as JSON is saved with the layout taken out again, and one that no longer does is saved as typed. Its bar stands on the frame and as far inside the frame's ends as the table's, so the two bars are one column: the padding on the bar's side is 0, which is `padding-left` right to left, as `QAbstractScrollArea` mirrors the contents rect `QStyleSheetStyle` has already mirrored |
+| `roomPropertiesJsonWarning` | "Not valid JSON. It will be saved as typed." under the box while that applies |
 
 Three of the `settings*` names are not the settings dialog's alone.
 `settingsRail` and `settingsFocused` are the contract `SidebarItemDelegate` and
@@ -2151,9 +2447,24 @@ and the warning's words clear 4.5:1 on the page in both appearances, read off th
 label's palette, which is where a stylesheet's `color:` lands. The add-tab button
 and the three the find bar is worked from carry a glyph each and no word, and the tab rules
 point the close button at a picture. A case reads pixels: with two notes open,
-the chosen tab has to be within a few levels of the accent wash on the page and
-the other has to read as the page itself. And an appearance change has to rebuild
+both tabs stand on the page with nothing behind them, the chosen one's word on the
+accent underline and the other's on the hairline. And an appearance change has to rebuild
 both sheets with the new field tone - nothing outside this window restyles it.
+
+**`test/functional_tests/UnderlinedTabStripTest.cpp`** reads every strip the tab
+recipe draws - the notepad's, the package manager's and both of the connection
+window's - off a grab of its window in both appearances. The chosen tab's word
+stands on the accent in the bar's bottom two rows across the whole of its ink and
+no other tab carries the accent there; the first word's ink starts on the left
+edge of the content under the strip, its font's side bearing in, to within a
+pixel; no word inks less than it does drawn whole; the strip's bottom row reads
+the hairline at the far end of that content, past the last tab, and the row over
+it does not; and choosing another tab moves neither the strip nor any tab's
+rectangle, while the underline follows the choice. The notepad's + is read
+standing on the hairline, its box ending where the line does; with the focus
+given to its strip from the keyboard the chosen underline reads four rows deep
+with the word where it was, and a click on a tab leaves the strip without the
+focus.
 
 **The marks and the buttons** are measured off pixels rather than off palettes,
 since neither carries a word: `SettingsShellNavigationTest` reads a page's check

@@ -18,9 +18,10 @@
  ***************************************************************************/
 
 /*
- * TStyle paints the profile strip's chips with no stylesheet - fill or wash, word, cross,
- * indicator and their geometry - so only a grab shows them, and in both appearances, since an
- * ink can read in one and vanish in the other.
+ * TStyle paints the profile strip with no stylesheet - the word, its underline, the hairline, the
+ * cross, the indicator and their geometry - so only a grab shows them, and in both appearances,
+ * since an ink can read in one and vanish in the other. The marks a profile's new output puts on
+ * its tab are read off the grab too, as that is the one place a player sees them.
  *
  * Run with: ctest -R ProfileTabBarStyleTest -V
  */
@@ -94,23 +95,15 @@ private:
     ExposedTabBar* mpTabBar = nullptr;
     QPalette mSavedPalette;
 
-    // A wash is composited rather than blitted, so it agrees with the token mix to a level or two
+    // A flat fill is written rather than blended, so it agrees with the token to a level or two
     static constexpr int scmInkTolerance = 2;
-    // Wider than three short names need, so a chip held to its word's width would show
+    // Wider than three short names need, so the hairline has room to run on past the last tab
     static constexpr int scmBarWidth = 600;
-    // Short of the 7:1 the ink is mixed for: antialiasing leaves only the glyph's stems at full ink
-    static constexpr qreal scmChosenWordFloor = 6.5;
-    // The same allowance on a filled chip, as a fraction of the white's own contrast on the fill,
-    // for a rasteriser that leaves no pixel at full coverage
-    static constexpr qreal scmOnFillWordReach = 0.9;
-
-    // Mixed here rather than asked of TStyle, so the test is an independent reading of the rule
-    static QColor chosenFillOnLightPage(const uiDesign::ThemeTokens& tokens) { return uiDesign::readableOn(tokens.field, tokens.accent, tokens.text, uiDesign::scmTextMinimumRatio); }
 
     static QString saidAs(const QColor& colour) { return colour.name(QColor::HexArgb); }
 
     // A never-shown widget keeps its resize pending until rendered, and QTabBar lays out its tabs
-    // on that event, so the chips would be measured for a top-level's default width
+    // on that event, so the tabs would be measured for a top-level's default width
     static void layOutAtItsOwnSize(QTabBar* pTabBar)
     {
         QResizeEvent resized(pTabBar->size(), QSize());
@@ -137,12 +130,16 @@ private:
         return QColor(commonest);
     }
 
-    // Thresholded against the word's own ink: a fixed distance would count the chosen chip's
-    // stronger ink as more word
-    static int inkCoverage(const QImage& strip, const QRect& box, const QColor& ink)
+    static QRect scannedIn(const QImage& strip, const QRect& box)
     {
         const qreal ratio = strip.devicePixelRatio();
-        const QRect scanned = QRect(qRound(box.left() * ratio), qRound(box.top() * ratio), qRound(box.width() * ratio), qRound(box.height() * ratio)) & strip.rect();
+        return QRect(qRound(box.left() * ratio), qRound(box.top() * ratio), qRound(box.width() * ratio), qRound(box.height() * ratio)) & strip.rect();
+    }
+
+    // Thresholded against the word's own ink: a fixed distance would count a stronger ink as more word
+    static int inkCoverage(const QImage& strip, const QRect& box, const QColor& ink)
+    {
+        const QRect scanned = scannedIn(strip, box);
         const QColor behind = commonestColour(strip.copy(scanned));
         const int reach = TestPixels::distance(behind, ink);
         int touched = 0;
@@ -159,7 +156,7 @@ private:
     static int inkedWidth(const QImage& strip, const QRect& box, const QColor& ink)
     {
         const qreal ratio = strip.devicePixelRatio();
-        const QRect scanned = QRect(qRound(box.left() * ratio), qRound(box.top() * ratio), qRound(box.width() * ratio), qRound(box.height() * ratio)) & strip.rect();
+        const QRect scanned = scannedIn(strip, box);
         const QColor behind = commonestColour(strip.copy(scanned));
         const int reach = TestPixels::distance(behind, ink);
         int left = -1;
@@ -176,30 +173,92 @@ private:
         return left < 0 ? 0 : qRound((right - left + 1) / ratio);
     }
 
-    // Mirrors TStyle::layoutChip()
-    QRect chipOf(const int index) const { return mpTabBar->tabRect(index).adjusted(0, 0, -uiDesign::scmTabGap, 0); }
-
-    // Past the accent bar a chosen chip carries, where only the wash is drawn
-    QPoint washSpot(const int index) const
+    // The pixel of a word furthest from what it is written on carries its ink: antialiasing leaves
+    // only the stems at full coverage
+    static QColor strongestInk(const QImage& strip, const QRect& box)
     {
-        const QRect chip = chipOf(index);
-        return QPoint(chip.left() + uiDesign::scmAccentBarWidth + 2, chip.center().y());
+        const QRect scanned = scannedIn(strip, box);
+        const QColor behind = commonestColour(strip.copy(scanned));
+        QColor strongest = behind;
+        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
+            for (int x = scanned.left(); x <= scanned.right(); ++x) {
+                const QColor pixel(strip.pixel(x, y));
+                if (TestPixels::distance(pixel, behind) > TestPixels::distance(strongest, behind)) {
+                    strongest = pixel;
+                }
+            }
+        }
+        return strongest;
     }
 
-    // Mid-height on the accent bar, clear of the arc at either end of it
-    QPoint barSpot(const int index) const
+    // dx/dy of the least squares line through a word's ink pixels: an upright word's depends on its letters, and an
+    // italic one's differs from it, as its tops stand right of its feet
+    static double inkLean(const QImage& image, const QRect& scanned, const QColor& behind, const QColor& ink)
     {
-        const QRect chip = chipOf(index);
-        return QPoint(chip.left() + 1, chip.center().y());
+        const int reach = TestPixels::distance(behind, ink);
+        double count = 0.0;
+        double sumX = 0.0;
+        double sumY = 0.0;
+        double sumXY = 0.0;
+        double sumYY = 0.0;
+        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
+            for (int x = scanned.left(); x <= scanned.right(); ++x) {
+                if (2 * TestPixels::distance(QColor(image.pixel(x, y)), behind) >= reach) {
+                    count += 1.0;
+                    sumX += x;
+                    sumY += y;
+                    sumXY += static_cast<double>(x) * y;
+                    sumYY += static_cast<double>(y) * y;
+                }
+            }
+        }
+        const double spread = count * sumYY - sumY * sumY;
+        return spread > 0.0 ? (count * sumXY - sumX * sumY) / spread : 0.0;
+    }
+
+    // The word drawn here, on the same surface in the same ink, for the grab's lean to be held against
+    static double drawnLean(const QFont& font, const QString& text, const QColor& ink, const QColor& behind, const qreal ratio)
+    {
+        const QFontMetrics metrics(font);
+        QImage drawn(QSize(metrics.horizontalAdvance(text) + 8, metrics.height() + 4) * ratio, QImage::Format_ARGB32);
+        drawn.setDevicePixelRatio(ratio);
+        drawn.fill(behind);
+        QPainter painter(&drawn);
+        painter.setFont(font);
+        painter.setPen(ink);
+        painter.drawText(QPoint(4, 2 + metrics.ascent()), text);
+        painter.end();
+        return inkLean(drawn, drawn.rect(), behind, ink);
+    }
+
+    static QRect wordBoxOf(ExposedTabBar& bar, const int index)
+    {
+        QStyleOptionTab option;
+        bar.initStyleOption(&option, index);
+        return bar.style()->subElementRect(QStyle::SE_TabBarTabText, &option, &bar);
+    }
+
+    // Mirrors TStyle::layoutTab(): each tab leads with scmTabStripInset of the gap and trails the rest
+    static QRect contentOf(const QTabBar& bar, const int index) { return bar.tabRect(index).adjusted(uiDesign::scmTabStripInset, 0, uiDesign::scmTabStripInset - uiDesign::scmTabGap, 0); }
+    QRect contentOf(const int index) const { return contentOf(*mpTabBar, index); }
+
+    static QRect lineOf(const QTabBar& bar, const int index)
+    {
+        const QRect tab = bar.tabRect(index);
+        return QRect(tab.left(), tab.top() + uiDesign::scmTabPaddingTop, tab.width(), tab.height() - uiDesign::scmTabPaddingTop - uiDesign::scmTabPaddingBottom);
+    }
+
+    // In the gap a tab trails, on the word's line, where nothing but the surface is drawn
+    QPoint gapSpot(const int index) const
+    {
+        const QRect tab = mpTabBar->tabRect(index);
+        return QPoint(tab.right() - (uiDesign::scmTabGap - uiDesign::scmTabStripInset) / 2, lineOf(*mpTabBar, index).center().y());
     }
 
     QRect indicatorOf(const int index) const
     {
-        const QRect chip = chipOf(index);
-        return QRect(chip.left() + uiDesign::scmInputBorderWidth + uiDesign::scmTabPaddingHorizontal,
-                     chip.top() + (chip.height() - TStyle::sIndicatorDiameter) / 2,
-                     TStyle::sIndicatorDiameter,
-                     TStyle::sIndicatorDiameter);
+        const QRect line = lineOf(*mpTabBar, index);
+        return QRect(contentOf(index).left(), line.top() + (line.height() - TStyle::sIndicatorDiameter) / 2, TStyle::sIndicatorDiameter, TStyle::sIndicatorDiameter);
     }
 
     QAbstractButton* crossOf(const int index) const { return qobject_cast<QAbstractButton*>(mpTabBar->tabButton(index, QTabBar::RightSide)); }
@@ -216,154 +275,102 @@ private:
         QCoreApplication::processEvents();
     }
 
-    void theChosenChipIsWashed()
+    // The accent on the bottom rows under a tab's content, the hairline under the rest
+    static bool standsOnTheUnderline(const QImage& strip, const QTabBar& bar, const int index, const uiDesign::ThemeTokens& tokens, QString* pWhy)
+    {
+        const QRect content = contentOf(bar, index);
+        const int bottom = bar.tabRect(index).bottom();
+        for (int row = bottom - uiDesign::scmTabUnderlineWidth + 1; row <= bottom; ++row) {
+            for (int x = content.left(); x <= content.right(); ++x) {
+                const QColor read = TestPixels::sampled(strip, QPoint(x, row));
+                if (!TestPixels::readsAs(read, tokens.accent, scmInkTolerance)) {
+                    *pWhy = qsl("at %1,%2 under tab %3 it reads %4 rather than the accent %5")
+                                    .arg(QString::number(x), QString::number(row), QString::number(index), saidAs(read), saidAs(tokens.accent));
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    static bool carriesNoAccent(const QImage& strip, const QTabBar& bar, const int index, const uiDesign::ThemeTokens& tokens, QString* pWhy)
+    {
+        const QRect tab = bar.tabRect(index);
+        for (int row = tab.bottom() - uiDesign::scmTabFocusUnderlineWidth + 1; row <= tab.bottom(); ++row) {
+            for (int x = tab.left(); x <= tab.right(); ++x) {
+                const QColor read = TestPixels::sampled(strip, QPoint(x, row));
+                if (TestPixels::readsAs(read, tokens.accent, scmInkTolerance)) {
+                    *pWhy = qsl("tab %1 carries the accent at %2,%3").arg(QString::number(index), QString::number(x), QString::number(row));
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    void theChosenTabStandsOnTheUnderline()
     {
         const QImage strip = TestPixels::shot(mpTabBar);
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
         const QColor surface = commonestColour(strip);
 
-        const QColor resting = TestPixels::sampled(strip, washSpot(2));
-        QVERIFY2(TestPixels::readsAs(resting, surface, 0),
-                 qPrintable(qsl("a tab that is not the one on show is drawn on something other than the strip's own surface: %1 rather than %2").arg(saidAs(resting), saidAs(surface))));
-        const QColor restingEdge = TestPixels::sampled(strip, barSpot(2));
-        QVERIFY2(TestPixels::readsAs(restingEdge, surface, 0), qPrintable(qsl("a tab that is not on show carries a bar on its leading edge: %1").arg(saidAs(restingEdge))));
-        const QRect restingChip = chipOf(2);
-        const QColor restingTop = TestPixels::sampled(strip, QPoint(restingChip.center().x(), restingChip.top()));
-        QVERIFY2(TestPixels::readsAs(restingTop, surface, 0),
-                 qPrintable(qsl("a tab that is not on show is outlined: %1 on its top edge rather than the strip's own %2").arg(saidAs(restingTop), saidAs(surface))));
-
-        const QRect chosenChip = chipOf(0);
-        if (!tokens.darkPage) {
-            // No bar or outline on a light page: in the accent they would say nothing on the accent fill
-            const QColor fill = chosenFillOnLightPage(tokens);
-            struct Spot
-            {
-                const char* where;
-                QPoint at;
-            };
-            const Spot spots[]{{"inside its leading padding", washSpot(0)}, {"where a bar would stand", barSpot(0)}, {"on its top edge", QPoint(chosenChip.center().x(), chosenChip.top())}};
-            for (const Spot& spot : spots) {
-                const QColor read = TestPixels::sampled(strip, spot.at);
-                QVERIFY2(TestPixels::readsAs(read, fill, scmInkTolerance),
-                         qPrintable(qsl("the tab on show is not filled with %1, the accent %2 walked until the field's white reads on it: %3 it is %4")
-                                            .arg(saidAs(fill), saidAs(tokens.accent), QString::fromUtf8(spot.where), saidAs(read))));
-            }
-            return;
+        for (const int index : {0, 2}) {
+            const QColor beside = TestPixels::sampled(strip, gapSpot(index));
+            QVERIFY2(TestPixels::readsAs(beside, surface, 0),
+                     qPrintable(qsl("tab %1 is drawn on %2 rather than on the strip's own surface %3 - a tab is still filled").arg(QString::number(index), saidAs(beside), saidAs(surface))));
         }
 
-        const QColor chosen = TestPixels::sampled(strip, washSpot(0));
-        const QColor wanted = TestPixels::composited(tokens.accentWash, surface);
-        QVERIFY2(TestPixels::readsAs(chosen, wanted, scmInkTolerance),
-                 qPrintable(qsl("the tab on show is not washed in the accent: %1 where the accent wash over %2 is %3").arg(saidAs(chosen), saidAs(surface), saidAs(wanted))));
+        QString why;
+        QVERIFY2(standsOnTheUnderline(strip, *mpTabBar, 0, tokens, &why), qPrintable(qsl("the tab on show stands on no accent underline: %1").arg(why)));
+        const QColor overTheUnderline = TestPixels::sampled(strip, QPoint(contentOf(0).center().x(), mpTabBar->tabRect(0).bottom() - uiDesign::scmTabUnderlineWidth));
+        QVERIFY2(!TestPixels::readsAs(overTheUnderline, tokens.accent, scmInkTolerance), "the underline is thicker than the design's two pixels, though the bar takes no keyboard focus");
+        QVERIFY2(carriesNoAccent(strip, *mpTabBar, 2, tokens, &why), qPrintable(qsl("a tab that is not on show reads as chosen: %1").arg(why)));
 
-        // On a dark page the wash alone does not say which profile is on show
-        const QColor bar = TestPixels::sampled(strip, barSpot(0));
-        QVERIFY2(TestPixels::readsAs(bar, tokens.accent, scmInkTolerance),
-                 qPrintable(qsl("the tab on show has no accent bar on its leading edge: %1 where the accent is %2").arg(saidAs(bar), saidAs(tokens.accent))));
-
-        const QColor edge = TestPixels::sampled(strip, QPoint(chosenChip.center().x(), chosenChip.top()));
-        QVERIFY2(TestPixels::readsAs(edge, tokens.accent, scmInkTolerance),
-                 qPrintable(qsl("the tab on show has no accent outline: %1 on its top edge where the accent is %2").arg(saidAs(edge), saidAs(tokens.accent))));
+        const QColor underTheRest = TestPixels::sampled(strip, QPoint(contentOf(2).center().x(), mpTabBar->tabRect(2).bottom()));
+        QVERIFY2(TestPixels::readsAs(underTheRest, tokens.border, scmInkTolerance),
+                 qPrintable(qsl("the tab that is not on show stands on %1 rather than the hairline %2").arg(saidAs(underTheRest), saidAs(tokens.border))));
+        const int lastEnd = mpTabBar->tabRect(mpTabBar->count() - 1).right();
+        QVERIFY2(lastEnd < mpTabBar->width() - 2, "SETUP: the tabs fill the bar, so the hairline past them cannot be read");
+        const QColor farEnd = TestPixels::sampled(strip, QPoint(mpTabBar->width() - 1, mpTabBar->height() - 1));
+        QVERIFY2(TestPixels::readsAs(farEnd, tokens.border, scmInkTolerance),
+                 qPrintable(qsl("at the bar's far end, past every tab, its bottom row reads %1 rather than the hairline %2").arg(saidAs(farEnd), saidAs(tokens.border))));
     }
 
-    // The accent ink at the design's floor was mixed against the deepest wash and fades into this
-    // strip's own, so the dark-page word is walked past it. The strongest pixel is read because
-    // only the glyph's stems are at full ink.
-    void theChosenWordIsStrong()
+    // Nearer the accent's ink than the chrome tone or the full text ink
+    void theChosenWordIsTheAccentInk()
     {
         const QImage strip = TestPixels::shot(mpTabBar);
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-        const QColor behind = tokens.darkPage ? TestPixels::composited(tokens.accentWash, commonestColour(strip)) : chosenFillOnLightPage(tokens);
-
-        QStyleOptionTab option;
-        mpTabBar->initStyleOption(&option, 0);
-        const QRect word = mpTabBar->style()->subElementRect(QStyle::SE_TabBarTabText, &option, mpTabBar);
-        const qreal ratio = strip.devicePixelRatio();
-        const QRect scanned = QRect(qRound(word.left() * ratio), qRound(word.top() * ratio), qRound(word.width() * ratio), qRound(word.height() * ratio)) & strip.rect();
-        QVERIFY2(!scanned.isEmpty(), "the chosen chip leaves its word no room at all, so there is nothing to read");
-
-        qreal strongest = 0.0;
-        QColor strongestInk;
-        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
-            for (int x = scanned.left(); x <= scanned.right(); ++x) {
-                const QColor pixel(strip.pixel(x, y));
-                const qreal reads = uiDesign::contrastRatio(pixel, behind);
-                if (reads > strongest) {
-                    strongest = reads;
-                    strongestInk = pixel;
-                }
-            }
-        }
-
-        if (!tokens.darkPage) {
-            const qreal inkReads = uiDesign::contrastRatio(tokens.field, behind);
-            const bool atFullInk = TestPixels::readsAs(strongestInk, tokens.field, scmInkTolerance);
-            if (!atFullInk) {
-                qDebug("no pixel of the word is at the field's own white, so it is read by how far it reaches instead");
-            }
-            QVERIFY2(atFullInk || strongest >= scmOnFillWordReach * inkReads,
-                     qPrintable(qsl("the word on the tab on show is not written in the field's white %1 on the fill %2: its strongest pixel is %3, reaching %4:1, where that white reads at %5:1")
-                                        .arg(saidAs(tokens.field), saidAs(behind), saidAs(strongestInk), QString::number(strongest, 'f', 2), QString::number(inkReads, 'f', 2))));
-            return;
-        }
-
-        const QColor walked = uiDesign::readableOn(behind, tokens.accentText, tokens.text, TStyle::sChosenWordMinimumRatio);
-        QVERIFY2(strongest >= scmChosenWordFloor,
-                 qPrintable(qsl("the word on the tab on show reaches only %1:1 against its wash %2 - its strongest pixel is %3, where the ink at the design's floor %4 reads at %5:1 and the "
-                                "walked ink %6 at %7:1")
-                                    .arg(QString::number(strongest, 'f', 2),
-                                         saidAs(behind),
-                                         saidAs(strongestInk),
-                                         saidAs(tokens.accentText),
-                                         QString::number(uiDesign::contrastRatio(tokens.accentText, behind), 'f', 2),
-                                         saidAs(walked),
-                                         QString::number(uiDesign::contrastRatio(walked, behind), 'f', 2))));
+        const QColor wanted = uiDesign::readableOn(tokens.page, tokens.accentText, tokens.text, uiDesign::scmTextMinimumRatio);
+        const QColor ink = strongestInk(strip, wordBoxOf(*mpTabBar, 0));
+        QVERIFY2(TestPixels::distance(ink, wanted) < TestPixels::distance(ink, tokens.mutedText) && TestPixels::distance(ink, wanted) < TestPixels::distance(ink, tokens.text),
+                 qPrintable(qsl("the word on the tab on show is written in %1, nearer the chrome tone %2 or the text ink %3 than the accent's ink %4")
+                                    .arg(saidAs(ink), saidAs(tokens.mutedText), saidAs(tokens.text), saidAs(wanted))));
     }
 
     void theIndicatorIsAStateColour()
     {
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
-        // Tab 2 rests on the page; the chosen chip's light-page fill is checked separately below
-        mpTabBar->setTabConnectionIndicator(2, TabConnectionIndicator::Connected);
-        QImage strip = TestPixels::shot(mpTabBar);
-        const QColor dot = TestPixels::sampled(strip, indicatorOf(2).center());
-        const QColor wantedDot = uiDesign::readableOn(tokens.page, uiDesign::stateColor(uiDesign::scmStateHue_ok, tokens.darkPage), tokens.text, uiDesign::scmQuietMinimumRatio);
-        QVERIFY2(TestPixels::readsAs(dot, wantedDot, scmInkTolerance),
-                 qPrintable(qsl("a connected profile's dot is not the state colour for something working: %1 rather than %2").arg(saidAs(dot), saidAs(wantedDot))));
+        for (const int index : {0, 2}) {
+            mpTabBar->setTabConnectionIndicator(index, TabConnectionIndicator::Connected);
+            QImage strip = TestPixels::shot(mpTabBar);
+            const QColor dot = TestPixels::sampled(strip, indicatorOf(index).center());
+            const QColor wantedDot = uiDesign::readableOn(tokens.page, uiDesign::stateColor(uiDesign::scmStateHue_ok, tokens.darkPage), tokens.text, uiDesign::scmQuietMinimumRatio);
+            QVERIFY2(TestPixels::readsAs(dot, wantedDot, scmInkTolerance),
+                     qPrintable(
+                             qsl("a connected profile's dot on tab %1 is not the state colour for something working: %2 rather than %3").arg(QString::number(index), saidAs(dot), saidAs(wantedDot))));
+            mpTabBar->setTabConnectionIndicator(index, TabConnectionIndicator::None);
+        }
 
+        // The ring is in the ink of the word beside it
         mpTabBar->setTabConnectionIndicator(2, TabConnectionIndicator::Disconnected);
-        strip = TestPixels::shot(mpTabBar);
+        const QImage strip = TestPixels::shot(mpTabBar);
         const QRect box = indicatorOf(2);
         const QColor ring = TestPixels::sampled(strip, QPoint(box.left(), box.center().y()));
         QVERIFY2(TestPixels::readsAs(ring, tokens.mutedText, scmInkTolerance),
-                 qPrintable(qsl("a disconnected profile's ring is not drawn in the chrome tone: %1 rather than %2").arg(saidAs(ring), saidAs(tokens.mutedText))));
-
+                 qPrintable(qsl("a disconnected profile's ring is not drawn in the chrome tone of its word: %1 rather than %2").arg(saidAs(ring), saidAs(tokens.mutedText))));
         mpTabBar->setTabConnectionIndicator(2, TabConnectionIndicator::None);
-        QCoreApplication::processEvents();
-
-        if (tokens.darkPage) {
-            return;
-        }
-
-        // A dot walked for the page, or a ring in the chrome tone, would be swallowed by a light page's fill
-        const QColor fill = chosenFillOnLightPage(tokens);
-        mpTabBar->setTabConnectionIndicator(0, TabConnectionIndicator::Connected);
-        strip = TestPixels::shot(mpTabBar);
-        const QColor chosenDot = TestPixels::sampled(strip, indicatorOf(0).center());
-        const QColor wantedChosenDot = uiDesign::readableOn(fill, uiDesign::stateColor(uiDesign::scmStateHue_ok, tokens.darkPage), tokens.text, uiDesign::scmQuietMinimumRatio);
-        QVERIFY2(TestPixels::readsAs(chosenDot, wantedChosenDot, scmInkTolerance),
-                 qPrintable(qsl("the dot on the tab on show is not the state colour walked against the fill %1 it stands on: %2 rather than %3")
-                                    .arg(saidAs(fill), saidAs(chosenDot), saidAs(wantedChosenDot))));
-
-        mpTabBar->setTabConnectionIndicator(0, TabConnectionIndicator::Disconnected);
-        strip = TestPixels::shot(mpTabBar);
-        const QRect chosenBox = indicatorOf(0);
-        const QColor chosenRing = TestPixels::sampled(strip, QPoint(chosenBox.left(), chosenBox.center().y()));
-        QVERIFY2(TestPixels::readsAs(chosenRing, tokens.field, scmInkTolerance),
-                 qPrintable(qsl("the ring on the tab on show is not drawn in the field's white its word is: %1 rather than %2").arg(saidAs(chosenRing), saidAs(tokens.field))));
-
-        mpTabBar->setTabConnectionIndicator(0, TabConnectionIndicator::None);
         QCoreApplication::processEvents();
     }
 
@@ -375,7 +382,7 @@ private slots:
         // In mudlet.cpp's order: the crosses have to exist before the tabs, or QTabBar silently makes its own
         mpTabBar->setMovable(true);
         mpTabBar->setTabsClosable(true);
-        // A top-level here, with no main window frame to fill the surface behind the chips
+        // A top-level here, with no main window frame to fill the surface behind the tabs
         mpTabBar->setAutoFillBackground(true);
         for (const QString& profileName : {qsl("Alpha"), qsl("Bravo"), qsl("Delta")}) {
             mpTabBar->setTabData(mpTabBar->addTab(profileName), profileName);
@@ -401,54 +408,61 @@ private slots:
             QVERIFY2(pCross->size() == wanted,
                      qPrintable(qsl("the cross on tab %1 is %2x%3 rather than the %4x%4 box the design draws it in")
                                         .arg(QString::number(i), QString::number(pCross->size().width()), QString::number(pCross->size().height()), QString::number(uiDesign::scmTabCloseBoxSize))));
+            QVERIFY2(pCross->geometry().right() == contentOf(i).right(),
+                     qPrintable(qsl("the cross on tab %1 ends at %2 rather than where the tab's own extent does, %3, before the gap to the next tab")
+                                        .arg(QString::number(i), QString::number(pCross->geometry().right()), QString::number(contentOf(i).right()))));
         }
 
-        QVERIFY2(!mpTabBar->drawBase(), "the strip still draws the band a platform fills the whole bar with behind the tabs");
-        QVERIFY2(mpTabBar->expanding(), "the chips are held to the width of their words rather than sharing the width of the window, as the profile strip always has");
-        QVERIFY2(mpTabBar->testAttribute(Qt::WA_Hover), "the bar asks for no hover events, so no chip can ever be washed under the pointer");
+        QVERIFY2(mpTabBar->drawBase(), "the strip draws no base, so there is no hairline for its tabs to stand on");
+        QVERIFY2(!mpTabBar->expanding(), "the tabs share the width of the window rather than standing as words from its leading edge");
+        QVERIFY2(mpTabBar->testAttribute(Qt::WA_Hover), "the bar asks for no hover events, so no word can ever light under the pointer");
     }
 
-    // Guards the platform tabs' light-mode cross sitting visibly higher than the word
-    void test_everythingIsCentredOnTheChip()
+    void test_theCrossAndTheWordShareOneLine()
     {
         for (int i = 0; i < mpTabBar->count(); ++i) {
-            const int chipCentre = mpTabBar->tabRect(i).center().y();
+            const int lineCentre = lineOf(*mpTabBar, i).center().y();
 
             QAbstractButton* pCross = crossOf(i);
             QVERIFY(pCross);
             const int crossCentre = pCross->geometry().center().y();
-            QVERIFY2(std::abs(crossCentre - chipCentre) <= 1,
-                     qPrintable(qsl("the cross on tab %1 sits %2px off the chip's centre line, where the word is").arg(QString::number(i), QString::number(std::abs(crossCentre - chipCentre)))));
+            QVERIFY2(std::abs(crossCentre - lineCentre) <= 1,
+                     qPrintable(qsl("the cross on tab %1 sits %2px off the word's line").arg(QString::number(i), QString::number(std::abs(crossCentre - lineCentre)))));
 
-            QStyleOptionTab option;
-            mpTabBar->initStyleOption(&option, i);
-            const QRect text = mpTabBar->style()->subElementRect(QStyle::SE_TabBarTabText, &option, mpTabBar);
-            QVERIFY2(std::abs(text.center().y() - chipCentre) <= 1,
-                     qPrintable(qsl("the word on tab %1 sits %2px off the chip's centre line").arg(QString::number(i), QString::number(std::abs(text.center().y() - chipCentre)))));
+            const QRect text = wordBoxOf(*mpTabBar, i);
+            QVERIFY2(std::abs(text.center().y() - lineCentre) <= 1,
+                     qPrintable(qsl("the word on tab %1 sits %2px off its line").arg(QString::number(i), QString::number(std::abs(text.center().y() - lineCentre)))));
             QVERIFY2(text.right() < pCross->geometry().left(), qPrintable(qsl("the word on tab %1 runs under the cross rather than stopping in front of it").arg(QString::number(i))));
         }
     }
 
-    void test_theChipIsTheRecipesSize()
+    void test_theTabIsTheRecipesSize()
     {
-        const int wantedHeight = mpTabBar->fontMetrics().height() + 2 * (uiDesign::scmTabPaddingVertical + uiDesign::scmInputBorderWidth);
+        const int wantedHeight = std::max(mpTabBar->fontMetrics().height(), uiDesign::scmTabCloseBoxSize) + uiDesign::scmTabPaddingTop + uiDesign::scmTabPaddingBottom;
         QCOMPARE(mpTabBar->tabSizeHint(0).height(), wantedHeight);
 
         QCOMPARE(mpTabBar->tabRect(0).left(), 0);
+        QVERIFY2(wordBoxOf(*mpTabBar, 0).left() == uiDesign::scmTabStripInset,
+                 qPrintable(qsl("the first name starts at %1 rather than at the strip's inset, %2").arg(QString::number(wordBoxOf(*mpTabBar, 0).left()), QString::number(uiDesign::scmTabStripInset))));
         for (int i = 1; i < mpTabBar->count(); ++i) {
             QVERIFY2(mpTabBar->tabRect(i).left() == mpTabBar->tabRect(i - 1).right() + 1,
-                     qPrintable(qsl("chip %1 starts at %2 rather than where the one before it ends, %3 - the gap between them is inside a chip's own rectangle")
+                     qPrintable(qsl("tab %1 starts at %2 rather than where the one before it ends, %3 - the gap between them is inside a tab's own rectangle")
                                         .arg(QString::number(i), QString::number(mpTabBar->tabRect(i).left()), QString::number(mpTabBar->tabRect(i - 1).right() + 1))));
+            const int gap = wordBoxOf(*mpTabBar, i).left() - (contentOf(i - 1).right() + 1);
+            QVERIFY2(gap == uiDesign::scmTabGap,
+                     qPrintable(qsl("tab %1's word starts %2px after the tab before it ends, rather than the design's %3")
+                                        .arg(QString::number(i), QString::number(gap), QString::number(uiDesign::scmTabGap))));
         }
 
         const int lastEdge = mpTabBar->tabRect(mpTabBar->count() - 1).right();
-        QVERIFY2(lastEdge == mpTabBar->width() - 1,
-                 qPrintable(qsl("three chips end at %1 on a %2px bar, so they are not sharing its width between them").arg(QString::number(lastEdge), QString::number(mpTabBar->width()))));
+        QVERIFY2(lastEdge < mpTabBar->width() - 1,
+                 qPrintable(
+                         qsl("three tabs end at %1 on a %2px bar, so they are stretched across it rather than standing as words").arg(QString::number(lastEdge), QString::number(mpTabBar->width()))));
     }
 
-    void test_theChosenWordIsBoldAndTheStripDoesNotShiftForIt()
+    void test_theChosenWordIsSemiboldAndTheStripDoesNotShiftForIt()
     {
-        // The same word on both chips, so only the choice can differ between the two readings
+        // The same word on both tabs, so only the choice can differ between the two readings
         ExposedTabBar bar(nullptr);
         bar.setAutoFillBackground(true);
         bar.setTabData(bar.addTab(qsl("Same")), qsl("Same-A"));
@@ -458,22 +472,22 @@ private slots:
         bar.setCurrentIndex(0);
         QCoreApplication::processEvents();
 
-        const auto wordBox = [&bar](const int index) {
-            QStyleOptionTab option;
-            bar.initStyleOption(&option, index);
-            return bar.style()->subElementRect(QStyle::SE_TabBarTabText, &option, &bar);
-        };
-
         const QImage strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
-
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-        // Each word's own ink, or the reading counts the whole box as word
-        const int chosenInk = inkCoverage(strip, wordBox(0), tokens.darkPage ? tokens.accentText : tokens.field);
-        const int restingInk = inkCoverage(strip, wordBox(1), tokens.mutedText);
-        QVERIFY2(restingInk > 0, "the resting chip's word marks nothing at all, so there is no reading to compare the chosen one against");
-        QVERIFY2(100 * chosenInk >= 115 * restingInk,
-                 qPrintable(qsl("the word on the chosen chip marks %1 pixels of its box against the %2 the same word marks on the resting chip beside it, so it is not drawn any bolder")
-                                    .arg(QString::number(chosenInk), QString::number(restingInk))));
+
+        QFont semibold = bar.font();
+        semibold.setWeight(uiDesign::scmTabChosenWeight);
+        if (QFontInfo(semibold).weight() > QFontInfo(bar.font()).weight()) {
+            // Each word's own ink, or the reading counts the whole box as word
+            const int chosenInk = inkCoverage(strip, wordBoxOf(bar, 0), tokens.accentText);
+            const int restingInk = inkCoverage(strip, wordBoxOf(bar, 1), tokens.mutedText);
+            QVERIFY2(restingInk > 0, "the resting tab's word marks nothing at all, so there is no reading to compare the chosen one against");
+            QVERIFY2(100 * chosenInk >= 105 * restingInk,
+                     qPrintable(qsl("the word on the chosen tab marks %1 pixels of its box against the %2 the same word marks on the resting tab beside it, so it is not drawn any heavier")
+                                        .arg(QString::number(chosenInk), QString::number(restingInk))));
+        } else {
+            qInfo("  this machine's font has no face heavier than its regular one at the chosen weight, so the weight is not read off the grab");
+        }
 
         // A pixel of slack: Qt measures a tab's text with QFontMetrics::size(), this with horizontalAdvance()
         QFont bold = bar.font();
@@ -481,9 +495,9 @@ private slots:
         for (int i = 0; i < bar.count(); ++i) {
             const int boldAdvance = QFontMetrics(bold).horizontalAdvance(bar.tabText(i));
             QVERIFY2(boldAdvance > bar.fontMetrics().horizontalAdvance(bar.tabText(i)), "bold and regular measure this word the same here, so nothing below could be told apart");
-            QVERIFY2(wordBox(i).width() + 1 >= boldAdvance,
-                     qPrintable(qsl("chip %1 leaves its word %2px, less than the %3px that word takes in bold - so the chip a reader chooses is measured narrower than it is drawn")
-                                        .arg(QString::number(i), QString::number(wordBox(i).width()), QString::number(boldAdvance))));
+            QVERIFY2(wordBoxOf(bar, i).width() + 1 >= boldAdvance,
+                     qPrintable(qsl("tab %1 leaves its word %2px, less than the %3px that word takes in bold - so a tab marked with new output is measured narrower than it is drawn")
+                                        .arg(QString::number(i), QString::number(wordBoxOf(bar, i).width()), QString::number(boldAdvance))));
         }
 
         QList<QRect> before;
@@ -494,7 +508,7 @@ private slots:
         QCoreApplication::processEvents();
         for (int i = 0; i < bar.count(); ++i) {
             QVERIFY2(bar.tabRect(i) == before.at(i),
-                     qPrintable(qsl("chip %1 stood at %2 and moved to %3 when the choice moved to the chip beside it, so the whole strip steps sideways on every switch")
+                     qPrintable(qsl("tab %1 stood at %2 and moved to %3 when the choice moved to the tab beside it, so the whole strip steps sideways on every switch")
                                         .arg(QString::number(i), TestPixels::describe(before.at(i)), TestPixels::describe(bar.tabRect(i)))));
         }
     }
@@ -506,7 +520,7 @@ private slots:
         ExposedTabBar bar(nullptr);
         bar.setAutoFillBackground(true);
         bar.setTabData(bar.addTab(qsl("Chosen")), qsl("Chosen"));
-        // The same displayed word on both resting chips, so only the mark can tell them apart; set
+        // The same displayed word on both resting tabs, so only the mark can tell them apart; set
         // through QTabBar because TTabBar's own setters escape the '&' the platform would have added
         bar.setTabData(bar.QTabBar::addTab(qsl("&Gorbash")), qsl("Gorbash"));
         bar.setTabData(bar.QTabBar::addTab(qsl("&Gorbash")), qsl("Gorbash-Twin"));
@@ -518,18 +532,13 @@ private slots:
         bar.markActivity(qsl("Gorbash"), false);
         QCoreApplication::processEvents();
 
-        const auto wordBox = [&bar](const int index) {
-            QStyleOptionTab option;
-            bar.initStyleOption(&option, index);
-            return bar.style()->subElementRect(QStyle::SE_TabBarTabText, &option, &bar);
-        };
         const QImage strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
         const QColor ink = uiDesign::themeTokens().mutedText;
-        const int markedInk = inkCoverage(strip, wordBox(1), ink);
-        const int unmarkedInk = inkCoverage(strip, wordBox(2), ink);
-        QVERIFY2(unmarkedInk > 0, "the unmarked chip's word marks nothing at all, so there is no reading to compare the marked one against");
+        const int markedInk = inkCoverage(strip, wordBoxOf(bar, 1), ink);
+        const int unmarkedInk = inkCoverage(strip, wordBoxOf(bar, 2), ink);
+        QVERIFY2(unmarkedInk > 0, "the unmarked tab's word marks nothing at all, so there is no reading to compare the marked one against");
         QVERIFY2(100 * markedInk >= 115 * unmarkedInk,
-                 qPrintable(qsl("the word on the chip with new output marks %1 pixels of its box against the %2 the same word marks on the chip beside it, so the mark never reached the "
+                 qPrintable(qsl("the word on the tab with new output marks %1 pixels of its box against the %2 the same word marks on the tab beside it, so the mark never reached the "
                                 "painting")
                                     .arg(QString::number(markedInk), QString::number(unmarkedInk))));
     }
@@ -578,12 +587,266 @@ private slots:
                  qPrintable(qsl("the tab stood at %1 and moved to %2 when its mark went on, so the strip steps sideways whenever output arrives")
                                     .arg(TestPixels::describe(before), TestPixels::describe(bar.tabRect(index)))));
 
+        // The word's line, not the whole tab, whose bottom row is the hairline running under every tab
         const QImage strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
-        const int inked = inkedWidth(strip, bar.tabRect(index), uiDesign::themeTokens().mutedText);
+        const int inked = inkedWidth(strip, lineOf(bar, index), uiDesign::themeTokens().mutedText);
         QVERIFY2(inked + bearingSlack >= boldAdvance,
                  qPrintable(qsl("the marked name inks %1px of the %2px it takes in bold (%3px in plain), so it is clipped or drawn without the mark")
                                     .arg(QString::number(inked), QString::number(boldAdvance), QString::number(plainAdvance))));
 #endif
+    }
+
+    // The mark is what tells a player a profile behind another tab has text waiting, so it has to
+    // stand out from a quiet tab, stay apart from the chosen one and go once the tab is chosen
+    void test_newOutputMarksAnUnchosenTabInTheFullInk()
+    {
+        ExposedTabBar bar(nullptr);
+        bar.setAutoFillBackground(true);
+        bar.setTabsClosable(true);
+        bar.setTabData(bar.addTab(qsl("Gorbash")), qsl("Gorbash"));
+        bar.setTabData(bar.addTab(qsl("Zugg")), qsl("Zugg"));
+        bar.setTabData(bar.addTab(qsl("Kaldor")), qsl("Kaldor"));
+        bar.resize(scmBarWidth, bar.sizeHint().height());
+        layOutAtItsOwnSize(&bar);
+        bar.setCurrentIndex(0);
+        QCoreApplication::processEvents();
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+
+        const QImage quiet = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        const QRect zuggBefore = bar.tabRect(1);
+        bar.markActivity(qsl("Zugg"), false);
+        bar.markActivity(qsl("Kaldor"), true);
+        QCoreApplication::processEvents();
+        QVERIFY(bar.tabBold(qsl("Zugg")) && bar.tabItalic(qsl("Kaldor")));
+        QVERIFY2(bar.tabRect(1) == zuggBefore, qPrintable(qsl("the marked tab stood at %1 and moved to %2").arg(TestPixels::describe(zuggBefore), TestPixels::describe(bar.tabRect(1)))));
+        const QImage marked = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+
+        const QRect zuggWord = wordBoxOf(bar, 1);
+        const QRect scanned = scannedIn(marked, zuggWord);
+        int differing = 0;
+        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
+            for (int x = scanned.left(); x <= scanned.right(); ++x) {
+                differing += quiet.pixel(x, y) != marked.pixel(x, y) ? 1 : 0;
+            }
+        }
+        qInfo().noquote() << qsl("  %1 of the marked word's pixels changed with the mark").arg(QString::number(differing));
+        QVERIFY2(differing > 0, "the tab marked with new output is drawn exactly as it was before the mark");
+
+        for (const int index : {1, 2}) {
+            const QColor ink = strongestInk(marked, wordBoxOf(bar, index));
+            QVERIFY2(TestPixels::distance(ink, tokens.text) < TestPixels::distance(ink, tokens.mutedText),
+                     qPrintable(qsl("the marked word on tab %1 is written in %2, nearer the quiet chrome tone %3 than the full text ink %4, so the mark barely shows")
+                                        .arg(QString::number(index), saidAs(ink), saidAs(tokens.mutedText), saidAs(tokens.text))));
+        }
+        const QColor quietInk = strongestInk(quiet, zuggWord);
+        QVERIFY2(TestPixels::distance(quietInk, tokens.mutedText) < TestPixels::distance(quietInk, tokens.text),
+                 qPrintable(qsl("a quiet tab is already written in %1, nearer the text ink %2 than the chrome tone %3, so the mark adds nothing")
+                                    .arg(saidAs(quietInk), saidAs(tokens.text), saidAs(tokens.mutedText))));
+
+        QString why;
+        QVERIFY2(standsOnTheUnderline(marked, bar, 0, tokens, &why), qPrintable(qsl("the tab on show lost its underline when another was marked: %1").arg(why)));
+        for (const int index : {1, 2}) {
+            QVERIFY2(carriesNoAccent(marked, bar, index, tokens, &why), qPrintable(qsl("a marked tab reads as chosen: %1").arg(why)));
+        }
+
+        QFont bold = bar.font();
+        bold.setBold(true);
+        const int boldAdvance = QFontMetrics(bold).horizontalAdvance(bar.tabText(1));
+        const int inked = inkedWidth(marked, zuggWord, tokens.text);
+        QVERIFY2(inked + 3 >= boldAdvance, qPrintable(qsl("the marked name inks %1px of the %2px it takes in bold, so it is clipped").arg(QString::number(inked), QString::number(boldAdvance))));
+
+        // As mudlet's tab switch does: choose, then clear
+        bar.setCurrentIndex(1);
+        bar.clearActivity(1);
+        QCoreApplication::processEvents();
+        QVERIFY2(!bar.tabBold(qsl("Zugg")), "the tab the player chose still carries the mark for text they have now seen");
+        QVERIFY2(bar.tabItalic(qsl("Kaldor")), "choosing one tab took the mark off another");
+        const QImage chosen = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        QVERIFY2(standsOnTheUnderline(chosen, bar, 1, tokens, &why), qPrintable(qsl("the newly chosen tab stands on no underline: %1").arg(why)));
+        const QColor chosenInk = strongestInk(chosen, wordBoxOf(bar, 1));
+        const QColor accentInk = uiDesign::readableOn(tokens.page, tokens.accentText, tokens.text, uiDesign::scmTextMinimumRatio);
+        QVERIFY2(TestPixels::distance(chosenInk, accentInk) < TestPixels::distance(chosenInk, tokens.text),
+                 qPrintable(qsl("the chosen tab's word is written in %1, nearer the mark's text ink %2 than the accent's %3").arg(saidAs(chosenInk), saidAs(tokens.text), saidAs(accentInk))));
+    }
+
+    // The italic of a local change and the underline mark change the word's shape, not only its ink, so the grab is
+    // read for the shape: the same word on a twin tab with no mark is the reading to hold it against
+    void test_theItalicAndUnderlineMarksArePainted()
+    {
+        ExposedTabBar bar(nullptr);
+        bar.setAutoFillBackground(true);
+        bar.setTabData(bar.addTab(qsl("Chosen")), qsl("Chosen"));
+        // No descenders, so nothing of the word stands where the underline is drawn
+        bar.setTabData(bar.addTab(qsl("Gorbash")), qsl("Gorbash"));
+        bar.setTabData(bar.addTab(qsl("Gorbash")), qsl("Gorbash-Twin"));
+        bar.resize(scmBarWidth, bar.sizeHint().height());
+        layOutAtItsOwnSize(&bar);
+        bar.setCurrentIndex(0);
+        bar.markActivity(qsl("Gorbash"), true);
+        QCoreApplication::processEvents();
+        QVERIFY2(bar.tabItalic(1) && !bar.tabItalic(2), "SETUP: the local change did not mark the one tab it was for");
+
+        QImage strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        const qreal ratio = strip.devicePixelRatio();
+        const QRect marked = scannedIn(strip, wordBoxOf(bar, 1));
+        const QRect twin = scannedIn(strip, wordBoxOf(bar, 2));
+        const QColor behind = commonestColour(strip.copy(twin));
+        const QColor markedInk = strongestInk(strip, wordBoxOf(bar, 1));
+        const QColor twinInk = strongestInk(strip, wordBoxOf(bar, 2));
+
+        QFont italic = bar.font();
+        italic.setItalic(true);
+        const double uprightLean = drawnLean(bar.font(), bar.tabText(1), markedInk, behind, ratio);
+        const double italicLean = drawnLean(italic, bar.tabText(1), markedInk, behind, ratio);
+        const double markedLean = inkLean(strip, marked, behind, markedInk);
+        const double twinLean = inkLean(strip, twin, behind, twinInk);
+        qInfo().noquote() << qsl("  the marked word leans %1 and its unmarked twin %2, where the word drawn upright leans %3 and in italic %4")
+                                     .arg(QString::number(markedLean, 'f', 3), QString::number(twinLean, 'f', 3), QString::number(uprightLean, 'f', 3), QString::number(italicLean, 'f', 3));
+        if (std::abs(italicLean - uprightLean) > 0.05) {
+            QVERIFY2(std::abs(markedLean - italicLean) < std::abs(markedLean - uprightLean),
+                     qPrintable(qsl("the tab marked for a local change leans %1, nearer the upright word's %2 than the italic's %3, so the mark never reached the painting")
+                                        .arg(QString::number(markedLean, 'f', 3), QString::number(uprightLean, 'f', 3), QString::number(italicLean, 'f', 3))));
+            QVERIFY2(std::abs(twinLean - uprightLean) < std::abs(twinLean - italicLean),
+                     qPrintable(qsl("SETUP: the unmarked twin leans %1, nearer the italic word's %2 than the upright's %3, so the reading cannot tell the two apart")
+                                        .arg(QString::number(twinLean, 'f', 3), QString::number(italicLean, 'f', 3), QString::number(uprightLean, 'f', 3))));
+        } else {
+            qInfo("  this machine's font draws its italic no more slanted than its upright face, so the italic mark is not read off the grab");
+        }
+
+        bar.clearActivity(1);
+        bar.setTabUnderline(1, true);
+        QCoreApplication::processEvents();
+        strip = bar.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+
+        // The word's box and the air under it, clear of the hairline; measured again, as the tab is no longer sized
+        // for the italic
+        const auto underTheWord = [&bar, &strip](const int index) {
+            const QRect box = wordBoxOf(bar, index);
+            return scannedIn(strip, QRect(box.left(), box.top(), box.width(), bar.tabRect(index).bottom() - uiDesign::scmTabUnderlineWidth - box.top() + 1));
+        };
+        const QRect underlined = underTheWord(1);
+        const QRect twinBox = underTheWord(2);
+        const int markedReach = TestPixels::distance(behind, strongestInk(strip, wordBoxOf(bar, 1)));
+        const int twinReach = TestPixels::distance(behind, twinInk);
+        int twinLeft = -1;
+        int twinRight = -1;
+        for (int x = twinBox.left(); x <= twinBox.right(); ++x) {
+            for (int y = twinBox.top(); y <= twinBox.bottom(); ++y) {
+                if (2 * TestPixels::distance(QColor(strip.pixel(x, y)), behind) >= twinReach) {
+                    twinLeft = twinLeft < 0 ? x - twinBox.left() : twinLeft;
+                    twinRight = x - twinBox.left();
+                    break;
+                }
+            }
+        }
+        QVERIFY2(twinLeft >= 0, "SETUP: the twin's word marks nothing, so there is no width to read the underline against");
+
+        // Each pixel as its share of the way from the surface to its own word's ink, so the marked word's full ink and
+        // its twin's quiet one compare: the letters cancel, and what is left is what the mark adds. A line that falls
+        // between two rows of pixels is split across them, so two rows are read together
+        const auto share = [&strip, &behind](const QRect& box, const int column, const int row, const int reach) {
+            return std::min(1.0, static_cast<double>(TestPixels::distance(QColor(strip.pixel(box.left() + column, box.top() + row)), behind)) / reach);
+        };
+        const int span = twinRight - twinLeft + 1;
+        double addedAbove = 0.0;
+        double mostAdded = 0.0;
+        int mostAddedRow = -1;
+        for (int row = 0; row < std::min(underlined.height(), twinBox.height()); ++row) {
+            double added = 0.0;
+            for (int column = twinLeft; column <= twinRight; ++column) {
+                added += std::max(0.0, share(underlined, column, row, markedReach) - share(twinBox, column, row, twinReach));
+            }
+            if (added + addedAbove > mostAdded) {
+                mostAdded = added + addedAbove;
+                mostAddedRow = row;
+            }
+            addedAbove = added;
+        }
+        qInfo().noquote() << qsl("  the underlined word adds %1 pixels' worth of ink to its twin's across its %2 device pixel width, on rows %3 and %4 of its box")
+                                     .arg(QString::number(mostAdded, 'f', 1), QString::number(span), QString::number(mostAddedRow - 1), QString::number(mostAddedRow));
+        // A font's underline can be thinner than a pixel, so half a pixel's worth per column is what is asked of it
+        QVERIFY2(2 * mostAdded >= span,
+                 qPrintable(qsl("no two rows of the underlined tab's word carry more ink than its twin's across its width (at best %1 of %2 device pixels' worth), so the underline never reached the "
+                                "painting")
+                                    .arg(QString::number(mostAdded, 'f', 1), QString::number(span))));
+    }
+
+    // From the keyboard the chosen underline thickens up into the air under the word
+    void test_theKeyboardThickensTheChosenUnderline()
+    {
+        QVERIFY2(mpTabBar->focusPolicy() & Qt::TabFocus, "SETUP: this bar takes no keyboard focus, so there is no focused strip to read");
+        mpTabBar->setCurrentIndex(0);
+        mpTabBar->show();
+        mpTabBar->activateWindow();
+        if (!QTest::qWaitForWindowActive(mpTabBar)) {
+            QSKIP("the bar cannot be made the active window here, so it cannot hold the focus");
+        }
+        mpTabBar->setFocus(Qt::TabFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY2(mpTabBar->hasFocus(), "SETUP: the bar did not take the focus it was given");
+
+        const QImage strip = TestPixels::shot(mpTabBar);
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const int bottom = mpTabBar->tabRect(0).bottom();
+        const int x = contentOf(0).center().x();
+        for (int row = bottom - uiDesign::scmTabFocusUnderlineWidth + 1; row <= bottom; ++row) {
+            const QColor read = TestPixels::sampled(strip, QPoint(x, row));
+            QVERIFY2(TestPixels::readsAs(read, tokens.accent, scmInkTolerance),
+                     qPrintable(qsl("from the keyboard the chosen underline is not %1px deep: row %2 reads %3 rather than the accent %4")
+                                        .arg(QString::number(uiDesign::scmTabFocusUnderlineWidth), QString::number(row), saidAs(read), saidAs(tokens.accent))));
+        }
+        const QColor overIt = TestPixels::sampled(strip, QPoint(x, bottom - uiDesign::scmTabFocusUnderlineWidth));
+        QVERIFY2(!TestPixels::readsAs(overIt, tokens.accent, scmInkTolerance), "from the keyboard the underline grows deeper than the design's four pixels");
+        QString why;
+        QVERIFY2(carriesNoAccent(strip, *mpTabBar, 1, tokens, &why), qPrintable(qsl("with the focus on the bar a tab that is not chosen reads as chosen: %1").arg(why)));
+        mpTabBar->clearFocus();
+        mpTabBar->hide();
+    }
+
+    // The marks are kept by the profile's name, so a tab dragged to another place keeps its own
+    void test_aMarkStaysWithItsTabWhenTheTabIsMoved()
+    {
+        mpTabBar->setCurrentIndex(0);
+        mpTabBar->markActivity(qsl("Delta"), false);
+        QCoreApplication::processEvents();
+        mpTabBar->moveTab(2, 1);
+        QCoreApplication::processEvents();
+        QCOMPARE(mpTabBar->tabIndex(qsl("Delta")), 1);
+        QVERIFY2(mpTabBar->tabBold(1), "the moved tab left its mark behind at its old place");
+        QVERIFY2(!mpTabBar->tabBold(2), "the tab now at the marked tab's old place took its mark");
+
+        const QImage strip = TestPixels::shot(mpTabBar);
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const QColor ink = strongestInk(strip, wordBoxOf(*mpTabBar, 1));
+        QVERIFY2(TestPixels::distance(ink, tokens.text) < TestPixels::distance(ink, tokens.mutedText),
+                 qPrintable(qsl("the moved tab's word is written in %1 rather than the mark's text ink %2").arg(saidAs(ink), saidAs(tokens.text))));
+    }
+
+    // A tab bar whose script sheet draws the tabs still shows which profile has text waiting
+    void test_aScriptSheetStillCarriesTheMarks()
+    {
+        const auto restoreSheet = qScopeGuard([this]() {
+            mpTabBar->setStyleSheet(QString());
+        });
+        mpTabBar->setStyleSheet(qsl("QTabBar::tab { background: rgb(250, 250, 250); color: black; }"));
+        QTRY_VERIFY2(mpTabBar->expanding(), "a script's sheet took the tabs, yet they no longer share the bar's width as they did before the design");
+        mpTabBar->setTabData(mpTabBar->addTab(qsl("Bravo")), qsl("Bravo-Twin"));
+        mpTabBar->setCurrentIndex(0);
+        mpTabBar->markActivity(qsl("Bravo"), false);
+        QCoreApplication::processEvents();
+
+        const QImage strip = TestPixels::shot(mpTabBar);
+        // theme-fixed: the sheet above writes black, so black is what the words are read against
+        const QColor sheetInk(Qt::black);
+        const int markedInk = inkCoverage(strip, wordBoxOf(*mpTabBar, 1), sheetInk);
+        const int unmarkedInk = inkCoverage(strip, wordBoxOf(*mpTabBar, 3), sheetInk);
+        QVERIFY2(unmarkedInk > 0, "the unmarked tab's word marks nothing under the script's sheet");
+        QVERIFY2(100 * markedInk >= 115 * unmarkedInk,
+                 qPrintable(qsl("under a script's sheet the marked word marks %1 pixels against the %2 of the same word unmarked, so the mark is lost")
+                                    .arg(QString::number(markedInk), QString::number(unmarkedInk))));
+
+        mpTabBar->setStyleSheet(QString());
+        QTRY_VERIFY2(!mpTabBar->expanding(), "the tabs still share the bar's width after the script's sheet went");
     }
 
     void test_anApplicationSheetNamingTheTabBarTakesTheTabs()
@@ -593,15 +856,15 @@ private slots:
             mpTabBar->refreshAfterApplicationStyleChange();
         });
         mpTabBar->setCurrentIndex(0);
-        const int chipWidth = mpTabBar->tabSizeHint(0).width();
+        const int tabWidth = mpTabBar->tabSizeHint(0).width();
         constexpr int sheetWidth = 500;
-        QVERIFY2(chipWidth < sheetWidth, "the chip is already as wide as the sheet below asks for, so nothing could be told from its width");
+        QVERIFY2(tabWidth < sheetWidth, "the tab is already as wide as the sheet below asks for, so nothing could be told from its width");
 
         qApp->setStyleSheet(qsl("QPushButton { min-width: %1px; }").arg(QString::number(sheetWidth)));
         mpTabBar->refreshAfterApplicationStyleChange();
-        QVERIFY2(mpTabBar->tabSizeHint(0).width() == chipWidth,
-                 qPrintable(qsl("a sheet about push buttons changed the chip's width from %1 to %2px").arg(QString::number(chipWidth), QString::number(mpTabBar->tabSizeHint(0).width()))));
-        theChosenChipIsWashed();
+        QVERIFY2(mpTabBar->tabSizeHint(0).width() == tabWidth,
+                 qPrintable(qsl("a sheet about push buttons changed the tab's width from %1 to %2px").arg(QString::number(tabWidth), QString::number(mpTabBar->tabSizeHint(0).width()))));
+        theChosenTabStandsOnTheUnderline();
         if (QTest::currentTestFailed()) {
             return;
         }
@@ -609,8 +872,9 @@ private slots:
         qApp->setStyleSheet(qsl("QTabBar::tab { min-width: %1px; }").arg(QString::number(sheetWidth)));
         mpTabBar->refreshAfterApplicationStyleChange();
         QVERIFY2(mpTabBar->tabSizeHint(0).width() >= sheetWidth,
-                 qPrintable(qsl("the tab is %1px wide under a sheet asking for at least %2px, so the chips kept the tabs from it")
+                 qPrintable(qsl("the tab is %1px wide under a sheet asking for at least %2px, so the design kept the tabs from it")
                                     .arg(QString::number(mpTabBar->tabSizeHint(0).width()), QString::number(sheetWidth))));
+        QVERIFY2(mpTabBar->expanding(), "under a script's sheet the tabs no longer share the bar's width as they did before the design");
     }
 
     // setProfileStyleSheet() puts the profile's sheet on the bar itself
@@ -673,9 +937,9 @@ private slots:
         QVERIFY2(pTrap->mPainted.isEmpty(), qPrintable(qsl("a control the tab style does not draw itself went to the bare native style: %1").arg(pTrap->mPainted.join(qsl(", ")))));
     }
 
-    void test_theChosenChipIsWashedInTheAccent() { theChosenChipIsWashed(); }
+    void test_theChosenTabStandsOnTheUnderline() { theChosenTabStandsOnTheUnderline(); }
 
-    void test_theChosenWordIsWalkedPastTheFloor() { theChosenWordIsStrong(); }
+    void test_theChosenWordIsTheAccentInk() { theChosenWordIsTheAccentInk(); }
 
     void test_theIndicatorIsAStateColour() { theIndicatorIsAStateColour(); }
 
@@ -694,7 +958,7 @@ private slots:
 
         int furthest = 0;
         QColor furthestInk;
-        QRect marked;
+        QRect markedBox;
         const qreal ratio = drawn.devicePixelRatio();
         for (int y = 0; y < drawn.height(); ++y) {
             for (int x = 0; x < drawn.width(); ++x) {
@@ -704,13 +968,13 @@ private slots:
                     furthestInk = pixel;
                 }
                 if (TestPixels::distance(surface, pixel) > 3 * scmInkTolerance) {
-                    marked |= QRect(x, y, 1, 1);
+                    markedBox |= QRect(x, y, 1, 1);
                 }
             }
         }
 
         // A platform's own x fills nearly all of the box; the recipe's is scmTabCloseGlyphSize across
-        const QSize markSize(qRound(marked.width() / ratio), qRound(marked.height() / ratio));
+        const QSize markSize(qRound(markedBox.width() / ratio), qRound(markedBox.height() / ratio));
         QVERIFY2(std::abs(markSize.width() - uiDesign::scmTabCloseGlyphSize) <= 2 && std::abs(markSize.height() - uiDesign::scmTabCloseGlyphSize) <= 2,
                  qPrintable(qsl("the mark inside the cross's box measures %1x%2 rather than the %3x%3 the recipe draws it at, so it is not this design's x")
                                     .arg(QString::number(markSize.width()), QString::number(markSize.height()), QString::number(uiDesign::scmTabCloseGlyphSize))));
@@ -727,73 +991,29 @@ private slots:
                                          saidAs(surface),
                                          QString::number(chromeReach),
                                          saidAs(QApplication::palette().color(QPalette::WindowText)))));
-
-        if (tokens.darkPage) {
-            return;
-        }
-
-        // The chrome tone would vanish on a light page's fill. Read off the strip, since the button's
-        // own grab paints the page behind its mark rather than the chip under it.
-        QAbstractButton* pChosenCross = crossOf(0);
-        QVERIFY(pChosenCross);
-        const QImage strip = TestPixels::shot(mpTabBar);
-        const qreal stripRatio = strip.devicePixelRatio();
-        const QRect box = pChosenCross->geometry();
-        const QRect scanned = QRect(qRound(box.left() * stripRatio), qRound(box.top() * stripRatio), qRound(box.width() * stripRatio), qRound(box.height() * stripRatio)) & strip.rect();
-        QVERIFY2(!scanned.isEmpty(), "the cross on the tab on show stands outside the strip, so there is nothing to read");
-
-        const QColor fill = chosenFillOnLightPage(tokens);
-        const QColor filled = commonestColour(strip.copy(scanned));
-        QVERIFY2(TestPixels::readsAs(filled, fill, scmInkTolerance),
-                 qPrintable(qsl("the cross on the tab on show is not standing on the fill: what is behind it is %1 rather than %2").arg(saidAs(filled), saidAs(fill))));
-
-        const int inkReach = TestPixels::distance(fill, tokens.field);
-        QVERIFY2(inkReach > 0, "the field's white is the fill itself here, so nothing could be told from a drawn mark");
-
-        int chosenFurthest = 0;
-        QColor chosenFurthestInk;
-        for (int y = scanned.top(); y <= scanned.bottom(); ++y) {
-            for (int x = scanned.left(); x <= scanned.right(); ++x) {
-                const QColor pixel(strip.pixel(x, y));
-                if (TestPixels::distance(fill, pixel) > chosenFurthest) {
-                    chosenFurthest = TestPixels::distance(fill, pixel);
-                    chosenFurthestInk = pixel;
-                }
-            }
-        }
-
-        QVERIFY2(chosenFurthest * 2 >= inkReach,
-                 qPrintable(qsl("the cross on the tab on show barely marks the fill %1: its furthest pixel %2 gets %3 from it, only part of the %4 the field's white %5 would reach")
-                                    .arg(saidAs(fill), saidAs(chosenFurthestInk), QString::number(chosenFurthest), QString::number(inkReach), saidAs(tokens.field))));
-        // Past what the chrome tone reaches on the fill even at full coverage, which tells a cross
-        // written for the fill from one still in the page's grey
-        const int chromeOnTheFill = TestPixels::distance(fill, tokens.mutedText);
-        QVERIFY2(chosenFurthest > chromeOnTheFill + scmInkTolerance,
-                 qPrintable(qsl("the cross on the tab on show is still inked in the chrome tone %1 rather than in the field's white %2: its furthest pixel %3 gets %4 from the fill, where the "
-                                "chrome tone itself gets %5")
-                                    .arg(saidAs(tokens.mutedText), saidAs(tokens.field), saidAs(chosenFurthestInk), QString::number(chosenFurthest), QString::number(chromeOnTheFill))));
-        QVERIFY2(chosenFurthest <= inkReach + 3 * scmInkTolerance,
-                 qPrintable(qsl("the cross on the tab on show is inked past the field's white %1 on the fill %2: its furthest pixel %3 is %4 from the fill, where that white is %5")
-                                    .arg(saidAs(tokens.field), saidAs(fill), saidAs(chosenFurthestInk), QString::number(chosenFurthest), QString::number(inkReach))));
     }
 
-    void test_theHoveredChipIsWashed()
+    void test_aHoveredTabChangesOnlyItsWordsInk()
     {
+        mpTabBar->setCurrentIndex(0);
         hoverOver(1);
         const QImage strip = TestPixels::shot(mpTabBar);
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
         const QColor surface = commonestColour(strip);
 
-        const QColor hovered = TestPixels::sampled(strip, washSpot(1));
-        const QColor wanted = TestPixels::composited(tokens.hoverWash, surface);
-        QVERIFY2(TestPixels::readsAs(hovered, wanted, scmInkTolerance),
-                 qPrintable(qsl("the chip under the pointer is not washed: %1 where the hover wash over %2 is %3").arg(saidAs(hovered), saidAs(surface), saidAs(wanted))));
+        const QColor beside = TestPixels::sampled(strip, gapSpot(1));
+        QVERIFY2(TestPixels::readsAs(beside, surface, 0), qPrintable(qsl("the tab under the pointer is washed: %1 where the strip is %2").arg(saidAs(beside), saidAs(surface))));
+        QString why;
+        QVERIFY2(carriesNoAccent(strip, *mpTabBar, 1, tokens, &why), qPrintable(qsl("the tab under the pointer reads as chosen: %1").arg(why)));
+        const QColor ink = strongestInk(strip, wordBoxOf(*mpTabBar, 1));
+        QVERIFY2(TestPixels::distance(ink, tokens.accentText) < TestPixels::distance(ink, tokens.mutedText),
+                 qPrintable(qsl("the word under the pointer is written in %1, nearer the quiet %2 than the accent's ink %3").arg(saidAs(ink), saidAs(tokens.mutedText), saidAs(tokens.accentText))));
     }
 
     void test_bothAppearances()
     {
-        theChosenChipIsWashed();
-        theChosenWordIsStrong();
+        theChosenTabStandsOnTheUnderline();
+        theChosenWordIsTheAccentInk();
         theIndicatorIsAStateColour();
 
         DarkTheme theme;
@@ -803,8 +1023,8 @@ private slots:
         QCoreApplication::processEvents();
         QVERIFY2(uiDesign::themeTokens().darkPage, "the dark palette did not take, so the second pass would repeat the first");
 
-        theChosenChipIsWashed();
-        theChosenWordIsStrong();
+        theChosenTabStandsOnTheUnderline();
+        theChosenWordIsTheAccentInk();
         theIndicatorIsAStateColour();
     }
 };

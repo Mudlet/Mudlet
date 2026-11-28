@@ -46,6 +46,7 @@ class QObject;
 class QPainter;
 class QPalette;
 class QRect;
+class QSpinBox;
 class QTabBar;
 class QTimer;
 class QWidget;
@@ -121,6 +122,11 @@ inline constexpr qreal scmStateHue_update = 0.34;
 inline constexpr qreal scmStateHue_error = 0.01;
 QColor stateColor(const qreal hue, const bool darkPage);
 
+// The same green as scmStateHue_update today, but named apart so either can move without the other
+inline constexpr qreal scmHeadingHue = 0.34;
+// scmHeadingHue walked to scmTextMinimumRatio on surface
+QColor sectionHeadingInk(const ThemeTokens& tokens, const QColor& surface);
+
 // Walked off the separator, the darkest surface any error ink sits on; a caller on a lighter surface walks it on
 // with readableOn() against that surface.
 QColor errorInk(const ThemeTokens& tokens);
@@ -194,7 +200,8 @@ inline constexpr int scmRadiusPanel = 8;
 inline constexpr int scmRadiusProminentInput = scmRadiusPanel;
 
 // Set on a form rather than a window, so a code pane keeps the field it paints itself; a window with no form
-// passes the container's selector as selectorPrefix.
+// passes the container's selector as selectorPrefix. Every single-line field, combo box and spin box is held to
+// scmInputHeight; one that has to be taller keeps its own height with holdHeight().
 QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix = QString());
 
 // Exported for a read-only field, which is let down the same way without being disabled
@@ -245,23 +252,48 @@ QPixmap noticeGlyph(const NoticeKind kind, const ThemeTokens& tokens, const qrea
 // Fixed to the glyph's square, or the label keeps the height the .ui file's 64px bitmap needed
 void applyNoticeGlyph(QLabel* pLabel, const NoticeKind kind, const ThemeTokens& tokens);
 
-// Call prepareTabStrip() on the bar too. A crowded strip's scroll buttons are left alone: their arrows belong to a
-// QToolButton the bar makes, and a face without them is a blank square.
-QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens);
-
-// Safe before or after the bar holds tabs
-void prepareTabStrip(QTabBar* pTabBar);
-
 inline constexpr int scmTabPaneInset = 4;
 
-// Public because TTabBar paints the profile strip's chips from these same numbers
-inline constexpr int scmMenuItemPaddingVertical = 4;
-inline constexpr int scmTabPaddingVertical = scmMenuItemPaddingVertical;
-inline constexpr int scmTabPaddingHorizontal = 10;
-inline constexpr int scmTabGap = 2;
+// Public because TTabBar paints the profile strip from these same numbers
+inline constexpr int scmTabPaddingTop = 5;
+inline constexpr int scmTabUnderlineWidth = 2;
+// Grown up into the air under the word, so neither the word nor the strip moves for it
+inline constexpr int scmTabFocusUnderlineWidth = 4;
+inline constexpr int scmTabUnderlineAir = 6;
+inline constexpr int scmTabPaddingBottom = scmTabUnderlineAir + scmTabUnderlineWidth;
+// Trailing, so the first word starts on the edge of what is under the strip
+inline constexpr int scmTabGap = 18;
+// A profile tab leads with this much of the gap, which puts the first name where it has always stood
 inline constexpr int scmTabStripInset = scmTabPaneInset;
 inline constexpr int scmTabCloseBoxSize = 14;
 inline constexpr int scmTabCloseGlyphSize = 8;
+// What QTabBar::tabSizeHint() adds for a tab button, so the cross stands this far after the word
+inline constexpr int scmTabCloseGap = 4;
+inline constexpr QFont::Weight scmTabChosenWeight = QFont::DemiBold;
+
+// Call prepareTabStrip() on the bar too, and leave these rules out of every sheet that reaches it while that answers
+// false. paneInset is the pane's margin at its sides and foot, and where the strip starts: 0 where nothing under the
+// strip needs keeping off a window's edge. direction is the bar's layoutDirection(): Qt never mirrors a sheet's
+// margins, so the gap after each tab is written on its trailing side. A crowded strip's scroll buttons are left alone:
+// their arrows belong to a QToolButton the bar makes, and a face without them is a blank square.
+QString tabBarStyleSheet(const QString& tabWidgetSelector, const ThemeTokens& tokens, const int paneInset = scmTabPaneInset, const Qt::LayoutDirection direction = Qt::LeftToRight);
+
+// A script's sheet that names QTabBar takes a strip's tabs whole: the application's, or the one on pScriptSheetHolder,
+// the widget a profile's sheet is set on. Mudlet's own sheets never go on that widget, or their rules would count.
+bool scriptSheetTakesTheTabs(const QWidget* pScriptSheetHolder);
+
+// Answers whether the design draws the strip; false while a script's sheet takes the tabs, and the bar is then put
+// back as it was. Qt carries a sheet into a window from every widget above it, so that sheet is looked for on the
+// bar's window and all its ancestors: Mudlet's own tab rules go inside the window, never on it or above it.
+// Safe to repeat, with or without tabs. The bar's QTabWidget then hints the size its pages, strip and pane need.
+bool prepareTabStrip(QTabBar* pTabBar);
+
+// True once a script's sheet has come or gone since prepareTabStrip() last ran: ask on the window's StyleChange, which
+// a sheet set above the window sends too, and restyle then. The restyle sends the window no StyleChange back.
+bool tabStripOutOfDate(const QTabBar* pTabBar);
+
+// Along the bottom row of base, the row a chosen tab's underline is drawn over
+void paintTabStripHairline(QPainter* pPainter, const QRect& base, const ThemeTokens& tokens);
 
 // QAbstractButton reads SH_Button_FocusPolicy once, in its constructor, and the base style swaps with the
 // appearance; both answer Qt::StrongFocus, so a click leaves the focus accent on the control. Call after setting
@@ -274,6 +306,9 @@ void keepClickFocusOffControls(QWidget* pRoot);
 void letPopupsTakeTheFieldsCorner(QWidget* pRoot);
 
 inline constexpr int scmInputContentHeight = 22;
+// A colour well beside a form's controls shows a value rather than taking one in, so it is smaller than a field
+inline constexpr int scmColourWellWidth = 40;
+inline constexpr int scmColourWellHeight = 22;
 inline constexpr int scmInputPaddingVertical = 2;
 inline constexpr int scmInputPaddingHorizontal = 6;
 inline constexpr int scmInputBorderWidth = 1;
@@ -282,6 +317,19 @@ inline constexpr int scmInputStepperWidth = 16;
 // A window drawing its own split button pads its words clear of this itself: no selector can ask whether a button
 // carries a menu.
 inline constexpr int scmInputDropDownWidth = 18;
+
+// Spin boxes standing one above another and holding the same kind of number, an opacity or a diameter: one fixed
+// size for all of them, each value right-aligned so the suffixes line up down the column, and inset from the
+// trailing edge so the widest value any of them can hold sits in the middle. Kept so across font and style changes.
+// Call once per group.
+void fitNumberBoxes(const QList<QSpinBox*>& boxes);
+// A spin box's value starting where a field's text does, mirrored right to left; a box fitNumberBoxes() looks after
+// and a centred or trailing value are left alone. Call after setting inputStyleSheet(), and again wherever a spin box
+// is built after that pass; re-running is harmless.
+void lineUpNumberBoxesWithFields(QWidget* pRoot);
+// The input and button recipes set a styled field's or button's height limits again at every polish; this puts the
+// widget back to a height of its own after each, for a control that has to be taller than a field
+void holdHeight(QWidget* pWidget, const int height);
 
 qreal contrastRatio(const QColor& first, const QColor& second);
 
@@ -384,6 +432,9 @@ void paintAccentBar(QPainter* pPainter, const QRect& row, const QColor& accent, 
 
 // Fills through the alpha channel, keeping antialiased edges that recolouring pixels would harden
 QPixmap tintedGlyph(const QPixmap& source, const QColor& color);
+
+// What a colour that may be see-through is painted over, so its transparency shows the board through it
+QPixmap checkerboardTile(const qreal devicePixelRatio);
 
 // Lucide authors at 2, which reads heavy at toolbar and editor sizes; the glyphs ship as SVG so the weight is set
 // here.
