@@ -8,6 +8,7 @@ Error Package_spec.lua: Tests opening a profile whose script fails as it loads n
 Error Package_spec.lua: Tests opening a profile whose script fails as it loads names the scripts that failed on that profile's console, once
 Error Package_spec.lua: Tests opening a profile whose script fails as it loads names them again after a reset, leaving out those fixed or disabled since
 Error Package_spec.lua: Tests opening a profile whose script fails as it loads runs a failing body of a module loaded before the profile's scripts only once
+Failure LuaErrorObjects_spec.lua: Tests reporting errors raised with something other than a string should report each one with the type of what was raised
 Failure Mapper_spec.lua: Tests closing another profile that opened a map widget survives the main window being activated again after the close
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes after resetProfile() then closeProfile()
 Failure Miscallaneous_spec.lua: Tests C++ functions in the Miscallaneous category Tests a profile torn down while its script spins the event loop closes another profile after closeProfile(), then closes
