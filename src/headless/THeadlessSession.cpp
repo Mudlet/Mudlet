@@ -649,6 +649,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 mShownLinesOfPasses.clear();
                 mSentLineIds.clear();
                 mEditedLineIds.clear();
+                pNewHost->mainConsoleModel().buffer.keepLineIds();
                 pNewHost->mainConsoleModel().mTriggerTextShownElsewhere = [self = QPointer<THeadlessSession>(this)]() {
                     return self && self->lineShownTaken();
                 };
