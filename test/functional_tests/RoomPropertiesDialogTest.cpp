@@ -804,7 +804,8 @@ private:
         TestPixels::settle();
 
         QVERIFY2(!pBar->testAttribute(Qt::WA_SetStyle), qPrintable(qsl("%1: the bar still wears the style the design gave it").arg(when)));
-        for (const QWidget* pOnTheWay = pBar; pOnTheWay; pOnTheWay = pOnTheWay->parentWidget()) {
+        // Up to the window and no further: the script's own sheet may stand on a widget above it
+        for (const QWidget* pOnTheWay = pBar; pOnTheWay; pOnTheWay = pOnTheWay == pDlg ? nullptr : pOnTheWay->parentWidget()) {
             const QString sheet = pOnTheWay->styleSheet();
             QVERIFY2(!sheet.contains(qsl("QTabBar")) && !sheet.contains(qsl("::tab")) && !sheet.contains(qsl("::pane")),
                      qPrintable(qsl("%1: the sheet on %2 still carries the design's tab rules, and they reach the bar").arg(when, pOnTheWay->objectName())));
@@ -1113,6 +1114,38 @@ private slots:
         }
 
         qApp->setStyleSheet(QString());
+        TestPixels::settle();
+        readTheDesignsTabs(pDlg);
+    }
+
+    // A profile's sheet is set on the map, which the window is made under, and Qt carries it into the window from there
+    void aSheetOnTheWidgetAboveTheWindowTakesTheTabsToo()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        // As T2DMap makes it; the flags keep it a window of its own
+        QWidget* pAbove = mp2dMap;
+        pDlg->setParent(pAbove, pDlg->windowFlags());
+        const auto restoreTheSheetAbove = qScopeGuard([pAbove]() {
+            pAbove->setStyleSheet(QString());
+            TestPixels::settle();
+        });
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        TestPixels::settle();
+        readTheDesignsTabs(pDlg);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        pAbove->setStyleSheet(scriptTabSheet());
+        TestPixels::settle();
+        readTheScriptsTabs(pDlg, qsl("a sheet set on the widget above the window"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        pAbove->setStyleSheet(QString());
         TestPixels::settle();
         readTheDesignsTabs(pDlg);
     }
