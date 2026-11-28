@@ -58,16 +58,20 @@ public:
     {
         // What the player typed: the line, less the tail the last completion filled in if that is still selected
         QString typed;
-        // The first line of history from the walk's place on that starts with typed; nullopt with none, and the walk
-        // starts again from the newest
+        // The next line of history from the walk's place, older for Up and newer for Down, that starts with typed;
+        // nullopt with none, and the walk starts again from the newest
         std::optional<QString> line;
         bool tailCut = false;
     };
-    // Up, or Down for !forward, on a line typed into, with "Highlight history" on: each call goes on to the next older
-    // line of history that starts with what was typed. Once line is shown, setHistoryCompletion() with what the line
-    // then holds.
+    // Up, or Down for !forward, on a line typed into, with "Highlight history" on: each Up goes on to the next older
+    // line of history that starts with what was typed, and each Down back to the next newer one, then to what was
+    // typed. Once line is shown, setHistoryCompletion() with what the line then holds.
     HistoryCompletion historyComplete(const QString& line, bool tailSelected, const QStringList& history, bool forward);
     void setHistoryCompletion(const QString& line) { mLastCompletion = line; }
+    // The line is the one last given to setHistoryCompletion(), with all after shownLine() selected: nothing, when that is the whole line
+    bool showingHistoryCompletion(const QString& line, const bool tailSelected) const { return tailSelected && line == mLastCompletion; }
+    // A Down would find a line of history newer than the one last shown that starts with what was typed
+    bool newerHistoryMatch(const QStringList& history) const;
     // An edit: the next Up looks from the newest line again
     void restartHistoryWalk() { mHistoryCount = -1; }
     // A space, a deletion or a send also forgets the line the walk last found

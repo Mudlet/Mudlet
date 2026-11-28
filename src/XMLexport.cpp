@@ -506,6 +506,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mMapperShowGrid") = pHost->mMapperShowGrid ? "yes" : "no";
     host.append_attribute("mMapperStitchAreas") = pHost->mMapperStitchAreas ? "yes" : "no";
+    host.append_attribute("mMapperDeletedRoomExitsAsStubs") = pHost->mMapperDeletedRoomExitsAsStubs ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
     host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
@@ -706,6 +707,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         upperLevelColorNode.text().set(pHost->mUpperLevelColor.name().toUtf8().constData());
         upperLevelColorNode.append_attribute("alpha").set_value(pHost->mUpperLevelColor.alpha());
         host.append_child("mRoomBorderColor").text().set(pHost->mRoomBorderColor.name().toUtf8().constData());
+        // Only once set: unset, it follows mRed2
+        if (pHost->mMapperDefaultRoomColor.isValid()) {
+            host.append_child("mMapperDefaultRoomColor").text().set(pHost->mMapperDefaultRoomColor.name().toUtf8().constData());
+        }
         host.append_child("mRoomCollisionBorderColor").text().set(pHost->mRoomCollisionBorderColor.name().toUtf8().constData());
         auto mapGridColorNode = host.append_child("mMapGridColor");
         mapGridColorNode.text().set(pHost->mMapGridColor.name().toUtf8().constData());
