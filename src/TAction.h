@@ -63,6 +63,9 @@ public:
     }
     int getButtonRotation() const { return mButtonRotation; }
     void setButtonColumns(int columns) {
+        // The editor's range: a bar grows its grid layout to the filler offset, which may be
+        // up to one less than this, so a package asking for billions of columns exhausts memory
+        columns = std::clamp(columns, 0, 99);
         if (columns != mButtonColumns) {
             setDataChanged();
             mButtonColumns = columns;

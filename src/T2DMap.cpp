@@ -77,6 +77,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QInputDialog>
+#include <QIntValidator>
 #include <QMessageBox>
 #include <QComboBox>
 
@@ -2139,6 +2140,15 @@ void T2DMap::slot_movePosition()
     auto pLEy = new QLineEdit(dialog);
     auto pLEz = new QLineEdit(dialog);
 
+    // Read back with the locale that validated it: QString::toInt() turns some text this passes,
+    // such as a U+2212 minus sign, into 0, which would silently move the selection to 0 on that axis
+    QLocale coordinateLocale = QLocale::c();
+    coordinateLocale.setNumberOptions(QLocale::RejectGroupSeparator);
+    auto coordinateValidator = new QIntValidator(dialog);
+    coordinateValidator->setLocale(coordinateLocale);
+    for (auto pLineEdit : {pLEx, pLEy, pLEz}) {
+        pLineEdit->setValidator(coordinateValidator);
+    }
     pLEx->setText(QString::number(pR_start->x()));
     pLEy->setText(QString::number(pR_start->y()));
     pLEz->setText(QString::number(pR_start->z()));
@@ -2169,6 +2179,12 @@ void T2DMap::slot_movePosition()
     pB_ok->setText(tr("OK"));
     boxLayout->addWidget(pB_ok);
     connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
+    const auto enableOkWhenAllReadable = [pB_ok, pLEx, pLEy, pLEz]() {
+        pB_ok->setEnabled(pLEx->hasAcceptableInput() && pLEy->hasAcceptableInput() && pLEz->hasAcceptableInput());
+    };
+    for (auto pLineEdit : {pLEx, pLEy, pLEz}) {
+        connect(pLineEdit, &QLineEdit::textChanged, pB_ok, enableOkWhenAllReadable);
+    }
 
     auto pB_abort = new QPushButton(pButtonBar);
     //: dialog (room(s) move) button
@@ -2186,9 +2202,9 @@ void T2DMap::slot_movePosition()
     // The dialog's event loop runs scripts, which may delete the room
     pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
     if (accepted && pR_start) {
-        const int dx = pLEx->text().toInt() - pR_start->x();
-        const int dy = pLEy->text().toInt() - pR_start->y();
-        const int dz = pLEz->text().toInt() - pR_start->z();
+        const int dx = coordinateLocale.toInt(pLEx->text()) - pR_start->x();
+        const int dy = coordinateLocale.toInt(pLEy->text()) - pR_start->y();
+        const int dz = coordinateLocale.toInt(pLEz->text()) - pR_start->z();
 
         mMultiRect = QRect(0, 0, 0, 0);
 
@@ -2210,6 +2226,8 @@ void T2DMap::slot_movePosition()
                 pArea->calcSpan();
             }
         }
+        // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area
+        mpMap->updateArea(dirtyAreas.size() == 1 ? *dirtyAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
     dialog->deleteLater();
@@ -2327,6 +2345,9 @@ void T2DMap::slot_showPropertiesDialog()
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_preview_border, this, &T2DMap::slot_previewBorderProperties);
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_userData, this, &T2DMap::slot_setRoomUserData);
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_hash, this, &T2DMap::slot_setRoomHash);
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_area, this, &T2DMap::slot_setRoomsArea);
     connect(mpDlgRoomProperties, &QDialog::finished, this, [=, this]() {
         mpDlgRoomProperties = nullptr;
     });
@@ -2418,6 +2439,91 @@ void T2DMap::slot_setRoomProperties(bool changeName,
     mpMap->setUnsaved(__func__);
 }
 
+void T2DMap::slot_setRoomUserData(QMap<QString, std::optional<QString>> changes, QSet<int> roomIds)
+{
+    QSet<int> areaIds;
+    for (const int roomId : std::as_const(roomIds)) {
+        // The dialog is not modal, so rooms may have gone while it was open
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+        for (auto it = changes.cbegin(); it != changes.cend(); ++it) {
+            if (it.value().has_value()) {
+                room->userData.insert(it.key(), it.value().value());
+            } else {
+                room->userData.remove(it.key());
+            }
+        }
+        areaIds.insert(room->getArea());
+    }
+    if (areaIds.isEmpty()) {
+        return;
+    }
+    // As setRoomUserData() does for a key the views do not draw (the dialog never writes the room.ui_ ones): no
+    // revision bump, which would rebuild the 3D scene, but a repaint for map info contributors that show the key
+    mpMap->setUnsavedKeepingRevisions(__func__);
+    for (const int areaId : std::as_const(areaIds)) {
+        mpMap->updatePlayerArea(areaId);
+    }
+}
+
+void T2DMap::slot_setRoomHash(int roomId, QString hash)
+{
+    // The dialog is not modal, so the room may have gone while it was open
+    if (!mpMap->mpRoomDB->getRoom(roomId)) {
+        return;
+    }
+    if (mpMap->mpRoomDB->setRoomHash(roomId, hash)) {
+        mpMap->setUnsaved(__func__);
+    }
+}
+
+void T2DMap::slot_setRoomsArea(int areaId, QSet<int> roomIds)
+{
+    // The dialog is not modal, so rooms, or the area, may have gone while it was open
+    QSet<int> rooms;
+    for (const int roomId : std::as_const(roomIds)) {
+        if (mpMap->mpRoomDB->getRoom(roomId)) {
+            rooms.insert(roomId);
+        }
+    }
+    // By name, not getArea(): an area that so far only has a name is made by the first room moved into it
+    if (rooms.isEmpty() || !mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
+        return;
+    }
+    moveRoomsToArea(rooms, areaId);
+}
+
+void T2DMap::moveRoomsToArea(const QSet<int>& roomIds, const int areaId)
+{
+    mMultiRect = QRect(0, 0, 0, 0);
+    for (const int roomId : roomIds) {
+        mpMap->setRoomArea(roomId, areaId);
+    }
+    if (!roomIds.isEmpty()) {
+        // The rooms leave their areas for another, so every area involved must be redrawn
+        mpMap->updateArea(-1);
+        const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        if (!mIsSecondaryView && mpMap->mapper()) {
+            mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
+        }
+        switchArea(targetAreaName);
+        // Land on the rooms moved rather than on whichever room switchArea()
+        // would otherwise have picked. Found from roomIds, not the selection:
+        // Configure room is not modal, and the map's selection may have moved
+        // on by the time its OK sends the rooms here
+        TRoom* pCenterRoom = mpMap->mpRoomDB->getRoom(TMapPainter::selectionCentreRoom(mpMap, roomIds));
+        if (pCenterRoom) {
+            mMapCenterX = pCenterRoom->x();
+            mMapCenterY = -pCenterRoom->y();
+            mMapCenterZ = pCenterRoom->z();
+            set3DViewCenter(areaId, mMapCenterX, -mMapCenterY, mMapCenterZ);
+        }
+    }
+    update();
+}
+
 void T2DMap::slot_previewBorderProperties(QSet<int> roomIds)
 {
     Q_UNUSED(roomIds)
@@ -2431,6 +2537,20 @@ void T2DMap::slot_setImage() {}
 
 void T2DMap::slot_deleteRoom()
 {
+    // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area.
+    // Rooms whose exits lead in lose those exits too, and may be in other areas.
+    QSet<int> affectedAreas;
+    const QMultiHash<int, int>& entrances = mpMap->mpRoomDB->getEntranceHash();
+    for (const int roomId : std::as_const(mMultiSelectionSet)) {
+        if (const TRoom* room = mpMap->mpRoomDB->getRoom(roomId)) {
+            affectedAreas.insert(room->getArea());
+        }
+        for (auto it = entrances.constFind(roomId); it != entrances.cend() && it.key() == roomId; ++it) {
+            if (const TRoom* enteringRoom = mpMap->mpRoomDB->getRoom(it.value())) {
+                affectedAreas.insert(enteringRoom->getArea());
+            }
+        }
+    }
     mpMap->mpRoomDB->removeRoom(mMultiSelectionSet);
     // mMultiSelectionSet gets cleared as rooms are removed by
     // TRoomDB::removeRoom() so no need to clear it here!
@@ -2438,6 +2558,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
+    mpMap->updateArea(affectedAreas.size() == 1 ? *affectedAreas.cbegin() : -1);
     mpMap->setUnsaved(__func__);
 }
 
@@ -2481,9 +2602,7 @@ void T2DMap::slot_spread()
     mMultiRect = QRect(0, 0, 0, 0);
     const int dx = pR_centerRoom->x();
     const int dy = pR_centerRoom->y();
-    const int areaID = pR_centerRoom->getArea();
-    auto pArea = mpMap->mpRoomDB->getArea(areaID);
-    bool doneSomething = false;
+    QSet<int> movedAreas;
     QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -2491,7 +2610,7 @@ void T2DMap::slot_spread()
             continue;
         }
 
-        doneSomething = true;
+        movedAreas.insert(pMovingR->getArea());
         pMovingR->setCoordinates(((pMovingR->x() - dx) * spread + dx), ((pMovingR->y() - dy) * spread + dy), pMovingR->z());
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
@@ -2508,12 +2627,15 @@ void T2DMap::slot_spread()
         pMovingR->customLines = newCustomLinePointsMap;
         pMovingR->calcRoomDimensions();
     }
-    if (doneSomething) {
-        if (pArea) {
-            pArea->mIsDirty = true;
-            pArea->clean();
+    if (!movedAreas.isEmpty()) {
+        for (const int areaId : std::as_const(movedAreas)) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pArea->mIsDirty = true;
+                pArea->clean();
+            }
         }
         repaint();
+        mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2558,9 +2680,7 @@ void T2DMap::slot_shrink()
     mMultiRect = QRect(0, 0, 0, 0);
     const int dx = pR_centerRoom->x();
     const int dy = pR_centerRoom->y();
-    const int areaID = pR_centerRoom->getArea();
-    auto pArea = mpMap->mpRoomDB->getArea(areaID);
-    bool doneSomething = false;
+    QSet<int> movedAreas;
     QSetIterator<int> itSelectionRoom(mMultiSelectionSet);
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -2568,7 +2688,7 @@ void T2DMap::slot_shrink()
             continue;
         }
 
-        doneSomething = true;
+        movedAreas.insert(pMovingR->getArea());
         pMovingR->setCoordinates(((pMovingR->x() - dx) / spread + dx), ((pMovingR->y() - dy) / spread + dy), pMovingR->z());
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
@@ -2585,12 +2705,15 @@ void T2DMap::slot_shrink()
         pMovingR->customLines = newCustomLinePointsMap;
         pMovingR->calcRoomDimensions();
     }
-    if (doneSomething) {
-        if (pArea) {
-            pArea->mIsDirty = true;
-            pArea->clean();
+    if (!movedAreas.isEmpty()) {
+        for (const int areaId : std::as_const(movedAreas)) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pArea->mIsDirty = true;
+                pArea->clean();
+            }
         }
         repaint();
+        mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2740,38 +2863,15 @@ void T2DMap::slot_setArea()
                 mpMap->mapper()->updateAreaComboBox();
             }
         }
-        mMultiRect = QRect(0, 0, 0, 0);
-        QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
-        while (itSelectedRoom.hasNext()) {
-            mpMap->setRoomArea(itSelectedRoom.next(), newAreaId);
-        }
-        if (!mMultiSelectionSet.isEmpty()) {
-            const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-            if (!mIsSecondaryView && mpMap->mapper()) {
-                mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
-            }
-            switchArea(targetAreaName);
-            // The rooms are still selected, so land on them rather than on
-            // whichever room switchArea() would otherwise have picked:
-            TRoom* pCenterRoom = getCenterSelection() ? mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId) : nullptr;
-            if (pCenterRoom) {
-                mMapCenterX = pCenterRoom->x();
-                mMapCenterY = -pCenterRoom->y();
-                mMapCenterZ = pCenterRoom->z();
-                set3DViewCenter(newAreaId, mMapCenterX, -mMapCenterY, mMapCenterZ);
-            }
-        }
-        update();
+        moveRoomsToArea(mMultiSelectionSet, newAreaId);
     });
 
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    if (!mIsSecondaryView && mpMap->mapper()) {
-        arealist_combobox->setCurrentIndex(mpMap->mapper()->getCurrentShownAreaIndex());
-    } else {
-        arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
-    }
+    // From the 3D view's menu this hidden 2D map may still hold the area it last showed
+    const int shownAreaId = (!mIsSecondaryView && mpMap->mapper()) ? mpMap->mapper()->shownAreaId() : mAreaID;
+    arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(shownAreaId)));
 }
 
 

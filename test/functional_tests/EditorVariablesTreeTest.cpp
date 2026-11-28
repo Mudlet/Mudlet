@@ -30,6 +30,7 @@
 #include <QLabel>
 #include <QPalette>
 #include <QPixmap>
+#include <QScopeGuard>
 #include <QStyleOptionViewItem>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -186,7 +187,9 @@ private slots:
                                                                      "myFunction = function() return 1 end\n"
                                                                      "myKeyed = { alpha = 1, beta = 2 }\n"
                                                                      "myList = { 10, 20, 30 }\n"
-                                                                     "myNested = { kept = \"yes\" }\n")),
+                                                                     "myNested = { kept = \"yes\" }\n"
+                                                                     "myParagraph = \"first line\\nsecond line\"\n"
+                                                                     "myLeadingBreak = \"\\nafter a break\\n\"\n")),
                  "the variables these cases read could not be made");
 
         // So the triggers tree has a row to measure a variable's row against
@@ -329,7 +332,9 @@ private slots:
                                                       {qsl("myBoolean"), qsl("true")},
                                                       {qsl("myKeyed"), qsl("{ 2 keys }")},
                                                       {qsl("myList"), qsl("{ 3 items }")},
-                                                      {qsl("myFunction"), qsl("function")}};
+                                                      {qsl("myFunction"), qsl("function")},
+                                                      {qsl("myParagraph"), qsl("\"first line\u2026\"")},
+                                                      {qsl("myLeadingBreak"), qsl("\"after a break\"")}};
         QStringList wrong;
         QStringList measured;
         for (const auto& row : expected) {
@@ -510,8 +515,13 @@ private slots:
                                     .arg(tokens.disabledText.name(), QString::number(ratio, 'f', 2), QString::number(uiDesign::scmQuietMinimumRatio, 'f', 1))));
     }
 
+    // Grayscale icons, as in colour the braces take the old picture's colour rather than the chrome's tone
     void test_theHeadingRowCarriesTheBracesAndNoSquare()
     {
+        mudlet::self()->setColouredIcons(false);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(true);
+        });
         openTheVariablesView();
         QTreeWidgetItem* pHeading = headingRow();
         QVERIFY(pHeading);
