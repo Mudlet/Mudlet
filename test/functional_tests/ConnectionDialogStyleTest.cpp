@@ -254,8 +254,24 @@ private slots:
         auto* pConnect = pDialog->findChild<QPushButton*>(qsl("connectButton"));
         QVERIFY2(pConnect, "the Connect button is not there to be read");
         QVERIFY2(pConnect->isDefault(), "Connect is not the dialog's default button, so Return no longer reaches it");
-        QVERIFY2(pConnect->property(uiDesign::scmProp_primaryButton).toBool(), "Connect does not carry the primary-button property, so it reads as one control among four");
-        QVERIFY2(pDialog->widget_bottom->styleSheet().contains(qsl("[%1=\"true\"]").arg(QString::fromLatin1(uiDesign::scmProp_primaryButton))), "the button row's sheet has no primary rule");
+        QVERIFY2(!pConnect->property(uiDesign::scmProp_primaryButton).toBool(), "Connect carries the primary-button property, whose accent fill reads as a button held down beside the plain ones");
+        auto* pOffline = pDialog->findChild<QPushButton*>(qsl("offlineButton"));
+        QVERIFY2(pOffline, "the Offline button is not there to be read");
+        pConnect->ensurePolished();
+        pOffline->ensurePolished();
+        QVERIFY2(pConnect->font().weight() >= QFont::DemiBold && pOffline->font().weight() < QFont::DemiBold,
+                 qPrintable(qsl("Connect's word is drawn at weight %1 against Offline's %2, so nothing marks it as the default").arg(pConnect->font().weight()).arg(pOffline->font().weight())));
+        {
+            // Just inside the left edge's middle, clear of the word and of the outline that focus colours
+            const QImage faces = pDialog->grab().toImage();
+            const qreal facesRatio = faces.devicePixelRatio();
+            const auto faceOf = [&](const QPushButton* pButton) {
+                const QPoint at = pButton->mapTo(pDialog, QPoint(4, pButton->height() / 2));
+                return faces.pixelColor(qRound(at.x() * facesRatio), qRound(at.y() * facesRatio));
+            };
+            QVERIFY2(pConnect->isEnabled() && pOffline->isEnabled(), "the two buttons are not both enabled to be compared");
+            QCOMPARE(faceOf(pConnect).name(), faceOf(pOffline).name());
+        }
 
         // A platform bevel is a gradient that lands nowhere near this tone; the
         // top edge's middle is a straight run of the line, not its rounded corner
