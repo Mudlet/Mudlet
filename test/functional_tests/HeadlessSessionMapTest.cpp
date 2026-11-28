@@ -126,6 +126,24 @@ end
         return image;
     }
 
+    // The rooms the map's last draw put down, as "id:x,y" to the nearest pixel, lowest id first
+    static QString whereDrawn(const THeadlessSession& session)
+    {
+        const auto view = session.mapView(THeadlessSession::MapTarget::script);
+        if (!view) {
+            return qsl("(none drawn)");
+        }
+        QList<THeadlessSession::MapRoom> rooms = view->rooms;
+        std::sort(rooms.begin(), rooms.end(), [](const THeadlessSession::MapRoom& a, const THeadlessSession::MapRoom& b) {
+            return a.id < b.id;
+        });
+        QStringList where;
+        for (const THeadlessSession::MapRoom& room : rooms) {
+            where.append(qsl("%1:%2,%3").arg(room.id).arg(qRound(room.position.x())).arg(qRound(room.position.y())));
+        }
+        return where.join(QLatin1Char(' '));
+    }
+
     static QString saved(const QImage& image, const QString& name)
     {
         const QString path = qsl("%1/HeadlessSessionMapTest-%2.png").arg(QDir::tempPath(), name);
@@ -1587,6 +1605,147 @@ setRoomCoordinates(9, 50, 50, 0)
         QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl(" centre nil"));
         QVERIFY(session.mapPointer({.type = Pointer::Type::doubleClick, .position = onRoom8Centred}));
         QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), qsl("e to 8"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Rooms 7, 8 east of it and 9 north of it, 2 apart, 30 pixels to a map unit at a zoom of 10 in 300 pixels
+    void test_aDragAndAPinchMoveWhatWasDrawn()
+    {
+        const QString name = qsl("Headless Map Touch");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()") + twoRoomsLua(qsl("Headless Touch")) + qsl(R"lua(
+addRoom(9)
+setRoomArea(9, headlessArea)
+setRoomCoordinates(9, 0, 2, 0)
+)lua")));
+        QTest::qWait(50);
+        const auto script = THeadlessSession::MapTarget::script;
+        const QPointF middle(scmWidth / 2.0, scmHeight / 2.0);
+        QVERIFY(!session.moveMapView(script, QPointF(30, 0), 1.0, middle));
+        QCOMPARE(session.errorString(), qsl("The map has not been drawn yet; it moves what renderMap() drew."));
+        QVERIFY(rendered(session));
+        QCOMPARE(whereDrawn(session), qsl("7:200,150 8:260,150 9:200,90"));
+
+        // Room 8 stays under the pinch, with the others twice as far from it
+        QSignalSpy repaints(&session, &THeadlessSession::mapRepaintRequested);
+        QVERIFY2(session.moveMapView(script, QPointF(), 2.0, QPointF(260, 150)), qPrintable(session.errorString()));
+        QTRY_VERIFY_WITH_TIMEOUT(!repaints.isEmpty(), 5000);
+        QVERIFY(!session.mapView(script)->following);
+        QCOMPARE(whereDrawn(session), qsl("7:200,150 8:260,150 9:200,90"));
+        QVERIFY(rendered(session));
+        QCOMPARE(session.mapView(script)->zoom, 5.0);
+        QCOMPARE(qRound(session.mapView(script)->roomSize), 60);
+        QCOMPARE(whereDrawn(session), qsl("7:140,150 8:260,150 9:140,30"));
+        QVERIFY(session.runLua(qsl("headlessZoom = getMapZoom()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessZoom"), qsl("5"));
+
+        // Down the screen is south on the map
+        QVERIFY(session.moveMapView(script, QPointF(30, 45), 1.0, middle));
+        QVERIFY(rendered(session));
+        QCOMPARE(whereDrawn(session), qsl("7:170,195 8:290,195 9:170,75"));
+
+        // The drag comes first, so the pinch is about where room 7 is dragged to
+        QVERIFY(session.moveMapView(script, QPointF(-60, 0), 0.5, QPointF(110, 195)));
+        QVERIFY(rendered(session));
+        QCOMPARE(session.mapView(script)->zoom, 10.0);
+        QCOMPARE(whereDrawn(session), qsl("7:110,195 8:170,195 9:110,135"));
+
+        // A pinch about the middle alone keeps following the player
+        QVERIFY(session.followPlayerOnMap(script));
+        QVERIFY(rendered(session));
+        QCOMPARE(whereDrawn(session), qsl("7:200,150 8:260,150 9:200,90"));
+        QVERIFY(session.moveMapView(script, QPointF(), 2.0, middle));
+        QVERIFY(session.mapView(script)->following);
+        QVERIFY(rendered(session));
+        QCOMPARE(whereDrawn(session), qsl("7:200,150 8:320,150 9:200,30"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Each move is of what the one before it left, at that one's zoom, though none of them is drawn yet
+    void test_severalMovesBeforeTheNextDrawAddUp()
+    {
+        const QString name = qsl("Headless Map Touch Moves");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()") + twoRoomsLua(qsl("Headless Touch Moves")) + qsl(R"lua(
+addRoom(9)
+setRoomArea(9, headlessArea)
+setRoomCoordinates(9, 0, 2, 0)
+)lua")));
+        QTest::qWait(50);
+        const auto script = THeadlessSession::MapTarget::script;
+        const QPointF middle(scmWidth / 2.0, scmHeight / 2.0);
+        QVERIFY(rendered(session));
+        QVERIFY(session.moveMapView(script, QPointF(30, 0), 1.0, middle));
+        QVERIFY(session.moveMapView(script, QPointF(0, 30), 1.0, middle));
+        QVERIFY(session.moveMapView(script, QPointF(), 2.0, middle));
+        QVERIFY(session.moveMapView(script, QPointF(-60, 0), 1.0, middle));
+        QVERIFY(session.moveMapView(script, QPointF(), 1.25, middle));
+        QCOMPARE(whereDrawn(session), qsl("7:200,150 8:260,150 9:200,90"));
+        QCOMPARE(session.mapView(script)->zoom, 10.0);
+        QVERIFY(rendered(session));
+        QCOMPARE(session.mapView(script)->zoom, 4.0);
+        QCOMPARE(whereDrawn(session), qsl("7:200,225 8:350,225 9:200,75"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Laid out at twice the size and drawn scaled down, the map keeps to the frame's pixels: what is drawn, where
+    // mapView() says, what the pointer hits and what a drag, a pinch and the wheel move
+    void test_aMapLaidOutLargerKeepsToTheFramesPixels()
+    {
+        using Pointer = THeadlessSession::MapPointerEvent;
+        const QString name = qsl("Headless Map Laid Out Larger");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("openMapWidget()") + twoRoomsLua(qsl("Headless Laid Out Larger")) + qsl(R"lua(
+addRoom(9)
+setRoomArea(9, headlessArea)
+setRoomCoordinates(9, 0, 2, 0)
+setCustomEnvColor(302, 30, 30, 200, 255)
+setRoomEnv(8, 302)
+)lua")));
+        QTest::qWait(50);
+        const auto script = THeadlessSession::MapTarget::script;
+        const auto drawnLarger = [&session]() -> std::optional<QImage> {
+            QImage image = blankImage();
+            QPainter painter(&image);
+            if (!session.renderMap(painter, image.size(), 2.0)) {
+                return std::nullopt;
+            }
+            painter.end();
+            return image;
+        };
+        const std::optional<QImage> image = drawnLarger();
+        QVERIFY2(image, qPrintable(session.errorString()));
+        QCOMPARE(qRound(session.mapView(script)->roomSize), 30);
+        QCOMPARE(whereDrawn(session), qsl("7:200,150 8:260,150 9:200,90"));
+        QVERIFY2(image->pixelColor(260, 150) == eastColour(), qPrintable(saved(*image, qsl("larger"))));
+        QVERIFY2(image->pixelColor(260, 162) == Qt::black, qPrintable(saved(*image, qsl("larger"))));
+
+        const QPointF onRoom8(260, 150);
+        QVERIFY(session.mapPointer({.position = onRoom8}));
+        QVERIFY(session.runLua(qsl("headlessSelected = headlessSelection()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSelected"), qsl("8 centre 8"));
+        // The painter takes a selected room as picked, so with room 8 selected a double-click anywhere walks there
+        QVERIFY(session.mapPointer({.position = QPointF(10, 10)}));
+        QVERIFY(session.mapPointer({.type = Pointer::Type::doubleClick, .position = onRoom8}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), qsl("e to 8"));
+
+        // Dragged 30 pixels right, room 8 is where the pinch about it leaves it
+        QVERIFY(session.moveMapView(script, QPointF(30, 0), 2.0, QPointF(290, 150)));
+        QVERIFY(drawnLarger());
+        QCOMPARE(qRound(session.mapView(script)->roomSize), 60);
+        QCOMPARE(whereDrawn(session), qsl("7:170,150 8:290,150 9:170,30"));
+
+        // As the GUI's, five notches turned towards the player zoom out about the pointer
+        QVERIFY(session.mapPointer({.type = Pointer::Type::wheel, .position = QPointF(290, 150), .angleDelta = QPoint(0, -600)}));
+        QVERIFY(drawnLarger());
+        QVERIFY2(qFuzzyCompare(session.mapView(script)->zoom, 5.0 * std::pow(1.07, 5)), qPrintable(QString::number(session.mapView(script)->zoom)));
+        QVERIFY2(whereDrawn(session).contains(qsl("8:290,150")), qPrintable(whereDrawn(session)));
         QVERIFY(session.shutdown(false));
     }
 };
