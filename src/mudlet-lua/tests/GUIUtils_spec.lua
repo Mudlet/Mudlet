@@ -2294,6 +2294,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         -- past the maximum is at the maximum, and a reading it cannot give is none
         setGauge(gaugeName, 3, 2)
         assert.are.same({2, 0, 2}, {getLabelAccessibleValue(gaugeName .. "_back")})
+        setGauge(gaugeName, 5, -10)
+        assert.is_nil(getLabelAccessibleValue(gaugeName .. "_back"))
         -- without asking setLabelAccessibleValue(), which would warn of it at every prompt
         local setSpy = spy.on(_G, "setLabelAccessibleValue")
         finally(function() _G.setLabelAccessibleValue:revert() end)

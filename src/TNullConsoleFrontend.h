@@ -238,8 +238,8 @@ public:
     bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline) override;
     bool resetLabelLinkStyle(const QString& name) override;
     bool clearLabelVisitedLinks(const QString& name) override;
-    // TLabel::slot_linkActivated()'s marking of the link visited, and the restyle where that changed what the label
-    // shows; nothing where no label has the name
+    // TLabel::slot_linkActivated()'s marking of the link visited, and the restyle where a visited colour is set;
+    // nothing where no label has the name
     void visitLabelLink(const QString& name, const QString& link);
     bool showLabel(const QString& name) override { return setLabelShown(name, true); }
     bool hideLabel(const QString& name) override { return setLabelShown(name, false); }

@@ -241,8 +241,9 @@ deletes it with `deleteLine()` has the line sent again in `linesUpdated`, as a `
 its text, runs and prompt flag as `lineShown` would send them now, or `deleted`. It comes from the event
 loop, once for all the lines a turn changed, those deleted first and then the rest in the order they
 stand. Lines trimmed off the top as the console outgrows its limit, and those before a `clearWindow()`,
-are dropped without one. A change that splits a line, as `wrapLine()` or an `insertText()` of a line feed
-does, updates only its first part, and the change of a link's state is told by `linksChanged`, not here.
+are dropped without one. A line split by `wrapLine()` or an `insertText()` of a line feed keeps its id on
+its first part only, which a later change updates, and the change of a link's state is told by
+`linksChanged`, not here.
 
 `timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
 timestamp button does, and `setTimeStampsShown()` presses that button: the choice is saved for the
@@ -1429,7 +1430,7 @@ for a Lua error, a link not run, a web link nothing opened and a `prompt:` link 
 (`hiddenInputWanted`): the GUI then puts the text in its hidden-input box, which a frontend with no window
 does not have, so the link is not followed or marked visited. It is `unknown`, with `errorString()` saying
 why, for a name that is not a label's, for an `href` that is not one of the label's links as its `text`
-holds them now, read as Qt reads them, with their entities decoded, and for any while the GUI's label takes no
+holds them now, read as Qt reads them, and for any while the GUI's label takes no
 click on its links: while `containsAnchorTag()` finds no anchor in its `text`, as a raw `<` in a quoted `href`
 or a space after a tag's `<` hides one, and while it is `clickThrough`. It is `refused` where `runLua()` is. An app
 that opens web links its own way, as one whose engine runs where it cannot start a browser, may keep them from

@@ -136,8 +136,8 @@ struct TLabelModel
     QString restyledText();
     // The href of each link in the text, in the order of the text, as QLabel reads them to draw them as links
     static QStringList linkTargets(const QString& text);
-    // Marks the link visited, as following it does, where a visited colour is set: true when the view should show
-    // restyledText(), false when nothing changed
+    // Marks the link visited, as following it does, where a visited colour is set: true then, as the view should show
+    // restyledText()
     bool visitLink(const QString& link);
     // What following a link did. A browser drops the whitespace around an href before reading its scheme, and so
     // does this; the payload of a send: or prompt: link is kept untrimmed, as it can end in a space the player means.
