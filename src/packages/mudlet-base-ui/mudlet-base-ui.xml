@@ -469,6 +469,9 @@
 -- row pulls that section out to sit anywhere over the game's text, the sections
 -- left behind share out the space it had, and where each one was left is
 -- remembered between sessions.
+-- A main window of a phone's size gets a layout of its own instead of the dock
+-- (see BaseUI.layoutCompact): the bars along the top, and the chat behind a
+-- button for each tab along the bottom.
 -- Type "baseui" for options; "baseui hide" removes it until "baseui show".
 
 BaseUI = BaseUI or {}
@@ -498,6 +501,15 @@ end
 
 local settingsFile = getMudletHomeDir() .. "/base_ui_settings.lua"
 local ownPackage = "mudlet-base-ui"
+
+-- Tells the frontend this profile's interface lays itself out for any screen, so
+-- one that would otherwise show it a desktop-shaped window (Mudlet for Android
+-- does, on a phone held upright) gives it the real one
+local function declareAdaptive(adaptive)
+  if type(setAdaptiveLayout) == "function" then
+    setAdaptiveLayout(ownPackage, adaptive)
+  end
+end
 
 -- Everything a look decides lives in one of these tables: the dock's chrome,
 -- the gauge colours, the font, and the colour the game's own text sits on. In
@@ -655,6 +667,8 @@ end
 -- changes; the widgets are then repainted from here.
 local css = {}
 local gaugeDefs = { hp = {}, mp = {}, xp = {}, mv = {}, enemy = {} }
+-- what a screen reader calls each bar
+local gaugeNames = { hp = "Health", mp = "Mana", xp = "Experience", mv = "Movement", enemy = "Enemy" }
 
 -- How much of a background picture the dock's own surfaces hide while one is
 -- showing, as a stylesheet percentage. Floating sections keep their full colour,
@@ -696,6 +710,14 @@ local function rebuildCss(opacity)
     [[background-color: %s; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
     shade(theme.tabInactive, opacity), theme.borderSoft, theme.borderSoft)
   css.gaugeBack = gaugeStyle(theme.gaugeBack)
+  css.vitalsBar = string.format("background-color: %s; border: 0px; border-bottom: 1px solid %s;",
+    shade(theme.panel, opacity), theme.border)
+  css.chatButtonRow = string.format("background-color: %s; border: 0px; border-top: 1px solid %s;",
+    shade(theme.panel, opacity), theme.border)
+  css.chatButton = string.format("background-color: %s; border: 1px solid %s; border-radius: 6px;",
+    theme.tabInactive, theme.border)
+  css.chatButtonOpen = string.format("background-color: %s; border: 1px solid %s; border-radius: 6px;",
+    theme.accent, theme.accent)
   for key, color in pairs(theme.gauges) do
     gaugeDefs[key].front = gaugeStyle(color)
   end
@@ -2050,6 +2072,7 @@ function BaseUI.restyle()
     -- cache; a look change moves both, so every tab repaints
     BaseUI.refreshChatTabs()
   end
+  BaseUI.restyleCompact()
   for key, gauge in pairs(BaseUI.gauges) do
     local def = gaugeDefs[key]
     if def then
@@ -2123,6 +2146,7 @@ end
 -- the "baseui" status alias) is the way back for players who prefer this UI.
 function BaseUI.standAside(_, packageName)
   BaseUI.settings.standingAside = packageName or "the game's interface"
+  declareAdaptive(false)
   -- the game's own interface brings its own colours; give the background back
   applyBackdrop()
   BaseUI.saveSettings()
@@ -2200,12 +2224,20 @@ function BaseUI.uninstall()
     section:deleteSaveFile()
     pcall(section.delete, section)
   end
+  -- each takes what the compact layout moved into it, and the strips give back their borders
+  for _, name in ipairs({ "vitalsBar", "chatButtonRow", "chatSheet" }) do
+    local widget = BaseUI[name]
+    if widget then
+      pcall(widget.delete, widget)
+    end
+  end
   if BaseUI.container then
     -- takes the palette button and every remaining section with it, and gives
     -- back the border the dock was attached to
     pcall(BaseUI.container.delete, BaseUI.container)
   end
   os.remove(settingsFile)
+  declareAdaptive(false)
   -- last, since everything above is written in terms of it: a reinstall builds
   -- itself from nothing rather than from what this session left behind
   BaseUI = nil
@@ -2224,6 +2256,7 @@ function BaseUI.serverGuiRemoved(_, packageName)
       return
     end
     BaseUI.settings.standingAside = nil
+    declareAdaptive(true)
     applyBackdrop()
     BaseUI.saveSettings()
     BaseUI.armChatTriggers()
@@ -2233,9 +2266,11 @@ function BaseUI.serverGuiRemoved(_, packageName)
     -- standing aside hid the dock, and a section is a window in its own right
     -- rather than a child widget of it, so showing the sections alone would
     -- leave them over the game's text with no dock behind them
-    if BaseUI.container then
+    if BaseUI.container and not BaseUI.compactWindow() then
       BaseUI.container:show()
       BaseUI.container:adjustBorder()
+    elseif BaseUI.container then
+      BaseUI.dockAwayForCompact = true
     end
     BaseUI.layoutDock()
   end)
@@ -2252,7 +2287,15 @@ function BaseUI.mapPlaceholderClicked()
   end
 end
 
+-- A profile has one mapper, and while its map window is on screen an embedded one is
+-- refused. The Geyser mapper that refusal left behind would take the map out of that
+-- window whenever the dock is next shown, hidden or resized after the window is
+-- closed, which the compact layout does on a resize, so the map stays the window's.
 function BaseUI.createMapper()
+  if getMapWidgetGeometry and getMapWidgetGeometry() then
+    BaseUI.mapInWindow = true
+    return
+  end
   BaseUI.map = Geyser.Mapper:new({
     name = "BaseUI_map",
     x = "0%", y = "0%", width = "100%", height = "100%",
@@ -2264,7 +2307,8 @@ end
 -- room exists (made by a mapping script, a map download or a manual load).
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
 function BaseUI.checkMapData(event)
-  if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
+  if not BaseUI.container or BaseUI.map or BaseUI.mapInWindow or BaseUI.dormant()
+    or (BaseUI.laidOutCompact and BaseUI.dockAwayForCompact) then
     return
   end
   if not BaseUI.mapHasData() then
@@ -2302,8 +2346,47 @@ local function dockWidth(windowWidth, margin)
   return math.floor(math.min(windowWidth / 4, math.max(narrowestDock, room)))
 end
 
+local chatWelcome = "&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n"
+
+local function showChatWelcome()
+  local pane = BaseUI.chats.all
+  pane:clear()
+  pane:decho(chatWelcome)
+  BaseUI.chatWelcomeWrap = pane.wrapAt
+end
+
+-- Printed lines keep the wrap they had, so a welcome printed before the window had
+-- its size is printed again at the new width, but only while it is all "All" holds
+local function refitChatWelcome()
+  local pane = BaseUI.chats and BaseUI.chats.all
+  if not pane or not BaseUI.chatWelcomeWrap or pane.wrapAt == BaseUI.chatWelcomeWrap then
+    return
+  end
+  local held = table.concat(getLines(pane.name, 0, getLineCount(pane.name)) or {}):gsub("%s", "")
+  if held ~= decho2string(chatWelcome):gsub("%s", "") then
+    BaseUI.chatWelcomeWrap = nil
+    return
+  end
+  showChatWelcome()
+end
+
+-- The main window's size classes, read the way Material reads them: a compact
+-- width is a phone held upright or a narrow window, a compact height a phone on
+-- its side or a short window. They are the main window's rather than the device's,
+-- so a small desktop window gets the same layout as a phone.
+local function mainWindowInfo()
+  local info = type(getMainWindowInfo) == "function" and getMainWindowInfo()
+  return type(info) == "table" and info or nil
+end
+
+-- Mudlets older than getMainWindowInfo() get the dock
+function BaseUI.compactWindow()
+  local info = mainWindowInfo()
+  return info ~= nil and (info.widthClass == "compact" or info.heightClass == "compact")
+end
+
 -- A width the player gave the dock by dragging its edge is left alone for the session
-function BaseUI.fitDock()
+local function fitDockWidth()
   local dock = BaseUI.container
   local windowWidth = getMainWindowSize()
   if not dock or windowWidth &lt;= 0 or (dock.attached or dock.hiddenAttached) ~= "right"
@@ -2321,17 +2404,35 @@ function BaseUI.fitDock()
   dock:set_constraints(dock)
   -- Mudlet 5.0 does not move the border on set_constraints()
   dock:adjustBorder()
+  refitChatWelcome()
+end
+
+-- Answers both a resize and sysMainWindowClassChangeEvent: a resize can take the
+-- main window into another size class, and the class can change without a resize
+-- (a frontend that scales Mudlet's pixels can change how many it gives a logical one)
+function BaseUI.fitDock()
+  if BaseUI.laidOutCompact or BaseUI.compactWindow() then
+    BaseUI.layoutDock()
+  end
+  -- not while compact: adjusting a hidden dock's border lets go of it for good.
+  -- After the layout, so a dock coming back is fitted to the window it comes back to.
+  if not BaseUI.compactWindow() then
+    fitDockWidth()
+  end
 end
 
 function BaseUI.build()
   if BaseUI.container then
     return
   end
+  local compact = BaseUI.compactWindow()
   BaseUI.container = Adjustable.Container:new({
     name = "BaseUI",
     x = "75%", y = "0%",
     width = "25%", height = "100%",
     attached = "right",
+    -- takes the border when it is shown, which the compact layout never does
+    hidden = compact or nil,
     titleText = "Mudlet UI",
     titleTxtColor = theme.text,
     adjLabelstyle = css.dock,
@@ -2371,7 +2472,7 @@ function BaseUI.build()
   paintPictureButton()
   BaseUI.pictureButton:setClickCallback(BaseUI.pictureClicked)
   BaseUI.createSection("map")
-  if BaseUI.mapHasData() then
+  if BaseUI.mapHasData() and not compact then
     BaseUI.createMapper()
   else
     BaseUI.mapPlaceholder = Geyser.Label:new({
@@ -2419,18 +2520,19 @@ function BaseUI.build()
   BaseUI.settings.built = true
   BaseUI.saveSettings()
   BaseUI.refreshChatTabs()
-  BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
+  showChatWelcome()
   -- last, so the bars are above the chat window where the two overlap
   BaseUI.createSection("vitals")
   -- the container remembers its own hidden/detached state from the previous
   -- session (it saves on exit) - our setting says it should be visible, so
   -- override whatever it restored
-  if not BaseUI.dormant() then
+  if not BaseUI.dormant() and not compact then
     BaseUI.container:show()
     if not BaseUI.container.attached then
       BaseUI.container:attachToBorder("right")
     end
   end
+  BaseUI.dockAwayForCompact = compact and not BaseUI.dormant()
   BaseUI.layoutDock()
   BaseUI.maybeAnnounce()
 end
@@ -2469,6 +2571,7 @@ function BaseUI.refreshChatTabs()
       end
     end
   end
+  BaseUI.paintChatButtons()
 end
 
 function BaseUI.selectChatTab(key)
@@ -2488,8 +2591,16 @@ function BaseUI.selectChatTab(key)
   BaseUI.refreshChatTabs()
 end
 
+-- In the compact layout a tab is only on screen while its button has it open
+function BaseUI.chatShowing(key)
+  if BaseUI.laidOutCompact and BaseUI.dockAwayForCompact then
+    return BaseUI.openChat == key
+  end
+  return BaseUI.activeChatTab == key
+end
+
 function BaseUI.noteChatActivity(key)
-  if key == BaseUI.activeChatTab then
+  if BaseUI.chatShowing(key) then
     return
   end
   BaseUI.unread[key] = (BaseUI.unread[key] or 0) + 1
@@ -2688,6 +2799,20 @@ function BaseUI.layoutDock()
   if not BaseUI.container then
     return
   end
+  if BaseUI.compactWindow() then
+    BaseUI.layoutCompact()
+    return
+  end
+  -- The map, not made while the window was compact, waits for the next map or
+  -- vitals event, as on a dock built before the map had rooms: made on a resize,
+  -- it takes over the profile's map widget whenever that has just been closed
+  if BaseUI.leaveCompact() then
+    if BaseUI.usedGaugeSlots &gt; 0 then
+      -- puts the bars back in their places in the vitals panel, which lays the dock out
+      BaseUI.layoutGauges()
+      return
+    end
+  end
   BaseUI.placedGaugeSlots = BaseUI.usedGaugeSlots
   local places = dockPlaces()
   for _, key in ipairs(sectionOrder) do
@@ -2851,9 +2976,297 @@ function BaseUI.ensureGauge(key)
   gauge:setFgColor("white")
   gauge:setAlignment("l")
   gauge:setBold(true)
+  gauge.back:setAccessibleName(gaugeNames[key])
   BaseUI.gauges[key] = gauge
   BaseUI.layoutGauges()
   return gauge
+end
+
+-- The compact layout, for a main window with a compact width or height: no dock
+-- and no map, since the frontend's own map is the one that fits a screen that
+-- size, only the bars along the top and a button for each chat tab along the
+-- bottom. A button opens its tab over the game's text and closes it again, the
+-- way Mudlet Web's phone layout switches between its panels from a row of buttons
+-- under them. Sizes are in the main window's logical pixels, getMainWindowInfo()'s
+-- pixelScale Mudlet pixels each, so a button is as big under a finger on a dense
+-- phone screen as it is on a desktop. The buttons are 48 tall, the smallest touch
+-- target Android's accessibility guidelines allow, as a frontend that grows a
+-- smaller one to that is stopped by an open tab right above it.
+local compact = {
+  barHeight = 26, barPadding = 3, barGap = 6,
+  buttonHeight = 48, rowPadding = 4, buttonGap = 4,
+}
+
+-- Locked, and attached to its border, so the console gives it room the way it
+-- gives the dock room and other scripts' containers on that border share it
+local function compactStrip(name, border, style)
+  local strip = Adjustable.Container:new({
+    name = name,
+    x = "0%", y = border == "top" and "0%" or "-1", width = "100%", height = 1,
+    attached = border,
+    attachedMargin = 0,
+    padding = 0,
+    autoLoad = false,
+    autoSave = false,
+  })
+  -- not locked by the constructor: it locks before attaching, and locking reserves
+  -- the border from a list of that border's containers made only on attaching
+  strip:lockContainer("full")
+  -- a right-click would open Adjustable's menu, whose items unlock, move and close it
+  strip.adjLabel:setClickCallback(function() end)
+  -- that callback would have a screen reader call the strip a button
+  strip.adjLabel:setAccessibleRole("text")
+  -- set after locking: the "full" lock style zeroes every border width
+  strip.adjLabelstyle = style
+  strip.adjLabel:setStyleSheet(style)
+  return strip
+end
+
+local function createCompactWidgets()
+  BaseUI.vitalsBar = compactStrip("BaseUI_vitals_bar", "top", css.vitalsBar)
+  BaseUI.chatButtonRow = compactStrip("BaseUI_chat_buttons", "bottom", css.chatButtonRow)
+  BaseUI.chatSheet = Geyser.Container:new({
+    name = "BaseUI_chat_sheet",
+    x = 0, y = 0, width = 1, height = 1,
+  })
+  BaseUI.chatButtons = {}
+  BaseUI.buttonPainted = {}
+  for _, tab in ipairs(chatTabs) do
+    local button = Geyser.Label:new({
+      name = "BaseUI_chat_button_" .. tab.key,
+      x = 0, y = 0, width = 1, height = 1,
+      font = theme.font, fontSize = 10, format = "c",
+    }, BaseUI.chatButtonRow.Inside)
+    button:setClickCallback(BaseUI.toggleChat, tab.key)
+    BaseUI.chatButtons[tab.key] = button
+  end
+end
+
+-- Geyser keeps a strip's height and its distance from the edge as separate
+-- constraints, so both change together, as fitDockWidth does for the dock
+local function sizeStrip(strip, border, height)
+  if strip.height == height then
+    return
+  end
+  strip.height = height
+  if border == "bottom" then
+    strip.y = "-" .. height
+  end
+  strip:set_constraints(strip)
+  strip:adjustBorder()
+end
+
+-- A widget the hidden dock hid along with itself comes out hidden by its parent;
+-- show(true) clears just that, so a bar or a pane hidden on purpose stays hidden
+local function moveInto(widget, container)
+  if widget.container ~= container then
+    widget:changeContainer(container)
+    widget:show(true)
+  end
+end
+
+-- Two bars to a row with the window upright and all of them in one row on its side,
+-- in vitalsStats order like the dock's
+local function layoutVitalsBar(scale, upright)
+  local bar, slots = BaseUI.vitalsBar, BaseUI.usedGaugeSlots
+  if slots == 0 then
+    bar:hide()
+    return
+  end
+  bar:show()
+  local columns = math.min(slots, upright and 2 or maxGaugeSlots)
+  local padding, gap = compact.barPadding * scale, compact.barGap * scale
+  local height = compact.barHeight * scale
+  sizeStrip(bar, "top", math.floor(math.ceil(slots / columns) * height + 2 * padding))
+  local width = (bar:get_width() - 2 * padding - (columns - 1) * gap) / columns
+  local index = 0
+  for _, stat in ipairs(vitalsStats) do
+    local gauge = BaseUI.gauges[stat.key]
+    if gauge then
+      moveInto(gauge, bar.Inside)
+      local column, row = index % columns, math.floor(index / columns)
+      gauge:move(math.floor(padding + column * (width + gap)), math.floor(padding + row * height))
+      gauge:resize(math.floor(width), math.floor(height))
+      index = index + 1
+    end
+  end
+end
+
+local function layoutChatButtons(scale)
+  local row = BaseUI.chatButtonRow
+  row:show()
+  local padding, gap = math.floor(compact.rowPadding * scale), compact.buttonGap * scale
+  -- Rounded up: rounded down, a button falls short of the touch target it is sized to
+  local height = math.ceil(compact.buttonHeight * scale)
+  sizeStrip(row, "bottom", height + 2 * padding)
+  local width = (row:get_width() - 2 * padding - (#chatTabs - 1) * gap) / #chatTabs
+  for i, tab in ipairs(chatTabs) do
+    local button = BaseUI.chatButtons[tab.key]
+    button:move(math.floor(padding + (i - 1) * (width + gap)), padding)
+    button:resize(math.floor(width), height)
+  end
+end
+
+-- An open tab covers the console exactly, between the bars and the buttons
+local function layoutChatSheet(entering)
+  local sheet = BaseUI.chatSheet
+  local windowWidth, windowHeight = getMainWindowSize()
+  local left, top = getBorderLeft(), getBorderTop()
+  sheet:move(left, top)
+  sheet:resize(math.max(0, windowWidth - left - getBorderRight()), math.max(0, windowHeight - top - getBorderBottom()))
+  sheet:show()
+  for _, tab in ipairs(chatTabs) do
+    local pane = BaseUI.chats[tab.key]
+    if entering then
+      pane:hide()
+    end
+    if pane.container ~= sheet then
+      moveInto(pane, sheet)
+      pane:move("0%", "0%")
+      pane:resize("100%", "100%")
+    end
+  end
+end
+
+-- The dock and the chat panes are made whatever the layout, so changing layouts is
+-- moving the bars and the panes between the two and showing one of them
+local function arrangeCompact()
+  local entering = not BaseUI.laidOutCompact
+  BaseUI.laidOutCompact = true
+  if not BaseUI.container.hidden then
+    BaseUI.container:hide()
+    BaseUI.dockAwayForCompact = true
+  end
+  -- a section dragged out of the dock is no longer its child to hide
+  for _, key in ipairs(sectionOrder) do
+    local section = BaseUI.sections[key]
+    if section and BaseUI.sectionFloating(key) and not section.hidden then
+      section:hide()
+    end
+  end
+  -- a dock something else hid is not on screen to stand in for, as on a roomy window
+  if BaseUI.dormant() or not BaseUI.dockAwayForCompact then
+    for _, widget in ipairs({ BaseUI.vitalsBar, BaseUI.chatButtonRow, BaseUI.chatSheet }) do
+      widget:hide()
+    end
+    return
+  end
+  if not BaseUI.vitalsBar then
+    createCompactWidgets()
+  end
+  if entering then
+    BaseUI.openChat = nil
+  end
+  local info = mainWindowInfo()
+  local scale = tonumber(info and info.pixelScale) or 1
+  layoutVitalsBar(scale, info and info.widthClass == "compact")
+  layoutChatButtons(scale)
+  -- last: it covers whatever the two strips leave of the console
+  layoutChatSheet(entering)
+  BaseUI.paintChatButtons()
+  refitChatWelcome()
+end
+
+function BaseUI.layoutCompact()
+  -- the first fit comes while build() is still making them; and the strips resize
+  -- the console, whose resize event comes back here before they are all placed
+  if not BaseUI.chats or not BaseUI.sections.vitals or BaseUI.arrangingCompact then
+    return
+  end
+  BaseUI.arrangingCompact = true
+  local ok, problem = pcall(arrangeCompact)
+  BaseUI.arrangingCompact = false
+  if not ok then
+    error(problem)
+  end
+end
+
+-- Puts the bars and the panes back in the dock, shows it if the compact layout
+-- was standing in for it, and says whether there was anything to put back
+function BaseUI.leaveCompact()
+  if not BaseUI.laidOutCompact then
+    return false
+  end
+  BaseUI.laidOutCompact = false
+  local dockBack = BaseUI.dockAwayForCompact and not BaseUI.dormant()
+  BaseUI.dockAwayForCompact = nil
+  BaseUI.openChat = nil
+  for _, gauge in pairs(BaseUI.gauges) do
+    gauge:changeContainer(BaseUI.sections.vitals)
+  end
+  local belowTabs = layout.tabs + layout.tabGap
+  for _, tab in ipairs(chatTabs) do
+    local pane = BaseUI.chats[tab.key]
+    pane:changeContainer(BaseUI.sections.chat)
+    pane:move("0%", belowTabs)
+    pane:resize("100%", "100%-" .. belowTabs)
+  end
+  if BaseUI.vitalsBar then
+    BaseUI.vitalsBar:hide()
+    BaseUI.chatButtonRow:hide()
+    BaseUI.chatSheet:hide()
+  end
+  if dockBack then
+    BaseUI.container:show()
+  end
+  BaseUI.selectChatTab(BaseUI.activeChatTab)
+  refitChatWelcome()
+  return true
+end
+
+-- Opens a tab over the game's text, or closes it if it is the one open
+function BaseUI.toggleChat(key)
+  if not BaseUI.chats or not BaseUI.chats[key] then
+    return
+  end
+  if BaseUI.openChat == key then
+    BaseUI.openChat = nil
+    BaseUI.chats[key]:hide()
+    BaseUI.paintChatButtons()
+    return
+  end
+  BaseUI.openChat = key
+  BaseUI.selectChatTab(key)
+end
+
+-- Each button says what is behind it, and a screen reader says whether it is open.
+-- Compared against what was last painted, for the reason refreshChatTabs compares:
+-- a captured chat line moves one count.
+function BaseUI.paintChatButtons()
+  if not BaseUI.chatButtons then
+    return
+  end
+  for _, tab in ipairs(chatTabs) do
+    local button = BaseUI.chatButtons[tab.key]
+    local open = BaseUI.openChat == tab.key
+    local unread = open and 0 or math.min(BaseUI.unread[tab.key] or 0, 99)
+    local text = unread &gt; 0 and string.format("%s (%d)", tab.label, unread) or tab.label
+    local style = open and css.chatButtonOpen or css.chatButton
+    local painted = BaseUI.buttonPainted[tab.key]
+    if not painted or painted.text ~= text or painted.style ~= style then
+      button:setStyleSheet(style)
+      button:echo(text, open and theme.bg or theme.textDim)
+      button:setAccessibleName(string.format("%s chat%s%s", tab.label,
+        unread &gt; 0 and string.format(", %d new", unread) or "", open and ", open" or ""))
+      BaseUI.buttonPainted[tab.key] = { text = text, style = style }
+    end
+  end
+end
+
+function BaseUI.restyleCompact()
+  if not BaseUI.vitalsBar then
+    return
+  end
+  BaseUI.vitalsBar.adjLabelstyle = css.vitalsBar
+  BaseUI.vitalsBar.adjLabel:setStyleSheet(css.vitalsBar)
+  BaseUI.chatButtonRow.adjLabelstyle = css.chatButtonRow
+  BaseUI.chatButtonRow.adjLabel:setStyleSheet(css.chatButtonRow)
+  for _, button in pairs(BaseUI.chatButtons) do
+    button:setFont(theme.font)
+  end
+  -- the font change re-echoes in the colour the label had
+  BaseUI.buttonPainted = {}
+  BaseUI.paintChatButtons()
 end
 
 -- a protocol's enemy wins over the one read from a fight's sentences
@@ -3182,30 +3595,53 @@ function BaseUI.announce()
   end
   BaseUI.settings.announced = true
   BaseUI.saveSettings()
+  if BaseUI.compactWindow() then
+    cecho("\n" .. fitConsole("&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars and chat.") .. "\n")
+    cecho(fitConsole("&lt;cyan&gt;[ Mudlet UI ] Tap &lt;yellow&gt;All&lt;cyan&gt;, &lt;yellow&gt;Tells&lt;cyan&gt; or &lt;yellow&gt;Channels&lt;cyan&gt; at the bottom to read the chat collected there, and tap it again to put it away - type &lt;yellow&gt;baseui&lt;cyan&gt; for the rest.&lt;reset&gt;") .. "\n")
+    return
+  end
   cecho("\n" .. fitConsole("&lt;cyan&gt;[ Mudlet UI ] Built you a starter interface from what your game supports - health bars, map and chat.") .. "\n")
   cecho(fitConsole("&lt;cyan&gt;[ Mudlet UI ] Drag its title bar to move it, or any section's header out of it to put that section anywhere.") .. "\n")
   cecho(fitConsole("&lt;cyan&gt;[ Mudlet UI ] The &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar changes how it looks - type &lt;yellow&gt;baseui&lt;cyan&gt; for the rest.&lt;reset&gt;") .. "\n")
 end
 
+-- Whether the dock, or the compact layout standing in for it, is on screen
+function BaseUI.onScreen()
+  if not BaseUI.container or BaseUI.dormant() then
+    return false
+  end
+  return not BaseUI.container.hidden or BaseUI.dockAwayForCompact == true
+end
+
+-- Takes the dock off the screen, and the compact layout's strips with it, giving
+-- their borders back. A compact layout that stood in for the dock would otherwise
+-- show the dock again once the window is roomy.
+function BaseUI.putAway()
+  if BaseUI.container then
+    BaseUI.container:hide()
+    BaseUI.container:adjustBorder()
+  end
+  BaseUI.dockAwayForCompact = nil
+  BaseUI.layoutDock()
+end
+
 function BaseUI.hide()
   BaseUI.settings.hidden = true
+  declareAdaptive(false)
   -- before the save, so the tint it gives back is what gets remembered
   applyBackdrop()
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
   BaseUI.killConditionTrigger()
-  if BaseUI.container then
-    BaseUI.container:hide()
-    BaseUI.container:adjustBorder()
-  end
-  BaseUI.layoutDock()
+  BaseUI.putAway()
   cecho("\n&lt;cyan&gt;[ Mudlet UI ] Hidden - type &lt;yellow&gt;baseui show&lt;cyan&gt; to bring it back.&lt;reset&gt;\n")
 end
 
 function BaseUI.show()
   BaseUI.settings.hidden = false
   BaseUI.settings.standingAside = nil
+  declareAdaptive(true)
   applyBackdrop()
   BaseUI.saveSettings()
   if type(gmcp) == "table" and next(gmcp) then
@@ -3224,10 +3660,16 @@ function BaseUI.show()
     BaseUI.build()
   end
   if BaseUI.container then
-    BaseUI.container:show()
-    if not BaseUI.container.attached then
-      BaseUI.container:attachToBorder("right")
+    if not BaseUI.compactWindow() then
+      BaseUI.container:show()
+      if not BaseUI.container.attached then
+        BaseUI.container:attachToBorder("right")
+      end
+    else
+      BaseUI.dockAwayForCompact = true
     end
+    -- the window may have changed size class while it was hidden
+    BaseUI.fitDock()
     -- after the dock is back, not before: showing it shows every section in it,
     -- including one with nothing in it to show
     BaseUI.layoutDock()
@@ -3412,6 +3854,7 @@ onEvent("sysDisconnectionEvent", "BaseUI.handleDisconnect")
 onEvent("sysDataSendRequest", "BaseUI.noteCommandSent")
 onEvent("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
 onEvent("sysWindowResizeEvent", "BaseUI.fitDock")
+onEvent("sysMainWindowClassChangeEvent", "BaseUI.fitDock")
 onEvent("sysServerGuiInstalled", "BaseUI.standAside")
 onEvent("sysUninstallPackage", "BaseUI.packageRemoved")
 onEvent("sysInstallPackage", "BaseUI.mapperInstalled")
@@ -3457,6 +3900,8 @@ if connected then
     BaseUI.updateMsdpVitals()
   end
 end
+
+declareAdaptive(not BaseUI.dormant())
 
 -- The profile restores the border the dock had at exit, so a dock this game has
 -- filled before is built now rather than leaving that border empty until it speaks

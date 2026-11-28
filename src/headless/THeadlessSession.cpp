@@ -640,6 +640,9 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                     return;
                 }
                 mpHost = pNewHost;
+                if (mMainWindowDevice) {
+                    pNewHost->setMainWindowDevice(*mMainWindowDevice);
+                }
                 if (supplyTransport) {
                     pNewHost->mTelnet.setTransport(mpTransport);
                 }

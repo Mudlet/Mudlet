@@ -3561,6 +3561,18 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList, const QString& ma
     pHost->postMessage(outcomeMsg);
 }
 
+bool TMainConsole::event(QEvent* event)
+{
+    const bool handled = TConsole::event(event);
+    // A move to a screen of another scale resizes nothing in logical pixels, so no resize checks it
+    if (event->type() == QEvent::DevicePixelRatioChange) {
+        if (auto pHost = getHost()) {
+            pHost->checkMainWindowClasses();
+        }
+    }
+    return handled;
+}
+
 void TMainConsole::resizeEvent(QResizeEvent* event)
 {
     auto pHost = getHost();

@@ -950,6 +950,9 @@ void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(mudletEvent);
+    if (mType == MainConsole) {
+        mpHost->checkMainWindowClasses();
+    }
 }
 
 void TConsole::resizeEvent(QResizeEvent* event)

@@ -35,6 +35,7 @@
 #include "TBackgroundTask.h"
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
+#include "TMainWindowInfo.h"
 #include "TimerUnit.h"
 #include "TSpellChecker.h"
 #include "TWindowRegistry.h"
@@ -866,6 +867,17 @@ public:
     std::optional<QString> userWindowStyleSheet(const QString& name) const;
     std::optional<bool> windowVisible(const QString& name) const;
     std::optional<QSize> mainWindowSize() const;
+    // mainWindowSize() in logical pixels, with what the frontend gave with setMainWindowDevice(), else what Mudlet
+    // measures of where it draws the main window; {} without a main window
+    std::optional<TMainWindowInfo> mainWindowInfo() const;
+    // From a frontend that draws the main window other than Mudlet measures it, as one that scales it does
+    void setMainWindowDevice(const TMainWindowInfo::Device&);
+    // Raises sysMainWindowClassChangeEvent if mainWindowInfo() is in other classes than scripts last had; call once
+    // the main window's sysWindowResizeEvent has been raised, so handlers see the borders it settled
+    void checkMainWindowClasses();
+    // Whether any of the profile's scripts has called setAdaptiveLayout(owner, true) and not taken it back
+    bool adaptiveLayout() const { return !mAdaptiveLayoutOwners.isEmpty(); }
+    void setAdaptiveLayout(const QString& owner, bool adaptive);
     // A name with no user window answers the main window's size.
     std::optional<QSize> userWindowSize(const QString& name) const;
     // Columns by rows of a console's text area; {} for no such console.
@@ -1491,6 +1503,7 @@ signals:
     void signal_consoleFontChanged(const QFont& font);
     // With no view: the main console's grid, or where its text goes, may have changed
     void signal_mainAreaLaidOut();
+    void signal_adaptiveLayoutChanged(bool adaptive);
     // request counts the requests made, so an answer to one a newer one has replaced is known
     void signal_mainWindowResizeRequested(const QSize& pixels, quint64 request);
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
@@ -1875,6 +1888,10 @@ private:
     // Unset till a frontend gives an area or a border first takes from it, so till then it is the grid
     std::optional<QSize> mMainAreaCells;
     std::optional<QSize> mMainAreaPixels;
+    std::optional<TMainWindowInfo::Device> mGivenMainWindowDevice;
+    // What scripts last had of mainWindowInfo(), against which a change is measured; unset till they start
+    std::optional<TMainWindowInfo> mAnnouncedMainWindowInfo;
+    QSet<QString> mAdaptiveLayoutOwners;
     // What a script's setMainWindowSize() asked for that the frontend answered, till it gives an area of its own accord
     // or a script asks for another
     std::optional<QSize> mAnsweredMainWindowRequest;

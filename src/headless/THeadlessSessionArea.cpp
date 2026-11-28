@@ -27,6 +27,7 @@
 #include <QMetaMethod>
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 bool THeadlessSession::setMainWindowSize(const QSize& pixels)
@@ -57,6 +58,31 @@ bool THeadlessSession::setMainWindowSize(const QSize& pixels)
     // The first handler may close the profile, and a function the frontend bound into Lua delete the session
     mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::area);
     return true;
+}
+
+bool THeadlessSession::setMainWindowDevice(const TMainWindowInfo::Device& device)
+{
+    if (refused()) {
+        return false;
+    }
+    const auto positive = [](const double value) {
+        return std::isfinite(value) && value > 0;
+    };
+    if (!positive(device.devicePixelRatio) || !positive(device.pixelScale)) {
+        //: Error from a frontend with no window given what it knows of where it draws the main window, with a pixel ratio or scale that is zero, negative or not a number
+        mErrorString = tr("A main window's pixel ratio and scale must each be a number above 0.");
+        return false;
+    }
+    mMainWindowDevice = device;
+    if (mpHost && mpHost->mLoadedOk && !mpHost->closeStarted()) {
+        mpHost->setMainWindowDevice(device);
+    }
+    return true;
+}
+
+bool THeadlessSession::adaptiveLayout() const
+{
+    return mpHost && mpHost->adaptiveLayout();
 }
 
 QSize THeadlessSession::mainConsoleGrid() const
@@ -113,9 +139,28 @@ void THeadlessSession::connectAreaRelays(Host* pHost, const unsigned int run)
                 }
             },
             Qt::QueuedConnection);
+    mDeliveredAdaptiveLayout.reset();
+    connect(
+            pHost,
+            &Host::signal_adaptiveLayoutChanged,
+            this,
+            [this, run]() {
+                if (run != mRun || !mpHost || !mDeliveredAdaptiveLayout) {
+                    return;
+                }
+                const bool adaptive = mpHost->adaptiveLayout();
+                if (adaptive == *mDeliveredAdaptiveLayout) {
+                    return;
+                }
+                mDeliveredAdaptiveLayout = adaptive;
+                const QString profile = mProfileName;
+                emit adaptiveLayoutChanged(profile, adaptive);
+            },
+            Qt::QueuedConnection);
 }
 
 void THeadlessSession::noteAreaAtLoad()
 {
     mDeliveredMainConsoleArea = {mainConsoleGrid(), mainConsoleTextRect()};
+    mDeliveredAdaptiveLayout = adaptiveLayout();
 }

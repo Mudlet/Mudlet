@@ -2897,7 +2897,7 @@ describe("Tests UI functions", function()
     local originalBorders
 
     setup(function()
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalBorders = getBorderSizes()
     end)
 
@@ -2914,9 +2914,8 @@ describe("Tests UI functions", function()
       -- BaseUI.show() docks the chat window on the right border and it stays there,
       -- leaving the main console narrower for every later spec; BaseUI.hide() is
       -- how the base UI itself gives that border back
-      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
-        BaseUI.container:hide()
-        BaseUI.container:adjustBorder()
+      if not dockWasShowing and BaseUI.onScreen() then
+        BaseUI.putAway()
       end
     end)
 
@@ -2994,9 +2993,9 @@ describe("Tests UI functions", function()
       local saved, createMapper
 
       before_each(function()
-        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder }
+        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder, inWindow = BaseUI.mapInWindow }
         BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
-        BaseUI.map, BaseUI.mapPlaceholder = nil, nil
+        BaseUI.map, BaseUI.mapPlaceholder, BaseUI.mapInWindow = nil, nil, nil
         BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
         stub(BaseUI, "mapHasData", true)
         stub(BaseUI, "layoutDock")
@@ -3008,6 +3007,7 @@ describe("Tests UI functions", function()
         BaseUI.layoutDock:revert()
         BaseUI.createMapper:revert()
         BaseUI.container, BaseUI.map, BaseUI.mapPlaceholder = saved.container, saved.map, saved.placeholder
+        BaseUI.mapInWindow = saved.inWindow
       end)
 
       it("should not look again once the starter UI has been uninstalled", function()
@@ -3048,6 +3048,55 @@ describe("Tests UI functions", function()
           assert.stub(createMapper).was_called(1)
         end)
       end
+    end)
+
+    -- an embedded mapper refused while the map window is on screen would take the map
+    -- out of that window the next time the dock is shown or hidden after it was closed
+    describe("when the profile's map window is on screen", function()
+      local saved
+
+      before_each(function()
+        saved = {
+          map = BaseUI.map, inWindow = BaseUI.mapInWindow, container = BaseUI.container,
+          placeholder = BaseUI.mapPlaceholder, compact = BaseUI.laidOutCompact,
+        }
+        BaseUI.map, BaseUI.mapInWindow, BaseUI.mapPlaceholder, BaseUI.laidOutCompact = nil, nil, nil, nil
+        BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
+        BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      end)
+
+      after_each(function()
+        BaseUI.map, BaseUI.mapInWindow, BaseUI.container = saved.map, saved.inWindow, saved.container
+        BaseUI.mapPlaceholder, BaseUI.laidOutCompact = saved.placeholder, saved.compact
+      end)
+
+      it("should leave the map to that window rather than make a mapper of its own", function()
+        stub(_G, "getMapWidgetGeometry", function() return 0, 0, 300, 200 end)
+        local embed = stub(_G, "createMapper")
+        -- busted leaves a stub in place when the spec that made it raises
+        local ok, err = pcall(BaseUI.createMapper)
+        local made = BaseUI.map
+        -- while createMapper() is still stubbed: hiding a mapper embeds it
+        if made then
+          pcall(made.delete, made)
+        end
+        _G.getMapWidgetGeometry:revert()
+        _G.createMapper:revert()
+        assert.is_true(ok, tostring(err))
+        assert.stub(embed).was_not_called()
+        assert.is_nil(made)
+      end)
+
+      it("should not try again on a later map event", function()
+        BaseUI.mapInWindow = true
+        local make = stub(BaseUI, "createMapper")
+        stub(BaseUI, "mapHasData", true)
+        local ok, err = pcall(BaseUI.checkMapData)
+        BaseUI.createMapper:revert()
+        BaseUI.mapHasData:revert()
+        assert.is_true(ok, tostring(err))
+        assert.stub(make).was_not_called()
+      end)
     end)
 
     -- the game's interface can be drawing on the profile's one map widget by the
@@ -3175,7 +3224,7 @@ describe("Tests UI functions", function()
       savedTheme = BaseUI.themeName
       savedMain = { getBackgroundColor("main") }
       savedMap = { getMapBackgroundColor() }
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalBorders = getBorderSizes()
       BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
       BaseUI.build()
@@ -3189,10 +3238,8 @@ describe("Tests UI functions", function()
       BaseUI.settings = savedSettings
       BaseUI.setTheme(savedTheme or "midnight", true)
       BaseUI.saveSettings()
-      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
-        BaseUI.container:hide()
-        BaseUI.container:adjustBorder()
-        BaseUI.layoutDock()
+      if not dockWasShowing and BaseUI.onScreen() then
+        BaseUI.putAway()
       end
       assert.are.same(originalBorders, getBorderSizes())
     end)
@@ -3456,7 +3503,7 @@ describe("Tests UI functions", function()
       savedSettings = table.deepcopy(BaseUI.settings)
       savedTheme = BaseUI.themeName
       savedMain = { getBackgroundColor("main") }
-      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      dockWasShowing = BaseUI.onScreen()
       originalBorders = getBorderSizes()
       BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
       BaseUI.build()
@@ -3488,13 +3535,14 @@ describe("Tests UI functions", function()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
       BaseUI.createConditionTrigger()
-      if dockWasShowing and BaseUI.container.hidden then
+      if dockWasShowing and not BaseUI.onScreen() then
         BaseUI.container:show()
-      elseif not dockWasShowing and not BaseUI.container.hidden then
-        BaseUI.container:hide()
-        BaseUI.container:adjustBorder()
+        BaseUI.layoutDock()
+      elseif not dockWasShowing and BaseUI.onScreen() then
+        BaseUI.putAway()
+      else
+        BaseUI.layoutDock()
       end
-      BaseUI.layoutDock()
       assert.are.same(originalBorders, getBorderSizes())
     end)
 
@@ -3580,6 +3628,206 @@ describe("Tests UI functions", function()
       end
       assert.are.equal("30%", BaseUI.container.width)
       assert.are.equal(480, BaseUI.container:get_width())
+    end)
+
+    it("should say it lays itself out for any screen only while it is shown", function()
+      local real, said = setAdaptiveLayout, {}
+      -- busted gives each spec globals of its own, so a stub the package is to call goes in _G
+      _G.setAdaptiveLayout = function(owner, adaptive)
+        said[#said + 1] = owner .. "=" .. tostring(adaptive)
+        return true
+      end
+      finally(function()
+        _G.setAdaptiveLayout = real
+      end)
+      clickClose()
+      expandAlias("baseui show", false)
+      assert.are.same({ "mudlet-base-ui=false", "mudlet-base-ui=true" }, said)
+    end)
+
+    describe("in a compact main window", function()
+      local realInfo, savedUnread
+
+      before_each(function()
+        realInfo = getMainWindowInfo
+        savedUnread = table.deepcopy(BaseUI.unread)
+      end)
+
+      after_each(function()
+        _G.getMainWindowInfo = realInfo
+        BaseUI.fitDock()
+        BaseUI.unread = savedUnread
+        BaseUI.refreshChatTabs()
+      end)
+
+      -- in _G, where the package reads it, as setAdaptiveLayout's stub above is
+      local function sizedAs(widthClass, heightClass, pixelScale)
+        _G.getMainWindowInfo = function()
+          return { widthClass = widthClass, heightClass = heightClass, pixelScale = pixelScale or 1 }
+        end
+        BaseUI.fitDock()
+      end
+
+      local function withBars(keys)
+        local made = {}
+        for _, key in ipairs(keys) do
+          if not BaseUI.gauges[key] and BaseUI.ensureGauge(key) then
+            made[#made + 1] = key
+          end
+        end
+        finally(function()
+          for _, key in ipairs(made) do
+            BaseUI.gauges[key]:delete()
+            BaseUI.gauges[key] = nil
+            BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots - 1
+          end
+          BaseUI.layoutGauges()
+        end)
+        for _, key in ipairs(keys) do
+          assert.is_not_nil(BaseUI.gauges[key], "no room for the " .. key .. " bar")
+        end
+      end
+
+      local function click(label)
+        local callback = label.clickCallback
+        if type(callback) == "string" then
+          callback = loadstring("return " .. callback)()
+        end
+        callback(unpack(label.clickArgs))
+      end
+
+      local function shown(widget)
+        return not (widget.hidden or widget.auto_hidden)
+      end
+
+      it("should take either of the main window's size classes being compact", function()
+        local function compactFor(widthClass, heightClass)
+          _G.getMainWindowInfo = function()
+            return { widthClass = widthClass, heightClass = heightClass }
+          end
+          return BaseUI.compactWindow()
+        end
+        assert.is_true(compactFor("compact", "medium"))
+        assert.is_true(compactFor("expanded", "compact"))
+        assert.is_true(compactFor("compact", "compact"))
+        assert.is_false(compactFor("medium", "medium"))
+        assert.is_false(compactFor("expanded", "expanded"))
+        _G.getMainWindowInfo = function()
+          return nil, "no main window"
+        end
+        assert.is_false(BaseUI.compactWindow())
+        _G.getMainWindowInfo = nil
+        assert.is_false(BaseUI.compactWindow())
+      end)
+
+      it("should hide the dock and the map, keeping the bars along the top", function()
+        withBars({ "hp", "mp" })
+        sizedAs("compact", "medium")
+        assert.is_true(BaseUI.container.hidden)
+        assert.are.equal(0, getBorderRight())
+        assert.is_true(BaseUI.map == nil or not shown(BaseUI.map), "the map is on screen")
+        local bar, hp, mp = BaseUI.vitalsBar, BaseUI.gauges.hp, BaseUI.gauges.mp
+        assert.are.equal(bar.Inside, hp.container)
+        assert.is_true(shown(bar) and shown(hp))
+        assert.are.equal(0, bar:get_y())
+        assert.are.equal(bar:get_height(), getBorderTop())
+        assert.are.equal(hp:get_y(), mp:get_y())
+        assert.is_true(hp:get_x() + hp:get_width() <= mp:get_x(), "the bars overlap")
+      end)
+
+      it("should put the bars two to a row upright and all in one row on its side", function()
+        withBars({ "hp", "mp", "mv" })
+        sizedAs("compact", "medium")
+        local hp, mv = BaseUI.gauges.hp, BaseUI.gauges.mv
+        assert.is_true(hp:get_y() < mv:get_y(), "three bars in one row upright")
+        sizedAs("medium", "compact")
+        assert.are.equal(hp:get_y(), mv:get_y())
+      end)
+
+      it("should put a button for each chat tab along the bottom, opening its tab over the game's text and closing it again", function()
+        sizedAs("compact", "medium")
+        local row = BaseUI.chatButtonRow
+        local _, height = getMainWindowSize()
+        assert.is_true(shown(row))
+        assert.are.equal(height, row:get_y() + row:get_height())
+        assert.are.equal(row:get_height(), getBorderBottom())
+        for _, key in ipairs({ "all", "tells", "channels" }) do
+          assert.is_false(shown(BaseUI.chats[key]), key .. " is open before its button is tapped")
+        end
+        click(BaseUI.chatButtons.tells)
+        local pane, width = BaseUI.chats.tells, getMainWindowSize()
+        assert.is_true(shown(pane))
+        assert.is_false(shown(BaseUI.chats.all))
+        assert.are.same({ getBorderLeft(), getBorderTop(), width - getBorderLeft() - getBorderRight(), height - getBorderTop() - getBorderBottom() },
+          { pane:get_x(), pane:get_y(), pane:get_width(), pane:get_height() })
+        click(BaseUI.chatButtons.all)
+        assert.is_true(shown(BaseUI.chats.all))
+        assert.is_false(shown(pane))
+        click(BaseUI.chatButtons.all)
+        assert.is_false(shown(BaseUI.chats.all))
+      end)
+
+      it("should count on its button what a closed tab has not shown, and say it to a screen reader", function()
+        sizedAs("compact", "medium")
+        local button = BaseUI.chatButtons.tells
+        BaseUI.unread.tells = 0
+        BaseUI.noteChatActivity("tells")
+        BaseUI.noteChatActivity("tells")
+        assert.are.equal("Tells (2)", button.message)
+        assert.are.equal("Tells chat, 2 new", button.accessibleName)
+        click(button)
+        assert.are.equal("Tells", button.message)
+        assert.are.equal("Tells chat, open", button.accessibleName)
+        BaseUI.noteChatActivity("tells")
+        assert.are.equal("Tells chat, open", button.accessibleName)
+        click(button)
+        assert.are.equal("Tells chat", button.accessibleName)
+      end)
+
+      it("should name its bars for a screen reader", function()
+        withBars({ "hp" })
+        assert.are.equal("Health", BaseUI.gauges.hp.back.accessibleName)
+      end)
+
+      it("should size its strips by the main window's pixel scale", function()
+        sizedAs("compact", "medium", 1)
+        local single = BaseUI.chatButtonRow:get_height()
+        sizedAs("compact", "medium", 2)
+        assert.are.equal(2 * single, BaseUI.chatButtonRow:get_height())
+      end)
+
+      it("should make its buttons no less than 48 logical pixels tall at any pixel scale", function()
+        sizedAs("compact", "medium", 1.3)
+        assert.is_true(BaseUI.chatButtons.tells:get_height() >= 48 * 1.3)
+      end)
+
+      it("should give the dock back when the window is roomy again", function()
+        if BaseUI.compactWindow() then
+          pending("this window is itself compact")
+          return
+        end
+        withBars({ "hp" })
+        sizedAs("compact", "medium")
+        _G.getMainWindowInfo = realInfo
+        BaseUI.fitDock()
+        assertOnRightBorder()
+        assert.is_false(shown(BaseUI.vitalsBar))
+        assert.is_false(shown(BaseUI.chatButtonRow))
+        assert.are.equal(BaseUI.sections.vitals, BaseUI.gauges.hp.container)
+        assert.are.equal(BaseUI.sections.chat, BaseUI.chats.all.container)
+        assert.is_true(shown(BaseUI.chats[BaseUI.activeChatTab]))
+      end)
+
+      it("should leave a dock the player moved where they put it", function()
+        BaseUI.container:detach()
+        BaseUI.container:move("10%", "10%")
+        sizedAs("compact", "medium")
+        assert.is_true(BaseUI.container.hidden)
+        _G.getMainWindowInfo = realInfo
+        BaseUI.fitDock()
+        assert.is_falsy(BaseUI.container.attached)
+        assert.are.equal("10%", BaseUI.container.x)
+      end)
     end)
 
     it("should leave a dock the player took off the border where they put it", function()

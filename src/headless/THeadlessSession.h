@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "TDebug.h"
+#include "TMainWindowInfo.h"
 
 #include <QColor>
 #include <QFlags>
@@ -566,6 +567,16 @@ public:
     // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
     QSize mainConsoleGrid() const;
     QRect mainConsoleTextRect() const;
+    // What the app knows of where it draws the main window, for an app that draws it other than Mudlet measures it,
+    // as one that scales it does: getMainWindowInfo() gives it with the main window's size over its pixelScale,
+    // Mudlet's pixels per logical pixel (dp, CSS pixel), and a change of it that changes a class raises
+    // sysMainWindowClassChangeEvent. Kept for the session's later profiles, each given it before its scripts run.
+    // Refused where setApplicationActive() is, and for a ratio or scale that is not a finite number above 0.
+    bool setMainWindowDevice(const TMainWindowInfo::Device& device);
+    std::optional<TMainWindowInfo::Device> mainWindowDevice() const { return mMainWindowDevice; }
+    // Whether the profile's scripts lay out for a main window of any shape, from their setAdaptiveLayout(); false
+    // with no profile open. Read it at profileLoaded, then follow adaptiveLayoutChanged.
+    bool adaptiveLayout() const;
     // The words scripts gave the main command line for Tab to complete, with addCmdLineSuggestion(), and those
     // it is never to complete, with addCmdLineBlacklist(), each once and sorted. Empty with no profile open.
     // Read from anywhere.
@@ -1103,6 +1114,9 @@ signals:
     // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
     // sends them once.
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // adaptiveLayout() changed. From the event loop, and only when it differs from what it was at profileLoaded or
+    // the last of these.
+    void adaptiveLayoutChanged(const QString& profile, bool adaptive);
     // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
     // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
@@ -1320,6 +1334,8 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    std::optional<bool> mDeliveredAdaptiveLayout;
+    std::optional<TMainWindowInfo::Device> mMainWindowDevice;
     // What scriptWindows(), each label's labelContent() and each text box's textBoxContent() gave at profileLoaded,
     // then as each scriptWindowsChanged was sent, and a text box's text as setTextBoxText() set it
     struct WindowsTold

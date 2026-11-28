@@ -37,7 +37,7 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   -- prompts with hp/mp labels make the base UI embed a mapper once rooms exist, and an
   -- embedded mapper cannot be closed, so every later openMapWidget() would fail
   setup(function()
-    dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+    dockWasShowing = BaseUI ~= nil and BaseUI.onScreen()
     if BaseUI then
       savedCreateMapper = BaseUI.createMapper
       BaseUI.createMapper = function() end
@@ -48,9 +48,8 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     if BaseUI then
       BaseUI.createMapper = savedCreateMapper
     end
-    if BaseUI and not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
-      BaseUI.container:hide()
-      BaseUI.container:adjustBorder()
+    if BaseUI and not dockWasShowing and BaseUI.onScreen() then
+      BaseUI.putAway()
     end
   end)
 
