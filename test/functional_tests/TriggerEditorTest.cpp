@@ -47,11 +47,13 @@
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TAlias.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TConsole.h"
 #include "TTextEdit.h"
 #include "TMap.h"
+#include "dlgAliasMainArea.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
@@ -332,6 +334,38 @@ private slots:
     QCOMPARE(text(3), qsl("return true"));
     QCOMPARE(text(4), qsl("c"));
     QCOMPARE(pEditor->mVisiblePatternCount, 5);
+  }
+
+  // An alias's empty command sends nothing, so a pattern that matches an empty
+  // line, such as one acting on a line of only spaces, cannot call itself
+  void test_aliasWithNoCommandMatchingAnEmptyLineSaves() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    auto *pAlias = new TAlias(qsl("qaBareEnter"), mpHost);
+    pAlias->setRegexCode(qsl("^\\s*$"));
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(pAlias));
+    pEditor->doCleanReset();
+    pEditor->slot_showAliases();
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pEditor->treeWidget_aliases->findItems(
+          qsl("qaBareEnter"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted alias");
+    pEditor->treeWidget_aliases->setCurrentItem(pItem);
+    pEditor->slot_aliasSelected(pItem);
+
+    QVERIFY2(pEditor->saveAlias(), "an alias that sends nothing was refused as an infinite loop");
+
+    pEditor->mpAliasMainArea->lineEdit_alias_command->setText(qsl("  "));
+    QVERIFY2(!pEditor->saveAlias(), "a command its own pattern matches was not caught as a loop");
+    pEditor->mpAliasMainArea->lineEdit_alias_command->clear();
   }
 
   // A colour pattern row's buttons have to show the colours its pattern text
