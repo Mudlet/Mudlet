@@ -47,16 +47,6 @@ constexpr int scmWellPaddingVertical = 3;
 // smaller square keeps the same curve beside the well's own
 constexpr int scmSwatchRadius = std::max(2, scmRadiusInput - scmWellPaddingVertical);
 
-// Black and white squares four pixels on a side. The picture's own squares are
-// three times as tall as they are wide, as it was drawn to be squeezed into a
-// 3:1 icon, so it is squeezed by the same amount here.
-QPixmap checkerboardTile(const qreal ratio)
-{
-    QPixmap tile = QPixmap(qsl(":/icons/black_white_transparent_check_1x3_ratio.png")).scaled(QSize(48, 16) * ratio, Qt::IgnoreAspectRatio, Qt::FastTransformation);
-    tile.setDevicePixelRatio(ratio);
-    return tile;
-}
-
 } // namespace
 
 AlphaColourWell::AlphaColourWell(QPushButton* pButton)
@@ -108,7 +98,7 @@ void AlphaColourWell::applyLook()
         const auto opacity = [](const int percent) {
             // The number takes three places, so in a fixed-pitch face every well's words are one length and the
             // word as well as the percent sign stands under the one above it
-            //: Words inside a colour well that may be see-through (a map colour in the settings, a map label colour, or a room's border colour in its properties), beside a swatch of the colour: how opaque the colour is, %1 being a whole percentage - 100 for a colour that is not see-through at all - padded with spaces to three characters
+            //: Words inside a colour well that may be see-through (a map colour in the settings, or a map label colour), beside a swatch of the colour: how opaque the colour is, %1 being a whole percentage - 100 for a colour that is not see-through at all - padded with spaces to three characters
             return QCoreApplication::translate("AlphaColourWell", "Opacity %1%").arg(percent, 3);
         };
         words = opacity(qRound(mColour.alphaF() * 100));

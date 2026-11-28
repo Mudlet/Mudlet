@@ -33,6 +33,10 @@
 class Host;
 class TRoom;
 
+namespace uiDesign {
+class ColourValue;
+}
+
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
     Q_OBJECT
@@ -40,6 +44,7 @@ class dlgRoomProperties : public QDialog, public Ui::room_properties
 public:
     Q_DISABLE_COPY(dlgRoomProperties)
     explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
+    ~dlgRoomProperties() override;
     void
     init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, int hiddenRoomCount, const QSet<int>& roomIds);
     void accept() override;
@@ -75,6 +80,10 @@ signals:
 
 private:
     QColor backgroundBasedColor(QColor);
+    void restyleColourRows();
+    bool resetOffered(const QColor& chosen) const;
+    bool borderColoursDiffer() const;
+    void showBorderColour();
     QColor defaultSymbolColor();
     QString getNewSymbol();
     void initSymbolInstructions();
@@ -87,7 +96,6 @@ private:
     void initHiddenInstructions(const int);
     void initBorderInstructions();
     void emitBorderPreview();
-    void showBorderColor();
     void restoreOriginalBorders();
     void initGeneral();
     void initUserData();
@@ -100,6 +108,8 @@ private:
     QSet<int> liveRoomIds() const;
 
     Host* mpHost = nullptr;
+    uiDesign::ColourValue* mpSymbolColour = nullptr;
+    uiDesign::ColourValue* mpBorderColour = nullptr;
     QSet<int> mRoomIds;
     QHash<int, quint64> mRoomSerials;
     QHash<QString, int> mpSymbols;
@@ -110,9 +120,10 @@ private:
     bool mChangeRoomColor = false;
     bool mSymbolColorWasChanged = false;
     QColor selectedBorderColor;
-    QString mBorderColorButtonWords;
     int mBorderThickness = 0;
     bool mBorderColorWasChanged = false;
+    // An opacity set for rooms that differ in colour, which each room takes with its own colour
+    std::optional<int> mBorderAlphaOnly;
     bool mBorderThicknessWasChanged = false;
     QHash<int, QColor> mOriginalBorderColors;
     QHash<int, int> mOriginalBorderThicknesses;
@@ -140,6 +151,7 @@ private slots:
 
     void slot_openBorderColorSelector();
     void slot_borderColorSelected(const QColor&);
+    void slot_borderOpacitySelected(const QColor&);
     void slot_resetBorderColor();
     void slot_borderThicknessChanged(int);
 

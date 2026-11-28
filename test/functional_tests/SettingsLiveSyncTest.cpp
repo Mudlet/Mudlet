@@ -46,6 +46,7 @@
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QTimer>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -55,6 +56,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TMap.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
@@ -633,6 +635,92 @@ private slots:
         QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
         QCOMPARE(mpHost->mainConsoleShowsTimeStamps(), before);
         QCOMPARE(pConsole->timeStampButton->isChecked(), before);
+    }
+
+    // A colour typed into its field, or chosen in the colours window, is the
+    // profile's at once, so neither is an edit waiting to be applied: coming
+    // back to the dialog still re-reads what a script moved meanwhile, and a
+    // colour a script moved shows in its field
+    void test_aColourTypedOrChosenLeavesTheSettingsToBeReread()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room marker's colours cannot be reached");
+        const QColor priorLightRed = mpHost->mLightRed;
+        const QColor priorLightGreen = mpHost->mLightGreen;
+        const QColor priorGrid = mpHost->mMapGridColor;
+        const QColor priorOuterRing = mpHost->mpMap->mPlayerRoomOuterColor;
+        const quint8 priorStyle = mpHost->mpMap->mPlayerRoomStyle;
+        const int priorWrap = mpHost->mWrapAt;
+        const auto restore = qScopeGuard([=, this]() {
+            mpHost->mLightRed = priorLightRed;
+            mpHost->mLightGreen = priorLightGreen;
+            mpHost->mMapGridColor = priorGrid;
+            mpHost->mpMap->mPlayerRoomOuterColor = priorOuterRing;
+            mpHost->mpMap->mPlayerRoomStyle = priorStyle;
+            mpHost->mWrapAt = priorWrap;
+        });
+        // The custom ring, so its colours are on offer as the dialog opens
+        mpHost->mpMap->mPlayerRoomStyle = 3;
+        openPreferences();
+
+        const auto rereadAfter = [this](const char* what) {
+            mpHost->mWrapAt += 3;
+            const int wrapFromAScript = mpHost->mWrapAt;
+            returnToTheDialog();
+            QVERIFY2(mpPreferences->wrap_at_spinBox->value() == wrapFromAScript, what);
+        };
+        // A field the focus leaves hands its editingFinished to the apply, whose own re-read would hide one that never
+        // came, so each step starts with the focus where it acts and that apply been and gone
+        const auto focusAndSettle = [this](QWidget* pWidget) {
+            QVERIFY2(pWidget, "there is no such control");
+            QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+            pWidget->setFocus();
+            applySpy.wait(TestSettings::scmQuietWindow);
+        };
+        const auto typeInto = [](QWidget* pField, const QString& typed) {
+            if (auto* pSpinBox = qobject_cast<QSpinBox*>(pField)) {
+                pSpinBox->selectAll();
+            } else {
+                static_cast<QLineEdit*>(pField)->selectAll();
+            }
+            QTest::keyClicks(pField, typed);
+            QTest::keyClick(pField, Qt::Key_Return);
+        };
+
+        // Chosen in the colours window, see-through, so the opacity box moves with the field
+        mpPreferences->setTab(qsl("mapper"));
+        focusAndSettle(mpPreferences->pushButton_mapGridColor);
+        QPointer<QTimer> pPicker = TestSettings::pickInTheNextColorDialog(this, QColor(7, 8, 9, 51));
+        mpPreferences->pushButton_mapGridColor->click();
+        delete pPicker;
+        QCOMPARE(mpHost->mMapGridColor, QColor(7, 8, 9, 51));
+        rereadAfter("a see-through colour chosen in the colours window kept the dialog from re-reading the settings");
+
+        mpPreferences->setTab(qsl("mainDisplay"));
+        focusAndSettle(mpPreferences->pushButton_lGreen);
+        pPicker = TestSettings::pickInTheNextColorDialog(this, QColor(4, 5, 6));
+        mpPreferences->pushButton_lGreen->click();
+        delete pPicker;
+        QCOMPARE(mpHost->mLightGreen, QColor(4, 5, 6));
+        rereadAfter("a colour chosen in the colours window kept the dialog from re-reading the settings");
+
+        auto* pLightRed = mpPreferences->findChild<QLineEdit*>(qsl("settingsColour_lRed"));
+        focusAndSettle(pLightRed);
+        typeInto(pLightRed, qsl("#102030"));
+        QCOMPARE(mpHost->mLightRed, QColor(0x10, 0x20, 0x30));
+        rereadAfter("a typed colour kept the dialog from re-reading the settings");
+
+        mpPreferences->setTab(qsl("mapper"));
+        auto* pOuterRing = mpPreferences->findChild<QLineEdit*>(qsl("settingsPlayerRoomOuterColour"));
+        focusAndSettle(pOuterRing);
+        typeInto(pOuterRing, qsl("#405060"));
+        QCOMPARE(mpHost->mpMap->mPlayerRoomOuterColor.rgb(), QColor(0x40, 0x50, 0x60).rgb());
+        rereadAfter("a typed ring colour kept the dialog from re-reading the settings");
+
+        mpPreferences->setTab(qsl("mainDisplay"));
+        focusAndSettle(mpPreferences->pushButton_lGreen);
+        mpHost->mLightRed = QColor(1, 2, 3);
+        returnToTheDialog();
+        QCOMPARE(mpPreferences->findChild<QLineEdit*>(qsl("settingsColour_lRed"))->text(), qsl("#010203"));
     }
 };
 
