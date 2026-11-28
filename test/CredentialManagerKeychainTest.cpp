@@ -110,6 +110,8 @@ private slots:
     void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
     void testATrimmedLookupStillFindsTheProfilesOwnCopy();
     void testForgettingSaysSoWhenTheKeychainCopyRemains();
+    void testAnEntryAnotherBuildSavedIsEmptiedWhenItWillNotDelete_data();
+    void testAnEntryAnotherBuildSavedIsEmptiedWhenItWillNotDelete();
     void testAKeychainNotOnDBusHoldsNothingToRemove();
     void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
@@ -510,6 +512,14 @@ public:
     {
         mShouldStall = [](QKeychain::Job* job) {
             return qobject_cast<T*>(job) != nullptr;
+        };
+    }
+
+    // For a removal on macOS, which rewrites an entry the keychain will not delete
+    void stallEveryDeleteAndWrite()
+    {
+        mShouldStall = [](QKeychain::Job* job) {
+            return qobject_cast<QKeychain::DeletePasswordJob*>(job) || qobject_cast<QKeychain::WritePasswordJob*>(job);
         };
     }
 
@@ -2021,13 +2031,90 @@ void CredentialManagerKeychainTest::testForgettingSaysSoWhenTheKeychainCopyRemai
     QVERIFY2(reported.contains(QStringLiteral("synthetic: this entry will not be deleted")), qPrintable(QStringLiteral("the keychain's own reason was dropped: %1").arg(reported)));
 }
 
+void CredentialManagerKeychainTest::testAnEntryAnotherBuildSavedIsEmptiedWhenItWillNotDelete_data()
+{
+    QTest::addColumn<QKeychain::Error>("deleteAnswer");
+    QTest::addColumn<bool>("overwrites");
+    QTest::addColumn<QKeychain::Error>("overwriteAnswer");
+    QTest::addColumn<bool>("forgotten");
+
+    QTest::newRow("emptied") << QKeychain::OtherError << true << QKeychain::NoError << true;
+    QTest::newRow("not even emptied") << QKeychain::OtherError << true << QKeychain::OtherError << false;
+    // Rewriting would only ask the player the question they just refused
+    QTest::newRow("refused by the player") << QKeychain::AccessDeniedByUser << false << QKeychain::NoError << false;
+    QTest::newRow("deleted") << QKeychain::NoError << false << QKeychain::NoError << true;
+    QTest::newRow("nothing to delete") << QKeychain::EntryNotFound << false << QKeychain::NoError << true;
+}
+
+void CredentialManagerKeychainTest::testAnEntryAnotherBuildSavedIsEmptiedWhenItWillNotDelete()
+{
+#if !defined(Q_OS_MACOS)
+    QSKIP("Only the macOS login keychain refuses a delete it lets another build from the same signer rewrite");
+#endif
+    QFETCH(QKeychain::Error, deleteAnswer);
+    QFETCH(bool, overwrites);
+    QFETCH(QKeychain::Error, overwriteAnswer);
+    QFETCH(bool, forgotten);
+
+    JobStaller staller;
+    staller.stallEveryDeleteAndWrite();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    auto answer = std::make_shared<Answer>();
+    manager.removePassword(mProfile, mKey, [answer](bool success, const QString& error) {
+        ++answer->count;
+        answer->success = success;
+        answer->error = error;
+    });
+
+    const QString service = expectedServiceName(mProfile, mKey);
+    QKeychain::Job* deletion = staller.waitForStalled(0);
+    QVERIFY(deletion);
+    QCOMPARE(deletion->service(), service);
+    JobStaller::answer(deletion, deleteAnswer, QStringLiteral("synthetic: Invalid attempt to change the owner of this item."));
+
+    int next = 1;
+    if (overwrites) {
+        QKeychain::Job* overwrite = staller.waitForStalled(next++);
+        QVERIFY(overwrite);
+        QVERIFY2(qobject_cast<QKeychain::WritePasswordJob*>(overwrite), "an entry the keychain would not delete was not rewritten");
+        QCOMPARE(overwrite->service(), service);
+        QCOMPARE(overwrite->key(), service);
+        QVERIFY2(overwrite->macOSKeychainPreference() == QKeychain::MacOSKeychainPreference::LegacyKeychain, "the rewrite was not aimed at the keychain that refused the delete");
+        JobStaller::answer(overwrite, overwriteAnswer, QStringLiteral("synthetic: the keychain's answer to the rewrite"));
+    }
+
+    // The colliding-format entry is removed either way
+    QKeychain::Job* collidingDeletion = staller.waitForStalled(next);
+    QVERIFY(collidingDeletion);
+    QVERIFY2(qobject_cast<QKeychain::DeletePasswordJob*>(collidingDeletion), "an entry the player refused to give up was rewritten anyway");
+    QCOMPARE(collidingDeletion->service(), expectedLegacyServiceName(mProfile, mKey));
+    JobStaller::answer(collidingDeletion, QKeychain::EntryNotFound, QStringLiteral("synthetic: nothing stored here"));
+
+    QVERIFY(waitForAnswer(answer));
+    QCOMPARE(answer->count, 1);
+    QVERIFY2(answer->success == forgotten, qPrintable(QStringLiteral("forgotten: expected %1, reported %2 (%3)").arg(forgotten).arg(answer->success).arg(answer->error)));
+    if (!forgotten) {
+        QVERIFY2(answer->error.contains(QStringLiteral("synthetic: Invalid attempt to change the owner of this item.")),
+                 qPrintable(QStringLiteral("the keychain's reason for keeping the entry was dropped: %1").arg(answer->error)));
+    }
+}
+
 // With no Secret Service on D-Bus, libsecret answers every job with OtherError. A store that fails
 // falls back to the encrypted file, so nothing can be in a keychain that isn't there, and a removal
 // should not report one as left behind (raised in review of #11906).
 void CredentialManagerKeychainTest::testAKeychainNotOnDBusHoldsNothingToRemove()
 {
     JobStaller watcher;
+#if defined(Q_OS_MACOS)
+    // On macOS each delete refused with OtherError is followed by a rewrite of its entry, refused here too
+    watcher.stallEveryDeleteAndWrite();
+    const int jobs = 4;
+#else
     watcher.stallEvery<QKeychain::DeletePasswordJob>();
+    const int jobs = onWindows() ? 4 : 2;
+#endif
     CredentialManager manager;
     manager.mJobStartHook = watcher.hook();
 
@@ -2038,9 +2125,8 @@ void CredentialManagerKeychainTest::testAKeychainNotOnDBusHoldsNothingToRemove()
         removeAnswered = true;
     });
 
-    const int deletions = onWindows() ? 4 : 2;
-    for (int deletion = 0; deletion < deletions; ++deletion) {
-        QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
+    for (int index = 0; index < jobs; ++index) {
+        QKeychain::Job* cleanup = watcher.waitForStalled(index);
         QVERIFY(cleanup);
 #if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("could not reach the keychain.*org\\.freedesktop\\.secrets")));
@@ -2114,21 +2200,26 @@ void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderTh
 void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data()
 {
     QTest::addColumn<QKeychain::Error>("firstReadError");
+    QTest::addColumn<bool>("emptiedEntry");
     QTest::addColumn<bool>("garbledFile");
     QTest::addColumn<CredentialManager::ReadOutcome>("expected");
-    QTest::newRow("nothing stored anywhere") << QKeychain::NoError << false << CredentialManager::ReadOutcome::NothingStored;
-    QTest::newRow("the first read refused") << QKeychain::AccessDenied << false << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("nothing stored anywhere") << QKeychain::NoError << false << false << CredentialManager::ReadOutcome::NothingStored;
+    // What a removal leaves of an entry the macOS keychain would not delete
+    QTest::newRow("an emptied entry") << QKeychain::NoError << true << false << CredentialManager::ReadOutcome::NothingStored;
+    QTest::newRow("the first read refused") << QKeychain::AccessDenied << false << false << CredentialManager::ReadOutcome::Unreadable;
     // What libsecret reports when no Secret Service is running on D-Bus
-    QTest::newRow("no keychain service to ask") << QKeychain::OtherError << false << CredentialManager::ReadOutcome::Unavailable;
-    QTest::newRow("the encrypted file garbled") << QKeychain::NoError << true << CredentialManager::ReadOutcome::Unreadable;
-    QTest::newRow("no keychain service, and the file garbled") << QKeychain::OtherError << true << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("no keychain service to ask") << QKeychain::OtherError << false << false << CredentialManager::ReadOutcome::Unavailable;
+    QTest::newRow("the encrypted file garbled") << QKeychain::NoError << false << true << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("no keychain service, and the file garbled") << QKeychain::OtherError << false << true << CredentialManager::ReadOutcome::Unreadable;
 }
 
 void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered()
 {
     QFETCH(QKeychain::Error, firstReadError);
+    QFETCH(bool, emptiedEntry);
     QFETCH(bool, garbledFile);
     QFETCH(CredentialManager::ReadOutcome, expected);
+    const bool answersFirstRead = emptiedEntry || firstReadError != QKeychain::NoError;
     const QString filePath = CredentialManager::generateFilePath(mProfile, mKey);
     const auto removeFile = qScopeGuard([&filePath] {
         QFile::remove(filePath);
@@ -2140,7 +2231,7 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
         file.write("not an encrypted credential");
     }
     JobStaller staller;
-    if (firstReadError != QKeychain::NoError) {
+    if (answersFirstRead) {
         staller.stallNth<QKeychain::ReadPasswordJob>(0);
     }
     staller.answerOtherReadsNotFound();
@@ -2149,7 +2240,7 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
     QObject lateContext;
 
     const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
-    if (firstReadError != QKeychain::NoError) {
+    if (answersFirstRead) {
         QKeychain::Job* firstRead = staller.waitForStalled();
         QVERIFY(firstRead);
         JobStaller::answer(firstRead, firstReadError, QStringLiteral("synthetic: the first read failed"));
@@ -2157,6 +2248,9 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
     QVERIFY(waitForAnswer(answers->first));
     QVERIFY(!answers->first->success);
     QCOMPARE(answers->outcome, expected);
+    if (emptiedEntry) {
+        QVERIFY2(staller.reads().size() > 1, "the lookup stopped at the emptied entry instead of looking further");
+    }
 }
 
 void CredentialManagerKeychainTest::testALookupThatAnswersInTimeOwesNoLateAnswer()

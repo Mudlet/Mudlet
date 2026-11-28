@@ -1540,6 +1540,15 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
                 startJob(bareJob);
 #else
+#if defined(Q_OS_MACOS)
+                // The login keychain lets only the copy of Mudlet that saved an item delete it, though any build from the
+                // same signer may rewrite it. QtKeychain reports that refusal (errSecInvalidOwnerEdit) as OtherError, like
+                // other failures it does not name, and emptying the entry is as good an answer to those.
+                if (!primarySuccess && deleteJob->error() == QKeychain::OtherError) {
+                    emptyUndeletableCredential(service, account, profileName, primaryError);
+                    return;
+                }
+#endif
                 finishRemoveCredential(account, profileName, primarySuccess, primaryError);
 #endif
             },
@@ -1547,6 +1556,49 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
     startJob(deleteJob);
 }
+
+#if defined(Q_OS_MACOS)
+void CredentialManager::emptyUndeletableCredential(const QString& service, const QString& account, const QString& profileName, const QString& deleteError)
+{
+    mCurrentJob = nullptr;
+    auto* writeJob = new QKeychain::WritePasswordJob(service, this);
+    writeJob->setKey(service);
+    writeJob->setTextData(QString());
+    // The refusal is the login keychain's. A build entitled to the data protection keychain would otherwise write
+    // the empty value there, and leave the secret where an older build still reads it.
+    writeJob->setMacOSKeychainPreference(QKeychain::MacOSKeychainPreference::LegacyKeychain);
+    trackCurrentJob(writeJob);
+    mCurrentOperationDescription = qsl("emptying of the keychain entry it could not delete for profile \"%1\", key \"%2\" (entry \"%3\")").arg(profileName, account, service);
+    setupTimeout();
+
+    connect(
+            writeJob,
+            &QKeychain::WritePasswordJob::finished,
+            this,
+            [this, writeJob, account, profileName, deleteError]() {
+                if (!isOperationValid()) {
+                    qWarning().noquote() << "CredentialManager: dropped the answer to the" << mCurrentOperationDescription
+                                         << "- the application is shutting down, so its caller is not told the outcome";
+                    writeJob->deleteLater();
+                    return;
+                }
+
+                cleanupTimeout();
+
+                const bool emptied = writeJob->error() == QKeychain::NoError;
+                const QString error = emptied ? QString() : qsl("%1, nor could it be emptied: %2").arg(deleteError, writeJob->errorString());
+                writeJob->deleteLater();
+                if (emptied) {
+                    qWarning().noquote() << "CredentialManager: the keychain would not delete the entry for profile" << profileName << "key" << account << "-" << deleteError
+                                         << "- so it was emptied instead";
+                }
+                finishRemoveCredential(account, profileName, emptied, error);
+            },
+            Qt::QueuedConnection);
+
+    startJob(writeJob);
+}
+#endif
 
 void CredentialManager::finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError)
 {
