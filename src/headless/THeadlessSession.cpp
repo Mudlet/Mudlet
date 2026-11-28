@@ -2540,6 +2540,8 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
     std::vector<TChar> format(firstFormat.begin() + std::min<qsizetype>(firstPadding, firstFormat.size()), firstFormat.end());
     format.resize(text.size(), format.empty() ? TChar() : format.back());
     QList<qint64> lineIds{buffer.lineIdBuffer.at(first)};
+    // A line feed a script wrote into a row parts the text there too, into a line with no id of its own
+    lineIds.insert(lineIds.size(), text.count(QChar::LineFeed), 0);
     for (int y = first + 1; y <= last; ++y) {
         const QString& segment = buffer.lineBuffer.at(y);
         const bool wrapped = buffer.wrapsFromPreviousLine(y);
@@ -2552,7 +2554,9 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         format.insert(format.end(), joint.size(), format.empty() ? TChar() : format.back());
         const TLineFormat& segmentFormat = buffer.buffer.at(y);
         const int from = std::min(padding, static_cast<int>(segment.size()));
-        text.append(QStringView(segment).mid(from));
+        const QStringView added = QStringView(segment).mid(from);
+        text.append(added);
+        lineIds.insert(lineIds.size(), added.count(QChar::LineFeed), 0);
         const auto formatFrom = segmentFormat.begin() + std::min<qsizetype>(from, segmentFormat.size());
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
@@ -2590,7 +2594,8 @@ QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const boo
                       textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor),
                       arrivalTime(buffer, write.line),
                       write.continuesLine,
-                      {shownLineId(buffer, write.line)}});
+                      // Drawn on the end of the line above, it is that line's, which only its own id updates
+                      {write.continuesLine ? 0 : shownLineId(buffer, write.line)}});
     }
     return lines;
 }
@@ -2600,6 +2605,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QPointer<THeadlessSession> self(this);
     const QString profile = mProfileName;
     const bool followed = isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::linesUpdated));
+    bool editedWhileHeld = false;
     for (const ShownLine& line : lines) {
         QList<qint64> lineIds = line.lineIds;
         lineIds.resize(line.text.count(QChar::LineFeed) + 1);
@@ -2609,6 +2615,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
                 lineId = 0;
             } else if (lineId) {
                 mSentLineIds.insert(lineId);
+                editedWhileHeld = editedWhileHeld || mEditedLineIds.contains(lineId);
             }
         }
         ++gSignalsBeingHandedOut;
@@ -2618,7 +2625,32 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
             return false;
         }
     }
+    if (editedWhileHeld) {
+        queueLineUpdates();
+    }
     return true;
+}
+
+// A line fed from inside a pass waits for that pass to end before it is sent, as it stood then, so a change to it
+// meanwhile is sent after it
+bool THeadlessSession::lineIdHeld(const qint64 lineId) const
+{
+    if (!lineId || !isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::linesUpdated))) {
+        return false;
+    }
+    for (const QList<ShownLine>& lines : mShownLinesOfPasses) {
+        for (const ShownLine& line : lines) {
+            if (line.lineIds.contains(lineId)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool THeadlessSession::lineIdsFollowed() const
+{
+    return !mSentLineIds.isEmpty() || (!mShownLinesOfPasses.isEmpty() && isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::linesUpdated)));
 }
 
 // The id of the line lineShown sent that line is part of: the first line of its paragraph, or of the part of one a
@@ -2636,7 +2668,7 @@ qint64 THeadlessSession::shownLineId(const TBuffer& buffer, int line) const
 
 void THeadlessSession::noteLinesEdited(const int firstLine, const int lastLine)
 {
-    if (mSentLineIds.isEmpty() || !mpHost) {
+    if (!lineIdsFollowed() || !mpHost) {
         return;
     }
     const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
@@ -2644,7 +2676,7 @@ void THeadlessSession::noteLinesEdited(const int firstLine, const int lastLine)
     bool edited = false;
     for (int line = std::max(0, firstLine); line <= last; ++line) {
         const qint64 lineId = shownLineId(buffer, line);
-        if (mSentLineIds.contains(lineId)) {
+        if (mSentLineIds.contains(lineId) || lineIdHeld(lineId)) {
             mEditedLineIds.insert(lineId);
             edited = true;
         }
@@ -2658,21 +2690,21 @@ void THeadlessSession::noteLinesEdited(const int firstLine, const int lastLine)
 // once they have.
 void THeadlessSession::noteLinesRemoved(const int firstLine, const int lastLine, const bool trimmed)
 {
-    if (mSentLineIds.isEmpty() || !mpHost) {
+    if (!lineIdsFollowed() || !mpHost) {
         return;
     }
     const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
     const int last = std::min(lastLine, static_cast<int>(buffer.lineIdBuffer.size()) - 1);
     bool edited = false;
     for (int line = std::max(0, firstLine); line <= last; ++line) {
-        const qint64 lineId = trimmed ? buffer.lineIdBuffer.at(line) : shownLineId(buffer, line);
-        if (!mSentLineIds.contains(lineId)) {
-            continue;
-        }
         if (trimmed) {
+            const qint64 lineId = buffer.lineIdBuffer.at(line);
             mSentLineIds.remove(lineId);
             mEditedLineIds.remove(lineId);
-        } else {
+            continue;
+        }
+        const qint64 lineId = shownLineId(buffer, line);
+        if (mSentLineIds.contains(lineId) || lineIdHeld(lineId)) {
             mEditedLineIds.insert(lineId);
             edited = true;
         }
@@ -2709,8 +2741,16 @@ void THeadlessSession::sendLineUpdates()
     }
     const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
     QList<int> lines;
-    QSet<qint64> missing = mEditedLineIds;
-    mEditedLineIds.clear();
+    QSet<qint64> missing;
+    QSet<qint64> held;
+    for (const qint64 lineId : std::as_const(mEditedLineIds)) {
+        if (mSentLineIds.contains(lineId)) {
+            missing.insert(lineId);
+        } else if (lineIdHeld(lineId)) {
+            held.insert(lineId);
+        }
+    }
+    mEditedLineIds = held;
     for (int line = static_cast<int>(buffer.lineIdBuffer.size()) - 1; line >= 0 && !missing.isEmpty(); --line) {
         if (missing.remove(buffer.lineIdBuffer.at(line))) {
             lines.prepend(line);

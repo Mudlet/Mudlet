@@ -1236,6 +1236,8 @@ private:
     // False if a handler deleted the session
     bool sendShownLines(const QList<ShownLine>& lines);
     qint64 shownLineId(const TBuffer& buffer, int line) const;
+    bool lineIdHeld(qint64 lineId) const;
+    bool lineIdsFollowed() const;
     void noteLinesEdited(int firstLine, int lastLine);
     void noteLinesRemoved(int firstLine, int lastLine, bool trimmed);
     void queueLineUpdates();
